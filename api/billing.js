@@ -137,7 +137,12 @@ export default async function handler(req, res) {
   const rawBody = await readBody(req);
   const sig = req.headers['stripe-signature'];
 
+  // Public config — returns publishable key, no auth required
   if (req.method === 'GET') {
+    const qs = new URL(req.url, 'https://x').searchParams;
+    if (qs.get('action') === 'config') {
+      return res.status(200).json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
+    }
     return handleStatus(req, res);
   }
 

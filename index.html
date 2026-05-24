@@ -753,11 +753,18 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <script>
 // BILLING & STRIPE
-const STRIPE_PK='pk_test_51TahgeITwaPUO1ECJ6nVPbXz2BRditSw96naQU1Rffs9nm8AwEUpuo472vzorCknxk7EpbGc2gg8RFYgyge7yZl900UcG4VcMM';
 let stripe=null,cardElement=null,currentPayType=null,afterPayCallback=null;
 let selectedModel='standard';
 
-function initStripe(){if(!stripe&&window.Stripe)stripe=window.Stripe(STRIPE_PK);}
+async function initStripe(){
+  if(stripe) return;
+  if(!window.Stripe) return;
+  try{
+    const r=await fetch('/api/billing?action=config');
+    const d=await r.json();
+    if(d.publishableKey) stripe=window.Stripe(d.publishableKey);
+  }catch(e){console.error('Stripe init failed:',e);}
+}
 
 async function updateCreditDisplay(){
   try{
@@ -788,7 +795,7 @@ function setModel(m){
 }
 
 async function openPaymentModal(type,skipAllowed=false,onSuccess=null){
-  initStripe();
+  await initStripe();
   currentPayType=type;
   if(onSuccess)afterPayCallback=onSuccess;
   const meta={
