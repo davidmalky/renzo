@@ -26,7 +26,19 @@
       "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('queue id:',d.get\\('id'\\),'co:',d.get\\('co'\\)\\)\")",
       "Bash(grep -v \"^logs$\")",
       "Bash(git branch *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const env=JSON.parse\\(fs.readFileSync\\('.env.json','utf8'\\)\\);console.log\\(env.ANTHROPIC_API_KEY\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const env=JSON.parse\\(fs.readFileSync\\('.env.json','utf8'\\)\\);console.log\\(env.GITHUB_TOKEN\\);\")",
+      "Bash(curl -s https://renzo-beige.vercel.app/migrate)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const env=JSON.parse\\(fs.readFileSync\\('.env.json','utf8'\\)\\);const jwt=require\\('jsonwebtoken'\\);const token=jwt.sign\\({userId:'test'},env.JWT_SECRET,{expiresIn:'1m'}\\);fetch\\('https://renzo-beige.vercel.app/api/ai',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json','x-profile':'default'},body:JSON.stringify\\({model:'claude-haiku-4-5',max_tokens:20,messages:[{role:'user',content:'Say hi'}]}\\)}\\).then\\(r=>r.json\\(\\)\\).then\\(d=>console.log\\('status ok, content:',d.content?.[0]?.text||JSON.stringify\\(d\\)\\)\\).catch\\(e=>console.error\\(e\\)\\);\")",
+      "Bash(curl -s https://renzo-beige.vercel.app/)",
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\health.js\")",
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\status.js\")",
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\create-payment-intent.js\")",
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\webhook.js\")",
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\deduct.js\")"
     ]
   }
 }

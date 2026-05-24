@@ -325,6 +325,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <option value="">Switch profile...</option>
         </select>
       </div>
+      <div id="creditBalance" style="font-size:11px;color:rgba(232,228,220,.5);padding:4px 0 8px;text-align:center">⚡ -- credits</div>
       <button class="sidebar-logout" id="logoutBtn">Logout</button>
     </div>
   </aside>
@@ -661,6 +662,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <label>What should this message be about? <span style="font-weight:400;color:var(--gray)">(optional — leave blank to let Renzo decide)</span></label>
         <textarea id="aiPromptInput" rows="2" placeholder="e.g. Follow up on our Q3 pricing discussion&#10;e.g. Invite them to our trade show booth next month&#10;e.g. Contract renewal coming up, open the conversation" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:6px;outline:none;font-size:14px;resize:vertical;line-height:1.5"></textarea>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;color:var(--gray);font-weight:600">Intelligence:</span>
+        <button id="modelStd" class="btn btn-xs btn-primary" onclick="setModel('standard')">Standard</button>
+        <button id="modelEnh" class="btn btn-xs btn-ghost" onclick="setModel('enhanced')">Enhanced</button>
+        <span id="modelNote" class="hidden" style="font-size:12px;color:var(--amber)">~3x credits for complex relationships</span>
+      </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" id="aiGenBtn">Generate Message</button>
         <button class="btn btn-ghost btn-sm" id="aiSkipPrompt">Generate Based on Context</button>
@@ -745,6 +752,99 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 </div>
 
 <script>
+// BILLING & STRIPE
+const STRIPE_PK='pk_test_51TahgeITwaPUO1ECJ6nVPbXz2BRditSw96naQU1Rffs9nm8AwEUpuo472vzorCknxk7EpbGc2gg8RFYgyge7yZl900UcG4VcMM';
+let stripe=null,cardElement=null,currentPayType=null,afterPayCallback=null;
+let selectedModel='standard';
+
+function initStripe(){if(!stripe&&window.Stripe)stripe=window.Stripe(STRIPE_PK);}
+
+async function updateCreditDisplay(){
+  try{
+    const r=await fetch('/api/billing',{headers:getAuthHeaders()});
+    if(r.ok){const d=await r.json();const el=document.getElementById('creditBalance');if(el)el.textContent='⚡ '+Number(d.credits).toLocaleString()+' credits';}
+  }catch{}
+}
+
+function syncCreditDisplay(d){
+  if(d&&d._credits&&d._credits.creditsRemaining!==undefined){
+    const el=document.getElementById('creditBalance');
+    if(el)el.textContent='⚡ '+Number(d._credits.creditsRemaining).toLocaleString()+' credits';
+  }
+}
+
+function showCreditsModal(){document.getElementById('creditsModal').classList.remove('hidden');}
+
+function handleAi402(res){
+  if(res.status===402){showCreditsModal();return true;}
+  return false;
+}
+
+function setModel(m){
+  selectedModel=m;
+  document.getElementById('modelStd').className='btn btn-xs '+(m==='standard'?'btn-primary':'btn-ghost');
+  document.getElementById('modelEnh').className='btn btn-xs '+(m==='enhanced'?'btn-primary':'btn-ghost');
+  document.getElementById('modelNote').classList.toggle('hidden',m!=='enhanced');
+}
+
+async function openPaymentModal(type,skipAllowed=false,onSuccess=null){
+  initStripe();
+  currentPayType=type;
+  if(onSuccess)afterPayCallback=onSuccess;
+  const meta={
+    signup: {label:'Card Verification',price:'$0.99',desc:'One-time charge to activate your account. This amount goes toward your first credit purchase.'},
+    starter:{label:'Starter Pack',price:'$5',desc:'100 credits (first purchase: 120 credits with 20% bonus)'},
+    growth: {label:'Growth Pack',price:'$20',desc:'500 credits (first purchase: 600 credits with 20% bonus)'},
+    pro:    {label:'Pro Pack',price:'$50',desc:'1,500 credits (first purchase: 1,800 credits with 20% bonus)'}
+  };
+  const m=meta[type]||meta.starter;
+  document.getElementById('payTitle').textContent=m.label;
+  document.getElementById('payDetails').innerHTML='<strong>'+m.label+' — '+m.price+'</strong><br><span style="color:var(--gray);font-size:13px">'+m.desc+'</span>';
+  document.getElementById('paySuccess').classList.add('hidden');
+  document.getElementById('payFormArea').classList.remove('hidden');
+  document.getElementById('payBtn').classList.remove('hidden');
+  document.getElementById('payBtn').disabled=false;
+  document.getElementById('payBtn').textContent='Pay '+m.price;
+  document.getElementById('cardErrors').textContent='';
+  document.getElementById('paySkip').classList.toggle('hidden',!skipAllowed);
+  document.getElementById('paymentModal').classList.remove('hidden');
+  if(stripe){
+    if(!cardElement){
+      const els=stripe.elements();
+      cardElement=els.create('card',{style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
+    }
+    document.getElementById('cardElement').innerHTML='';
+    cardElement.mount('#cardElement');
+  }
+}
+
+async function processPayment(){
+  const btn=document.getElementById('payBtn');
+  btn.disabled=true;btn.textContent='Processing...';
+  document.getElementById('cardErrors').textContent='';
+  try{
+    const r=await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({type:currentPayType})});
+    if(!r.ok){const e=await r.json();throw new Error(e.error||'Payment setup failed');}
+    const {clientSecret,credits}=await r.json();
+    if(!clientSecret)throw new Error('No client secret returned');
+    const {error}=await stripe.confirmCardPayment(clientSecret,{payment_method:{card:cardElement}});
+    if(error){document.getElementById('cardErrors').textContent=error.message;btn.disabled=false;btn.textContent='Try Again';return;}
+    document.getElementById('payFormArea').classList.add('hidden');
+    document.getElementById('paySuccess').classList.remove('hidden');
+    document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits are being added to your account.':'Card verified successfully. You\'re all set!';
+    setTimeout(async()=>{
+      await updateCreditDisplay();
+      if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
+    },1500);
+    if(currentPayType!=='signup'){
+      setTimeout(()=>{document.getElementById('paymentModal').classList.add('hidden');document.getElementById('creditsModal').classList.add('hidden');},2500);
+    }
+  }catch(e){
+    document.getElementById('cardErrors').textContent=e.message;
+    btn.disabled=false;btn.textContent='Pay';
+  }
+}
+
 // Active profile prefix -- supports multiple use-case profiles
 let PROFILE = localStorage.getItem('renzo_active_profile') || 'default';
 function setProfile(name){
@@ -988,6 +1088,7 @@ async function doLogin(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
+    updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
   }catch(e){
@@ -1044,10 +1145,17 @@ async function doSignup(){
     await loadProfileData();
     await loadEmails();
     document.getElementById('loginView').classList.add('hidden');
-    document.getElementById('appView').classList.remove('hidden');
-    renderEmailAccounts();
-    renderProfileSelector();
-    document.getElementById('onboardModal').classList.remove('hidden');
+    function proceedToApp(){
+      document.getElementById('paymentModal').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      renderEmailAccounts();
+      renderProfileSelector();
+      updateCreditDisplay();
+      document.getElementById('onboardModal').classList.remove('hidden');
+    }
+    afterPayCallback=proceedToApp;
+    document.getElementById('paySkipLink').onclick=proceedToApp;
+    openPaymentModal('signup',true);
   }catch(e){
     err.textContent='Network error. Please try again.';
     err.classList.remove('hidden');
@@ -1501,10 +1609,12 @@ async function generateMsg(c, customInstruction){
     const res=await fetch('/api/ai',{
       method:'POST',
       headers:getAuthHeaders(),
-      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:selectedModel,max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
+    if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiModal').classList.add('hidden');return;}
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
     const data=await res.json();
+    syncCreditDisplay(data);
     let txt=data.content[0].text.trim();
     if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
     const parsed=JSON.parse(txt);
@@ -1658,8 +1768,10 @@ async function refineQueueMsg(qid){
       headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.c_name+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
     });
+    if(handleAi402(res)){btn.disabled=false;btn.textContent='Rewrite';return;}
     if(res.ok){
       const data=await res.json();
+      syncCreditDisplay(data);
       const newMsg=data.content[0].text.trim();
       const i=_cache.queue.findIndex(x=>x.id===qid);if(i>-1)_cache.queue[i].msg=newMsg;
       // Update preview in DOM without full re-render
@@ -1762,8 +1874,10 @@ async function refineDraft(did){
       headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.c_name+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
     });
+    if(handleAi402(res)){btn.disabled=false;btn.textContent='Rewrite';return;}
     if(res.ok){
       const data=await res.json();
+      syncCreditDisplay(data);
       const newMsg=data.content[0].text.trim();
       const i=_cache.drafts.findIndex(x=>x.id===did);if(i>-1)_cache.drafts[i].msg=newMsg;
       document.getElementById('dmsg-'+did).textContent=newMsg;
@@ -1866,8 +1980,10 @@ async function runBatch(){
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:filterPrompt}]})
     });
 
+    if(handleAi402(filterRes)){document.getElementById('batchProgress').classList.add('hidden');document.getElementById('runBatchBtn').disabled=false;return;}
     if(!filterRes.ok) throw new Error('Filter step failed');
     const filterData=await filterRes.json();
+    syncCreditDisplay(filterData);
     let filterTxt=filterData.content[0].text.trim();
     if(filterTxt.charCodeAt(0)===96) filterTxt=filterTxt.split('\n').slice(1,-1).join('\n');
     const filterResult=JSON.parse(filterTxt);
@@ -1917,8 +2033,10 @@ async function runBatch(){
           headers:getAuthHeaders(),
           body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:batchPromptMsg}]})
         });
+        if(res.status===402){showCreditsModal();break;}
         if(res.ok){
           const data=await res.json();
+          syncCreditDisplay(data);
           let txt=data.content[0].text.trim();
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
@@ -2314,7 +2432,8 @@ document.getElementById('aiRefineBtn') && document.getElementById('aiRefineBtn')
   this.disabled=true;this.textContent='Rewriting...';
   try{
     const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this outreach email based on this instruction: "'+instruction+'"\n\nOriginal email:\n'+current+'\n\nContact: '+aiContact.name+' at '+aiContact.company+'\n\nReturn ONLY the rewritten email text, no explanation.'}]})});
-    if(res.ok){const data=await res.json();document.getElementById('aiMsg').value=data.content[0].text.trim();document.getElementById('aiRefineBox').classList.add('hidden');document.getElementById('aiRefineInput').value='';toast('Message rewritten');}
+    if(handleAi402(res)){this.disabled=false;this.textContent='Rewrite';return;}
+    if(res.ok){const data=await res.json();syncCreditDisplay(data);document.getElementById('aiMsg').value=data.content[0].text.trim();document.getElementById('aiRefineBox').classList.add('hidden');document.getElementById('aiRefineInput').value='';toast('Message rewritten');}
   }catch(e){toast('Rewrite failed: '+e.message,'error');}
   this.disabled=false;this.textContent='Rewrite';
 });
@@ -2337,6 +2456,7 @@ document.getElementById('sReadWebsite') && document.getElementById('sReadWebsite
   this.disabled=true;this.textContent='Reading...';
   try{
     const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Company website: '+url+'. You cannot visit this URL. Use the domain name and your training knowledge to infer a company profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences: {"company":"name","sell":"what they sell in 2 sentences","customer":"who their customers are"}'}]})});
+    if(handleAi402(res)){this.disabled=false;this.textContent='Auto-fill from site';return;}
     if(!res.ok){const errData=await res.json().catch(()=>({}));throw new Error('API '+res.status+': '+(errData.error&&errData.error.message||'unknown'));}
     const data=await res.json();
     let txt=data.content[0].text.trim();
@@ -2397,7 +2517,9 @@ async function sendGuideMsg(){
 
   try{
     const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,system:systemPrompt,messages:[{role:'user',content:msg}]})});
+    if(res.status===402){document.getElementById(loadId).outerHTML='<div style="background:var(--amber-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:#92400E">Out of credits. <span style="cursor:pointer;text-decoration:underline" onclick="showCreditsModal()">Purchase more</span> to continue.</div>';msgs.scrollTop=msgs.scrollHeight;return;}
     const data=await res.json();
+    syncCreditDisplay(data);
     const reply=res.ok?data.content[0].text.trim():'Sorry, something went wrong. Try again.';
     document.getElementById(loadId).outerHTML='<div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">'+esc(reply)+'</div>';
   }catch(e){
@@ -2420,6 +2542,7 @@ async function sendGuideMsg(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
+    updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
@@ -2451,5 +2574,48 @@ async function sendGuideMsg(){
   </div>
 </div>
 
+<!-- OUT OF CREDITS MODAL -->
+<div id="creditsModal" class="modal-overlay hidden" style="z-index:4000">
+  <div class="modal-box" style="max-width:420px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">⚡</div>
+    <h2 style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:8px">Out of Credits</h2>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:24px">You've used all your credits. Purchase more to continue generating messages.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <button class="btn btn-primary btn-full" onclick="document.getElementById('creditsModal').classList.add('hidden');openPaymentModal('starter')">Starter — $5 &bull; 100 credits</button>
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('creditsModal').classList.add('hidden');openPaymentModal('growth')">Growth — $20 &bull; 500 credits</button>
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('creditsModal').classList.add('hidden');openPaymentModal('pro')">Pro — $50 &bull; 1,500 credits</button>
+    </div>
+    <button class="btn btn-ghost btn-full" onclick="document.getElementById('creditsModal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div id="paymentModal" class="modal-overlay hidden" style="z-index:4100">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="payTitle">Purchase Credits</h2>
+      <button class="modal-close" onclick="document.getElementById('paymentModal').classList.add('hidden')">×</button>
+    </div>
+    <div id="payDetails" style="background:var(--gray-pale);border-radius:8px;padding:14px 16px;margin-bottom:20px;font-size:14px;line-height:1.6"></div>
+    <div id="payFormArea">
+      <div class="field">
+        <label>Card Details</label>
+        <div id="cardElement" style="padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:8px;background:var(--white);min-height:42px"></div>
+        <div id="cardErrors" style="color:var(--red);font-size:12px;margin-top:6px"></div>
+      </div>
+      <button class="btn btn-primary btn-full" id="payBtn" style="margin-top:16px" onclick="processPayment()">Pay</button>
+      <div id="paySkip" class="hidden" style="text-align:center;margin-top:12px">
+        <span id="paySkipLink" style="font-size:13px;color:var(--gray);cursor:pointer;text-decoration:underline">Skip for now</span>
+      </div>
+    </div>
+    <div id="paySuccess" class="hidden" style="text-align:center;padding:28px 0">
+      <div style="font-size:40px;margin-bottom:10px">✓</div>
+      <div style="font-weight:700;color:var(--green);font-size:16px;margin-bottom:6px">Payment successful!</div>
+      <div id="paySuccessMsg" style="font-size:13px;color:var(--gray)"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
 </body>
 </html>
