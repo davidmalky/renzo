@@ -208,18 +208,49 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 <!-- LOGIN -->
 <div id="loginView">
   <div class="login-card">
-    <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
-    <div class="login-tag">Relationships that remember</div>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="loginUser" placeholder="you@company.com" autocomplete="email">
+    <div id="loginForm">
+      <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
+      <div class="login-tag">Relationships that remember</div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="loginUser" placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+        <div id="loginErr" class="error-text hidden">Incorrect credentials</div>
+      </div>
+      <button class="btn btn-primary btn-full" id="loginBtn">Log In</button>
+      <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
+        <hr style="flex:1;border:none;border-top:1px solid var(--gray-light)">
+        <span style="font-size:13px;color:var(--gray)">or</span>
+        <hr style="flex:1;border:none;border-top:1px solid var(--gray-light)">
+      </div>
+      <button class="btn btn-ghost btn-full" id="showSignupBtn">Create account</button>
     </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
-      <div id="loginErr" class="error-text hidden">Incorrect credentials</div>
+    <div id="signupForm" class="hidden">
+      <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
+      <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:20px;text-align:center">Create your account</div>
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="signupName" placeholder="Your name" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signupEmail" placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signupPass" placeholder="Min 8 characters" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="signupPass2" placeholder="Confirm password" autocomplete="new-password">
+      </div>
+      <div id="signupErr" class="error-text hidden"></div>
+      <button class="btn btn-primary btn-full" id="signupBtn">Create Account</button>
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--gray)">Already have an account? <span id="showLoginBtn" style="color:var(--green);cursor:pointer;text-decoration:underline">Sign in</span></div>
     </div>
-    <button class="btn btn-primary btn-full" id="loginBtn">Log In</button>
   </div>
 </div>
 
@@ -512,9 +543,8 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <div id="view-settings" class="view hidden">
       <div class="view-header"><h1 class="view-title">Settings</h1></div>
       <div class="card" style="padding:28px;max-width:560px">
-        <div id="settingsWarn" class="api-warn hidden">Add your Anthropic API key to enable AI features.</div>
-        <div class="field"><label>Anthropic API Key</label><input type="password" id="settingsKey" placeholder="sk-ant-..."></div>
-        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="background:var(--green-pale);border-left:4px solid var(--green);padding:12px 14px;border-radius:4px;font-size:13px;color:#1B4332;margin-bottom:24px">AI features are included — no API key needed.</div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:0 0 24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Company Profile</div>
         <div class="field"><label>Website URL</label>
           <div style="display:flex;gap:8px">
@@ -557,7 +587,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
         <div style="display:flex;align-items:center;gap:14px;margin-top:24px">
           <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
-          <span id="settingsOk" class="hidden" style="color:var(--green);font-size:13px;font-weight:500">Saved</span>
         </div>
       </div>
     </div>
@@ -959,7 +988,7 @@ async function doLogin(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
-    if(!localStorage.getItem(profileKey('renzo_onboarded'))) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
   }catch(e){
     err.textContent='Network error. Please try again.';
@@ -975,6 +1004,56 @@ function doLogout(){
   document.getElementById('loginView').classList.remove('hidden');
   document.getElementById('loginUser').value='';
   document.getElementById('loginPass').value='';
+  showLogin();
+}
+
+function showSignup(){
+  document.getElementById('loginForm').classList.add('hidden');
+  document.getElementById('signupForm').classList.remove('hidden');
+  document.getElementById('signupErr').classList.add('hidden');
+}
+
+function showLogin(){
+  document.getElementById('signupForm').classList.add('hidden');
+  document.getElementById('loginForm').classList.remove('hidden');
+  document.getElementById('loginErr').classList.add('hidden');
+}
+
+async function doSignup(){
+  const name=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const pass=document.getElementById('signupPass').value;
+  const pass2=document.getElementById('signupPass2').value;
+  const err=document.getElementById('signupErr');
+  const btn=document.getElementById('signupBtn');
+  err.classList.add('hidden');
+  if(!name||!email||!pass||!pass2){err.textContent='All fields are required.';err.classList.remove('hidden');return;}
+  if(pass.length<8){err.textContent='Password must be at least 8 characters.';err.classList.remove('hidden');return;}
+  if(pass!==pass2){err.textContent='Passwords do not match.';err.classList.remove('hidden');return;}
+  btn.disabled=true;btn.textContent='Creating account...';
+  try{
+    const r=await fetch('/api/auth/signup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,name})
+    });
+    const data=await r.json();
+    if(!r.ok){err.textContent=data.error||'Signup failed';err.classList.remove('hidden');btn.disabled=false;btn.textContent='Create Account';return;}
+    sessionStorage.setItem('renzo_jwt',data.token);
+    currentUser=data;
+    await loadProfileData();
+    await loadEmails();
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    renderEmailAccounts();
+    renderProfileSelector();
+    document.getElementById('onboardModal').classList.remove('hidden');
+  }catch(e){
+    err.textContent='Network error. Please try again.';
+    err.classList.remove('hidden');
+    btn.disabled=false;
+    btn.textContent='Create Account';
+  }
 }
 
 // ONBOARDING -- Step management
@@ -987,17 +1066,14 @@ function showObStep(step){
 async function readWebsite(){
   const url=document.getElementById('obUrl').value.trim();
   if(!url||!url.startsWith('http')){toast('Enter a valid URL starting with https://','error');return;}
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('Add your API key in Settings first','error');return;}
-
   document.getElementById('obSiteLoading').classList.remove('hidden');
   document.getElementById('obSiteResult').classList.add('hidden');
   document.getElementById('obReadSite').disabled=true;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:'Based on this company website URL: '+url+'\n\nYou cannot visit the URL, but use the domain name and your training knowledge about this company to infer a profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences:\n{"company":"company name","sell":"2-3 sentences describing what they sell or do","customer":"1-2 sentences describing their typical customers","tone":"Professional"}'}]})
     });
     if(!res.ok){const errData=await res.json().catch(()=>({}));throw new Error('API error '+res.status+': '+(errData.error&&errData.error.message||'unknown'));}
@@ -1384,13 +1460,6 @@ function openAi(id){
 }
 
 async function generateMsg(c, customInstruction){
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){
-    document.getElementById('aiLoading').classList.add('hidden');
-    document.getElementById('aiErr').classList.remove('hidden');
-    document.getElementById('aiErr').textContent='No API key set. Go to Settings to add your Anthropic API key.';
-    return;
-  }
   const p=gp(),rules=gr();
   const trigger=computeTrigger(c);
   const rulesStr=rules.length?'Additional instructions: '+rules.join('. '):'';
@@ -1429,9 +1498,9 @@ async function generateMsg(c, customInstruction){
     +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only"}';
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
@@ -1581,14 +1650,12 @@ async function refineQueueMsg(qid){
   if(!instruction) return;
   const item=gq().find(x=>x.id===qid);
   if(!item) return;
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('No API key set','error');return;}
   const btn=document.querySelector('#qrefine-'+qid+' .btn-primary');
   btn.disabled=true;btn.textContent='Rewriting...';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.c_name+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
     });
     if(res.ok){
@@ -1687,14 +1754,12 @@ async function refineDraft(did){
   if(!instruction) return;
   const item=_cache.drafts.find(x=>x.id===did);
   if(!item) return;
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('No API key set','error');return;}
   const btn=document.querySelector('#drefine-'+did+' .btn-primary');
   btn.disabled=true;btn.textContent='Rewriting...';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.c_name+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
     });
     if(res.ok){
@@ -1764,9 +1829,6 @@ async function runBatch(){
   if(!query){toast('Enter a prompt first','error');return;}
   const contacts=gc();
   if(!contacts.length){toast('No contacts found -- import contacts first','error');return;}
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('No API key set. Go to Settings.','error');return;}
-
   const p=gp();
   document.getElementById('batchProgress').classList.remove('hidden');
   document.getElementById('batchResults').classList.add('hidden');
@@ -1798,9 +1860,9 @@ async function runBatch(){
       +'\n\nReturn ONLY valid JSON:'
       +'\n{"matched":[0,2,5],"reasoning":"one sentence explaining who you picked and why","context":"what each message should focus on for this outreach"}';
 
-    const filterRes=await fetch('https://api.anthropic.com/v1/messages',{
+    const filterRes=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:getAuthHeaders(),
       body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:filterPrompt}]})
     });
 
@@ -1850,9 +1912,9 @@ async function runBatch(){
           +'\n\nWrite a SHORT (3-5 sentence) email. No bullets. No dashes. No sign-off. Start with Hi [firstname]. Sound human.'
           +'\n\nReturn JSON: {"reason":"one sentence why this contact fits","message":"email body only"}';
 
-        const res=await fetch('https://api.anthropic.com/v1/messages',{
+        const res=await fetch('/api/ai',{
           method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          headers:getAuthHeaders(),
           body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:batchPromptMsg}]})
         });
         if(res.ok){
@@ -2054,8 +2116,7 @@ function showIntegrationDetail(key){
 }
 
 function loadSettings(){
-  const key=localStorage.getItem('renzo_api_key')||'',p=gp();
-  document.getElementById('settingsKey').value=key;
+  const p=gp();
   document.getElementById('sWebsite').value=p.website||'';
   document.getElementById('sCo').value=p.company||'';
   document.getElementById('sSell').value=p.sell||'';
@@ -2063,21 +2124,14 @@ function loadSettings(){
   document.getElementById('sRole').value=p.role||'';
   document.getElementById('sTone').value=p.tone||'Professional';
   document.getElementById('sRep').value=p.repName||'';
-  document.getElementById('settingsWarn').classList[key?'add':'remove']('hidden');
-  document.getElementById('settingsOk').classList.add('hidden');
   renderRules();
   renderEmailAccounts();
 }
 
 async function saveSettings(){
-  const key=document.getElementById('settingsKey').value.trim();
-  localStorage.setItem('renzo_api_key',key);
   const profileData={website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim()};
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
   _cache.profile=r.ok?(await r.json()):profileData;
-  document.getElementById('settingsWarn').classList[key?'add':'remove']('hidden');
-  document.getElementById('settingsOk').classList.remove('hidden');
-  setTimeout(()=>document.getElementById('settingsOk').classList.add('hidden'),2000);
   toast('Settings saved','success');
 }
 
@@ -2193,6 +2247,11 @@ async function deleteRule(idx){
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('showSignupBtn').addEventListener('click',showSignup);
+document.getElementById('showLoginBtn').addEventListener('click',showLogin);
+document.getElementById('signupBtn').addEventListener('click',doSignup);
+document.getElementById('signupPass').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
+document.getElementById('signupPass2').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
 document.getElementById('logoutBtn').addEventListener('click',doLogout);
 document.getElementById('profileSel').addEventListener('change',function(){switchProfile(this.value);});
 document.getElementById('obSave').addEventListener('click',saveOnboarding);
@@ -2252,11 +2311,9 @@ document.getElementById('aiRefineBtn') && document.getElementById('aiRefineBtn')
   const instruction=document.getElementById('aiRefineInput').value.trim();
   if(!instruction||!aiContact) return;
   const current=document.getElementById('aiMsg').value;
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('No API key set','error');return;}
   this.disabled=true;this.textContent='Rewriting...';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this outreach email based on this instruction: "'+instruction+'"\n\nOriginal email:\n'+current+'\n\nContact: '+aiContact.name+' at '+aiContact.company+'\n\nReturn ONLY the rewritten email text, no explanation.'}]})});
+    const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this outreach email based on this instruction: "'+instruction+'"\n\nOriginal email:\n'+current+'\n\nContact: '+aiContact.name+' at '+aiContact.company+'\n\nReturn ONLY the rewritten email text, no explanation.'}]})});
     if(res.ok){const data=await res.json();document.getElementById('aiMsg').value=data.content[0].text.trim();document.getElementById('aiRefineBox').classList.add('hidden');document.getElementById('aiRefineInput').value='';toast('Message rewritten');}
   }catch(e){toast('Rewrite failed: '+e.message,'error');}
   this.disabled=false;this.textContent='Rewrite';
@@ -2277,11 +2334,9 @@ document.getElementById('sReadWebsite') && document.getElementById('sReadWebsite
   if(!url){toast('Enter a website URL first','error');return;}
   if(!url.startsWith('http')) url='https://'+url;
   document.getElementById('sWebsite').value=url;
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){toast('Add API key first','error');return;}
   this.disabled=true;this.textContent='Reading...';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Company website: '+url+'. You cannot visit this URL. Use the domain name and your training knowledge to infer a company profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences: {"company":"name","sell":"what they sell in 2 sentences","customer":"who their customers are"}'}]})});
+    const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Company website: '+url+'. You cannot visit this URL. Use the domain name and your training knowledge to infer a company profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences: {"company":"name","sell":"what they sell in 2 sentences","customer":"who their customers are"}'}]})});
     if(!res.ok){const errData=await res.json().catch(()=>({}));throw new Error('API '+res.status+': '+(errData.error&&errData.error.message||'unknown'));}
     const data=await res.json();
     let txt=data.content[0].text.trim();
@@ -2332,13 +2387,6 @@ async function sendGuideMsg(){
   msgs.innerHTML+='<div style="background:var(--green);color:#fff;border-radius:10px 10px 0 10px;padding:10px 13px;font-size:13px;line-height:1.5;max-width:90%;align-self:flex-end">'+esc(msg)+'</div>';
   msgs.scrollTop=msgs.scrollHeight;
 
-  const key=localStorage.getItem('renzo_api_key')||'';
-  if(!key){
-    msgs.innerHTML+='<div style="background:var(--gray-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:var(--dark);line-height:1.5;max-width:90%">Add your API key in Settings to enable AI guidance.</div>';
-    msgs.scrollTop=msgs.scrollHeight;
-    return;
-  }
-
   // Loading
   const loadId='guide-load-'+Date.now();
   msgs.innerHTML+='<div id="'+loadId+'" style="background:var(--gray-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--gray);max-width:60%">Thinking...</div>';
@@ -2348,12 +2396,12 @@ async function sendGuideMsg(){
   const systemPrompt='You are Renzo Guide, a helpful AI assistant built into the Renzo relationship outreach platform. You help users navigate and use Renzo effectively. Renzo is a B2B outreach tool that: imports contacts via CSV, uses AI to generate personalized outreach emails based on relationship context, manages an outreach queue, sends emails via Gmail or Outlook web compose, tracks activity history per contact, supports batch outreach with AI-powered contact filtering, and has an integrations page. The current user is '+(p.repName||'a rep')+' at '+(p.company||'their company')+'. Be concise, practical, and friendly. If they ask how to do something, give step-by-step instructions. Keep answers under 100 words.';
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,system:systemPrompt,messages:[{role:'user',content:msg}]})});
+    const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,system:systemPrompt,messages:[{role:'user',content:msg}]})});
     const data=await res.json();
     const reply=res.ok?data.content[0].text.trim():'Sorry, something went wrong. Try again.';
     document.getElementById(loadId).outerHTML='<div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">'+esc(reply)+'</div>';
   }catch(e){
-    document.getElementById(loadId).outerHTML='<div style="background:var(--red-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--red)">Error connecting. Check your API key in Settings.</div>';
+    document.getElementById(loadId).outerHTML='<div style="background:var(--red-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--red)">Error connecting. Please try again.</div>';
   }
   msgs.scrollTop=msgs.scrollHeight;
 }
@@ -2372,7 +2420,7 @@ async function sendGuideMsg(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
-    if(!localStorage.getItem(profileKey('renzo_onboarded'))) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();

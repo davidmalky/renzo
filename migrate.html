@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo Data Migration</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#F5F0E8;color:#1C1917;line-height:1.5;font-size:14px;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.14);width:100%;max-width:580px;padding:40px}
+h1{font-family:Georgia,serif;font-size:28px;margin-bottom:8px;color:#1C1917}
+.sub{color:#6B7280;margin-bottom:24px;font-size:13px;line-height:1.6}
+label{display:block;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:6px}
+input{width:100%;padding:10px 12px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-bottom:20px}
+input:focus{border-color:#1F6B47}
+textarea{width:100%;height:260px;padding:10px 12px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:12px;font-family:monospace;resize:vertical;outline:none;background:#F5F0E8;color:#1C1917;margin-bottom:4px}
+button{background:#1F6B47;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:hover:not(:disabled){background:#237A52}
+.hint{font-size:12px;color:#9CA3AF;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Renzo Data Migration</h1>
+  <p class="sub">One-time tool to migrate your local Renzo data into your account. Open browser DevTools → Application → Session Storage → find <strong>renzo_jwt</strong> and paste its value below, then click Run Migration.</p>
+  <label>JWT Token</label>
+  <input type="text" id="jwt" placeholder="Paste your renzo_jwt token here">
+  <label>Migration Log</label>
+  <textarea id="log" readonly placeholder="Output will appear here..."></textarea>
+  <p class="hint">Your localStorage data will NOT be deleted after migration.</p>
+  <button id="runBtn" onclick="runMigration()">Run Migration</button>
+</div>
+<script>
+function addLog(msg){
+  const el=document.getElementById('log');
+  el.value+=(el.value?'\n':'')+new Date().toLocaleTimeString()+' '+msg;
+  el.scrollTop=el.scrollHeight;
+}
+
+function hdrs(jwt,profile){
+  return {'Authorization':'Bearer '+jwt,'Content-Type':'application/json','x-profile':profile||'default'};
+}
+
+function parseLS(key){
+  try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}catch{return null;}
+}
+
+async function migrateProfile(jwt,profile,data){
+  if(!data||!Object.keys(data).length) return;
+  const body={
+    company:data.company||'',sell:data.sell||'',customer:data.customer||'',
+    role:data.role||'',tone:data.tone||'Professional',
+    rep_name:data.repName||data.rep_name||null,website:data.website||''
+  };
+  if(!body.company&&!body.sell){addLog('['+profile+'] Profile: empty, skipped');return;}
+  const r=await fetch('/api/profile',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify(body)});
+  if(r.ok) addLog('['+profile+'] Profile saved');
+  else addLog('['+profile+'] Profile FAILED: '+(await r.text()));
+}
+
+async function migrateContacts(jwt,profile,contacts){
+  if(!Array.isArray(contacts)||!contacts.length){addLog('['+profile+'] Contacts: none');return;}
+  let ok=0,skip=0,fail=0;
+  for(const c of contacts){
+    if(!c.name&&!c.company){skip++;continue;}
+    const body={
+      name:c.name||'',email:c.email||'',company:c.company||'',phone:c.phone||'',
+      website:c.website||'',linkedin:c.linkedin||'',title:c.title||'',
+      notes:c.notes||'',status:c.status||'active',history:c.history||null,
+      products:c.products||null,tier:c.tier||null,
+      last_contact:c.lastContact||c.last_contact||null,
+      contract_expiry:c.contractExpiry||c.contract_expiry||null,
+      annual_spend:c.annualSpend!=null?c.annualSpend:(c.annual_spend??null),
+      account_size:c.accountSize||c.account_size||null,
+      invoice_amount:c.invoiceAmount!=null?c.invoiceAmount:(c.invoice_amount??null),
+      rep_name:c.repName||c.rep_name||null
+    };
+    const r=await fetch('/api/contacts',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify(body)});
+    if(r.ok) ok++; else fail++;
+  }
+  addLog('['+profile+'] Contacts: '+ok+' saved'+(skip?' '+skip+' skipped':'')+(fail?' '+fail+' failed':''));
+}
+
+async function migrateActivity(jwt,profile,items){
+  if(!Array.isArray(items)||!items.length){addLog('['+profile+'] Activity: none');return;}
+  let ok=0,fail=0;
+  for(const a of items){
+    const body={
+      msg:a.msg||'',reason:a.reason||'',trigger:a.trigger||'',
+      ts:a.ts||new Date().toISOString(),
+      c_name:a.cName||a.c_name||'',co:a.co||''
+    };
+    const r=await fetch('/api/activity',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify(body)});
+    if(r.ok) ok++; else fail++;
+  }
+  addLog('['+profile+'] Activity: '+ok+' saved'+(fail?' '+fail+' failed':''));
+}
+
+async function migrateQueue(jwt,profile,items){
+  if(!Array.isArray(items)||!items.length){addLog('['+profile+'] Queue: none');return;}
+  let ok=0,fail=0;
+  for(const q of items){
+    const body={
+      msg:q.msg||'',subject:q.subject||'',reason:q.reason||'',
+      trigger:q.trigger||'',email:q.email||'',
+      c_name:q.c_name||q.cName||'',co:q.co||''
+    };
+    const r=await fetch('/api/queue',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify(body)});
+    if(r.ok) ok++; else fail++;
+  }
+  addLog('['+profile+'] Queue: '+ok+' saved'+(fail?' '+fail+' failed':''));
+}
+
+async function migrateDrafts(jwt,profile,items){
+  if(!Array.isArray(items)||!items.length){addLog('['+profile+'] Drafts: none');return;}
+  let ok=0,fail=0;
+  for(const d of items){
+    const body={
+      msg:d.msg||'',subject:d.subject||'',reason:d.reason||'',
+      trigger:d.trigger||'',email:d.email||'',
+      c_name:d.c_name||d.cName||'',co:d.co||''
+    };
+    const r=await fetch('/api/drafts',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify(body)});
+    if(r.ok) ok++; else fail++;
+  }
+  addLog('['+profile+'] Drafts: '+ok+' saved'+(fail?' '+fail+' failed':''));
+}
+
+async function migrateRules(jwt,profile,rules){
+  if(!Array.isArray(rules)||!rules.length){addLog('['+profile+'] Rules: none');return;}
+  const rows=rules.map((r,i)=>({rule_text:typeof r==='string'?r:(r.rule_text||''),sort_order:i})).filter(r=>r.rule_text);
+  if(!rows.length){addLog('['+profile+'] Rules: none after filter');return;}
+  const r=await fetch('/api/rules',{method:'POST',headers:hdrs(jwt,profile),body:JSON.stringify({rules:rows})});
+  if(r.ok) addLog('['+profile+'] Rules: '+rows.length+' saved');
+  else addLog('['+profile+'] Rules FAILED: '+(await r.text()));
+}
+
+async function migrateEmails(jwt,accounts){
+  if(!Array.isArray(accounts)||!accounts.length){addLog('Email accounts: none');return;}
+  const rows=accounts.map((e,i)=>({addr:e.addr||e,label:e.label||'',sort_order:i})).filter(e=>e.addr);
+  const r=await fetch('/api/emails',{method:'POST',headers:hdrs(jwt,'default'),body:JSON.stringify({accounts:rows})});
+  if(r.ok) addLog('Email accounts: '+rows.length+' saved');
+  else addLog('Email accounts FAILED: '+(await r.text()));
+}
+
+async function runMigration(){
+  const jwt=document.getElementById('jwt').value.trim();
+  if(!jwt){alert('Paste your JWT token first');return;}
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true;btn.textContent='Migrating...';
+  document.getElementById('log').value='';
+
+  addLog('Starting migration...');
+
+  // Validate token first
+  try{
+    const vr=await fetch('/api/auth/validate',{headers:{'Authorization':'Bearer '+jwt}});
+    const vd=await vr.json();
+    if(!vd.valid){addLog('ERROR: Invalid or expired token. Log into Renzo and copy renzo_jwt from sessionStorage.');btn.disabled=false;btn.textContent='Run Migration';return;}
+    addLog('Token valid for: '+vd.email);
+  }catch(e){addLog('ERROR: Could not validate token: '+e.message);btn.disabled=false;btn.textContent='Run Migration';return;}
+
+  // Discover profiles
+  const profiles=new Set(['default']);
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(!key||!key.startsWith('renzo_')) continue;
+    const m=key.match(/^renzo_[^_]+__(.+)$/);
+    if(m) profiles.add(m[1]);
+  }
+  addLog('Profiles found: '+[...profiles].join(', '));
+
+  // Global: email accounts
+  await migrateEmails(jwt,parseLS('renzo_emails')||[]);
+
+  // Per-profile migration
+  for(const profile of profiles){
+    const sfx=profile==='default'?'':'__'+profile;
+    addLog('\n-- Profile: '+profile+' --');
+    await migrateProfile(jwt,profile,parseLS('renzo_profile'+sfx)||{});
+    await migrateContacts(jwt,profile,parseLS('renzo_contacts'+sfx)||[]);
+    await migrateActivity(jwt,profile,parseLS('renzo_activity'+sfx)||[]);
+    await migrateQueue(jwt,profile,parseLS('renzo_queue'+sfx)||[]);
+    await migrateDrafts(jwt,profile,parseLS('renzo_drafts'+sfx)||[]);
+    await migrateRules(jwt,profile,parseLS('renzo_rules'+sfx)||[]);
+  }
+
+  addLog('\nDone. Data was NOT removed from localStorage.');
+  btn.disabled=false;btn.textContent='Run Migration';
+}
+</script>
+</body>
+</html>

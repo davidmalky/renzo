@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/migrate", "destination": "/migrate.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
