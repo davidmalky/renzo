@@ -1,0 +1,115 @@
+# CODE ANALYSIS REPORT
+
+## EXISTING_FEATURES:
+
+**Contact Management:**
+- `saveContact()` - saves/updates contact data to localStorage
+- `openEditContact(id)` - populates form with existing contact data for editing
+- `clearCtForm()` - resets contact form fields to empty
+- Contact modal (`ctModal`) with form fields for contact information
+- `ctInvoice` field exists in the form for invoice/billing data
+- Contact form uses `form-row` grid layout for side-by-side fields
+- Contact data stored in localStorage under key pattern (not visible in provided code but referenced by functions)
+
+**Form Structure:**
+- `.field` class structure with label and input elements
+- `.form-row` grid layout with `grid-template-columns:1fr 1fr` for two-column forms
+- Input types include text, number, select, textarea
+- Form validation with min/max attributes on number inputs
+
+**Data Handling:**
+- `parseFloat()` with `||0` fallback pattern for numeric fields
+- Value assignment pattern: `element.value = data.field || ''`
+- Field clearing in array iteration pattern
+
+**UI Components:**
+- Modal system (ctModal referenced)
+- CSS custom properties and styling system
+- Button system (.btn, .btn-primary, etc.)
+- Field styling with focus states
+
+## MISSING_FEATURES:
+
+- **`annualSpend` field completely absent from contact form** - this is the core issue
+- No input element with id `ctAnnual` in the HTML
+- No `annualSpend` property being saved in `saveContact()`
+- No `annualSpend` value being loaded in `openEditContact()`
+- No `ctAnnual` field being cleared in `clearCtForm()`
+
+## CHANGES_NEEDED:
+
+**1. HTML Structure (ctModal form):**
+- Locate the `form-row` containing `ctInvoice` field
+- Add second `.field` div with `ctAnnual` input inside that same `form-row`
+
+**2. JavaScript - `saveContact()` function:**
+- Add `annualSpend: parseFloat(document.getElementById('ctAnnual').value) || 0` to contact object being saved
+
+**3. JavaScript - `openEditContact(id)` function:**
+- Add `document.getElementById('ctAnnual').value = c.annualSpend || ''` to populate field when editing
+
+**4. JavaScript - `clearCtForm()` function:**
+- Add `'ctAnnual'` to the array of field IDs being reset to empty string
+
+## REUSE:
+
+**Existing Patterns to Follow:**
+- `.field` structure: `<div class="field"><label>Label Text</label><input type="number" id="..." min="0"></div>`
+- Number input pattern with `type="number"` and `min="0"` attributes
+- Data parsing: `parseFloat(document.getElementById('...').value) || 0`
+- Value loading: `document.getElementById('...').value = object.property || ''`
+- `.form-row` grid container for side-by-side fields (already exists around ctInvoice)
+- Label styling with uppercase, small font, gray color (automatic via CSS)
+- Input styling with border, focus states (automatic via CSS)
+
+**CSS Classes:**
+- `.field` - wrapper for label + input
+- `.form-row` - already applied to parent container
+- No new CSS needed - all styles already defined
+
+**Naming Convention:**
+- Field ID pattern: `ct` prefix + camelCase (e.g., `ctAnnual`)
+- Object property: camelCase without prefix (e.g., `annualSpend`)
+
+## RISKS:
+
+**Low Risk - Surgical Change:**
+- This is a pure additive change with no modifications to existing logic
+- No breaking changes to existing contact records (new field will default to 0 or '')
+- No conflicts with existing fields or functionality
+- Uses established patterns already in codebase
+
+**Potential Issues:**
+- If `annualSpend` is referenced elsewhere in code (mentioned in task as "used throughout priority scoring and AI generation"), those features may currently be broken or using default/undefined values
+- Existing contacts in localStorage won't have `annualSpend` property until edited - code handles this with `|| 0` and `|| ''` fallbacks
+
+**Validation Considerations:**
+- No max value specified (invoice field likely similar)
+- `min="0"` prevents negative values
+- Empty field defaults to 0 in saved data (appropriate for numeric calculations)
+
+## DATA_STRUCTURES:
+
+**Contact Object Structure (inferred from code):**
+```javascript
+{
+  // ... existing fields ...
+  invoice: Number,        // existing field from ctInvoice
+  annualSpend: Number,    // NEW - to be added
+  // ... other fields referenced by clearCtForm and openEditContact ...
+}
+```
+
+**localStorage Keys:**
+- Specific key not visible in provided code, but contact data is stored and retrieved in `saveContact()` and `openEditContact(id)`
+- Data appears to be object-based with property access pattern `c.propertyName`
+
+**Form Field IDs (referenced):**
+- `ctInvoice` - existing invoice field
+- `ctAnnual` - NEW field to be added
+- Other ct-prefixed fields exist (cleared in `clearCtForm()`)
+
+**Data Type Handling:**
+- Numeric fields use `parseFloat()` with `|| 0` fallback for safety
+- Display values use `|| ''` to show empty string instead of 0 in form fields
+- This pattern prevents showing "0" in empty fields while ensuring valid numbers in data

@@ -1,0 +1,523 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Field Mapping - Renzo Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#2D6A4F;--primary-light:#40916C;--primary-dark:#1B4332;--bg-base:#F7F4EF;--bg-card:#FFF;--text-primary:#1A1A1A;--text-secondary:#666;--border:#E0E0E0;--danger:#DC2626;--warning:#F59E0B;--success:#10B981;--info:#3B82F6;--sidebar-bg:#1A1A1A;--sidebar-text:#F7F4EF;--transition:0.2s ease;--shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.12);--shadow-lg:0 10px 40px rgba(0,0,0,.16)}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-base);color:var(--text-primary);line-height:1.5;overflow-x:hidden}
+.hidden{display:none!important}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip-link{position:absolute;top:-40px;left:0;background:var(--primary);color:#fff;padding:8px 16px;z-index:1000;transition:top var(--transition)}
+.skip-link:focus{top:0}
+.app-container{display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);display:flex;flex-direction:column;padding:24px 0;position:fixed;height:100vh;overflow-y:auto;z-index:100}
+.sidebar-logo{font-size:24px;font-weight:700;color:var(--primary-light);padding:0 24px;margin-bottom:32px}
+.sidebar-nav{flex:1}
+.nav-item{padding:12px 24px;cursor:pointer;transition:background var(--transition);display:flex;align-items:center;gap:8px;border:none;background:transparent;color:inherit;width:100%;text-align:left;font-size:14px;font-family:inherit}
+.nav-item:hover,.nav-item:focus{background:rgba(255,255,255,.05);outline:none}
+.nav-item.active{background:var(--primary-dark);border-left:3px solid var(--primary-light)}
+.main-content{flex:1;margin-left:240px;padding:32px;width:calc(100% - 240px)}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.header h1{font-size:28px;font-weight:700}
+.btn{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;transition:all var(--transition);font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover,.btn-primary:focus{background:var(--primary-dark);transform:translateY(-1px);box-shadow:var(--shadow-md);outline:2px solid var(--primary-light);outline-offset:2px}
+.btn-secondary{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary)}
+.btn-secondary:hover,.btn-secondary:focus{background:var(--bg-base);outline:2px solid var(--primary);outline-offset:2px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover,.btn-danger:focus{background:#B91C1C;outline:2px solid var(--danger);outline-offset:2px}
+.controls{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.search-input{padding:10px 16px;border:1px solid var(--border);border-radius:6px;font-size:14px;width:300px;font-family:inherit}
+.search-input:focus{outline:2px solid var(--primary);outline-offset:2px;border-color:var(--primary)}
+.filter-select{padding:10px 16px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--bg-card);cursor:pointer;font-family:inherit}
+.filter-select:focus{outline:2px solid var(--primary);outline-offset:2px;border-color:var(--primary)}
+.card{background:var(--bg-card);border-radius:8px;padding:24px;box-shadow:var(--shadow-sm)}
+.table-container{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:12px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-secondary);background:var(--bg-base)}
+td{padding:12px;border-bottom:1px solid var(--border)}
+tbody tr:hover{background:var(--bg-base)}
+.badge{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;display:inline-block}
+.badge-success{background:#D1FAE5;color:#065F46}
+.badge-warning{background:#FEF3C7;color:#92400E}
+.badge-danger{background:#FEE2E2;color:#991B1B}
+.badge-info{background:#DBEAFE;color:#1E40AF}
+.toggle-switch{position:relative;width:44px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;transition:background var(--transition);display:inline-block}
+.toggle-switch.active{background:var(--success)}
+.toggle-switch::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left var(--transition);box-shadow:var(--shadow-sm)}
+.toggle-switch.active::after{left:22px}
+.toggle-switch:focus{outline:2px solid var(--primary);outline-offset:2px}
+.toggle-label{display:flex;align-items:center;gap:8px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:var(--bg-card);border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.modal-header{padding:24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h2{font-size:20px;font-weight:600}
+.modal-close{background:transparent;border:none;font-size:24px;cursor:pointer;color:var(--text-secondary);padding:0;width:32px;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover,.modal-close:focus{background:var(--bg-base);outline:2px solid var(--primary);outline-offset:2px}
+.modal-body{padding:24px;overflow-y:auto;flex:1}
+.modal-footer{padding:24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:12px}
+.form-group{margin-bottom:20px}
+.form-label{display:block;margin-bottom:8px;font-weight:500;font-size:14px}
+.form-input,.form-select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit}
+.form-input:focus,.form-select:focus{outline:2px solid var(--primary);outline-offset:2px;border-color:var(--primary)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.direction-buttons{display:flex;gap:8px}
+.direction-btn{flex:1;padding:8px 12px;border:2px solid var(--border);background:var(--bg-card);border-radius:6px;cursor:pointer;font-size:13px;transition:all var(--transition);display:flex;align-items:center;justify-content:center;gap:4px}
+.direction-btn.active{border-color:var(--primary);background:var(--primary-light);color:#fff}
+.direction-btn:hover:not(.active),.direction-btn:focus{border-color:var(--primary);outline:none}
+.checkbox-group{display:flex;flex-direction:column;gap:8px}
+.checkbox-label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox-label input[type="checkbox"]{width:18px;height:18px;cursor:pointer}
+.checkbox-label input[type="checkbox"]:focus{outline:2px solid var(--primary);outline-offset:2px}
+.preview-panel{background:var(--bg-base);border-radius:6px;padding:16px;margin-top:16px}
+.preview-row{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:12px;background:var(--bg-card);border-radius:4px;margin-bottom:8px}
+.preview-arrow{color:var(--primary);font-weight:600}
+.alert{padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:14px}
+.alert-warning{background:#FEF3C7;color:#92400E;border-left:4px solid var(--warning)}
+.alert-danger{background:#FEE2E2;color:#991B1B;border-left:4px solid var(--danger)}
+.alert-info{background:#DBEAFE;color:#1E40AF;border-left:4px solid var(--info)}
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:20px}
+.tab{padding:12px 24px;cursor:pointer;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all var(--transition)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab:hover:not(.active),.tab:focus{color:var(--text-primary);outline:2px solid var(--primary);outline-offset:-2px}
+.drag-handle{cursor:grab;color:var(--text-secondary);padding:4px}
+.drag-handle:active{cursor:grabbing}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-secondary)}
+.empty-state-icon{font-size:48px;margin-bottom:16px;opacity:.5}
+.type-indicator{font-family:'Courier New',monospace;font-size:12px;color:var(--text-secondary);background:var(--bg-base);padding:2px 8px;border-radius:4px}
+.action-buttons{display:flex;gap:8px}
+.icon-btn{background:transparent;border:none;padding:8px;cursor:pointer;border-radius:4px;color:var(--text-secondary);transition:all var(--transition)}
+.icon-btn:hover,.icon-btn:focus{background:var(--bg-base);color:var(--text-primary);outline:2px solid var(--primary);outline-offset:2px}
+.loader{border:3px solid var(--border);border-top:3px solid var(--primary);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@media(max-width:768px){.sidebar{width:60px}.sidebar-logo,.nav-item span{display:none}.main-content{margin-left:60px;width:calc(100% - 60px)}.form-row{grid-template-columns:1fr}.direction-buttons{flex-direction:column}}
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<div class="app-container">
+<aside class="sidebar" role="navigation" aria-label="Main navigation">
+<div class="sidebar-logo">Renzo</div>
+<nav class="sidebar-nav">
+<button class="nav-item active" aria-current="page"><span>Field Mappings</span></button>
+<button class="nav-item"><span>Sync Settings</span></button>
+<button class="nav-item"><span>Activity Log</span></button>
+<button class="nav-item"><span>System Status</span></button>
+</nav>
+</aside>
+<main class="main-content" id="main-content">
+<header class="header">
+<h1>Contact Field Mappings</h1>
+<div style="display:flex;gap:12px">
+<button class="btn btn-secondary" id="exportBtn">Export</button>
+<button class="btn btn-secondary" id="importBtn">Import</button>
+<button class="btn btn-primary" id="addMappingBtn">+ Add Mapping</button>
+</div>
+</header>
+<div class="controls">
+<input type="search" class="search-input" placeholder="Search mappings..." id="searchInput" aria-label="Search field mappings">
+<select class="filter-select" id="directionFilter" aria-label="Filter by sync direction">
+<option value="">All Directions</option>
+<option value="sf_to_renzo">SF → Renzo</option>
+<option value="renzo_to_sf">Renzo → SF</option>
+<option value="bidirectional">Bidirectional</option>
+</select>
+<select class="filter-select" id="statusFilter" aria-label="Filter by status">
+<option value="">All Status</option>
+<option value="enabled">Enabled</option>
+<option value="disabled">Disabled</option>
+</select>
+<button class="btn btn-secondary" id="resetDefaultsBtn">Reset to Defaults</button>
+</div>
+<div class="card">
+<div class="table-container">
+<table role="table" aria-label="Field mappings table">
+<thead>
+<tr>
+<th scope="col">Order</th>
+<th scope="col">Salesforce Field</th>
+<th
+<scope="col">Renzo Field</th>
+<th scope="col">Direction</th>
+<th scope="col">Type</th>
+<th scope="col">Status</th>
+<th scope="col">Conflict</th>
+<th scope="col">Actions</th>
+</tr>
+</thead>
+<tbody id="mappingTableBody">
+<tr><td colspan="8"><div class="loader"></div></td></tr>
+</tbody>
+</table>
+</div>
+<div id="emptyState" class="empty-state" style="display:none">
+<div class="empty-state-icon">📋</div>
+<h3>No field mappings configured</h3>
+<p>Click "Add Mapping" to create your first field mapping</p>
+</div>
+</div>
+</main>
+</div>
+<div id="modalRoot"></div>
+<script nonce="{{CSP_NONCE}}">
+const STATE={mappings:[],sfFields:[],renzoFields:[],currentMapping:null,isDirty:false};
+const API_BASE='/api';
+const CACHE_DURATION=3600000;
+
+async function initializeMappingInterface(){
+showLoader();
+try{
+await Promise.all([loadExistingMappings(),fetchSalesforceFields(),fetchRenzoContactSchema()]);
+renderMappingTable(STATE.mappings);
+attachEventListeners();
+initializeDragDrop();
+}catch(err){
+showError('Failed to initialize interface: '+err.message);
+}finally{
+hideLoader();
+}
+}
+
+async function loadExistingMappings(){
+const response=await fetch(`${API_BASE}/field-mappings`,{credentials:'include'});
+if(!response.ok)throw new Error(`HTTP ${response.status}`);
+const data=await response.json();
+STATE.mappings=data.sort((a,b)=>a.sort_order-b.sort_order);
+}
+
+async function fetchSalesforceFields(){
+const cached=sessionStorage.getItem('sf_fields');
+const cacheTime=sessionStorage.getItem('sf_fields_time');
+if(cached&&cacheTime&&Date.now()-parseInt(cacheTime)<CACHE_DURATION){
+STATE.sfFields=JSON.parse(cached);
+return;
+}
+const response=await fetch(`${API_BASE}/salesforce/fields`,{credentials:'include'});
+if(!response.ok)throw new Error(`HTTP ${response.status}`);
+const data=await response.json();
+STATE.sfFields=data.fields;
+sessionStorage.setItem('sf_fields',JSON.stringify(data.fields));
+sessionStorage.setItem('sf_fields_time',Date.now().toString());
+}
+
+async function fetchRenzoContactSchema(){
+const cached=sessionStorage.getItem('renzo_schema');
+const cacheTime=sessionStorage.getItem('renzo_schema_time');
+if(cached&&cacheTime&&Date.now()-parseInt(cacheTime)<CACHE_DURATION){
+STATE.renzoFields=JSON.parse(cached);
+return;
+}
+const response=await fetch(`${API_BASE}/contact-schema`,{credentials:'include'});
+if(!response.ok)throw new Error(`HTTP ${response.status}`);
+const data=await response.json();
+STATE.renzoFields=data.fields;
+sessionStorage.setItem('renzo_schema',JSON.stringify(data.fields));
+sessionStorage.setItem('renzo_schema_time',Date.now().toString());
+}
+
+function renderMappingTable(mappings){
+const tbody=document.getElementById('mappingTableBody');
+const empty=document.getElementById('emptyState');
+if(!mappings||mappings.length===0){
+tbody.innerHTML='';
+empty.style.display='block';
+return;
+}
+empty.style.display='none';
+tbody.innerHTML=mappings.map((m,idx)=>`
+<tr data-mapping-id="${m.id}" draggable="true">
+<td><span class="drag-handle" aria-label="Reorder mapping">⋮⋮</span> ${idx+1}</td>
+<td>${escapeHtml(m.sf_field_label||m.sf_field_name)}</td>
+<td>${escapeHtml(m.renzo_field_label||m.renzo_field_name)}</td>
+<td><span class="badge badge-${m.direction}">${getDirectionIcon(m.direction)}</span></td>
+<td><span class="type-indicator">${escapeHtml(m.sf_field_type)}</span></td>
+<td><label class="toggle-switch"><input type="checkbox" ${m.enabled?'checked':''} onchange="toggleMappingStatus('${m.id}',this.checked)" aria-label="Toggle ${m.sf_field_name} mapping"><span class="toggle-slider" role="presentation"></span></label></td>
+<td>${escapeHtml(m.conflict_resolution||'SF Wins')}</td>
+<td class="action-buttons">
+<button class="icon-btn" onclick="openEditMappingModal('${m.id}')" aria-label="Edit ${m.sf_field_name} mapping">✏️</button>
+<button class="icon-btn" onclick="deleteMapping('${m.id}')" aria-label="Delete ${m.sf_field_name} mapping">🗑️</button>
+</td>
+</tr>
+`).join('');
+}
+
+function attachEventListeners(){
+document.getElementById('addMappingBtn').addEventListener('click',openAddMappingModal);
+document.getElementById('exportBtn').addEventListener('click',openExportModal);
+document.getElementById('importBtn').addEventListener('click',openImportModal);
+document.getElementById('resetDefaultsBtn').addEventListener('click',openResetDefaultsModal);
+document.getElementById('searchInput').addEventListener('input',handleSearch);
+document.getElementById('directionFilter').addEventListener('change',handleFilter);
+document.getElementById('statusFilter').addEventListener('change',handleFilter);
+window.addEventListener('beforeunload',e=>{if(STATE.isDirty){e.preventDefault();e.returnValue='';}});
+}
+
+function initializeDragDrop(){
+const tbody=document.getElementById('mappingTableBody');
+let draggedRow=null;
+tbody.addEventListener('dragstart',e=>{if(e.target.tagName==='TR'){draggedRow=e.target;e.target.style.opacity='0.5';}});
+tbody.addEventListener('dragend',e=>{if(e.target.tagName==='TR'){e.target.style.opacity='';draggedRow=null;}});
+tbody.addEventListener('dragover',e=>{e.preventDefault();});
+tbody.addEventListener('drop',async e=>{e.preventDefault();if(!draggedRow)return;const dropTarget=e.target.closest('tr');if(dropTarget&&dropTarget!==draggedRow){const allRows=Array.from(tbody.querySelectorAll('tr'));const dragIdx=allRows.indexOf(draggedRow);const dropIdx=allRows.indexOf(dropTarget);if(dragIdx<dropIdx){dropTarget.after(draggedRow);}else{dropTarget.before(draggedRow);}await updateSortOrder();}});
+}
+
+async function updateSortOrder(){
+const rows=document.querySelectorAll('#mappingTableBody tr');
+const updates=Array.from(rows).map((row,idx)=>({id:row.dataset.mappingId,sort_order:idx+1}));
+try{
+await fetch(`${API_BASE}/field-mappings/reorder`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({updates})});
+STATE.mappings.forEach(m=>{const update=updates.find(u=>u.id===m.id);if(update)m.sort_order=update.sort_order;});
+STATE.isDirty=true;
+}catch(err){
+showError('Failed to update sort order: '+err.message);
+}}
+
+function handleSearch(e){
+const term=e.target.value.toLowerCase();
+const filtered=STATE.mappings.filter(m=>(m.sf_field_name||'').toLowerCase().includes(term)||(m.renzo_field_name||'').toLowerCase().includes(term)||(m.sf_field_label||'').toLowerCase().includes(term)||(m.renzo_field_label||'').toLowerCase().includes(term));
+renderMappingTable(filtered);
+}
+
+function handleFilter(){
+const direction=document.getElementById('directionFilter').value;
+const status=document.getElementById('statusFilter').value;
+let filtered=STATE.mappings;
+if(direction)filtered=filtered.filter(m=>m.direction===direction);
+if(status)filtered=filtered.filter(m=>status==='enabled'?m.enabled:!m.enabled);
+renderMappingTable(filtered);
+}
+
+async function toggleMappingStatus(id,enabled){
+try{
+await fetch(`${API_BASE}/field-mappings/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({enabled})});
+const mapping=STATE.mappings.find(m=>m.id===id);
+if(mapping){mapping.enabled=enabled;STATE.isDirty=true;}
+showSuccess(`Mapping ${enabled?'enabled':'disabled'}`);
+}catch(err){
+showError('Failed to update status: '+err.message);
+}}
+
+function getDirectionIcon(dir){
+const icons={sf_to_renzo:'SF → Renzo',renzo_to_sf:'Renzo → SF',bidirectional:'⇄ Both'};
+return icons[dir]||dir;
+}
+
+function escapeHtml(str){
+const div=document.createElement('div');
+div.textContent=str||'';
+return div.innerHTML;
+}
+
+function showLoader(){document.getElementById('mappingTableBody').innerHTML='<tr><td colspan="8"><div class="loader"></div></td></tr>';}
+function hideLoader(){}
+function showError(msg){alert('Error: '+msg);}
+function showSuccess(msg){console.log('Success: '+msg);}
+
+document.addEventListener('DOMContentLoaded',initializeMappingInterface);
+</script>
+<!-- END:CoreJavaScript -->
+// START:FeatureJavaScript
+
+async function openAddMappingModal(){
+STATE.currentMapping=null;
+const modal=document.getElementById('addEditModal');
+document.getElementById('modalTitle').textContent='Add Field Mapping';
+document.getElementById('mappingForm').reset();
+document.getElementById('sfFieldSelect').disabled=false;
+document.getElementById('renzoFieldSelect').disabled=false;
+document.getElementById('enabledToggle').checked=true;
+document.getElementById('directionSfToRenzo').click();
+document.getElementById('conflictResolution').value='sf_wins';
+clearPreview();
+populateFieldDropdowns();
+modal.classList.add('active');
+}
+
+async function openEditMappingModal(mappingId){
+const mapping=STATE.mappings.find(m=>m.id===mappingId);
+if(!mapping)return;
+STATE.currentMapping=mapping;
+const modal=document.getElementById('addEditModal');
+document.getElementById('modalTitle').textContent='Edit Field Mapping';
+document.getElementById('sfFieldSelect').value=mapping.sf_field_name;
+document.getElementById('sfFieldSelect').disabled=true;
+document.getElementById('renzoFieldSelect').value=mapping.renzo_field_name;
+document.getElementById('renzoFieldSelect').disabled=true;
+document.getElementById('enabledToggle').checked=mapping.enabled;
+document.querySelector(`input[value="${mapping.direction}"]`).checked=true;
+document.getElementById('conflictResolution').value=mapping.conflict_resolution||'sf_wins';
+document.getElementById('trimWhitespace').checked=mapping.transformation_options?.trim_whitespace||false;
+document.getElementById('lowercaseEmail').checked=mapping.transformation_options?.lowercase_email||false;
+document.getElementById('formatPhone').checked=mapping.transformation_options?.format_phone||false;
+document.getElementById('defaultValue').value=mapping.transformation_options?.default_value||'';
+loadPreviewData(mapping);
+populateFieldDropdowns();
+modal.classList.add('active');
+}
+
+function populateFieldDropdowns(){
+const sfSelect=document.getElementById('sfFieldSelect');
+const renzoSelect=document.getElementById('renzoFieldSelect');
+const usedSfFields=new Set(STATE.mappings.map(m=>m.sf_field_name).filter(f=>f!==STATE.currentMapping?.sf_field_name));
+const usedRenzoFields=new Set(STATE.mappings.map(m=>m.renzo_field_name).filter(f=>f!==STATE.currentMapping?.renzo_field_name));
+sfSelect.innerHTML='<option value="">Select Salesforce field...</option>'+STATE.sfFields.filter(f=>!usedSfFields.has(f.name)).map(f=>`<option value="${f.name}">${f.label} (${f.type})</option>`).join('');
+renzoSelect.innerHTML='<option value="">Select Renzo field...</option>'+STATE.renzoFields.filter(f=>!usedRenzoFields.has(f.name)).map(f=>`<option value="${f.name}">${f.label} (${f.type})</option>`).join('');
+}
+
+function clearPreview(){
+document.getElementById('previewSourceData').textContent='Select fields to preview transformation';
+document.getElementById('previewTransformedData').textContent='';
+}
+
+async function loadPreviewData(mapping){
+try{
+const response=await fetch(`${API_BASE}/field-mappings/${mapping.id}/preview`,{credentials:'include'});
+const data=await response.json();
+if(data.success){
+const sourceHtml=data.samples.map(s=>`<div class="preview-row"><strong>${escapeHtml(s.source_field)}:</strong> ${escapeHtml(s.source_value)}</div>`).join('');
+const transformedHtml=data.samples.map(s=>`<div class="preview-row"><strong>${escapeHtml(s.dest_field)}:</strong> ${escapeHtml(s.transformed_value)}</div>`).join('');
+document.getElementById('previewSourceData').innerHTML=sourceHtml;
+document.getElementById('previewTransformedData').innerHTML=transformedHtml;
+}
+}catch(err){
+clearPreview();
+}}
+
+function closeModal(modalId){
+document.getElementById(modalId).classList.remove('active');
+}
+
+async function saveMappingForm(e){
+e.preventDefault();
+const formData={
+sf_field_name:document.getElementById('sfFieldSelect').value,
+renzo_field_name:document.getElementById('renzoFieldSelect').value,
+direction:document.querySelector('input[name="direction"]:checked').value,
+enabled:document.getElementById('enabledToggle').checked,
+conflict_resolution:document.getElementById('conflictResolution').value,
+transformation_options:{
+trim_whitespace:document.getElementById('trimWhitespace').checked,
+lowercase_email:document.getElementById('lowercaseEmail').checked,
+format_phone:document.getElementById('formatPhone').checked,
+default_value:document.getElementById('defaultValue').value
+}};
+if(!formData.sf_field_name||!formData.renzo_field_name){
+showError('Please select both fields');
+return;
+}
+const sfField=STATE.sfFields.find(f=>f.name===formData.sf_field_name);
+const renzoField=STATE.renzoFields.find(f=>f.name===formData.renzo_field_name);
+formData.sf_field_type=sfField?.type||'string';
+formData.renzo_field_type=renzoField?.type||'string';
+formData.sf_field_label=sfField?.label||formData.sf_field_name;
+formData.renzo_field_label=renzoField?.label||formData.renzo_field_name;
+try{
+const url=STATE.currentMapping?`${API_BASE}/field-mappings/${STATE.currentMapping.id}`:`${API_BASE}/field-mappings`;
+const method=STATE.currentMapping?'PUT':'POST';
+const response=await fetch(url,{method,headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(formData)});
+const result=await response.json();
+if(result.success){
+showSuccess(STATE.currentMapping?'Mapping updated':'Mapping created');
+closeModal('addEditModal');
+await loadExistingMappings();
+STATE.isDirty=true;
+}else{
+showError(result.message||'Failed to save mapping');
+}}catch(err){
+showError('Failed to save: '+err.message);
+}}
+
+async function deleteMapping(id){
+if(!confirm('Are you sure you want to delete this mapping?'))return;
+try{
+await fetch(`${API_BASE}/field-mappings/${id}`,{method:'DELETE',credentials:'include'});
+STATE.mappings=STATE.mappings.filter(m=>m.id!==id);
+renderMappingTable(STATE.mappings);
+STATE.isDirty=true;
+showSuccess('Mapping deleted');
+}catch(err){
+showError('Failed to delete: '+err.message);
+}}
+
+function openExportModal(){
+document.getElementById('exportImportModal').classList.add('active');
+document.getElementById('exportTab').click();
+}
+
+function switchTab(tab){
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active'));
+document.querySelectorAll('.tab-content').forEach(content=>content.classList.remove('active'));
+document.getElementById(tab+'Tab').classList.add('active');
+document.getElementById(tab+'Content').classList.add('active');
+}
+
+async function exportMappings(){
+const exportData={version:'1.0',exported_at:new Date().toISOString(),mappings:STATE.mappings};
+const blob=new Blob([JSON.stringify(exportData,null,2)],{type:'application/json'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download=`field-mappings-${new Date().toISOString().split('T')[0]}.json`;
+a.click();
+URL.revokeObjectURL(url);
+showSuccess('Configuration exported');
+}
+
+async function importMappings(e){
+const file=e.target.files[0];
+if(!file)return;
+const reader=new FileReader();
+reader.onload=async event=>{
+try{
+const importData=JSON.parse(event.target.result);
+if(!importData.mappings||!Array.isArray(importData.mappings)){
+showError('Invalid import file format');
+return;
+}
+if(!confirm(`Import ${importData.mappings.length} mappings? This will replace existing configuration.`))return;
+const response=await fetch(`${API_BASE}/field-mappings/import`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(importData)});
+const result=await response.json();
+if(result.success){
+showSuccess('Configuration imported');
+closeModal('exportImportModal');
+await loadExistingMappings();
+STATE.isDirty=true;
+}else{
+showError(result.message||'Import failed');
+}}catch(err){
+showError('Failed to parse import file: '+err.message);
+}};
+reader.readAsText(file);
+}
+
+async function resetToDefaults(){
+const modal=document.getElementById('resetModal');
+const count=STATE.mappings.length;
+document.getElementById('resetMessage').textContent=`This will reset all ${count} configured mappings to system defaults. This action cannot be undone.`;
+modal.classList.add('active');
+}
+
+async function confirmReset(){
+try{
+const response=await fetch(`${API_BASE}/field-mappings/reset`,{method:'POST',credentials:'include'});
+const result=await response.json();
+if(result.success){
+showSuccess('Reset to defaults complete');
+closeModal('resetModal');
+await loadExistingMappings();
+STATE.isDirty=true;
+}else{
+showError(result.message||'Reset failed');
+}}catch(err){
+showError('Failed to reset: '+err.message);
+}}
+
+// END:FeatureJavaScript
+</script>
+</body>
+</html>

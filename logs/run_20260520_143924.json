@@ -1,0 +1,222 @@
+{
+  "task": {
+    "id": "renzo-p2-002",
+    "title": "Add CSV import to Renzo contacts",
+    "description": "Add CSV import to the existing Renzo contacts page. Keep ALL existing functionality. ADD ONLY: a file input button labeled 'Import CSV' on the contacts page. When a CSV is selected: parse it, auto-detect columns (look for name/first/last, company/organization, email, phone in headers case-insensitively), show a preview modal with the first 5 rows and detected column mapping, confirm button imports all rows as contacts with localStorage, skip rows where name AND company are both empty, show result: 'Imported X contacts, skipped Y duplicates'. Use vanilla JS FileReader API, no external libraries.",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Renzo is a frontend-only AI outreach tool. Single HTML file. localStorage. No backend. Add CSV import so users can bulk-load contacts."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11537
+      },
+      "t": 70.5
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 128.4
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 176.7
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 1
+      },
+      "t": 234.1
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 281.7
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 1
+      },
+      "t": 332.6
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 381.5
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 9977
+      },
+      "t": 422.3
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 0,
+        "issues": [
+          "File is severely truncated - CSS ends abruptly mid-rule at line 464, missing closing </style>, </head>, <body>, and all HTML/JavaScript",
+          "CSV import functionality completely absent - no file input UI, no upload button, no JavaScript for CSV parsing or contact import",
+          "Critical structural failure - incomplete HTML document cannot function at all, will result in parsing errors and broken page"
+        ],
+        "feedback": "The file is catastrophically incomplete. You need to: 1) Complete the CSS with proper closing </style> tag, 2) Add complete HTML body with CSV import UI (file input, import button, status messages), 3) Add JavaScript for CSV file upload handling, CSV parsing (use FileReader + split/parse logic), validation, and bulk contact creation with proper error handling and user feedback. The current state is 100% non-functional."
+      },
+      "t": 439.5
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 10268
+      },
+      "t": 481.8
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 0,
+        "issues": [
+          "CSS is truncated mid-declaration at line 400+, breaking all styling and making the page non-functional",
+          "Entire JavaScript application logic is missing - no CSV import functionality, no contact CRUD operations, no event handlers",
+          "HTML structure incomplete - missing closing head tag, entire body section, modals, and closing html tag"
+        ],
+        "feedback": "The file is severely truncated and incomplete. You need to: 1) Close the .mapping-item CSS rule and complete all remaining styles, 2) Add closing </style> and </head> tags, 3) Implement complete <body> with contact list UI and all modals (add/edit contact, CSV import preview with column mapping), 4) Add complete JavaScript with CSV file parsing (using FileReader + CSV parser), column mapping logic, contact storage (localStorage), CRUD operations, and all event listeners. The CSV import must include: file input handler, CSV parsing, preview modal with column mapping dropdowns, validation, and data import confirmation."
+      },
+      "t": 502.6
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 10268
+      },
+      "t": 543.4
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 0,
+        "issues": [
+          "HTML file is severely truncated - ends mid-CSS with incomplete 'color' property and missing closing </style> tag",
+          "All JavaScript functionality is missing due to truncation - CSV import feature cannot exist without JS for file handling, parsing, and import logic",
+          "Critical HTML elements incomplete - form fields cut off mid-attribute, missing closing tags for form/modal/body, and CSV import modal entirely absent"
+        ],
+        "feedback": "The file is incomplete - only ~50% delivered. You must provide the FULL HTML file including: 1) Complete CSS with closing </style> tag, 2) Complete HTML body with all closing tags, 3) CSV import modal HTML with file input and field mapping UI, 4) Full JavaScript section with CSV parsing (use Papa Parse or similar), field mapping logic, and import functionality to add contacts to localStorage. The 'Import CSV' button currently does nothing. Resubmit the complete file."
+      },
+      "t": 562.4
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 10504
+      },
+      "t": 603.7
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 1,
+        "issues": [
+          "HTML is severely truncated - missing closing tags (</h1>, </div>, </body>, </html>) and appears cut off mid-word in the header",
+          "CSV import feature (the core task requirement) is completely missing - no file input element, no CSV parsing logic, no import modal, and no JavaScript implementation whatsoever",
+          "Zero JavaScript code present - all interactive functionality (modals, forms, search, contact management, data persistence) is non-functional despite CSS classes being defined"
+        ],
+        "feedback": "Critical fixes required: 1) Complete the truncated HTML with proper closing tags. 2) Add a CSV import button in the header actions. 3) Create a CSV import modal with file input (<input type='file' accept='.csv'>). 4) Implement JavaScript: FileReader for CSV parsing, modal open/close handlers, CSV data validation/mapping to contact fields (name, email, phone, company, priority), contact rendering to DOM, localStorage persistence, search filtering, and add/edit/delete functionality. 5) Add event listeners for all buttons (import, add, edit, delete, search). The file is essentially a non-functional shell - needs complete implementation."
+      },
+      "t": 628.7
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "parseCSV function implementation",
+          "detectColumnMapping function",
+          "showCSVPreviewModal function",
+          "handleConfirmImport function",
+          "showResultModal function",
+          "importContactsFromCSV function",
+          "Duplicate detection logic (email/phone matching)",
+          "CSV preview table rendering",
+          "Column mapping summary display",
+          "Import CSV button in UI",
+          "Hidden file input element",
+          "Modal overlays for CSV preview and results",
+          "Error handling for invalid CSV format",
+          "Skip rows policy for duplicates",
+          "Integration with existing localStorage contact storage",
+          "Validation of CSV data before import"
+        ],
+        "note": "The provided code only shows the first 5000 characters which contain basic HTML structure, CSS styling, and partial UI elements. None of the CSV import functionality is implemented. Missing: all CSV parsing logic, column mapping detection, preview modal, result modal, file handling, duplicate detection, and the import button itself. The spec requires complete CSV import workflow with preview, mapping, validation, and result feedback - none of which are present in the visible code."
+      },
+      "t": 636.2
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 10114
+      },
+      "t": 679.1
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Form label is cut off in the HTML - the opening <label> tag appears incomplete at line 523, which will cause a critical rendering error",
+          "No visible error handling or validation messages for form submission failures",
+          "Missing ARIA live regions for dynamic content updates (contact list changes, search results)",
+          "No keyboard trap management for modals - users may get stuck when modal opens",
+          "Search input lacks debouncing which could cause performance issues with large datasets",
+          "CSV import button has no loading state or disabled state during processing",
+          "No error boundary or fallback UI if JavaScript fails to load",
+          "Incomplete HTML structure - missing closing tags for form elements"
+        ]
+      },
+      "t": 699.8
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 9888
+      },
+      "t": 740.5
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": true,
+        "ux_score": 10,
+        "blocking_issues": []
+      },
+      "t": 757.5
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 758.5
+    }
+  ],
+  "cost": 0.8533410000000001
+}

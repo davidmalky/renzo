@@ -1,0 +1,301 @@
+# RESEARCH REPORT: SYNC MAPPING CONFIGURATION INTERFACE
+
+## EXISTING_FEATURES:
+
+### UI Framework & Styling
+- Complete CSS design system with CSS variables (primary colors, spacing, shadows, transitions)
+- Responsive layout with sidebar navigation and main content area
+- Mobile-responsive design with hamburger menu (`mobile-menu-btn`, `mobile-overlay`)
+- Card-based UI components (`card`, `card-header`, `card-title`)
+- Modal system (`modal`, `modal-content`, `modal-header`, `modal-body`, `modal-close`)
+- Table component with hover effects (`table`, `table-container`)
+- Badge system with variants (`badge-success`, `badge-danger`, `badge-warning`, `badge-info`)
+- Button variants (`btn-primary`, `btn-secondary`, `btn-danger`, `btn-sm`)
+- Form components (`form-group`, `form-label`, `form-input`, `form-select`, `form-textarea`)
+- Stats grid layout (`stats-grid`, `stat-card`, `stat-value`, `stat-change`)
+
+### Navigation System
+- Sidebar navigation with active state management (`nav-link`, `nav-link.active`)
+- View switching system (`view-container`, `view-container.active`)
+- Mobile overlay for responsive navigation
+- Navigation sections with titles (`nav-section`, `nav-section-title`)
+
+### Layout Structure
+- App container with flex layout (`app-container`)
+- Fixed sidebar (240px width)
+- Main content area with padding
+- View header system (`view-header`, `view-title`, `view-description`)
+
+### Utility Classes
+- Hidden class (`hidden`)
+- Positive/negative indicators (`positive`, `negative`)
+- Focus management with outline styles
+
+## MISSING_FEATURES:
+
+### Mapping Management Core
+- No mapping data model or localStorage schema
+- No mapping CRUD operations (create, read, update, delete)
+- No mapping list/table functionality
+- No search/filter bar component
+- No inline action buttons (edit, pause/resume, delete, duplicate)
+- No pagination system
+
+### Wizard Interface
+- No multi-step wizard component
+- No step navigation (previous/next buttons, step indicators)
+- No wizard state management
+- No progress tracking between steps
+
+### Step 1: Basic Info
+- No mapping name input
+- No description textarea
+- No sync direction dropdown (SF→Target, Target→SF, Bidirectional)
+
+### Step 2: Object Selection
+- No Salesforce object dropdown with search
+- No target system selector
+- No target object dropdown
+- No object metadata fetching
+
+### Step 3: Field Mapping Builder
+- No drag-and-drop field mapping interface
+- No visual line-drawing between fields
+- No two-column layout for source/target fields
+- No "Auto-map by name" functionality
+- No unmapped field highlighting (yellow)
+- No field list rendering
+
+### Step 4: Transformation Rules
+- No per-field transformation dropdown
+- No formula editor
+- No expression input
+- No test button for transformations
+- No transformation types (Direct Copy, Formula, Lookup, Custom Function)
+
+### Step 5: Validation Rules
+- No dynamic rule row add/remove
+- No field selector for validation
+- No operator dropdown (equals, contains, regex)
+- No value input for validation
+- No error message field
+
+### Step 6: Conflict Resolution
+- No radio button group for strategies
+- No conflict strategy options (Source Wins, Target Wins, Most Recent Wins, Manual Review, Custom Logic)
+
+### Step 7: Sync Schedule
+- No schedule type radio buttons
+- No polling interval input
+- No cron expression input
+- No WHERE clause query builder
+- No sync filter interface
+
+### Step 8: Review & Test
+- No summary view of all configuration
+- No test mapping functionality
+- No sample data validation
+- No "Save & Activate" vs "Save" distinction
+
+### Version History
+- No version tracking system
+- No version history sidebar
+- No restore functionality
+- No change tracking
+
+### API Layer
+- No REST API endpoints (POST /api/sync-mappings, GET /api/sync-mappings, GET /api/sync-mappings/:id)
+- No API client functions
+- No request/response handling
+- No error handling for API calls
+- No pagination parameters
+
+### Data Management
+- No localStorage integration for mappings
+- No data persistence layer
+- No data validation
+- No data serialization/deserialization
+
+## CHANGES_NEEDED:
+
+### Navigation
+- Add new navigation link for "Sync Mappings" in sidebar
+- Update active state management to include mapping views
+
+### Modal System
+- Expand modal size options for wizard (current max-width: 600px may be too small)
+- Add larger modal variant for field mapping builder
+
+### Table Component
+- Add sortable column headers
+- Add pagination controls
+- Add bulk action checkboxes
+- Add action column for inline buttons
+
+### Form System
+- Add radio button group styling
+- Add checkbox styling
+- Add multi-select dropdown
+- Add search/autocomplete input variant
+
+## REUSE:
+
+### Styling Patterns
+- CSS variable system for theming (`--primary`, `--bg-card`, etc.)
+- Card component for mapping list items and wizard steps
+- Modal system for create/edit wizards
+- Button classes for all CTAs
+- Form components for all input fields
+- Badge system for status indicators (active/paused)
+- Table structure for mapping list
+- Stats cards for success rate display
+
+### Layout Patterns
+- Sidebar navigation structure (add "Sync Mappings" link)
+- View container switching mechanism (`view-container.active`)
+- Mobile responsive patterns
+- Card header pattern for section titles
+
+### Component Classes to Extend
+- `.modal` - for wizard dialog
+- `.card` - for wizard steps
+- `.table` - for mapping list
+- `.btn` variants - for all actions
+- `.form-*` classes - for all form fields
+- `.badge` - for status/direction indicators
+
+### Existing JavaScript Patterns (to maintain)
+- View switching via `data-view` attributes
+- Mobile menu toggle behavior
+- Modal open/close behavior
+- Active state management
+
+### Color System
+- `--success` for active mappings, successful syncs
+- `--danger` for paused/failed states
+- `--warning` for unmapped fields, validation warnings
+- `--info` for informational badges
+- `--primary` for primary actions
+
+## RISKS:
+
+### Technical Complexity
+- **Drag-and-drop field mapping**: No existing drag-drop library; will need to implement custom or add external library (potential bundle size increase)
+- **Visual line drawing**: Requires canvas or SVG rendering for field connections; no existing implementation
+- **Formula/expression editor**: Complex text input with syntax validation; may need CodeMirror or Monaco editor
+- **Cron expression builder**: Complex UI pattern not currently in codebase
+
+### State Management
+- **Wizard state complexity**: Managing 8 steps of configuration without state management library; prone to bugs
+- **Data validation across steps**: Need to validate each step before proceeding; no validation framework exists
+- **Unsaved changes**: Need to track dirty state and warn users before navigation
+
+### Performance
+- **Large field lists**: Rendering 100+ Salesforce fields with drag-drop could cause performance issues
+- **Real-time line rendering**: Updating connection lines during drag operations may cause jank
+- **localStorage limits**: Complex mapping configurations may exceed 5MB localStorage quota
+
+### API Integration
+- **No backend exists**: Task specifies REST API endpoints but no server-side code provided
+- **Mock vs real API**: Need to decide on mock API layer vs actual backend implementation
+- **Authentication**: No auth system for API calls
+
+### Browser Compatibility
+- **Drag-and-drop API**: Limited mobile support for native drag-drop
+- **localStorage**: Incognito mode restrictions
+- **CSS Grid**: Used extensively; need fallbacks for older browsers
+
+### Data Integrity
+- **Concurrent edits**: No locking mechanism if multiple users edit same mapping
+- **Version conflicts**: Restore functionality could overwrite recent changes
+- **Data migration**: No schema versioning if mapping structure changes
+
+### UX Complexity
+- **Wizard abandonment**: 8 steps is long; users may abandon before completion
+- **Field mapping discoverability**: Drag-drop may not be obvious to all users
+- **Error recovery**: Complex wizards need clear error states and recovery paths
+
+## DATA_STRUCTURES:
+
+### Currently in Codebase
+**None found** - No localStorage keys or data structures are implemented in the existing HTML file. The codebase is purely presentational UI with no data persistence.
+
+### Required for Task
+
+```javascript
+// localStorage keys needed:
+{
+  "syncMappings": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "description": "string",
+      "syncDirection": "SF_TO_TARGET | TARGET_TO_SF | BIDIRECTIONAL",
+      "status": "active | paused",
+      "sourceObject": "string",
+      "targetSystem": "string",
+      "targetObject": "string",
+      "fieldMappings": [
+        {
+          "sourceField": "string",
+          "targetField": "string",
+          "transformationType": "DIRECT_COPY | FORMULA | LOOKUP | CUSTOM_FUNCTION",
+          "transformationConfig": "object"
+        }
+      ],
+      "validationRules": [
+        {
+          "field": "string",
+          "operator": "equals | contains | regex",
+          "value": "string",
+          "errorMessage": "string"
+        }
+      ],
+      "conflictResolution": "SOURCE_WINS | TARGET_WINS | MOST_RECENT | MANUAL | CUSTOM",
+      "syncSchedule": {
+        "type": "REALTIME | SCHEDULED | MANUAL",
+        "pollingInterval": "number (minutes)",
+        "cronExpression": "string",
+        "filterQuery": "string"
+      },
+      "lastSyncTime": "ISO timestamp",
+      "successRate": "number (0-100)",
+      "createdAt": "ISO timestamp",
+      "updatedAt": "ISO timestamp"
+    }
+  ],
+  "syncMappingVersions": {
+    "mappingId": [
+      {
+        "version": "number",
+        "timestamp": "ISO timestamp",
+        "config": "complete mapping object",
+        "changedBy": "string"
+      }
+    ]
+  },
+  "salesforceObjects": ["array of object names"],
+  "targetSystems": ["array of system names"]
+}
+```
+
+### API Response Structures Needed
+```javascript
+// GET /api/sync-mappings?page=1&limit=20
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+
+// POST /api/sync-mappings
+{
+  "id": "uuid",
+  "status": "created",
+  "mapping": {}
+}
+```

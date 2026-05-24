@@ -1,0 +1,68 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Update activity logging to capture the `reason` field when email drafts are prepared. Modify `markSentSilent()` to include `reason` in activity records. Remove the standalone "Mark Sent" button from queue item cards while preserving it in the contact history modal.
+
+## VIEWS
+- QueueItemCard: Remove "Mark Sent" button element; retain "Send Email Draft", "Refine", "Save Draft", and "Remove" buttons
+- ContactHistoryModal: No changes; "Mark Sent" button remains visible here
+
+## FUNCTIONS
+
+- **markSentSilent(qid)**:
+  1. Find queue item by qid using existing lookup logic
+  2. Extract item data: `cId`, `cName`, `co`, `msg`, `trigger`, `reason`
+  3. Call `ga()` to get existing activity array
+  4. Create new activity record with fields: `id` (via `uid()`), `cId`, `cName`, `co`, `msg`, `trigger`, `reason` (use `item.reason || ''`), `ts` (ISO timestamp)
+  5. Append new record to activity array
+  6. Call `s(K.activity, updatedArray)` to save to localStorage
+  7. Continue existing logic to remove item from queue
+
+- **sendEmail(qid)**: 
+  1. Call `openEmailCompose()` to launch email client
+  2. Call `markSentSilent(qid)` (which now includes reason in activity record)
+  3. Call `renderQueue()` to refresh UI
+  4. Return/complete execution
+
+- **renderQueue()** or equivalent queue card rendering:
+  1. Iterate through queue items
+  2. For each item, render card with buttons: "Send Email Draft", "Refine", "Save Draft", "Remove"
+  3. Omit/skip rendering "Mark Sent" button (remove conditional or button element that displays it)
+  4. Ensure event listeners remain only on the four specified buttons
+
+## DATA
+
+- **K.activity**: Array of activity objects
+  - Each object: `{id: string, cId: string, cName: string, co: string, msg: string, trigger: string, reason: string, ts: string}`
+  - `reason` field now mandatory (empty string if absent)
+
+- **Queue items**: Objects with structure
+  - Fields: `qid`, `cId`, `cName`, `co`, `msg`, `trigger`, `reason`
+  - `reason` may be undefined or empty; handle with fallback `|| ''`
+
+## API
+No external API changes. All operations are localStorage-based using existing helper functions:
+- `ga()`: retrieves activity array
+- `s(key, value)`: saves to localStorage
+- `uid()`: generates unique IDs
+
+## DESIGN
+- Queue item cards: Four-button layout with equal spacing for "Send Email Draft", "Refine", "Save Draft", "Remove"
+- Remove any visual element (button, icon, text) related to "Mark Sent" from queue cards
+- Contact history modal: no visual changes; "Mark Sent" button styling and position unchanged
+
+## ERRORS
+- **Queue item not found**: If `qid` does not match any queue item in `markSentSilent()`, log warning to console and exit function gracefully
+- **Missing reason field**: If `item.reason` is undefined, default to empty string `''` in activity record
+- **localStorage write failure**: If `s()` fails, catch error and display user-facing message "Failed to log activity"
+- **Activity array corruption**: If `ga()` returns invalid data, reset to empty array `[]` before appending new record
+
+## SCOPE_CHECK
+- Estimated total lines: **45 lines**
+  - `markSentSilent()` update: ~15 lines
+  - `sendEmail()` verification: ~5 lines (no change needed, just verify)
+  - Queue card render update: ~10 lines (remove button rendering logic)
+  - Error handling additions: ~10 lines
+  - Comment/documentation: ~5 lines
+
+- **SINGLE_TASK**: Proceed as one build. All changes are localized to two functions and one UI component. No architectural changes required. Well under 650-line limit.

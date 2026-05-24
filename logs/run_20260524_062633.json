@@ -1,0 +1,189 @@
+{
+  "task": {
+    "id": "renzo-quick-003",
+    "title": "Fix bulk send to use Gmail/Outlook web compose instead of mailto",
+    "description": "In bulkSendAll(), replace the mailto link construction with openEmailCompose(). Current broken code builds: let mailto='mailto:'+toEmail+'?subject=...'. Replace with: const emails=gEmails(); const fromEmail=(sel&&sel.value!==''&&emails[parseInt(sel.value)])?emails[parseInt(sel.value)].addr:''; openEmailCompose(toAddr,subject,body,fromEmail); Also change the stagger interval from 800ms to 1000ms. Remove the window.confirm() after bulk send \u2014 replace with a toast: toast(opened+' email drafts opened','success'); Do not show a confirm dialog at all. These are the only changes needed in bulkSendAll().",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 5220
+      },
+      "t": 29.2
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 55.9
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 68.3
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 135141
+      },
+      "t": 102.3
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical: Code is severely truncated in multiple places (CSS rules mid-declaration, HTML tags incomplete, JavaScript functions cut off mid-line) causing syntax errors and broken functionality",
+          "Missing implementation: Task requires bulk send with Gmail/Outlook web compose, but no working implementation visible - the #bulkSendBtn and draftAllBtn/markAllBtn handlers are referenced but not implemented in provided code",
+          "Fatal syntax errors: Truncated JavaScript functions (computeTrigger, renderDashboard incomplete), invalid CSS ('justify-content:justify'), and broken HTML tags will prevent the app from loading or functioning"
+        ],
+        "feedback": "The code is incomplete/corrupted with multiple truncation points breaking CSS, HTML, and JS. To fix: 1) Ensure complete file is provided - CSS rules must close properly, HTML tags must have closing tags, JS functions must be complete. 2) Implement the bulk send feature properly: add click handlers for #bulkSendBtn, draftAllBtn that construct Gmail/Outlook web compose URLs (gmail.com/mail/?view=cm&fs=1&to=X&su=Y&body=Z and outlook.live.com/mail/0/deeplink/compose?to=X&subject=Y&body=Z) for each queued recipient. 3) Fix syntax errors: complete the computeTrigger and renderDashboard functions, fix 'justify-content:justify' to valid value, ensure all HTML tags properly close. The app cannot function in current state due to truncation."
+      },
+      "t": 202.4
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 135141
+      },
+      "t": 244.8
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical: Multiple CSS rules are truncated/incomplete causing stylesheet parsing errors - .priority-badge missing closing brace, #obUrl input rule incomplete, and justify-content:justify typo",
+          "Critical: toggleActivity() function has backwards logic - when full is visible (expanded=true), it toggles to hidden=true keeping it hidden instead of showing",
+          "Critical: Bulk send functionality completely missing - no bulk selection checkboxes in contacts table, no 'Send All' button implementation using Gmail/Outlook web compose URLs (task requirement not met)"
+        ],
+        "feedback": "1) Fix CSS: Add closing brace for .priority-badge, complete #obUrl input{padding:8px;border:1px solid #ddd;border-radius:4px;width:100%}, change justify-content:justify to justify-content:center. 2) Fix toggleActivity(): Change logic to `if(expanded){full.classList.add('hidden');brief.classList.remove('hidden')}else{full.classList.remove('hidden');brief.classList.add('hidden')}`. 3) CRITICAL: Implement bulk send per task - add checkboxes to contact rows, add 'Bulk Send' button, create function that detects email provider from queueEmailSel dropdown and opens Gmail compose (https://mail.google.com/mail/?view=cm&fs=1&to=email1,email2&su=subject&body=text) or Outlook compose (https://outlook.office.com/mail/deeplink/compose?to=email1;email2&subject=subject&body=text) in new window instead of mailto links."
+      },
+      "t": 351.5
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 135164
+      },
+      "t": 393.3
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS is truncated mid-declaration causing syntax errors that will break all styling (line ~245: 'border-radius:var(--radius-')",
+          "Critical HTML structure incomplete - missing closing tags for style, head, body sections and truncated modal/form elements preventing page from rendering",
+          "Cannot verify TASK completion - bulk send event handlers (#sendAllBtn, #bulkSendBtn, #aiGmail) are not visible in truncated code, so impossible to confirm Gmail/Outlook web compose implementation vs mailto"
+        ],
+        "feedback": "The file is severely truncated and incomplete. Fix: 1) Ensure ALL CSS declarations are complete with closing brackets and semicolons, 2) Include complete HTML structure with all closing tags (</style>, </head>, <body>, </body>, </html>), 3) Most critically: include the JavaScript event handlers for bulk send buttons to verify they use Gmail/Outlook web compose URLs (e.g., https://mail.google.com/mail/?view=cm&to=...) instead of mailto: links. The current chunk is impossible to review for the stated TASK."
+      },
+      "t": 493.8
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 135164
+      },
+      "t": 542.3
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS is severely truncated mid-declaration (border-radius:var(--radius-) with no closing), missing closing style tag, and entire JavaScript section absent - will cause complete page breakage",
+          "HTML structure incomplete with truncated elements (addEmailBtn ends with </b instead of </button>, delModal cut off mid-tag) causing parsing errors and broken UI",
+          "Task requirement completely unimplemented: bulk send must use Gmail/Outlook web compose URLs instead of mailto, but no JavaScript is visible to verify implementation exists at all"
+        ],
+        "feedback": "CRITICAL FAILURES: 1) Complete the CSS - add missing closing brace and </style> tag. 2) Fix truncated HTML: Close addEmailBtn with </button>, complete delModal structure. 3) For the task requirement, add JavaScript that opens Gmail (https://mail.google.com/mail/?view=cm&fs=1&to=EMAIL&su=SUBJECT&body=BODY) or Outlook (https://outlook.office.com/mail/deeplink/compose?to=EMAIL&subject=SUBJECT&body=BODY) web compose URLs when bulk send is triggered, instead of mailto: links. 4) Attach click handlers to dynamically rendered .msg-btn buttons. Without complete CSS/HTML structure and the actual bulk send implementation, the app is non-functional."
+      },
+      "t": 644.5
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Cannot verify bulkSendAll() function implementation - function not found in provided code",
+          "Cannot verify openEmailCompose() function exists",
+          "Cannot verify gEmails() function exists",
+          "Cannot verify toast() function exists",
+          "Cannot verify email account selection dropdown (sel) exists",
+          "Code snippet provided is only HTML/CSS (5000 chars) - JavaScript implementation not included"
+        ],
+        "note": "The provided code contains only the first 5000 characters which includes HTML structure and CSS styling. The actual JavaScript implementation containing bulkSendAll(), openEmailCompose(), gEmails(), toast(), and the email account dropdown logic is not present in the provided snippet. Cannot verify if the specification requirements have been implemented without access to the JavaScript code where these functions should be defined."
+      },
+      "t": 650.2
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 137346
+      },
+      "t": 824.3
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 6,
+        "blocking_issues": [
+          "AI Guide chat modal lacks keyboard accessibility - no focus trap, no Escape key to close, cannot tab to close button",
+          "Guide input field and send button have no ARIA labels or accessible names for screen readers",
+          "Chat messages div (#guideMsgs) not marked as live region - screen readers won't announce new AI responses",
+          "Guide toggle button is a div with onclick - not keyboard accessible (cannot tab to it or activate with Enter/Space)"
+        ]
+      },
+      "t": 852.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 137346
+      },
+      "t": 938.0
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Mobile navigation: sidebar (230px fixed width) will break layout on mobile devices - no responsive breakpoints or hamburger menu implemented",
+          "Modal overflow issues: modals have max-height:92vh but no guaranteed scrollability for long content on small screens",
+          "Touch targets: buttons/nav items don't meet minimum 44x44px touch target size (some as small as 4px padding) - accessibility violation",
+          "No keyboard navigation: modals lack focus trap, no visible focus indicators beyond CSS outline, no ESC key handling apparent",
+          "Form validation feedback: no aria-invalid, aria-describedby connections between inputs and error messages - screen reader users won't hear errors",
+          "AI Guide modal is not keyboard accessible - no focus trap, cannot tab to close button or send button, and Escape key won't close modal",
+          "Guide button and modal lack ARIA labels/roles - screen readers won't understand the chat interface structure",
+          "Guide input field has no associated label - fails WCAG accessibility requirements"
+        ]
+      },
+      "t": 965.1
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 966.2
+    }
+  ],
+  "cost": 0.9599700000000003
+}

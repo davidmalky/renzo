@@ -1,0 +1,156 @@
+# TECHNICAL SPECIFICATION: RENZO PHASE 2 ENHANCEMENTS
+
+## OVERVIEW
+This spec defines enhancements to an existing single-file HTML/JS Renzo CRM application. The additions include: (1) Smart priority scoring system replacing simple tiers, (2) Outreach trigger reason computation and display, (3) Batch outreach with natural language queries, (4) CSV contact import with preview, (5) Trainable instruction rules for AI prompts. All features use localStorage persistence and Anthropic API integration. The spec assumes the existing app structure (login, contacts CRUD, AI generation, queue, drafts, settings) remains unchanged.
+
+## VIEWS
+
+- **ContactForm (Enhanced)**: Existing contact form gains two new fields: `contractExpiry` (date input) and `invoiceAmount` (number input). These appear below existing fields with consistent styling (forest green labels, rounded inputs).
+
+- **ContactRow (Enhanced)**: Each contact list row displays a priority score badge (0-100) with color coding: 80-100 red, 60-79 orange, 40-59 yellow, 0-39 green. Badge positioned right side of row before action buttons.
+
+- **MessageReasoningBox (Enhanced)**: Existing AI message reasoning area gains prominent "Trigger" section at top showing computed reason like "Contract expires in 23 days" or "Invoice $4,200 overdue" in bold with orange highlight background.
+
+- **BatchOutreachView**: New full-page view with centered card layout. Contains: textarea for natural language query (placeholder: "Reach out to all contacts with contracts expiring in 90 days"), "Generate" button, progress indicator showing "Generating message 3 of 7...", results list showing contact names with checkmarks as messages generate.
+
+- **CSVImportModal**: Modal overlay (existing modal system) with file input, drag-drop zone, 5-row preview table showing detected columns (Name, Company, Email, Phone with auto-mapped data), column mapping dropdowns, "Import X contacts" button, skip duplicates checkbox.
+
+- **TrainableInstructionsSection**: New settings section titled "My Outreach Rules" with textarea (400px height), placeholder text: "Add your rules here. Example: Always mention our Q2 promotion. Never mention pricing in first contact." Save button stores to localStorage.
+
+## FUNCTIONS
+
+- **calculatePriorityScore(contact)**: Takes contact object. Computes three factors: (1) daysSinceLastContact = (today - contact.lastContactDate) / normalize to 0-100 scale where 90+ days = 100, (2) contractExpiryScore = compute days until contractExpiry, 0 days = 100, 90+ days = 0, linear scale, (3) invoiceScore = (contact.invoiceAmount / 10000) * 100, capped at 100. Returns weighted sum: daysSinceLastContact * 0.4 + contractExpiryScore * 0.3 + invoiceScore * 0.3. Round to integer.
+
+- **computeOutreachTrigger(contact)**: Takes contact object. Determines highest-priority trigger reason. Check contract expiry: if within 90 days, return "Contract expires in X days". Check invoice amount: if > 0, return "Invoice $X,XXX overdue". Check last contact: if > 30 days, return "Not contacted in X days". Return string.
+
+- **getPriorityBadgeColor(score)**: Takes score 0-100. Returns CSS class name: 'priority-critical' (80-100), 'priority-high' (60-79), 'priority-medium' (40-59), 'priority-low' (0-39).
+
+- **sortContactsByPriority(contacts)**: Takes contacts array. Maps each contact through calculatePriorityScore, attaches score to contact object. Sorts descending by score. Returns sorted array.
+
+- **parseNaturalLanguageQuery(query)**: Takes string like "contacts with contracts expiring in 90 days". Lowercases query. Detects keywords: "contract expir" matches contract expiry check, "invoice" matches invoice filter, "not contacted" matches last contact date. Extracts numeric value (e.g., "90 days" → 90). Returns filter object: {type: 'contractExpiry', operator: 'within', value: 90}.
+
+- **filterContactsByQuery(contacts, filterObj)**: Takes contacts array and filter object. Applies filter logic: if type='contractExpiry' and operator='within', filter contacts where (contractExpiry - today) <= value days. If type='invoice', filter where invoiceAmount > 0. If type='lastContact', filter where (today - lastContactDate) > value days. Returns matching contacts array.
+
+- **generateBatchMessages(contacts, progressCallback)**: Takes contacts array and callback function. Iterates contacts with async loop. For each: (1) compute trigger via computeOutreachTrigger, (2) build AI prompt including trigger and trainable rules, (3) call Anthropic API with await, (4) create draft object with contact ID, message, trigger, timestamp, (5) invoke progressCallback(index, total), (6) add 500ms delay between calls. Returns array of draft objects. Handles API errors by storing error message in draft.
+
+- **enhanceAIPrompt(contact, basePrompt)**: Takes contact and existing prompt string. Retrieves trainable rules from localStorage key 'outreachRules'. Computes trigger via computeOutreachTrigger(contact). Builds enhanced prompt: basePrompt + "\n\nOUTREACH CONTEXT: " + trigger + "\n\nUSER RULES:\n" + rules. Returns enhanced prompt string.
+
+- **parseCSV(csvText)**: Takes CSV string. Splits by newline into rows. Splits first row by comma to get headers. Parses remaining rows by comma (handles quoted fields with regex). Returns array of objects where keys are numeric indices: [{0: "John", 1: "Acme", 2: "john@acme.com"}, ...].
+
+- **detectCSVColumns(parsedData)**: Takes parsed CSV array. Examines first 3 rows. For each column index, applies heuristics: if contains "@" likely email, if all digits with dashes likely phone, if common name patterns (capitalized words) likely name, if contains "Inc|LLC|Corp" likely company. Returns mapping object: {nameCol: 0, companyCol: 1, emailCol: 2, phoneCol: 3}.
+
+- **previewCSVData(parsedData, columnMapping, rowCount)**: Takes parsed data, column mapping, max rows. Slices first rowCount rows. Maps each row to preview object with keys: name, company, email, phone using columnMapping indices. Returns preview array.
+
+- **importCSVContacts(parsedData, columnMapping)**: Takes parsed data and mapping. Retrieves existing contacts from localStorage 'contacts'. Iterates parsed rows skipping header. For each row: (1) extract values using columnMapping, (2) check if email exists in contacts (duplicate check), (3) if not duplicate, create contact object with new UUID, extracted values, empty contractExpiry/invoiceAmount, (4) add to contacts array. Saves updated contacts to localStorage. Returns {imported: count, skipped: count}.
+
+- **saveTrainableRules(rulesText)**: Takes string. Saves to localStorage key 'outreachRules'. Shows success toast notification.
+
+- **loadTrainableRules()**: Reads localStorage 'outreachRules'. Returns string or empty string if not found.
+
+- **renderBatchOutreachView()**: Clears main content area. Builds DOM: container div with card styling, h2 "Batch Outreach", textarea with id 'batchQuery', button "Generate Messages", empty div id 'batchProgress', empty div id 'batchResults'. Attaches click handler to button calling handleBatchOutreach(). Appends to main area.
+
+- **handleBatchOutreach()**: Reads textarea value. If empty, shows error toast and returns. Calls parseNaturalLanguageQuery(query) to get filter. Retrieves contacts from localStorage. Calls filterContactsByQuery(contacts, filter). If no matches, shows "No contacts match" toast. Otherwise displays "Found X contacts" in batchProgress div. Calls generateBatchMessages with progress callback updating batchProgress div. On completion, adds all drafts to localStorage 'drafts', shows success toast, updates batchResults div with contact names list.
+
+- **renderCSVImportModal()**: Creates modal overlay (reuse existing modal system). Builds modal content: h3 "Import Contacts", file input (accept .csv), drag-drop zone with dashed border, preview div (initially hidden), column mapping dropdowns (Name, Company, Email, Phone), import button (disabled until file loaded). Attaches file input change handler calling handleCSVFileSelect(). Attaches import button click handler calling handleCSVImport().
+
+- **handleCSVFileSelect(event)**: Reads file via FileReader. Parses CSV via parseCSV(). Detects columns via detectCSVColumns(). Generates preview via previewCSVData(5 rows). Renders preview table in modal. Populates column mapping dropdowns with detected values. Enables import button. Shows preview section.
+
+- **handleCSVImport()**: Reads column mapping dropdown values. Calls importCSVContacts(). Shows toast: "Imported X contacts, skipped Y duplicates". Closes modal. Refreshes contacts list view with updated data including new contacts.
+
+- **attachPriorityScoreToContacts()**: Utility called when rendering contacts list. Retrieves contacts from localStorage. Maps each through calculatePriorityScore, assigns score to contact.priorityScore property. Calls sortContactsByPriority(). Returns enhanced contacts array.
+
+- **renderPriorityBadge(score)**: Takes numeric score. Returns HTML string: `<span class="priority-badge ${getPriorityBadgeColor(score)}">${score}</span>`. Badge styled with padding 4px 8px, border-radius 12px, font-weight bold, font-size 12px.
+
+- **renderTriggerBox(contact)**: Takes contact. Calls computeOutreachTrigger(contact). Returns HTML string: `<div class="trigger-box"><strong>Trigger:</strong> ${trigger}</div>`. Styled with orange background (#FFF3E0), padding 12px, border-left 4px solid #FF9800, margin-bottom 16px.
+
+- **enhanceContactForm()**: Modifies existing contact form render function. Adds two form groups after existing fields: (1) label "Contract Expiry" + input type="date" id="contractExpiry", (2) label "Invoice Amount" + input type="number" id="invoiceAmount" step="0.01". Uses existing form styling.
+
+- **enhanceContactSaveHandler()**: Wraps existing save contact handler. Before saving, reads contractExpiry and invoiceAmount input values. Adds to contact object. Proceeds with existing save logic.
+
+- **enhanceMessageGenerationView()**: Wraps existing AI message generation function. Before calling API: (1) gets current contact, (2) calls enhanceAIPrompt(contact, originalPrompt), (3) calls computeOutreachTrigger(contact), (4) stores trigger in draft object. After API response: (1) renders trigger box above message, (2) shows trigger in reasoning section.
+
+- **initializePhase2Features()**: Called on app load after existing initialization. (1) Checks localStorage for 'contacts', migrates old contacts adding contractExpiry=null, invoiceAmount=0, (2) loads trainable rules, (3) attaches nav click handler for "Batch Outreach" link, (4) attaches CSV import button to contacts toolbar.
+
+- **renderTrainableInstructionsSettings()**: Appends new section to settings page. Creates: h3 "My Outreach Rules", textarea id="outreachRules" with 400px height, loads current rules via loadTrainableRules(), button "Save Rules" with click handler calling saveTrainableRules().
+
+## DATA
+
+- **contacts (enhanced)**: Array in localStorage. Each contact object gains: `contractExpiry` (ISO date string or null), `invoiceAmount` (number, default 0), `lastContactDate` (ISO date string, updated on outreach), `priorityScore` (computed, not stored, calculated on render).
+
+- **drafts (enhanced)**: Array in localStorage. Each draft gains: `trigger` (string describing reason), `contactId` (UUID linking to contact). Existing fields: id, contactId, message, timestamp.
+
+- **outreachRules**: String in localStorage key 'outreachRules'. Plain text user-defined rules, default empty string. Max length 5000 characters.
+
+- **batchOutreachState**: Transient object (not persisted). Holds: `query` (string), `matchedContacts` (array), `progressIndex` (number), `generatedDrafts` (array). Cleared after batch completes.
+
+- **csvImportState**: Transient object. Holds: `parsedData` (array of arrays), `columnMapping` (object with nameCol, companyCol, emailCol, phoneCol), `previewRows` (array of 5 objects). Cleared when modal closes.
+
+- **priorityWeights**: Constant object: `{daysSinceContact: 0.4, contractExpiry: 0.3, invoice: 0.3}`. Used in calculatePriorityScore.
+
+## API
+
+- **Anthropic Messages API (enhanced)**: Endpoint `https://api.anthropic.com/v1/messages`, method POST. Payload enhanced with trigger context: `{model: "claude-3-5-sonnet-20241022", max_tokens: 1024, messages: [{role: "user", content: enhancedPrompt}]}`. Headers: `x-api-key`, `anthropic-version: 2023-06-01`, `content-type: application/json`. Enhanced prompt includes trigger and trainable rules via enhanceAIPrompt(). Response handling unchanged: extract `content[0].text`. Error handling: catch network errors, 429 rate limits (show "Rate limited, try again" toast), 401 auth errors (show "Invalid API key" toast).
+
+- **No new external APIs**: CSV parsing client-side via parseCSV(). Natural language processing via keyword matching in parseNaturalLanguageQuery() (no NLP API needed).
+
+## DESIGN
+
+- **Colors**: Existing palette unchanged: warm off-white background (#FAF9F6), forest green primary (#2D5016), dark sidebar (#1A1A1A). New colors: priority badges (critical: #D32F2F red, high: #F57C00 orange, medium: #FBC02D yellow, low: #388E3C green). Trigger box: #FFF3E0 light orange background, #FF9800 orange border.
+
+- **Typography**: Existing fonts unchanged (system: -apple-system, BlinkMacSystemFont, "Segoe UI"). Priority badge: 12px bold. Trigger box: 14px normal weight, trigger label bold.
+
+- **Layout**: Batch Outreach view: centered card 600px max-width, 24px padding. CSV import modal: 700px width, 80vh max-height with scroll. Trainable instructions textarea: full width, 400px height, 12px padding, border 1px solid #DDD.
+
+- **Priority Badge**: Inline-block, padding 4px 8px, border-radius 12px, margin-left 8px. Positioned in contact row using flexbox: row has `display: flex`, badge in `margin-left: auto` container.
+
+- **Trigger Box**: Full width, margin-bottom 16px, padding 12px, border-radius 4px, border-left 4px solid, background light orange. Icon: ⚠️ emoji before text.
+
+- **Progress Indicator**: Text display "Generating message 3 of 7..." with spinner (CSS animation rotating circle), color forest green, centered in batchProgress div.
+
+- **CSV Preview Table**: Bordered table, 100% width, alternating row colors (#F5F5F5). Header row bold with forest green background, white text. 5 rows max with scroll if needed.
+
+- **Animations**: Modal fade-in 200ms ease. Progress spinner rotate 360deg 1s linear infinite. Success checkmarks in batch results: scale-in 300ms ease.
+
+## ERRORS
+
+- **No API Key**: When generating batch messages or enhanced messages, check localStorage 'anthropicApiKey'. If missing, show toast "API key not configured. Go to Settings." and abort.
+
+- **CSV Parse Error**: If parseCSV() throws (malformed CSV), catch error, show toast "Invalid CSV file. Please check format." and clear file input.
+
+- **No CSV Columns Detected**: If detectCSVColumns() returns all nulls, show toast "Could not detect columns. Please map manually." and allow manual dropdown selection.
+
+- **Duplicate Email on Import**: During importCSVContacts(), when duplicate detected, increment skipped counter. Show final toast with counts.
+
+- **Empty Batch Query**: If textarea empty when "Generate" clicked, show toast "Please enter a query." and return.
+
+- **No Matches for Batch Query**: If filterContactsByQuery() returns empty array, show toast "No contacts match your query. Try different criteria."
+
+- **API Rate Limit (429)**: When Anthropic API returns 429, catch in generateBatchMessages(), show toast "Rate limited. Pausing 10 seconds...", await 10 seconds, retry same contact. Max 3 retries per contact.
+
+- **API Network Error**: Catch fetch() errors, show toast "Network error. Check connection." Store error in draft message: "Error: Could not generate message."
+
+- **Invalid Priority Score Inputs**: If contractExpiry or invoiceAmount contain non-numeric/invalid data, treat as null/0 in calculatePriorityScore(). Don't throw error.
+
+- **Large CSV File**: If CSV > 10MB, show toast "File too large. Max 10MB." and reject before parsing.
+
+- **localStorage Quota Exceeded**: Wrap all localStorage.setItem() in try-catch. If quota exceeded, show toast "Storage full. Delete old drafts or contacts." and abort save.
+
+## SECTIONS
+
+- **Section1_PriorityScoring**: (~120 lines) Implements calculatePriorityScore() with three weighted factors (days since contact, contract expiry, invoice). Includes helper functions: getDaysSince(date), getDaysUntil(date), normalizeDaysToScore(days, maxDays). Implements getPriorityBadgeColor() with four tier thresholds. Implements sortContactsByPriority() using array sort with score comparison. Implements renderPriorityBadge() returning HTML string with dynamic class. Adds data migration function migrateContactsForPriority() to add contractExpiry/invoiceAmount to old contacts (called once on init). Includes constants object PRIORITY_CONFIG with weights and thresholds.
+
+- **Section2_ContactFormEnhancement**: (~100 lines) Wraps existing renderContactForm() function. Implements enhanceContactForm() which injects two new form groups after phone field: contractExpiry date input with label "Contract Expiry Date", invoiceAmount number input with label "Outstanding Invoice Amount ($)" and step="0.01". Implements enhanceContactSaveHandler() which reads new field values, validates (date format, non-negative number), adds to contact object before saving. Adds CSS classes for new fields matching existing form styling. Implements resetContractFields() helper to clear fields on form reset.
+
+- **Section3_OutreachTrigger**: (~110 lines) Implements computeOutreachTrigger(contact) with priority logic: first check contract expiry within 90 days, then invoice > 0, then lastContact > 30 days, else "Standard check-in". Includes helper formatDaysRemaining(days) for "23 days" vs "1 day" grammar. Implements renderTriggerBox(contact) returning styled HTML with icon. Implements enhanceAIPrompt(contact, basePrompt) which loads rules from localStorage, calls computeOutreachTrigger(), builds enhanced prompt string with sections. Wraps existing generateAIMessage() to inject enhanced prompt and trigger. Adds trigger to draft object when saving. Implements showTriggerInUI(trigger) to render trigger box in message view.
+
+- **Section4_BatchOutreachUI**: (~130 lines) Implements renderBatchOutreachView() building full view: textarea, generate button, progress div, results div. Implements handleBatchOutreach() orchestrating flow: read query, parse, filter, generate. Implements parseNaturalLanguageQuery(query) with regex keyword matching for "contract expir", "invoice", "not contacted", number extraction via /\d+/. Implements filterContactsByQuery(contacts, filterObj) with switch on filter.type applying date/number comparisons. Implements renderBatchProgress(current, total) updating progress div with text and spinner. Implements renderBatchResults(drafts) listing contact names with checkmarks. Adds nav link "Batch Outreach" to sidebar nav. Adds CSS for spinner animation and result list.
+
+- **Section5_BatchMessageGeneration**: (~140 lines) Implements generateBatchMessages(contacts, progressCallback) async function. Uses for-await-of loop iterating contacts. For each: calls computeOutreachTrigger(), builds enhanced prompt via enhanceAIPrompt(), makes Anthropic API fetch with headers from localStorage, awaits response, parses JSON, extracts message text, creates draft object {id: uuid(), contactId, message, trigger, timestamp, status: 'generated'}, invokes progressCallback(index, contacts.length), adds 800ms delay via await sleep(800). Implements sleep(ms) promise helper. Implements error handling per contact: try-catch around API call, on error stores {id, contactId, message: 'Error: ' + error.message, trigger, timestamp, status: 'error'}. Returns array of all draft objects. Implements saveBatchDrafts(drafts) adding to localStorage 'drafts' array.
+
+- **Section6_CSVImportModal**: (~150 lines) Implements renderCSVImportModal() creating modal overlay with close button, file input with accept=".csv", drag-drop zone (ondragover, ondrop handlers), hidden preview section, column mapping section with 4 dropdowns (Name, Company, Email, Phone), skip duplicates checkbox, import button (disabled). Implements handleCSVFileSelect(event) reading file via FileReader.readAsText(), calling parseCSV(), detectCSVColumns(), previewCSVData(), rendering preview table, populating dropdowns with column options (0-N or "Skip"), enabling import button. Implements drag-drop handlers: preventDefaults(e), handleDrop(e) extracting file from e.dataTransfer.files[0]. Adds CSS for drag-over state (border color change). Implements closeCSVModal() clearing state and hiding modal.
+
+- **Section7_CSVParsing**: (~100 lines) Implements parseCSV(csvText) splitting by \n, splitting each row by comma handling quoted fields via regex /,(?=(?:(?:[^"]*"){2})*[^"]*$)/. Returns array of objects with numeric keys. Implements detectCSVColumns(parsedData) examining first 3 rows. For each column: checks for @ symbol (email), checks for phone patterns /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/, checks for name patterns /^[A-Z][a-z]+ [A-Z][a-z]+$/, checks for company keywords /(Inc|LLC|Corp|Ltd)/i. Returns best-guess mapping {nameCol, companyCol, emailCol, phoneCol} or null for each. Implements previewCSVData(parsedData, columnMapping, rowCount=5) slicing first 5 rows, mapping to objects with named keys. Returns preview array. Implements renderCSVPreview(previewData) building HTML table with thead (Name, Company, Email, Phone) and tbody rows.
+
+- **Section8_CSVImportLogic**: (~120 lines) Implements handleCSVImport() reading dropdown values for column mapping, reading skip duplicates checkbox state. Calls importCSVContacts(parsedData, columnMapping, skipDuplicates). Implements importCSVContacts(parsedData, columnMapping, skipDuplicates) loading existing contacts, iterating parsed rows (skip header row), extracting values via columnMapping indices, normalizing email (toLowerCase trim), checking duplicates via contacts.find(c => c.email === email), incrementing imported or skipped counter, creating contact object {id: generateUUID(), name, company, email, phone, contractExpiry: null, invoiceAmount: 0, lastContactDate: null, tier: 'B', notes: ''}, pushing to contacts array. Saves contacts to localStorage. Returns {imported, skipped}. Shows toast with counts. Calls refreshContactsList(). Closes modal. Implements generateUUID() using crypto.randomUUID() or fallback.
+
+- **Section9_TrainableInstructions**: (~90 lines) Implements renderTrainableInstructionsSettings() appending section to settings view. Creates h3 "My Outreach Rules", p explanation text "Add custom

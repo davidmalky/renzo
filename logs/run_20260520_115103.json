@@ -1,0 +1,230 @@
+{
+  "task": {
+    "id": "renzo-v2-001",
+    "title": "Renzo Phase 2 - Smart priority scoring and batch outreach",
+    "description": "Enhance the existing Renzo single-file HTML/JS app. The current app has: login (admin/renzo2024), contacts CRUD, AI message generation using Anthropic API, outreach queue, drafts, settings with API key. BUILD THESE ADDITIONS only \u00e2\u20ac\u201d do not rebuild what exists, add to it:\n\n1. SMART PRIORITY SCORE (replace simple Tier A/B/C)\nAdd priority score (0-100) computed from: days since last contact (weight 40%), contract expiry days remaining (weight 30%), invoice amount outstanding (weight 30%). Add fields to contact form: contractExpiry (date), invoiceAmount (number). Show priority score as colored badge on each contact row. Sort contacts by priority score descending.\n\n2. OUTREACH TRIGGER REASON\nWhen generating AI message, compute and display the specific trigger: 'Contract expires in 23 days' or 'Invoice $4,200 overdue' or 'Not contacted in 45 days'. Show trigger prominently in the message reasoning box. Include trigger in the AI prompt so message references it.\n\n3. BATCH OUTREACH WITH PROMPT\nAdd 'Batch Outreach' nav item. User types: 'Reach out to all contacts with contracts expiring in 90 days'. App finds matching contacts (simple keyword matching against contact data), generates AI message for each, adds all to queue. Show progress: 'Generating 1 of 5...'\n\n4. CSV IMPORT\nAdd 'Import CSV' button on contacts page. Accept CSV, auto-detect columns for name/company/email/phone. Show 5-row preview before import. Import valid rows, skip duplicates.\n\n5. TRAINABLE INSTRUCTIONS\nIn Settings, add 'My Outreach Rules' section. User adds plain-text rules stored in localStorage. These get injected into every AI message prompt.\n\nKEEP: existing login, existing contact form, existing queue/drafts/settings, existing design (warm off-white, forest green, dark sidebar). FRONTEND ONLY \u00e2\u20ac\u201d localStorage, no backend, no server.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Renzo is a frontend-only AI outreach tool. Single HTML file. localStorage data. No backend. Features: contacts with smart priority scoring, AI-generated personalized messages with reasoning, outreach queue where rep reviews and approves, batch outreach by natural language prompt, CSV import, trainable per-user instructions. The app should feel like a premium sales tool. Stay focused on these features only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 5123
+      },
+      "t": 29.7
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 177.2
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 230.1
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 376.3
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 425.5
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 559.3
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 610.9
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 29489
+      },
+      "t": 652.8
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS is truncated mid-declaration (grid-template-columns ends with 'gri...') causing syntax error and broken table layout",
+          "JavaScript truncated in checkCondition function ('return valu') causing fatal syntax error that breaks all validation",
+          "CSV import workflow incomplete: preview shows but no confirmCSVImport button/handler exists to actually import the data after preview"
+        ],
+        "feedback": "Critical fixes needed: 1) Complete the .table-row CSS grid-template-columns property (currently cuts off at 'gri'). 2) Complete the checkCondition function return statement (currently truncated to 'return valu'). 3) Add the missing confirmCSVImport button in the CSV preview modal and wire up the event listener to call importContactsFromCSV(). These are blocking issues preventing core functionality from working."
+      },
+      "t": 686.9
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 25110
+      },
+      "t": 788.0
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS truncated mid-property and missing </style> tag - will cause parsing errors and break all subsequent styles",
+          "JavaScript code truncated at end (cuts off at '// Enhan') - missing closing </script>, </body>, </html> tags causing malformed HTML",
+          "Core interactive features completely non-functional - no event listeners attached to buttons, forms, CSV dropzone, or modals despite CSS/HTML being present"
+        ],
+        "feedback": "The file is severely truncated and incomplete. Fix immediately: 1) Complete the `.csv-dropzone-text` CSS rule and add closing `</style>` tag. 2) Complete the truncated `filterContactsByQuery` function and ensure all JS code is complete with proper closing `</script>`, `</body>`, `</html>` tags. 3) Add the missing `setupEventListeners()` function to wire up all interactive elements - CSV upload, modal open/close, form submissions, batch processing button, checkbox selections. 4) Implement CSV parsing logic to populate `csvPreviewData` and render preview table. 5) Add drag-drop event handlers for `.csv-dropzone`. Without these fixes, zero functionality will work - clicking any button or uploading files will do nothing."
+      },
+      "t": 832.1
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 29722
+      },
+      "t": 951.0
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Code is severely truncated - multiple functions are incomplete (parseNaturalLanguageQuery, renderCSVPreview, setupEventListeners) causing immediate JavaScript errors on load",
+          "Missing critical functions called but never defined: computeOutreachTrigger() and parseNaturalLanguageQuery() will throw ReferenceError when Batch Outreach is triggered",
+          "No initialization code - missing DOMContentLoaded listener means no event handlers will be attached, making the entire UI non-functional"
+        ],
+        "feedback": "Critical fixes needed: 1) Complete all truncated functions - renderCSVPreview is cut off mid-HTML string, parseNaturalLanguageQuery missing closing brace, setupEventListeners incomplete. 2) Add the missing computeOutreachTrigger() function definition that's called in handleBatchGeneration(). 3) Add DOMContentLoaded event listener at the end to call setupEventListeners() so buttons work. 4) Complete the settings tab with input fields for API key and custom instructions. 5) Implement the natural language query search box in the contacts tab with proper event handlers. The file appears to be a partial upload - ensure the complete file is included with all function definitions closed properly."
+      },
+      "t": 981.0
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 26275
+      },
+      "t": 1128.4
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical: Multiple truncated/incomplete code sections - CSS missing closing tags/values, JavaScript functions cut off mid-implementation (handleCSVFile, filterContactsByQuery), and missing closing script tag. This will cause immediate syntax errors and broken functionality.",
+          "Critical: setupEventListeners() function is defined but never called, meaning NO event listeners will be attached when page loads - all buttons, forms, and interactions will be completely non-functional.",
+          "Critical: CSV parsing uses naive .split(',') which breaks on standard CSV files containing commas in fields (like 'Company, Inc.' or addresses), and .replace(/[\"']/g,'') corrupts valid data like names with apostrophes (O'Brien becomes OBrien)."
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED: 1) Complete all truncated code sections - finish the CSS blocks (add missing background colors, closing braces), complete handleCSVFile's reader.onload implementation, finish filterContactsByQuery function with all filter types and return statement. 2) Add setupEventListeners() call inside DOMContentLoaded event handler so page actually works. 3) Replace CSV parsing with proper implementation: use a real CSV parser or handle quoted fields correctly (regex like /,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/ for split, preserve quotes). 4) Verify generateAIMessage, parseCSV, autoMapColumns, escapeHtml, generateId, and all state management functions are actually present in complete file. 5) Add validation for empty CSV files before accessing lines[1]. Test with real CSV files containing commas and apostrophes."
+      },
+      "t": 1162.3
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Smart priority scoring system (0-100 calculation based on contractExpiry, invoiceAmount, lastContact)",
+          "contractExpiry and invoiceAmount fields in ContactForm",
+          "Priority score badge display in ContactRow with color coding",
+          "Outreach trigger reason computation and display in MessageReasoningBox",
+          "BatchOutreachView - full new view with natural language query interface",
+          "CSV import functionality - CSVImportModal with drag-drop, preview, and column mapping",
+          "TrainableInstructionsSection - section for AI prompt instruction rules",
+          "Natural language query parsing for batch outreach",
+          "Progress indicator for batch message generation",
+          "Trigger reason logic (contract expiry countdown, invoice overdue detection)",
+          "Auto-scoring algorithm that computes 0-100 priority based on multiple factors",
+          "CSV parsing and duplicate detection",
+          "Column mapping UI for CSV imports",
+          "Trainable instruction storage and retrieval",
+          "Integration of priority scores into queue sorting"
+        ],
+        "note": "Code shows only basic HTML structure and CSS styling foundation (first 5000 chars). None of the Phase 2 features are implemented: no priority scoring system, no new contact fields (contractExpiry/invoiceAmount), no trigger reasoning display, no batch outreach view, no CSV import modal, no trainable instructions section. The code appears to be the beginning of a base template with styling variables and basic layout components only."
+      },
+      "t": 1171.3
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 27759
+      },
+      "t": 1317.6
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No keyboard navigation support - modals, buttons, and interactive elements lack keyboard focus management and escape key handling",
+          "Missing ARIA labels and roles - screen readers cannot properly announce modal dialogs, form validations, or dynamic content updates",
+          "Form validation errors not announced - error states lack aria-live regions or aria-invalid attributes",
+          "Color contrast issues - gold (#d4af37) on light backgrounds and some text-secondary colors may fail WCAG AA standards",
+          "No focus visible states - custom buttons and interactive elements lack visible focus indicators for keyboard users",
+          "Alert/notification system incomplete - CSS class defined but no implementation visible for critical user feedback",
+          "Missing required field indicators - forms lack visual and programmatic indicators for required fields",
+          "API key stored in localStorage is a critical security vulnerability - exposed to XSS attacks and accessible by any script"
+        ]
+      },
+      "t": 1367.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 26136
+      },
+      "t": 1511.3
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete JavaScript code - login function is cut off mid-implementation",
+          "No mobile navigation pattern - header actions will overflow on small screens",
+          "Modal lacks keyboard trap implementation - users can tab out of modal to background content",
+          "Missing form validation implementation - forms have error states styled but no validation logic",
+          "No empty state handling - contacts/queue/drafts lists will show nothing when empty",
+          "Missing form validation - no client-side validation before addContact/updateContact calls",
+          "No error boundaries - modal close on error could trap users",
+          "Missing ARIA modal implementation - modal lacks aria-modal='true' and proper focus trap"
+        ]
+      },
+      "t": 1548.8
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1564.5
+    }
+  ],
+  "cost": 1.621395
+}

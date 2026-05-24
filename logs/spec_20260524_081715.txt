@@ -1,0 +1,86 @@
+# TECHNICAL SPECIFICATION: Custom Profile Creation Modal
+
+## OVERVIEW
+
+Replace the browser's `window.prompt()` in the profile switcher with a custom modal component for creating new profiles. The modal provides a better UX with validation, context help, and consistent styling. All modal infrastructure (CSS classes, HTML structure, event handlers) must be added to support this feature.
+
+## VIEWS
+
+- **newProfileModal**: Modal overlay with centered box containing profile creation form. Includes header with title and close button, explanatory text about profile purpose, text input field for profile name, error message placeholder, and action buttons (Cancel/Create). Uses `.hidden` class to toggle visibility.
+
+## FUNCTIONS
+
+- **showNewProfileModal()**: Removes `.hidden` class from `#newProfileModal`, clears `#newProfileName` input value, hides error message by adding `.hidden` to `#newProfileErr`, focuses `#newProfileName` input field.
+
+- **hideNewProfileModal()**: Adds `.hidden` class to `#newProfileModal`, clears input value, hides error message.
+
+- **handleCreateProfile()**: Reads `#newProfileName` value and trims whitespace. Validates: if empty or only whitespace, shows error "Profile name is required" and returns. Retrieves existing profiles from localStorage (key `profiles`, default empty array). Checks if name already exists (case-insensitive comparison). If duplicate, shows error "Profile name already exists" and returns. Calls `setProfile(trimmedName)` to set as current. Adds new profile to profiles array. Saves updated profiles array to localStorage. Calls `hideNewProfileModal()`. Calls `renderProfileSelector()` to refresh dropdown. Calls `showView('dashboard')` to navigate. Calls `updateQueueBadge()` to refresh badge count. Shows success toast with message "Profile '{name}' created".
+
+- **initProfileModal()**: Attaches click event to `#newProfileClose` button calling `hideNewProfileModal()`. Attaches click event to `#newProfileCancel` button calling `hideNewProfileModal()`. Attaches click event to `#newProfileCreate` button calling `handleCreateProfile()`. Attaches click event to `#newProfileModal` overlay (the outer div) to close on backdrop click, checking `event.target === event.currentTarget` to avoid closing when clicking modal box. Attaches keydown event to `#newProfileName` input to submit on Enter key (keyCode 13), calling `handleCreateProfile()`.
+
+- **switchProfile(name)** [MODIFIED]: Existing function logic remains. When `name === ''` (new profile trigger), instead of calling `window.prompt()`, calls `showNewProfileModal()` and returns early. At the very end of the function (after existing `showView('dashboard')` call), add `updateQueueBadge()` call.
+
+## DATA
+
+- **profiles** (localStorage): Array of profile name strings. Example: `["Default", "Vendors", "Customers"]`
+- **profile** (localStorage): Current active profile name string. Example: `"Vendors"`
+- **newProfileName** (DOM): Text input value for new profile name
+- **newProfileErr** (DOM): Error message display state (hidden/visible)
+
+## API
+
+None. All operations use localStorage and DOM manipulation.
+
+## DESIGN
+
+**Modal Overlay:**
+- `.modal-overlay`: position fixed, top 0, left 0, width 100%, height 100%, background `rgba(0,0,0,0.5)`, display flex, align-items center, justify-content center, z-index 1000
+
+**Modal Box:**
+- `.modal-box`: background white, border-radius 8px, box-shadow `var(--shadow-lg)` or `0 4px 20px rgba(0,0,0,0.15)`, padding 24px, max-width 90%, max-height 90vh, overflow auto
+- `.modal-sm`: width 400px (specific size variant for this modal)
+
+**Modal Header:**
+- `.modal-header`: display flex, justify-content space-between, align-items center, margin-bottom 16px
+- `.modal-title`: font-size 20px, font-weight 600, color `var(--text)` or `#1a202c`, margin 0
+- `.modal-close`: background transparent, border none, font-size 24px, color `var(--gray)` or `#718096`, cursor pointer, padding 0, width 32px, height 32px, line-height 32px, text-align center. Hover: color `var(--text)` or `#1a202c`
+
+**Form Elements:**
+- Help text: color `var(--gray)`, font-size 14px, margin-bottom 16px, line-height 1.5
+- Error text (`#newProfileErr`): color `var(--danger)` or `#e53e3e`, font-size 14px, margin-top 8px
+- Input field: use existing `.field` styles from app
+- Action buttons container: display flex, gap 10px, justify-content flex-end, margin-top 16px
+
+**Hidden State:**
+- `.hidden`: display none
+
+**Colors:**
+- Use existing CSS custom properties: `var(--primary)`, `var(--gray)`, `var(--danger)`, `var(--text)`, `var(--shadow-lg)`
+- Fallbacks: primary `#3b82f6`, gray `#718096`, danger `#e53e3e`, text `#1a202c`
+
+## ERRORS
+
+- **Empty profile name**: Show error "Profile name is required" in `#newProfileErr`, do not create profile
+- **Whitespace-only name**: Treated same as empty, show "Profile name is required"
+- **Duplicate profile name**: Show error "Profile name already exists" in `#newProfileErr`, do not create profile (case-insensitive check)
+- **Modal not found**: If `document.getElementById('newProfileModal')` returns null, log console error "Profile modal not initialized" and fall back to `window.prompt()` for graceful degradation
+- **Toast system missing**: If toast function unavailable, skip toast notification (non-critical)
+
+## SCOPE_CHECK
+
+**Estimated total lines:** 380 lines
+- HTML markup insertion: ~20 lines
+- CSS for modal system: ~120 lines
+- JavaScript functions: ~180 lines (showNewProfileModal ~8, hideNewProfileModal ~6, handleCreateProfile ~35, initProfileModal ~25, switchProfile modification ~10, utility/validation ~15, error handling ~10)
+- Comments and spacing: ~60 lines
+
+**SINGLE_TASK:** Proceed as one build. Under 650-line limit.
+
+**Implementation order:**
+1. Add CSS for modal infrastructure
+2. Add modal HTML before `</body>`
+3. Implement modal utility functions (show/hide)
+4. Implement handleCreateProfile with validation
+5. Implement initProfileModal event wiring
+6. Modify switchProfile function
+7. Call initProfileModal() on app initialization

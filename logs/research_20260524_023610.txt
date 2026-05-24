@@ -1,0 +1,60 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+- Complete authentication system with login view (`#loginView`)
+- Sidebar navigation with logo, nav items, user info, and logout button
+- Dark sidebar color scheme (`--sidebar: #141410`, `--sidebar-text: #EAE5DB`)
+- Sidebar footer section (`.sidebar-footer`) with user display and logout button
+- Comprehensive CSS variable system for colors, shadows, and spacing
+- Responsive layout with flexbox (`#appView` uses `display:flex` with sidebar and main content)
+- Styled buttons (`.btn`, `.btn-primary`, `.btn-ghost`, etc.)
+- Card components, tables, stats grids, and form elements
+- Typography system with DM Sans and DM Serif Display fonts
+- Shadow and border styling patterns
+
+## MISSING_FEATURES:
+- Version number display element
+- Footer text/attribution component below logout button
+- Styling for version footer text (small font, muted color)
+
+## CHANGES_NEEDED:
+- `.sidebar` component needs to accommodate additional footer content below existing logout button
+- `.sidebar-footer` section needs to be modified or extended to include version number display
+- May need to adjust `.sidebar` flex layout to ensure version footer stays at bottom
+
+## REUSE:
+- Use existing CSS variables:
+  - `--sidebar` (#141410) for background consistency
+  - `--sidebar-text` (#EAE5DB) for base text color
+  - `rgba(232,228,220,.4)` pattern (already used in `.sidebar-user`) for muted text
+  - `--radius-xs` (5px) for any subtle border radius if needed
+  - Existing font stack: `'DM Sans', system-ui, sans-serif`
+- Follow existing sidebar text sizing patterns:
+  - `.sidebar-user` uses `font-size: 11px` - good reference for small text
+  - `letter-spacing: .4px` pattern for readability
+- Reuse existing padding/spacing patterns from `.sidebar-footer` (16px 22px)
+- Follow existing border-top pattern: `border-top: 1px solid rgba(255,255,255,.07)`
+
+## RISKS:
+- Minimal risk task, but watch for:
+  - `.sidebar-footer` already has `padding: 16px 22px` and `border-top` - adding content won't break layout
+  - Ensure version footer doesn't get cut off if sidebar content grows (check `overflow-y:auto` on `nav`)
+  - Version text must be more muted than logout button to maintain visual hierarchy
+  - Character encoding: Task description shows "â€"" (likely a UTF-8 encoding issue) - should be "–" (en dash) or "-" in actual HTML
+
+## DATA_STRUCTURES:
+- No localStorage keys referenced in current HTML (authentication and data storage likely handled elsewhere)
+- No data structures need modification for this task
+- Task is purely presentational/UI modification
+
+---
+
+**RECOMMENDATION FOR PLANNER:**
+This is a straightforward UI addition. The version footer should be:
+1. Added as new HTML element inside `.sidebar-footer`, after the logout button
+2. Styled with new CSS class (e.g., `.sidebar-version`) using font-size ~10-11px
+3. Color should be more muted than `.sidebar-user` (perhaps `rgba(232,228,220,.25)` or `.3`)
+4. Text content: "Renzo v1.0 – Built by Agent Pipeline" (fix encoding issue)
+5. Add small margin-top (~8-10px) to separate from logout button
+
+No JavaScript changes needed. No data structure changes needed. Low complexity, low risk.

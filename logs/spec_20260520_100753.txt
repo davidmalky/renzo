@@ -1,0 +1,287 @@
+# TECHNICAL SPECIFICATION: ADVANCED TRANSFORMATION FUNCTIONS & EXPRESSION BUILDER
+
+## OVERVIEW
+
+This specification defines a comprehensive transformation function library and visual expression builder integrated into the existing mapping interface. The system enables users to create complex data transformations through drag-and-drop function composition, visual expression editing, and live preview capabilities. The architecture includes a function library panel, inline expression builder modal, runtime execution engine, template management, and testing integration—all built with vanilla JavaScript, HTML, and CSS following the existing codebase patterns.
+
+## VIEWS
+
+- **FunctionLibraryPanel**: Left sidebar overlay (300px wide) displaying categorized transformation functions with search, filter, drag-and-drop chips, and collapsible category sections. Appears when user clicks "Functions" button in mapping view header.
+
+- **ExpressionBuilderModal**: Full-screen modal (800px wide) with formula bar at top, visual function composer in center, parameter inputs with autocomplete below, and live preview pane on right showing transformation results on sample data.
+
+- **FunctionChipComponent**: Small draggable pill-shaped element showing function name and category icon, used in both library panel and expression composer.
+
+- **FunctionBlockComponent**: Visual representation of a function in the expression composer showing function name, parameter slots, nested function capability, and remove button.
+
+- **ExpressionTemplateLibrary**: Modal view (600px wide) displaying saved expression templates with search, preview, edit, delete, and import/export buttons.
+
+- **DebugModePanel**: Expandable section in Results tab showing step-by-step transformation execution for each record with function call hierarchy.
+
+- **ValidationErrorDetail**: Enhanced error display showing which specific function failed, parameter values at failure time, and suggested fixes.
+
+## FUNCTIONS
+
+- **initTransformationSystem()**: Called on page load. Initializes function library data structures, registers event listeners for function panel toggle, expression builder triggers, and drag-and-drop handlers. Loads saved expression templates from localStorage. Sets up global execution engine instance.
+
+- **renderFunctionLibraryPanel(container)**: Creates and populates the left sidebar panel. Generates category sections (String, Date, Math, Conditional, Array, Lookup) with collapsible headers. Renders function chips for each category. Attaches search input listener. Adds drag start handlers to function chips. Returns panel element reference.
+
+- **toggleFunctionLibraryPanel()**: Shows/hides the function library panel with slide-in animation (300ms ease-in-out). Updates toggle button state. Manages z-index stacking with modals. Adds/removes body class 'function-panel-open'.
+
+- **searchFunctions(query)**: Filters function library based on search query. Matches against function name, category, and description. Updates panel display to show only matching functions. Highlights matched text. Returns array of matched function objects.
+
+- **createFunctionChip(functionDef)**: Generates draggable function chip element. Sets data attributes (data-function-id, data-category, data-signature). Adds category icon. Attaches drag start/end event handlers. Returns HTMLElement.
+
+- **handleFunctionDragStart(event, functionDef)**: Sets drag data with function signature and metadata. Adds dragging visual state to chip. Creates drag ghost image. Stores function definition in event.dataTransfer.
+
+- **handleFunctionDrop(event, targetFieldMapping)**: Processes drop event on field mapping row. Extracts function definition from drag data. Opens expression builder modal with dropped function pre-populated. Prevents default drop behavior.
+
+- **openExpressionBuilderModal(fieldMappingId, currentExpression)**: Creates and displays expression builder modal. Loads current expression if exists. Initializes formula bar with expression syntax. Renders visual function composer. Sets up parameter input fields. Loads sample data for preview. Attaches save/cancel handlers. Returns modal instance.
+
+- **closeExpressionBuilderModal(save)**: If save=true, validates expression and updates field mapping with new expression. Clears modal content. Removes from DOM. Triggers mapping update event. Returns boolean success status.
+
+- **renderFormulaBar(expression)**: Displays expression in syntax-highlighted format at top of modal. Shows cursor position. Supports inline editing with syntax validation. Updates visual composer when formula bar is edited. Returns formula bar element.
+
+- **renderVisualFunctionComposer(expression, container)**: Parses expression into function blocks. Creates nested visual representation of function hierarchy. Renders function blocks with parameter slots. Enables drag-to-reorder. Adds "Add Function" dropzone between blocks. Returns composer element.
+
+- **parseExpression(expressionString)**: Converts string expression into abstract syntax tree (AST). Tokenizes function calls, parameters, and operators. Validates parentheses matching. Identifies nested functions. Returns AST object or validation errors.
+
+- **serializeExpression(ast)**: Converts AST back to string expression. Handles nested function serialization. Adds proper parentheses and commas. Escapes string literals. Returns formatted expression string.
+
+- **createFunctionBlock(functionDef, params, container)**: Generates visual block for a single function. Shows function name header. Creates parameter input slots based on function signature. Supports nested function blocks as parameters. Adds remove and configure buttons. Returns block element.
+
+- **addParameterSlot(functionBlock, paramDef, value)**: Creates input field or dropzone for function parameter. Sets up type-specific input (text, number, date, select, function). Adds autocomplete for field references. Validates parameter type. Attaches change handler. Returns slot element.
+
+- **handleParameterAutocomplete(inputElement, paramType)**: Shows autocomplete dropdown with available fields, constants, or nested functions based on parameter type. Filters options as user types. Handles arrow key navigation and enter to select. Positions dropdown relative to input. Returns autocomplete instance.
+
+- **insertNestedFunction(parentBlock, paramSlot, functionDef)**: Creates new function block inside parameter slot. Updates AST with nested function. Re-renders formula bar. Validates parameter compatibility. Returns nested block element.
+
+- **executeLivePreview(expression, sampleData)**: Runs expression against sample data records. Captures transformation result for each record. Handles execution errors gracefully. Updates preview pane with results table. Highlights differences from original values. Returns array of transformation results.
+
+- **validateExpression(expression)**: Checks expression syntax correctness. Validates function names exist in library. Verifies parameter count and types match signatures. Checks for circular references. Returns validation result object with errors array.
+
+- **registerFunction(functionDef)**: Adds new function to library. Validates function definition structure (name, category, signature, implementation, documentation). Stores in functions registry. Updates UI if library panel is open. Returns registration success boolean.
+
+- **executeFunction(functionName, params, context)**: Looks up function in registry. Validates parameters against signature. Executes function implementation with provided params. Handles type coercion. Catches and wraps execution errors. Returns transformation result or error object.
+
+- **executeBulkTransformation(expression, records)**: Compiles expression once. Iterates through records array. Applies transformation to each record. Collects results and errors. Optimizes for performance (caching compiled expression). Returns results array with success/error flags.
+
+- **handleTransformationError(error, functionName, params, record)**: Creates detailed error object with function name, parameter values, record context, and error message. Logs to debug console. Updates validation panel. Returns structured error object.
+
+- **openTemplateLibrary()**: Displays expression template library modal. Loads templates from localStorage. Renders template cards with name, description, and usage count. Attaches click handlers for apply, edit, delete. Adds import/export buttons. Returns modal instance.
+
+- **saveExpressionTemplate(name, description, expression)**: Validates template data. Generates unique template ID. Stores in localStorage templates array. Updates template library view if open. Shows success toast notification. Returns template object.
+
+- **applyExpressionTemplate(templateId, targetFieldMapping)**: Loads template by ID. Inserts template expression into field mapping. Opens expression builder for customization. Increments template usage count. Returns applied expression.
+
+- **exportTemplateLibrary()**: Serializes all templates to JSON. Creates downloadable blob. Triggers file download with timestamp in filename. Returns export success boolean.
+
+- **importTemplateLibrary(file)**: Reads uploaded JSON file. Validates template structure. Merges with existing templates (prompts for conflicts). Updates localStorage. Refreshes template library view. Returns import result with counts.
+
+- **initializeFunctionLibrary()**: Populates functions registry with built-in functions. Registers String functions (concat, substring, trim, replace, regexMatch, regexReplace, upper, lower, titleCase, padStart, padEnd). Registers Date functions (formatDate, parseDate, addDays, subtractDays, diffDays, convertTimezone, now, today). Registers Math functions (round, floor, ceil, abs, sum, average, min, max, multiply, divide, modulo). Registers Conditional functions (ifThenElse, switchCase, coalesce, isNull, isEmpty, equals, greaterThan, lessThan, and, or, not). Registers Array functions (map, filter, join, split, first, last, length, contains, concat, unique). Registers Lookup functions (lookupTable, httpGet, httpPost, jsonPath). Returns count of registered functions.
+
+- **stringConcat(...values)**: Concatenates all provided values into single string. Handles null/undefined as empty string. Converts non-strings to strings. Returns concatenated result.
+
+- **stringSubstring(str, start, length)**: Extracts substring from str starting at start index for length characters. Handles negative indices. Validates parameters. Returns substring or error.
+
+- **stringTrim(str, chars)**: Removes whitespace or specified chars from start and end of str. Returns trimmed string.
+
+- **stringReplace(str, search, replacement, flags)**: Replaces occurrences of search in str with replacement. Supports regex if flags provided. Returns modified string.
+
+- **stringRegexMatch(str, pattern, flags)**: Tests if str matches regex pattern. Returns boolean or match groups array based on flags.
+
+- **stringRegexReplace(str, pattern, replacement, flags)**: Replaces regex matches in str with replacement. Supports capture groups. Returns modified string.
+
+- **stringUpper(str)**: Converts str to uppercase. Returns uppercase string.
+
+- **stringLower(str)**: Converts str to lowercase. Returns lowercase string.
+
+- **stringTitleCase(str)**: Converts str to title case (first letter of each word capitalized). Returns title case string.
+
+- **stringPadStart(str, length, padChar)**: Pads str at start with padChar until length reached. Returns padded string.
+
+- **stringPadEnd(str, length, padChar)**: Pads str at end with padChar until length reached. Returns padded string.
+
+- **dateFormatDate(date, format)**: Formats date according to format string (YYYY-MM-DD, etc.). Parses date if string. Returns formatted string or error.
+
+- **dateParseDate(dateStr, format)**: Parses dateStr according to format pattern. Returns Date object or error.
+
+- **dateAddDays(date, days)**: Adds days to date. Returns new Date object.
+
+- **dateSubtractDays(date, days)**: Subtracts days from date. Returns new Date object.
+
+- **dateDiffDays(date1, date2)**: Calculates day difference between dates. Returns number of days.
+
+- **dateConvertTimezone(date, fromTz, toTz)**: Converts date from fromTz timezone to toTz. Returns new Date object.
+
+- **dateNow()**: Returns current timestamp as Date object.
+
+- **dateToday()**: Returns today's date at midnight as Date object.
+
+- **mathRound(num, decimals)**: Rounds num to decimals places. Returns rounded number.
+
+- **mathFloor(num)**: Rounds num down to nearest integer. Returns floored number.
+
+- **mathCeil(num)**: Rounds num up to nearest integer. Returns ceiling number.
+
+- **mathAbs(num)**: Returns absolute value of num.
+
+- **mathSum(...numbers)**: Sums all provided numbers. Filters out non-numbers. Returns sum.
+
+- **mathAverage(...numbers)**: Calculates average of provided numbers. Returns average or error if empty.
+
+- **mathMin(...numbers)**: Returns minimum value from provided numbers.
+
+- **mathMax(...numbers)**: Returns maximum value from provided numbers.
+
+- **mathMultiply(...numbers)**: Multiplies all provided numbers. Returns product.
+
+- **mathDivide(dividend, divisor)**: Divides dividend by divisor. Handles divide by zero. Returns quotient or error.
+
+- **mathModulo(dividend, divisor)**: Returns remainder of dividend / divisor. Returns modulo or error.
+
+- **conditionalIfThenElse(condition, thenValue, elseValue)**: Evaluates condition. Returns thenValue if true, elseValue if false.
+
+- **conditionalSwitchCase(value, cases, defaultValue)**: Matches value against cases object keys. Returns matching case value or defaultValue.
+
+- **conditionalCoalesce(...values)**: Returns first non-null, non-undefined value from values array.
+
+- **conditionalIsNull(value)**: Returns true if value is null or undefined.
+
+- **conditionalIsEmpty(value)**: Returns true if value is null, undefined, empty string, or empty array.
+
+- **conditionalEquals(val1, val2, ignoreCase)**: Compares values for equality. Supports case-insensitive string comparison. Returns boolean.
+
+- **conditionalGreaterThan(val1, val2)**: Returns true if val1 > val2.
+
+- **conditionalLessThan(val1, val2)**: Returns true if val1 < val2.
+
+- **conditionalAnd(...conditions)**: Returns true if all conditions are truthy.
+
+- **conditionalOr(...conditions)**: Returns true if any condition is truthy.
+
+- **conditionalNot(condition)**: Returns negation of condition.
+
+- **arrayMap(array, expression)**: Applies expression to each array element. Returns new array with transformed elements.
+
+- **arrayFilter(array, expression)**: Filters array elements based on expression evaluation. Returns filtered array.
+
+- **arrayJoin(array, separator)**: Joins array elements into string with separator. Returns joined string.
+
+- **arraySplit(str, separator)**: Splits str into array using separator. Returns array.
+
+- **arrayFirst(array)**: Returns first element of array or null if empty.
+
+- **arrayLast(array)**: Returns last element of array or null if empty.
+
+- **arrayLength(array)**: Returns length of array or 0 if not array.
+
+- **arrayContains(array, value)**: Returns true if array contains value.
+
+- **arrayConcat(...arrays)**: Concatenates multiple arrays. Returns combined array.
+
+- **arrayUnique(array)**: Removes duplicate values from array. Returns array with unique values.
+
+- **lookupTable(tableName, keyField, keyValue, returnField)**: Looks up value in reference table. Finds row where keyField equals keyValue. Returns value of returnField or null.
+
+- **lookupHttpGet(url, headers, pathToValue)**: Makes HTTP GET request to url with headers. Extracts value from response using pathToValue JSON path. Returns extracted value or error.
+
+- **lookupHttpPost(url, headers, body, pathToValue)**: Makes HTTP POST request with body. Extracts value from response. Returns extracted value or error.
+
+- **lookupJsonPath(jsonObject, path)**: Extracts value from jsonObject using JSON path expression. Returns extracted value or null.
+
+- **compileExpression(expressionString)**: Converts expression string to executable function. Optimizes for repeated execution. Caches compiled functions. Returns compiled function or compilation error.
+
+- **createExecutionContext(record, fieldMappings, referenceTables)**: Builds context object for expression execution. Includes current record data, mapped field references, lookup tables, and helper functions. Returns context object.
+
+- **executeInSandbox(compiledFunction, context)**: Runs compiled function in isolated scope. Prevents access to global variables. Implements timeout for long-running functions. Catches and wraps errors. Returns execution result.
+
+- **updateFieldMappingExpression(mappingId, expression)**: Stores expression in field mapping configuration. Updates UI to show expression indicator. Triggers validation. Saves to localStorage. Broadcasts update event.
+
+- **getFieldMappingExpression(mappingId)**: Retrieves stored expression for field mapping. Returns expression string or null.
+
+- **highlightExpressionSyntax(expressionString)**: Parses expression and wraps function names, parameters, operators in span elements with syntax classes. Returns HTML string with syntax highlighting.
+
+- **showExpressionError(errorObj, element)**: Displays error message near element. Highlights error location in expression. Shows tooltip with error details and suggested fix. Auto-dismisses after 5 seconds.
+
+- **clearExpressionErrors(element)**: Removes error indicators and messages from element and descendants.
+
+- **enableDebugMode()**: Activates debug mode for transformation testing. Starts capturing execution steps for each record. Updates Results tab to show debug panel. Persists debug mode state. Returns debug mode status.
+
+- **disableDebugMode()**: Deactivates debug mode. Stops capturing execution steps. Hides debug panel. Returns debug mode status.
+
+- **recordExecutionStep(recordId, functionName, params, result, duration)**: Logs transformation step during debug mode. Stores in debug trace for record. Includes timestamp, function, input/output values, execution time. Returns step object.
+
+- **renderDebugTrace(recordId, container)**: Displays step-by-step execution trace for record. Shows function call hierarchy with indentation. Displays input/output for each step. Highlights errors in red. Returns trace element.
+
+- **calculateExecutionMetrics(debugTrace)**: Analyzes debug trace to calculate performance metrics. Identifies slowest functions. Calculates total execution time. Returns metrics object.
+
+- **exportDebugTrace(recordId)**: Serializes debug trace to JSON. Creates downloadable file. Returns export success boolean.
+
+- **initializeReferenceTables()**: Loads reference tables for lookup functions from configuration. Validates table structure. Indexes tables for fast lookup. Returns count of loaded tables.
+
+- **addReferenceTable(name, data, keyField)**: Registers new reference table for lookups. Validates data structure. Creates index on keyField. Stores in tables registry. Returns success boolean.
+
+- **removeReferenceTable(name)**: Removes reference table from registry. Updates any expressions using that table. Returns success boolean.
+
+- **handleExpressionTemplateClick(templateId)**: Loads template details. Shows preview modal with expression and sample result. Provides Apply and Edit buttons. Returns modal instance.
+
+- **deleteExpressionTemplate(templateId)**: Confirms deletion with user. Removes template from localStorage. Updates template library view. Shows success notification. Returns deletion success boolean.
+
+- **editExpressionTemplate(templateId)**: Opens template editor modal. Loads template data into form. Allows editing name, description, expression. Saves changes on submit. Returns updated template object.
+
+- **searchExpressionTemplates(query)**: Filters templates by name, description, or expression content. Updates template library view with matches. Returns array of matching templates.
+
+- **attachExpressionToFieldMapping(fieldMappingId, expression)**: Updates field mapping configuration with expression. Adds expression indicator badge to field row. Stores in mapping state. Triggers re-evaluation. Returns success boolean.
+
+- **removeExpressionFromFieldMapping(fieldMappingId)**: Clears expression from field mapping. Removes expression indicator badge. Resets to direct field mapping. Returns success boolean.
+
+- **getFieldMappingsWithExpressions()**: Queries all field mappings. Filters those with expressions. Returns array of mapping objects with expressions.
+
+- **validateAllExpressions()**: Iterates through all field mappings with expressions. Validates each expression. Collects validation errors. Updates validation panel. Returns validation summary object.
+
+- **showFunctionDocumentation(functionDef, event)**: Displays tooltip near event target showing function documentation. Includes function signature, parameter descriptions, return type, and usage examples. Auto-positions to stay in viewport. Returns tooltip element.
+
+- **hideFunctionDocumentation()**: Removes active documentation tooltip. Clears tooltip reference.
+
+- **createFunctionExample(functionName, exampleData)**: Generates runnable example for function. Shows input, expression, and expected output. Adds "Try It" button to test in expression builder. Returns example element.
+
+## DATA
+
+- **functionsRegistry**: Object mapping function names to definitions. Structure: `{ functionName: { name, category, signature: [params], implementation: function, documentation: { description, examples, returnType } } }`. Stored in memory, initialized on load.
+
+- **expressionTemplates**: Array of saved expression template objects. Structure: `[{ id, name, description, expression, createdDate, usageCount }]`. Persisted in localStorage key 'expressionTemplates'.
+
+- **referenceTables**: Object mapping table names to table data with indexes. Structure: `{ tableName: { data: [rows], keyField: string, index: Map } }`. Stored in memory, loaded from configuration.
+
+- **currentExpression**: Object representing expression being edited in builder modal. Structure: `{ fieldMappingId, expressionString, ast, isValid, errors: [] }`. Stored in memory during editing session.
+
+- **functionLibraryState**: Object tracking function panel state. Structure: `{ isOpen: boolean, searchQuery: string, expandedCategories: [strings], selectedFunction: string }`. Stored in memory.
+
+- **debugTraces**: Map of record IDs to execution traces. Structure: `Map<recordId, [{ step, functionName, params, result, duration, timestamp, error }]>`. Stored in memory during debug session.
+
+- **compiledExpressions**: Map caching compiled expression functions. Structure: `Map<expressionString, { compiledFunction, timestamp }>`. Stored in memory with LRU eviction.
+
+- **fieldMappingExpressions**: Object mapping field mapping IDs to expressions. Structure: `{ mappingId: { expression, lastModified, isValid, errors } }`. Persisted in mapping configuration.
+
+- **executionMetrics**: Object tracking transformation performance. Structure: `{ totalExecutions, avgDuration, functionStats: { functionName: { calls, totalDuration, errors } } }`. Stored in memory, optionally exported.
+
+- **autocompleteCache**: Map caching autocomplete options for parameter types. Structure: `Map<paramType, [{ value, label, type }]>`. Stored in memory, refreshed when source fields change.
+
+- **validationResults**: Object storing expression validation results. Structure: `{ mappingId: { isValid, errors: [{ line, column, message, suggestedFix }], warnings: [] } }`. Stored in memory, updated on validation.
+
+## API
+
+- **N/A - No External APIs**: This feature operates entirely client-side with no external API calls required. Lookup functions (httpGet, httpPost) make external HTTP requests configured by users, but these are dynamic based on user-defined URLs, not fixed API endpoints. Response handling is generic JSON parsing with error catching for network failures, timeouts, and invalid responses.
+
+## DESIGN
+
+- **Color Palette**: Function categories use distinct colors: String=#3b82f6 (blue), Date=#10b981 (green), Math=#f59e0b (amber), Conditional=#8b5cf6 (purple), Array=#ec4899 (pink), Lookup=#06b6d4 (cyan). Expression builder uses --color-primary (#2563eb) for active elements, --color-success (#059669) for valid states, --color-error (#dc2626) for errors.
+
+- **Typography**: Function names use font-family: 'JetBrains Mono', 'Courier New', monospace at 13px. Documentation text uses --font-family-sans (system stack) at 14px. Formula bar uses monospace 14px with 1.5 line-height.
+
+- **Function Library Panel**: Position fixed left, width 300px, height 100vh, background white, box-shadow 2px 0 8px rgba(0,0,0,0.1). Slides in from left with transform translateX(-100%) to translateX(0), transition 300ms ease-in-out. Z-index 1000. Header height 60px with search input. Scrollable content area with padding 16px.
+
+- **Function Chip**: Display inline-block, padding 6px 12px, border-radius 16px, background category color at 10% opacity, border 1px solid category color. Font-size 12px, font-weight 500. Cursor grab when draggable, cursor grabbing when dragging. Icon size 14px before text. Hover: background opacity 20%, transform scale(1.05).
+
+- **Expression Builder Modal**: Width 900px, max-height 90vh, border-radius 12px, background white, box-shadow --shadow-lg. Padding 24px. Formula bar at top: height 48px, background #f9fafb, border-radius 6px, padding 8px 12px, border 1px solid #e5e7eb. Function composer: min-height 300px, padding

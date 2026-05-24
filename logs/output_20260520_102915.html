@@ -1,0 +1,1170 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapping Execution Engine - Advanced Transformations</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --error: #ef4444;
+  --error-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+  --purple: #8b5cf6;
+  --purple-light: #ede9fe;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+  --overlay: rgba(0,0,0,0.5);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+body.modal-open, body.function-panel-open {
+  overflow: hidden;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  transition: margin-left 0.3s ease-in-out;
+}
+
+body.function-panel-open .app-container {
+  margin-left: 300px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.btn-icon {
+  padding: 10px;
+  min-width: 40px;
+  justify-content: center;
+}
+
+.function-library-panel {
+  position: fixed;
+  top: 0;
+  left: -300px;
+  width: 300px;
+  height: 100vh;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+  transition: left 0.3s ease-in-out;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+
+body.function-panel-open .function-library-panel {
+  left: 0;
+}
+
+.panel-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.panel-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.function-category {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.category-header {
+  padding: 16px 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.category-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.category-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+
+.function-category.collapsed .category-chevron {
+  transform: rotate(-90deg);
+}
+
+.category-functions {
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.function-category.collapsed .category-functions {
+  display: none;
+}
+
+.function-chip {
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: grab;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.function-chip:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: translateX(4px);
+}
+
+.function-chip:active {
+  cursor: grabbing;
+}
+
+.function-chip.dragging {
+  opacity: 0.5;
+}
+
+.function-chip-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.function-chip-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.main-content {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mappings-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.mapping-row:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.mapping-row.drop-target {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.mapping-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: 'Monaco', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mapping-expression {
+  flex: 2;
+  min-width: 0;
+}
+
+.expression-display {
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.expression-display:hover {
+  border-color: var(--primary);
+  background: var(--bg-tertiary);
+}
+
+.expression-display.has-expression {
+  color: var(--text-primary);
+}
+
+.mapping-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xl);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: var(--bg-secondary);
+}
+
+.expression-builder-modal .modal {
+  width: 90%;
+  max-width: 1200px;
+}
+
+.formula-bar {
+  margin-bottom: 24px;
+}
+
+.formula-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  transition: all 0.2s;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.formula-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.visual-composer {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.composer-canvas {
+  min-height: 300px;
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.composer-canvas.empty {
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.function-block {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.function-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.function-block-name {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.function-block-remove {
+  background: none;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.function-block-remove:hover {
+  background: var(--error-light);
+}
+
+.function-block-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.param-input {
+  width: 100%;
+<!-- END:CSS -->
+
+<script>
+// ============================================================================
+// CORE JAVASCRIPT - Data Management, Auth, Navigation, Utilities
+// ============================================================================
+
+// Global State
+const state = {
+  currentUser: null,
+  currentProject: null,
+  mappings: [],
+  executionResults: null,
+  functionLibrary: [],
+  expressionTemplates: [],
+  activeModal: null,
+  functionPanelOpen: false,
+  debugMode: false,
+  validationErrors: []
+};
+
+// Authentication & User Management
+function initAuth() {
+  const savedUser = localStorage.getItem('currentUser');
+  if (savedUser) {
+    state.currentUser = JSON.parse(savedUser);
+    updateUserDisplay();
+  }
+}
+
+function login(email, password) {
+  // Simulate auth - replace with real API call
+  const user = { id: 1, email, name: email.split('@')[0] };
+  state.currentUser = user;
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  updateUserDisplay();
+  return user;
+}
+
+function logout() {
+  state.currentUser = null;
+  localStorage.removeItem('currentUser');
+  updateUserDisplay();
+}
+
+function updateUserDisplay() {
+  const userDisplay = document.querySelector('.user-profile');
+  if (userDisplay && state.currentUser) {
+    userDisplay.textContent = state.currentUser.name || state.currentUser.email;
+  }
+}
+
+// Data Management
+function loadMappings() {
+  const saved = localStorage.getItem('mappings');
+  state.mappings = saved ? JSON.parse(saved) : [];
+  return state.mappings;
+}
+
+function saveMappings() {
+  localStorage.setItem('mappings', JSON.stringify(state.mappings));
+}
+
+function createMapping(name, sourceType, targetType) {
+  const mapping = {
+    id: generateId(),
+    name,
+    sourceType,
+    targetType,
+    fieldMappings: [],
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  state.mappings.push(mapping);
+  saveMappings();
+  return mapping;
+}
+
+function updateMapping(id, updates) {
+  const index = state.mappings.findIndex(m => m.id === id);
+  if (index !== -1) {
+    state.mappings[index] = { ...state.mappings[index], ...updates, updated: new Date().toISOString() };
+    saveMappings();
+    return state.mappings[index];
+  }
+  return null;
+}
+
+function deleteMapping(id) {
+  state.mappings = state.mappings.filter(m => m.id !== id);
+  saveMappings();
+}
+
+function getMappingById(id) {
+  return state.mappings.find(m => m.id === id);
+}
+
+// Function Library Management
+function loadFunctionLibrary() {
+  state.functionLibrary = [
+    // String Functions
+    { id: 'uppercase', category: 'String', name: 'UPPERCASE', description: 'Converts text to uppercase', signature: 'UPPERCASE(text)', params: ['text'] },
+    { id: 'lowercase', category: 'String', name: 'LOWERCASE', description: 'Converts text to lowercase', signature: 'LOWERCASE(text)', params: ['text'] },
+    { id: 'trim', category: 'String', name: 'TRIM', description: 'Removes leading/trailing whitespace', signature: 'TRIM(text)', params: ['text'] },
+    { id: 'concat', category: 'String', name: 'CONCAT', description: 'Joins multiple values', signature: 'CONCAT(value1, value2, ...)', params: ['values'], variadic: true },
+    { id: 'substring', category: 'String', name: 'SUBSTRING', description: 'Extracts part of text', signature: 'SUBSTRING(text, start, length)', params: ['text', 'start', 'length'] },
+    { id: 'replace', category: 'String', name: 'REPLACE', description: 'Replaces text occurrences', signature: 'REPLACE(text, find, replace)', params: ['text', 'find', 'replace'] },
+    
+    // Date Functions
+    { id: 'now', category: 'Date', name: 'NOW', description: 'Returns current date/time', signature: 'NOW()', params: [] },
+    { id: 'formatdate', category: 'Date', name: 'FORMATDATE', description: 'Formats date to string', signature: 'FORMATDATE(date, format)', params: ['date', 'format'] },
+    { id: 'parsedate', category: 'Date', name: 'PARSEDATE', description: 'Parses string to date', signature: 'PARSEDATE(text, format)', params: ['text', 'format'] },
+    { id: 'dateadd', category: 'Date', name: 'DATEADD', description: 'Adds time to date', signature: 'DATEADD(date, amount, unit)', params: ['date', 'amount', 'unit'] },
+    
+    // Math Functions
+    { id: 'add', category: 'Math', name: 'ADD', description: 'Adds numbers', signature: 'ADD(num1, num2, ...)', params: ['numbers'], variadic: true },
+    { id: 'subtract', category: 'Math', name: 'SUBTRACT', description: 'Subtracts numbers', signature: 'SUBTRACT(num1, num2)', params: ['num1', 'num2'] },
+    { id: 'multiply', category: 'Math', name: 'MULTIPLY', description: 'Multiplies numbers', signature: 'MULTIPLY(num1, num2, ...)', params: ['numbers'], variadic: true },
+    { id: 'divide', category: 'Math', name: 'DIVIDE', description: 'Divides numbers', signature: 'DIVIDE(num1, num2)', params: ['num1', 'num2'] },
+    { id: 'round', category: 'Math', name: 'ROUND', description: 'Rounds to decimals', signature: 'ROUND(number, decimals)', params: ['number', 'decimals'] },
+    
+    // Conditional Functions
+    { id: 'if', category: 'Conditional', name: 'IF', description: 'Conditional logic', signature: 'IF(condition, trueValue, falseValue)', params: ['condition', 'trueValue', 'falseValue'] },
+    { id: 'isempty', category: 'Conditional', name: 'ISEMPTY', description: 'Checks if value is empty', signature: 'ISEMPTY(value)', params: ['value'] },
+    { id: 'coalesce', category: 'Conditional', name: 'COALESCE', description: 'Returns first non-empty value', signature: 'COALESCE(value1, value2, ...)', params: ['values'], variadic: true },
+    
+    // Array Functions
+    { id: 'join', category: 'Array', name: 'JOIN', description: 'Joins array with separator', signature: 'JOIN(array, separator)', params: ['array', 'separator'] },
+    { id: 'split', category: 'Array', name: 'SPLIT', description: 'Splits text into array', signature: 'SPLIT(text, separator)', params: ['text', 'separator'] },
+    { id: 'first', category: 'Array', name: 'FIRST', description: 'Gets first array element', signature: 'FIRST(array)', params: ['array'] },
+    { id: 'last', category: 'Array', name: 'LAST', description: 'Gets last array element', signature: 'LAST(array)', params: ['array'] },
+    
+    // Lookup Functions
+    { id: 'lookup', category: 'Lookup', name: 'LOOKUP', description: 'Looks up value from mapping table', signature: 'LOOKUP(value, mappingTable)', params: ['value', 'mappingTable'] },
+    { id: 'vlookup', category: 'Lookup', name: 'VLOOKUP', description: 'Vertical lookup', signature: 'VLOOKUP(value, table, column)', params: ['value', 'table', 'column'] }
+  ];
+}
+
+// Template Management
+function loadExpressionTemplates() {
+  const saved = localStorage.getItem('expressionTemplates');
+  state.expressionTemplates = saved ? JSON.parse(saved) : [];
+}
+
+function saveExpressionTemplate(name, expression, description) {
+  const template = {
+    id: generateId(),
+    name,
+    expression,
+    description,
+    created: new Date().toISOString()
+  };
+  state.expressionTemplates.push(template);
+  localStorage.setItem('expressionTemplates', JSON.stringify(state.expressionTemplates));
+  return template;
+}
+
+function deleteExpressionTemplate(id) {
+  state.expressionTemplates = state.expressionTemplates.filter(t => t.id !== id);
+  localStorage.setItem('expressionTemplates', JSON.stringify(state.expressionTemplates));
+}
+
+// Utility Functions
+function generateId() {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Navigation
+function navigateTo(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const targetView = document.getElementById(`${view}-view`);
+  if (targetView) {
+    targetView.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+    if (navItem) navItem.classList.add('active');
+  }
+}
+
+// Initialize Application
+function initApp() {
+  initAuth();
+  loadMappings();
+  loadFunctionLibrary();
+  loadExpressionTemplates();
+  setupEventListeners();
+  renderMappingList();
+  navigateTo('mappings');
+}
+
+// Wait for DOM to load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+</script>
+
+<!-- END:CoreJavaScript -->
+// Feature-specific Functions
+
+// Transformation System
+function initTransformationSystem() {
+  setupFunctionPanelToggle();
+  setupDragAndDrop();
+  setupModalHandlers();
+}
+
+function setupFunctionPanelToggle() {
+  const toggleBtn = document.getElementById('toggle-functions-btn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleFunctionLibraryPanel);
+  }
+}
+
+function toggleFunctionLibraryPanel() {
+  const panel = document.getElementById('function-library-panel');
+  const isOpen = panel.classList.contains('open');
+  
+  if (isOpen) {
+    panel.classList.remove('open');
+    document.body.classList.remove('function-panel-open');
+  } else {
+    panel.classList.add('open');
+    document.body.classList.add('function-panel-open');
+    renderFunctionLibraryPanel();
+  }
+}
+
+function renderFunctionLibraryPanel() {
+  const container = document.getElementById('function-categories');
+  const categories = [...new Set(state.functionLibrary.map(f => f.category))];
+  
+  container.innerHTML = categories.map(category => {
+    const functions = state.functionLibrary.filter(f => f.category === category);
+    return `
+      <div class="function-category">
+        <div class="function-category-header" onclick="toggleCategory(this)">
+          <span class="category-icon">${getCategoryIcon(category)}</span>
+          <span>${category}</span>
+          <span class="collapse-icon">▼</span>
+        </div>
+        <div class="function-chips">
+          ${functions.map(fn => createFunctionChipHTML(fn)).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  attachDragHandlers();
+}
+
+function getCategoryIcon(category) {
+  const icons = {
+    'String': '📝',
+    'Date': '📅',
+    'Math': '🔢',
+    'Conditional': '🔀',
+    'Array': '📋',
+    'Lookup': '🔍'
+  };
+  return icons[category] || '⚙️';
+}
+
+function createFunctionChipHTML(fn) {
+  return `
+    <div class="function-chip" draggable="true" 
+         data-function-id="${fn.id}"
+         data-category="${fn.category}"
+         data-signature="${escapeHtml(fn.signature)}"
+         title="${escapeHtml(fn.description)}">
+      <span class="chip-icon">${getCategoryIcon(fn.category)}</span>
+      <span class="chip-name">${fn.name}</span>
+    </div>
+  `;
+}
+
+function toggleCategory(header) {
+  header.parentElement.classList.toggle('collapsed');
+}
+
+function searchFunctions() {
+  const query = document.getElementById('function-search').value.toLowerCase();
+  const chips = document.querySelectorAll('.function-chip');
+  
+  chips.forEach(chip => {
+    const name = chip.querySelector('.chip-name').textContent.toLowerCase();
+    const signature = chip.dataset.signature.toLowerCase();
+    const matches = name.includes(query) || signature.includes(query);
+    chip.style.display = matches ? 'flex' : 'none';
+  });
+}
+
+function setupDragAndDrop() {
+  document.addEventListener('dragover', (e) => {
+    if (e.target.classList.contains('expression-input')) {
+      e.preventDefault();
+      e.target.classList.add('drag-over');
+    }
+  });
+  
+  document.addEventListener('dragleave', (e) => {
+    if (e.target.classList.contains('expression-input')) {
+      e.target.classList.remove('drag-over');
+    }
+  });
+  
+  document.addEventListener('drop', (e) => {
+    if (e.target.classList.contains('expression-input')) {
+      e.preventDefault();
+      e.target.classList.remove('drag-over');
+      handleFunctionDrop(e);
+    }
+  });
+}
+
+function attachDragHandlers() {
+  const chips = document.querySelectorAll('.function-chip');
+  chips.forEach(chip => {
+    chip.addEventListener('dragstart', handleFunctionDragStart);
+    chip.addEventListener('dragend', handleFunctionDragEnd);
+  });
+}
+
+function handleFunctionDragStart(e) {
+  const chip = e.currentTarget;
+  const signature = chip.dataset.signature;
+  e.dataTransfer.setData('text/plain', signature);
+  e.dataTransfer.effectAllowed = 'copy';
+  chip.classList.add('dragging');
+}
+
+function handleFunctionDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+}
+
+function handleFunctionDrop(e) {
+  const signature = e.dataTransfer.getData('text/plain');
+  const input = e.target;
+  const currentValue = input.value;
+  const cursorPos = input.selectionStart;
+  
+  const newValue = currentValue.substring(0, cursorPos) + signature + currentValue.substring(cursorPos);
+  input.value = newValue;
+  input.focus();
+  input.setSelectionRange(cursorPos + signature.length, cursorPos + signature.length);
+  
+  validateExpression(input);
+}
+
+function openExpressionBuilder(fieldId) {
+  const mapping = state.mappings.find(m => m.id === state.currentMapping);
+  const field = mapping?.fields.find(f => f.id === fieldId);
+  
+  if (!field) return;
+  
+  const modal = document.getElementById('expression-builder-modal');
+  const formulaBar = document.getElementById('formula-bar');
+  const previewPane = document.getElementById('expression-preview');
+  
+  formulaBar.value = field.expression || '';
+  modal.classList.add('active');
+  state.currentExpressionField = fieldId;
+  
+  renderFunctionComposer();
+  updateExpressionPreview();
+  
+  formulaBar.focus();
+}
+
+function closeExpressionBuilder(save = false) {
+  const modal = document.getElementById('expression-builder-modal');
+  
+  if (save) {
+    const formulaBar = document.getElementById('formula-bar');
+    const mapping = state.mappings.find(m => m.id === state.currentMapping);
+    const field = mapping?.fields.find(f => f.id === state.currentExpressionField);
+    
+    if (field) {
+      field.expression = formulaBar.value;
+      field.transform = formulaBar.value ? 'expression' : 'direct';
+      saveMappings();
+      renderFieldMappings();
+    }
+  }
+  
+  modal.classList.remove('active');
+  state.currentExpressionField = null;
+}
+
+function renderFunctionComposer() {
+  const container = document.getElementById('function-composer');
+  const formulaBar = document.getElementById('formula-bar');
+  const expression = formulaBar.value;
+  
+  if (!expression) {
+    container.innerHTML = '<div class="composer-empty">Drag functions here or type in the formula bar</div>';
+    return;
+  }
+  
+  container.innerHTML = `<div class="composer-expression">${escapeHtml(expression)}</div>`;
+}
+
+function updateExpressionPreview() {
+  const formulaBar = document.getElementById('formula-bar');
+  const previewPane = document.getElementById('expression-preview');
+  const expression = formulaBar.value;
+  
+  if (!expression) {
+    previewPane.innerHTML = '<div class="preview-empty">No expression to preview</div>';
+    return;
+  }
+  
+  const sampleData = [
+    { name: 'John Doe', date: '2024-01-15', value: '100' },
+    { name: 'Jane Smith', date: '2024-02-20', value: '200' }
+  ];
+  
+  try {
+    const results = sampleData.map(record => {
+      const result = executeExpression(expression, record);
+      return { input: record, output: result };
+    });
+    
+    previewPane.innerHTML = `
+      <div class="preview-success">
+        <h4>Preview Results</h4>
+        ${results.map((r, i) => `
+          <div class="preview-result">
+            <div class="preview-input"><strong>Input ${i + 1}:</strong> ${JSON.stringify(r.input)}</div>
+            <div class="preview-output"><strong>Output:</strong> ${JSON.stringify(r.output)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch (error) {
+    previewPane.innerHTML = `
+      <div class="preview-error">
+        <h4>Error</h4>
+        <p>${escapeHtml(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+function executeExpression(expression, record) {
+  const context = { ...record, ...createTransformFunctions() };
+  try {
+    return new Function('context', `with(context) { return ${expression}; }`)(context);
+  } catch (error) {
+    throw new Error(`Expression execution failed: ${error.message}`);
+  }
+}
+
+function createTransformFunctions() {
+  return {
+    UPPER: (str) => String(str).toUpperCase(),
+    LOWER: (str) => String(str).toLowerCase(),
+    CONCAT: (...args) => args.join(''),
+    TRIM: (str) => String(str).trim(),
+    SUBSTRING: (str, start, length) => String(str).substring(start, length),
+    REPLACE: (str, search, replace) => String(str).replace(new RegExp(search, 'g'), replace),
+    NOW: () => new Date().toISOString(),
+    DATEFORMAT: (date, format) => new Date(date).toLocaleDateString(),
+    DATEADD: (date, days) => new Date(new Date(date).getTime() + days * 86400000).toISOString(),
+    ADD: (...args) => args.reduce((a, b) => Number(a) + Number(b), 0),
+    SUBTRACT: (a, b) => Number(a) - Number(b),
+    MULTIPLY: (...args) => args.reduce((a, b) => Number(a) * Number(b), 1),
+    DIVIDE: (a, b) => Number(a) / Number(b),
+    IF: (condition, trueVal, falseVal) => condition ? trueVal : falseVal,
+    IFNULL: (value, defaultVal) => value == null ? defaultVal : value,
+    LENGTH: (arr) => Array.isArray(arr) ? arr.length : 0,
+    FIRST: (arr) => Array.isArray(arr) ? arr[0] : null,
+    LAST: (arr) => Array.isArray(arr) ? arr[arr.length - 1] : null,
+    LOOKUP: (value, table) => table[value] || value
+  };
+}
+
+function validateExpression(input) {
+  const expression = input.value;
+  const validationMsg = input.nextElementSibling;
+  
+  if (!expression) {
+    validationMsg.textContent = '';
+    validationMsg.className = 'validation-message';
+    return;
+  }
+  
+  try {
+    executeExpression(expression, {});
+    validationMsg.textContent = '✓ Valid expression';
+    validationMsg.className = 'validation-message valid';
+  } catch (error) {
+    validationMsg.textContent = `✗ ${error.message}`;
+    validationMsg.className = 'validation-message invalid';
+  }
+}
+
+function openTemplateLibrary() {
+  const modal = document.getElementById('template-library-modal');
+  modal.classList.add('active');
+  renderTemplateLibrary();
+}
+
+function closeTemplateLibrary() {
+  document.getElementById('template-library-modal').classList.remove('active');
+}
+
+function renderTemplateLibrary() {
+  const container = document.getElementById('template-list');
+  
+  if (state.expressionTemplates.length === 0) {
+    container.innerHTML = '<div class="template-empty">No saved templates</div>';
+    return;
+  }
+  
+  container.innerHTML = state.expressionTemplates.map(template => `
+    <div class="template-item">
+      <div class="template-header">
+        <strong>${escapeHtml(template.name)}</strong>
+        <span class="template-date">${formatDate(template.created)}</span>
+      </div>
+      <div class="template-expression">${escapeHtml(template.expression)}</div>
+      <div class="template-description">${escapeHtml(template.description)}</div>
+      <div class="template-actions">
+        <button onclick="useTemplate('${template.id}')" class="btn-secondary">Use</button>
+        <button onclick="deleteTemplate('${template.id}')" class="btn-secondary">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function useTemplate(id) {
+  const template = state.expressionTemplates.find(t => t.id === id);
+  if (template) {
+    document.getElementById('formula-bar').value = template.expression;
+    updateExpressionPreview();
+    closeTemplateLibrary();
+  }
+}
+
+function deleteTemplate(id) {
+  if (confirm('Delete this template?')) {
+    deleteExpressionTemplate(id);
+    renderTemplateLibrary();
+  }
+}
+
+function saveCurrentTemplate() {
+  const name = prompt('Template name:');
+  if (!name) return;
+  
+  const expression = document.getElementById('formula-bar').value;
+  const description = prompt('Description (optional):') || '';
+  
+  saveExpressionTemplate(name, expression, description);
+  alert('Template saved!');
+}
+
+// Modal Setup
+function setupModalHandlers() {
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+      e.target.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal.active').forEach(modal => {
+        modal.classList.remove('active');
+      });
+    }
+  });
+}
+
+// Initialize transformation system
+initTransformationSystem();
+</script>
+</body>
+</html>

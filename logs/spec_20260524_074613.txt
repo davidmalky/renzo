@@ -1,0 +1,166 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add localStorage quota protection, storage usage indicator, and pagination for contacts. Wrap storage writes in try/catch to handle QuotaExceededError, display a warning banner with export link. Show storage usage in KB in Settings view. Add pagination to contacts table when over 50 contacts with Previous/Next navigation and record count.
+
+## VIEWS
+
+**StorageWarning (banner):**
+- Fixed banner at top of screen, red background, white text
+- Message: "Storage nearly full. Export your data to free space."
+- Inline link to exportContacts()
+- Only appears when QuotaExceededError fires
+- Single instance (check by ID before creating)
+
+**Settings (modified):**
+- Add `<div id="storageUsage">` above Save button
+- Display: "Storage: X.X KB used"
+- Gray text, 12px font, 16px bottom margin
+
+**Contacts (modified):**
+- Add `<div id="contactsPagination">` below table
+- Pagination controls: Previous button, count text, Next button
+- Count text: "Showing X-Y of Z contacts"
+- Buttons: `.btn .btn-ghost .btn-sm` classes
+- Only visible when contacts.length > 50
+
+## FUNCTIONS
+
+**s(k, v):**
+- Wrap existing body in try/catch
+- On QuotaExceededError: call showStorageWarning()
+- Otherwise: rethrow error
+
+**showStorageWarning():**
+- Check if `#storageWarn` exists, return early if present
+- Create div element with id='storageWarn'
+- Apply inline styles: fixed position top 0 left 0 right 0, background var(--red), color #fff, text-align center, padding 10px, font-size 13px, z-index 9999
+- Set innerHTML with message and export link
+- Prepend to document.body
+
+**loadSettings() (modified):**
+- After existing settings load logic
+- Get all localStorage keys starting with 'renzo'
+- Calculate total bytes: sum of each key's value length
+- Convert to KB (divide by 1024, toFixed(1))
+- Set textContent of `#storageUsage` to "Storage: X.X KB used"
+
+**loadContacts() (modified):**
+- Add global variable: let contactsPage = 0
+- Get contacts array from localStorage
+- Calculate pagination: total contacts, start index (page*50), end index ((page+1)*50)
+- Slice contacts array for current page
+- Render only sliced contacts
+- After table render: call renderContactsPagination(total, start, end)
+- Wire click handlers only for visible contacts
+
+**renderContactsPagination(total, start, end):**
+- Get or create `#contactsPagination` div below table
+- If total <= 50: hide pagination, return
+- Show pagination div
+- Clear existing content
+- Create Previous button: disabled if contactsPage === 0, onclick decrements page and reloads
+- Create count span: "Showing {start+1}-{Math.min(end,total)} of {total} contacts"
+- Create Next button: disabled if end >= total, onclick increments page and reloads
+- Style: flexbox center, gap 16px, margin-top 16px
+
+**prevContactsPage():**
+- If contactsPage > 0: decrement contactsPage
+- Call loadContacts()
+
+**nextContactsPage():**
+- Get total contacts length
+- If (contactsPage+1)*50 < total: increment contactsPage
+- Call loadContacts()
+
+## DATA
+
+**contactsPage:**
+- Type: number
+- Initial value: 0
+- Tracks current page in contacts pagination
+
+**storageWarn:**
+- DOM element ID
+- Single instance banner for quota warnings
+
+**storageUsage:**
+- DOM element ID
+- Displays calculated storage usage in Settings
+
+**contactsPagination:**
+- DOM element ID
+- Container for pagination controls in Contacts
+
+## API
+
+None - all changes are client-side localStorage operations.
+
+## DESIGN
+
+**StorageWarning Banner:**
+- Position: fixed, top 0, left 0, right 0
+- Background: var(--red)
+- Color: #fff
+- Text-align: center
+- Padding: 10px
+- Font-size: 13px
+- Z-index: 9999
+- Link: color #fff, text-decoration underline
+
+**Storage Usage Line:**
+- Font-size: 12px
+- Color: var(--gray)
+- Margin-bottom: 16px
+- Format: "Storage: X.X KB used"
+
+**Pagination Controls:**
+- Display: flex
+- Justify-content: center
+- Align-items: center
+- Gap: 16px
+- Margin-top: 16px
+- Buttons: .btn .btn-ghost .btn-sm
+- Disabled state: opacity 0.5, cursor not-allowed
+- Count text: font-size 13px, color var(--gray)
+
+## ERRORS
+
+**QuotaExceededError in s():**
+- Catch specifically by name check
+- Call showStorageWarning()
+- Do not throw - fail silently after warning
+
+**Missing #storageUsage element:**
+- Check existence before setting textContent
+- Fail silently if not found (view not loaded yet)
+
+**Missing contacts array:**
+- Default to empty array if g('renzoContacts') returns null
+- Pagination shows 0 results gracefully
+
+**Invalid contactsPage value:**
+- Clamp to 0 minimum
+- Clamp to max page (Math.floor(total/50))
+
+**Double warning banner:**
+- Check document.getElementById('storageWarn') before creating
+- Return early if exists
+
+## SCOPE_CHECK
+
+**Estimated total lines: 120**
+
+Changes across multiple functions:
+- s() function: +7 lines (try/catch wrapper)
+- showStorageWarning(): +12 lines (new function)
+- loadSettings(): +5 lines (storage calculation)
+- loadContacts(): +15 lines (pagination logic)
+- renderContactsPagination(): +30 lines (new function)
+- prevContactsPage(): +5 lines (new function)
+- nextContactsPage(): +6 lines (new function)
+- Global variable: +1 line
+- HTML modifications in Settings view: +1 line (insertion point)
+- HTML modifications in Contacts view: +1 line (insertion point)
+
+**SINGLE_TASK:** Proceed as one build. All changes are small incremental additions to existing functions and new utility functions. Total under 650 lines, fits within single API call limit.

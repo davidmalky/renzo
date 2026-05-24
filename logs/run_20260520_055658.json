@@ -1,0 +1,238 @@
+{
+  "task": {
+    "id": "auto-1779269281",
+    "title": "Contact Sync Dashboard & Activity Log",
+    "description": "Build a comprehensive sync monitoring and activity dashboard accessible from the Integrations settings section. Create a new view 'SyncActivityView' that displays: (1) Sync status overview card showing last sync timestamp, total contacts synced, sync health indicator (green/yellow/red based on error rate), and 'Sync Now' manual trigger button; (2) Real-time sync progress indicator with progress bar, current operation description ('Syncing contacts...', 'Checking for updates...'), and records processed counter (e.g., '247/500 contacts'); (3) Activity log table with columns for timestamp, operation type (initial sync/update/error), Salesforce record ID, Renzo contact name, sync direction indicator, status (success/failed/conflict), and expandable row details showing field-level changes; (4) Filter controls for date range, sync status (all/success/failed), and record type; (5) Error summary section showing common error types with counts and quick resolution suggestions; (6) Export sync log button to download CSV report; (7) Sync statistics cards displaying total syncs in last 30 days, average sync duration, error rate percentage, and last successful sync. Include auto-refresh every 30 seconds when sync is active, toast notifications for sync completion/errors, and ability to retry failed individual records from the log table.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "Now that the core Salesforce connector is functional, users need visibility into sync operations to trust the system and troubleshoot issues. Without monitoring capabilities, users are blind to what data is being synced, when syncs occur, and why failures happen. This dashboard is critical for production adoption as it provides transparency, enables debugging, and builds user confidence in the integration. It also establishes the monitoring pattern for all future CRM connectors and prevents support burden from users unable to diagnose sync problems themselves."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11305
+      },
+      "t": 65.3
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 207.5
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 254.6
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 395.8
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 445.7
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 577.5
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 624.0
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 25238
+      },
+      "t": 721.6
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical XSS vulnerability: localStorage.getItem('user') is parsed and used without sanitization (lines 78-79), combined with CSP 'unsafe-inline' allowing script injection. Token also stored in localStorage instead of httpOnly cookies.",
+          "Missing CSRF protection: All POST/PUT/DELETE requests to /api/sync/* endpoints lack CSRF tokens, and no token validation is implemented in the form structure.",
+          "Security policy violations: CSP allows 'unsafe-inline' for scripts/styles, external font resources lack integrity checks, missing 'object-src' directive, and no input validation/sanitization visible on recordId parameters before URL construction in retryRecord()."
+        ],
+        "feedback": "CRITICAL FIXES REQUIRED: (1) Remove 'unsafe-inline' from CSP and implement nonce-based script loading. (2) Move authentication token from localStorage to httpOnly, secure, SameSite cookies. (3) Sanitize user data from localStorage before DOM injection - use DOMPurify or equivalent: `const user = DOMPurify.sanitize(JSON.parse(localStorage.getItem('user')))`. (4) Implement CSRF token generation on page load and include in all POST/PUT/DELETE request headers. (5) Add input validation: `retryRecord(recordId) { if(!/^[a-zA-Z0-9_-]+$/.test(recordId)) return; ... }`. (6) Add SRI hashes for external fonts or self-host. (7) Include 'object-src none' in CSP. (8) Complete truncated CSS animation 'sp' keyframes. (9) Implement rate limiting on sync trigger endpoint (429 Too Many Requests). (10) Add ARIA labels: aria-label='Sync settings', role='dialog' on modals, aria-expanded on expandable rows, and keyboard event handlers for accessibility. Fix these security issues before deployment."
+      },
+      "t": 765.5
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 25571
+      },
+      "t": 875.0
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical: HttpOnly cookie flag cannot be set via JavaScript (line ~850 setCookie function) - HttpOnly cookies MUST be set server-side only. Current implementation is broken and misleading, creating false security assumptions.",
+          "Critical: CSRF token stored in sessionStorage is vulnerable to XSS attacks - any XSS vulnerability allows attackers to steal the token. Move CSRF token handling entirely server-side with proper SameSite cookie attributes.",
+          "Critical: Client-side rate limiting is security theater (checkRateLimit function) - attackers trivially bypass by clearing localStorage. ALL rate limiting must be enforced server-side with proper request tracking."
+        ],
+        "feedback": "MUST FIX: (1) Remove the HttpOnly flag from setCookie JavaScript function entirely - document that session cookies must be set server-side with proper flags. (2) Replace sessionStorage CSRF token with server-side CSRF protection using Double Submit Cookie pattern or Synchronizer Token with SameSite=Strict cookies. (3) Remove client-side rate limiting code or clearly comment it as UI-only optimization, implement real rate limiting on backend API endpoints. SHOULD FIX: (4) Add 'unsafe-inline' to style-src CSP or move all inline styles to external CSS file with proper nonce/hash validation. (5) Remove placeholder integrity hash on Google Fonts link or calculate actual hash. (6) Sanitize ALL fields in sanitizeUserData (email, etc), not just name. (7) Add HTTPS enforcement check at page load. (8) Add aria-labels to nav buttons and interactive table elements. (9) Validate record link hrefs to prevent open redirects. (10) Use textContent consistently in toast function, never innerHTML."
+      },
+      "t": 926.0
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 24690
+      },
+      "t": 1025.3
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSP 'unsafe-inline' missing but inline styles present - styles are in <style> tag which requires 'unsafe-inline' or nonce/hash",
+          "CSP script-src 'self' may block inline event handlers if used in later chunks",
+          "CSP connect-src allows Salesforce domains but no API endpoint validation in this chunk"
+        ],
+        "feedback": ""
+      },
+      "t": 1078.2
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 22597
+      },
+      "t": 1222.5
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical XSS vulnerability: renderActivities() directly injects unsanitized user data (activity.name, activity.type, activity.sfId) into HTML via template literals with no encoding",
+          "Race condition in sync operations: cancelSync() sets syncActive=false but simulateSync() continues running its loop, causing state corruption and potential duplicate syncs",
+          "Memory leak pattern: toggleRowExpand() rebinds event listeners on every call via bindEvents(), but renderActivities() replaces row content without removing old listeners, accumulating handlers"
+        ],
+        "feedback": "CRITICAL SECURITY FIXES REQUIRED: 1) Implement HTML escaping function and sanitize ALL user data before rendering (activity.name, type, sfId, error messages). 2) Fix race condition by checking syncActive flag inside simulateSync() loop and clearing interval on cancel. 3) Prevent memory leaks by either using event delegation (single listener on tbody) or explicitly removing listeners before replacing row innerHTML. 4) Add try-catch blocks around async operations with user-facing error messages. 5) Remove 'unsafe-inline' from CSP and implement nonce-based approach. 6) Add CSRF tokens to any form submissions. 7) Implement focus trap for modals and ARIA labels for accessibility. 8) Add prefers-reduced-motion media query to disable animations. These security and stability issues must be resolved before production deployment."
+      },
+      "t": 1261.7
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "SyncActivityView complete implementation - only partial HTML structure present",
+          "SyncStatusOverviewCard with all specified elements (last sync timestamp, total contacts counter, health indicator, sync button)",
+          "SyncProgressIndicator with all elements (operation description, records counter, elapsed time, cancel button)",
+          "ActivityLogTable complete implementation with all columns (timestamp, operation type, SF ID, Renzo contact name, direction indicator, status badge)",
+          "Auto-refresh every 30 seconds during active sync",
+          "Expandable row details showing field-level changes",
+          "Error details panel with retry button",
+          "Filter functionality (operation type, status, date range, contact search)",
+          "Export capabilities",
+          "Manual sync trigger functionality",
+          "Real-time sync status updates",
+          "Performance analytics display",
+          "Relative time formatting",
+          "Error rate threshold calculations (green <5%, yellow 5-15%, red >15%)",
+          "JavaScript logic for sync operations, filtering, sorting, pagination",
+          "Integration with Salesforce sync infrastructure",
+          "Cancel button for long-running operations",
+          "All interactive behaviors specified in the requirements"
+        ],
+        "note": "Code appears to be truncated at ~5000 characters and only contains basic HTML structure and CSS styling. Missing all JavaScript functionality, complete component implementations, and interactive features required by the specification. No sync logic, API integration, filtering, export, or real-time update capabilities are present."
+      },
+      "t": 1270.7
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 31561
+      },
+      "t": 1437.0
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Missing focus management: modals don't trap focus or return focus on close, breaking keyboard navigation",
+          "No keyboard support: interactive elements like .log-row, .date-preset lack keyboard activation (Enter/Space)",
+          "Missing ARIA labels: .modal-close, .toast-close, filter checkboxes lack accessible names",
+          "Color-only communication: status indicators (.status-dot, .stat-delta colors) lack text alternatives for colorblind users",
+          "Missing live regions: sync progress updates, toast notifications lack aria-live for screen reader announcements",
+          "Sticky sidebar creates horizontal scroll on mobile (<768px) - sidebar stays fixed at 240px pushing content off-screen",
+          "Touch targets too small: .toast-close, .modal-close, checkboxes don't meet 44x44px minimum for mobile",
+          "Table not responsive: .log-table will overflow on mobile with no horizontal scroll indication"
+        ]
+      },
+      "t": 1502.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 25936
+      },
+      "t": 1649.5
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 5,
+        "blocking_issues": [
+          "Missing keyboard navigation for log rows - row.addEventListener('keydown') added but row has no tabindex, making it unfocusable",
+          "ARIA live region on progress section will announce on every update - use aria-atomic='true' and consider rate limiting announcements",
+          "Modal keyboard trap not implemented - users cannot tab through modal content and escape key handler missing",
+          "Contact links (<a href='#'>) navigate nowhere and lack proper click handlers - confusing for keyboard/screen reader users",
+          "Expandable rows lack proper ARIA labeling - button should have aria-controls pointing to details row ID"
+        ]
+      },
+      "t": 1700.3
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1716.2
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Contact Field Mapping Configuration Interface"
+      },
+      "t": 1732.0
+    }
+  ],
+  "cost": 1.706838
+}

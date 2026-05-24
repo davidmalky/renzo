@@ -1,0 +1,53 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Extend the contact search functionality to include email, title, notes, and products fields in addition to existing name and company search. Add a sort dropdown to the contacts toolbar with five sorting options: priority, last contact date, company name, contact name, and annual spend. Wire the sort dropdown to trigger re-rendering with appropriate sort logic.
+
+## VIEWS
+- ContactsToolbar: Add sort dropdown after existing search input, using .filter-select styling with id="ctSortF" containing 5 option elements (priority, lastContact, company, name, spend)
+
+## FUNCTIONS
+
+- renderContacts(): 
+  1. After existing filtering logic, replace single-field search with multi-field search checking name, company, email, title, notes, products (all case-insensitive, handling null/undefined values)
+  2. After filtering contacts array, retrieve ctSortF.value
+  3. Apply sort based on selected value:
+     - priority: sort by computePriority(c) descending
+     - lastContact: sort by c.lastContact ascending (date string comparison)
+     - company: sort by c.company alphabetically ascending (case-insensitive)
+     - name: sort by c.name alphabetically ascending (case-insensitive)
+     - spend: sort by c.annualSpend descending (numeric)
+  4. Continue with existing rendering logic
+
+- initContactSortListener():
+  1. Get element by id 'ctSortF'
+  2. Add 'change' event listener
+  3. Call renderContacts() on change
+
+## DATA
+- No new data structures
+- Existing contact object fields used: name, company, email, title, notes, products, lastContact, annualSpend
+
+## API
+- No API changes (localStorage only)
+
+## DESIGN
+- Sort dropdown uses existing .filter-select class
+- Positioned in .toolbar after search input
+- Matches existing filter dropdown styling (same height, font, spacing)
+- No new CSS required
+
+## ERRORS
+- Handle null/undefined for optional fields (email, title, notes, products) in search filter using `(c.field||'')` pattern
+- Handle missing ctSortF element gracefully (check for null before adding listener)
+- Handle missing lastContact or annualSpend values in sorting (treat as empty string or 0)
+
+## SCOPE_CHECK
+- Estimated total lines: 45
+  - Search filter modification: 8 lines
+  - Sort logic block: 25 lines
+  - Toolbar HTML addition: 7 lines
+  - Event listener setup: 5 lines
+- SINGLE_TASK: proceed as one build
+- All changes contained within existing renderContacts() function and one new event listener function
+- No file splitting required

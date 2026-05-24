@@ -1,0 +1,242 @@
+{
+  "task": {
+    "id": "auto-1779274550",
+    "title": "Field Mapping Configuration UI",
+    "description": "Build a comprehensive field mapping management interface that allows users to create, edit, and manage mappings between Salesforce and Renzo fields without code changes.\n\nKey Features:\n\n1. **MappingListView** (`/sync/mappings`): Main interface showing all configured mappings in a searchable, filterable table with columns: source field, destination field, direction (bidirectional/one-way), transformation applied, status (active/inactive), last modified. Include bulk actions (activate/deactivate, delete) and 'Create New Mapping' button.\n\n2. **MappingEditorModal**: Full-featured modal for creating/editing mappings with:\n   - Source field dropdown (dynamically populated from Salesforce schema API)\n   - Destination field dropdown (from Renzo database schema)\n   - Direction selector: Salesforce\u2192Renzo, Renzo\u2192Salesforce, or Bidirectional\n   - Data type validation with automatic compatibility checking\n   - Transformation selector dropdown with: None, Custom Function, Date Format, Text Transform, Picklist Mapping, Formula\n   - Transformation configuration panel that changes based on selected type\n   - Conflict resolution strategy: Source Wins, Destination Wins, Most Recent, Manual Review, Custom Logic\n   - Active/Inactive toggle\n   - Test mapping button to preview transformation with sample data\n\n3. **TransformationBuilder**: Visual interface for common transformations:\n   - Date format converter with format string input and preview\n   - Text transforms: uppercase, lowercase, trim, regex replace\n   - Picklist value mapper with source\u2192destination value pairs table\n   - Formula builder with field tokens, operators, and function library\n   - Custom JavaScript function editor with syntax highlighting and error checking\n\n4. **MappingValidation**: Real-time validation system that checks:\n   - Field existence in both systems\n   - Data type compatibility\n   - Transformation syntax errors\n   - Circular dependency detection for bidirectional mappings\n   - Display validation errors inline with helpful resolution suggestions\n\n5. **Database Schema**:\n   - `FieldMappings` table: id, source_system, source_field, destination_system, destination_field, direction, transformation_type, transformation_config (JSON), conflict_resolution, is_active, created_at, updated_at\n   - `TransformationFunctions` table: id, name, description, function_code, parameters_schema (JSON)\n\n6. **API Endpoints**:\n   - GET /api/mappings - list all mappings with filters\n   - POST /api/mappings - create new mapping\n   - PUT /api/mappings/{id} - update mapping\n   - DELETE /api/mappings/{id} - delete mapping\n   - POST /api/mappings/{id}/test - test mapping with sample data\n   - GET /api/fields/salesforce - get Salesforce field schema\n   - GET /api/fields/renzo - get Renzo field schema\n\n7. **Import/Export**: Allow users to export mapping configurations as JSON and import from file for backup/migration purposes.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "Field mapping configuration is currently hardcoded, making the system inflexible and requiring developer intervention for any mapping changes. This is the most critical missing piece because: (1) it blocks non-technical users from managing their own sync configurations, (2) every client implementation requires custom code changes, (3) it's a prerequisite for making the sync engine truly production-ready and self-service, and (4) users need this before they can fully utilize the sync execution engine and dashboard that were just built. Without this UI, the completed sync engine can only execute pre-configured mappings, severely limiting its utility."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11340
+      },
+      "t": 63.9
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 215.9
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 263.6
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 415.4
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 466.6
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 607.1
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 653.5
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 29823
+      },
+      "t": 769.3
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSP 'unsafe-inline' allows inline scripts/styles, defeating XSS protection - should use nonces or hashes",
+          "CSP allows 'ws:' and 'wss:' for all origins - should restrict WebSocket connections to specific origins",
+          "No CSRF protection mechanism visible"
+        ],
+        "feedback": ""
+      },
+      "t": 823.2
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 25650
+      },
+      "t": 926.0
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical XSS vulnerability: Direct interpolation of user input in search/filter fields without sanitization or encoding. All user inputs must be sanitized using DOMPurify or equivalent before rendering, and implement Content Security Policy headers.",
+          "Missing authentication and CSRF protection: No visible authentication checks, authorization logic, or CSRF tokens on state-changing operations. Implement proper auth middleware and include CSRF tokens in all forms/AJAX requests.",
+          "Incomplete and corrupted code: CSS class '.va' is truncated at end, 'matchesDirection' filtering logic is incomplete. Code appears to be cut off mid-implementation, making it non-functional and potentially introducing runtime errors."
+        ],
+        "feedback": "This code requires immediate security remediation before deployment. Priority fixes: (1) Implement input sanitization using a library like DOMPurify for all user-controlled data (search, filters) before DOM insertion. (2) Add server-side authentication/authorization checks and CSRF token validation. (3) Complete the truncated code sections (CSS '.va' class, matchesDirection filter logic). (4) Add input validation with maxlength, pattern attributes, and server-side validation. (5) Implement CSP headers restricting inline styles and scripts. (6) Add SRI hashes to external resources (Google Fonts). (7) Replace hardcoded mock data with secure API calls. (8) Add proper error handling with try-catch blocks around all event handlers. (9) Implement accessibility features (ARIA labels, keyboard traps in modals, focus management). (10) Add rate limiting on API endpoints and form submissions. The code structure is reasonable but security implementation is critically insufficient for production use."
+      },
+      "t": 969.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 29719
+      },
+      "t": 1093.9
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CRITICAL: CSP policy includes 'unsafe-inline' for both style-src and script-src, completely defeating CSP protection and enabling XSS attacks. Inline event handlers (onclick) throughout the code violate CSP 'self' policy. Must remove 'unsafe-inline', externalize all inline scripts/styles, and use event delegation instead of onclick attributes.",
+          "CRITICAL: Authentication token and CSRF token stored in global authState object are fully accessible via browser console, enabling token theft through XSS. Combined with no input sanitization (mapping.id used directly in onclick handlers), this creates severe vulnerability chain. Must implement httpOnly cookies for auth tokens and add DOMPurify or equivalent for all user input.",
+          "CRITICAL: Multiple incomplete/truncated code sections (form input CSS mid-declaration, truncated button tag at end) indicate non-production-ready code. Font integrity hash is placeholder 'sha384-example' causing stylesheet loading failure. Missing formatDate function will cause runtime errors. Code requires completion and testing before deployment."
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED: 1) Remove ALL 'unsafe-inline' from CSP and refactor inline onclick handlers to use addEventListener with proper event delegation. 2) Move authentication tokens to httpOnly secure cookies and implement proper CSRF protection with SameSite cookies. 3) Add input sanitization library (DOMPurify) and sanitize ALL user inputs before rendering, especially mapping.id in onclick handlers. 4) Complete truncated CSS and button elements. 5) Generate real SRI hash for font file or remove integrity attribute. 6) Define missing formatDate function. 7) Add runtime input validation beyond just maxlength attributes. 8) Implement rate limiting on search/API functions. 9) Add autocomplete attributes to form inputs. 10) Review and test all API error messages to prevent information leakage. Code is currently in incomplete state with critical security vulnerabilities - NOT production-ready."
+      },
+      "t": 1146.8
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 32515
+      },
+      "t": 1314.8
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "Content-Security-Policy blocks inline styles - the entire <style> block violates 'style-src self' directive",
+          "Google Fonts URLs in CSP conflict with inline style restriction and may not load properly",
+          "CSP 'connect-src' allows all HTTPS origins ('https:') which is overly permissive"
+        ],
+        "feedback": ""
+      },
+      "t": 1377.6
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "MappingEditorModal full implementation (three-column layout with source/destination field selectors)",
+          "Collapsible object tree for Salesforce schema browsing",
+          "Transformation configuration panel with dynamic type selection",
+          "Data type compatibility indicator with green checkmark/red warning",
+          "Conflict resolution dropdown",
+          "Validation error panel with inline error display",
+          "Test Mapping functionality and UI",
+          "TransformationBuilderPanel component",
+          "Schema browsing with data type icons",
+          "Bulk action checkboxes and bulk operations",
+          "Real-time validation logic",
+          "Inline error resolution UI",
+          "Direction selector with three radio buttons and arrow icons",
+          "Empty state onboarding message with 'Create First Mapping' CTA",
+          "Last modified timestamp display",
+          "Transformation type indicators in table",
+          "Custom .mapping-row styling complete implementation",
+          "Field selector search functionality",
+          "Data type mismatch warnings"
+        ],
+        "note": "Code provides basic HTML structure, CSS foundation, and partial UI components (sidebar, header, table structure, basic filters, badges, toggle switches) but is incomplete. Missing the core MappingEditorModal implementation with three-column layout, schema tree navigation, transformation configuration panel, validation system, testing capabilities, and many interactive features specified in the requirements. The code appears to be cut off mid-implementation (ends at 5000 chars during CSS definition). Approximately 30-40% of specified functionality is present."
+      },
+      "t": 1386.9
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 32274
+      },
+      "t": 1540.3
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete JavaScript code - function validateTransformation is cut off mid-call (results.pu...)",
+          "Missing closing script tag and likely more functionality",
+          "CSS margin property is incomplete at line: 'margin-'",
+          "No mobile responsive CSS breakpoints defined for tables, forms, or complex layouts",
+          "Touch target sizes not specified - buttons/interactive elements may be too small for mobile (minimum 44x44px required for accessibility)",
+          "No keyboard navigation handlers visible in JavaScript for accessibility compliance",
+          "No ARIA labels, roles, or live regions defined for screen reader support",
+          "Schema tree interaction code not visible - critical for user flow completion"
+        ]
+      },
+      "t": 1603.4
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 27195
+      },
+      "t": 1754.8
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "CSS truncated - stylesheet ends mid-declaration at line 147 ('.sideba'), breaking all mobile styles",
+          "No mobile hamburger menu button or mechanism to access sidebar when hidden at <1024px",
+          "Modal not keyboard-accessible - missing focus trap, no ESC key handler visible",
+          "Toggle switches have incorrect accessibility structure - 44px wrapper but 24px clickable area creates dead zones",
+          "Form inputs lack associated <label> elements with 'for' attributes - screen readers cannot identify fields",
+          "No skip-to-content link for keyboard users to bypass sidebar navigation",
+          "Radio buttons in direction selector lack proper label association and fieldset grouping",
+          "JavaScript code is truncated mid-function (filterMappings() incomplete) - code will fail to execute"
+        ]
+      },
+      "t": 1794.3
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1810.0
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Real-time Sync Execution Engine"
+      },
+      "t": 1822.2
+    }
+  ],
+  "cost": 1.7899319999999996
+}

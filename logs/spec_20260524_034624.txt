@@ -1,0 +1,36 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a version footer displaying "Renzo v1.0 – Built by Agent Pipeline" to the bottom of the sidebar in index.html. The footer will be styled to match the existing dark sidebar color scheme with muted text, positioned below the logout button within the existing .sidebar-footer section. This is a minimal single-file modification requiring ~15 lines of code.
+
+## VIEWS
+- Sidebar Footer: Add `.sidebar-version` element after `.sidebar-logout` button within existing `.sidebar-footer` container. Display version text in small, uppercase, muted styling consistent with sidebar design language.
+
+## FUNCTIONS
+No JavaScript functions required. This is purely HTML/CSS modification.
+
+## DATA
+No new data storage required. Static text content: "Renzo v1.0 – Built by Agent Pipeline"
+
+## API
+No API changes required.
+
+## DESIGN
+- **Element**: New `<div class="sidebar-version">` containing version text
+- **Font**: 'DM Sans', 10px, weight 500, uppercase
+- **Color**: `rgba(232, 228, 220, 0.35)` (more muted than .sidebar-user)
+- **Spacing**: `margin-top: 16px` to separate from logout button, `text-align: center`
+- **Letter spacing**: `0.5px` for uppercase readability
+- **Line height**: `1.4` for text wrapping if needed
+- **Positioning**: Placed after logout button, bottom of `.sidebar-footer`
+- **Responsive**: Inherits sidebar width, no additional breakpoints needed
+
+## ERRORS
+- No error states (static content only)
+- Ensure proper spacing if sidebar height is constrained (verify visual layout)
+
+## SCOPE_CHECK
+- Estimated total lines: ~15 lines (10 CSS + 5 HTML)
+- SINGLE_TASK: This is well under 650 lines and modifies only index.html
+- Changes: Add one HTML div element and one CSS class definition
+- No file splitting required

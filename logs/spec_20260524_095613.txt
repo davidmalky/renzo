@@ -1,0 +1,199 @@
+# TECHNICAL SPECIFICATION: Integrations Page Visual Rework
+
+## OVERVIEW
+Rework the integrations page to clearly distinguish live integrations from roadmap items using visual sections, status badges, and waitlist functionality. The refactor adds section headers with color-coded bullets, status badges on each card, replaces coming-soon buttons with waitlist forms, and adds a new Renzo API card. All changes are visual and client-side with localStorage-based waitlist tracking.
+
+## VIEWS
+
+**#integrationsView (existing, modified):**
+- Add `.section-title` divs before card groups to create "Live Now" and "Coming Soon" sections
+- Section titles use green (--green-mid) for live and gray (--gray) for roadmap
+- Each integration card header modified to include inline status badge
+- Coming Soon cards get waitlist form UI below buttons when activated
+- New Renzo API card added to Coming Soon section
+
+**Waitlist Form (new inline component):**
+- `.waitlist-form` container that appears below "Join Waitlist" button
+- Email input field with validation
+- Submit button triggers localStorage save
+- `.waitlist-success` confirmation message replaces form on submit
+
+## FUNCTIONS
+
+**initIntegrationsView():**
+- Locate existing integration cards (CSV, Email, Salesforce, HubSpot, QuickBooks)
+- Insert section title before CSV card: `<div class="section-title live-section">● Live Now</div>`
+- Insert section title before Salesforce card: `<div class="section-title coming-section">● Coming Soon</div>`
+- Add status badges to each card header (after h3 title)
+- CSV and Email cards: green "Live" badge
+- Salesforce, HubSpot, QuickBooks cards: gray "Coming Soon" badge
+- Replace "View Setup Guide" buttons on coming-soon cards with "Join Waitlist" buttons
+- Create and append Renzo API card to Coming Soon section
+- Attach event listeners to all "Join Waitlist" buttons
+
+**showWaitlistForm(button, integrationName):**
+- Check if form already exists for this card (prevent duplicates)
+- Create waitlist form HTML structure
+- Insert form below the clicked button
+- Focus on email input field
+- Attach submit handler to form
+
+**submitWaitlist(event, integrationName):**
+- Prevent default form submission
+- Get email value from input field
+- Validate email format using regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+- If invalid, show inline error message "Please enter a valid email"
+- If valid, proceed to save
+- Retrieve existing waitlist from localStorage key 'renzo_waitlist' (parse JSON or default to empty array)
+- Check if this email + integration combo already exists
+- If exists, show "You're already on the waitlist" message
+- If new, create entry object: `{email: emailValue, integration: integrationName, ts: Date.now()}`
+- Push to waitlist array
+- Save back to localStorage as JSON string
+- Hide form and show success message: "Thanks — we'll email you when it's ready"
+
+**createRenzoAPICard():**
+- Generate card HTML with structure matching existing integration cards
+- Title: "Renzo API"
+- Description: "Connect any system directly via REST API. Ideal for custom CRMs, internal tools, and automation workflows."
+- Include gray "Coming Soon" badge
+- No action buttons (clean card)
+- Return card element for insertion into DOM
+
+**validateEmail(email):**
+- Test email string against regex pattern
+- Return boolean true/false
+
+## DATA
+
+**localStorage: 'renzo_waitlist':**
+- Array of waitlist entry objects
+- Each object: `{email: string, integration: string, ts: number}`
+- email: user's email address
+- integration: name of integration (e.g., "Salesforce", "HubSpot", "QuickBooks", "Renzo API")
+- ts: timestamp of submission (milliseconds)
+- Format: JSON string in localStorage
+- Example: `[{"email":"user@example.com","integration":"Salesforce","ts":1704067200000}]`
+
+## API
+
+**No external API calls required.**
+All data operations use localStorage. Future backend integration would POST to `/api/waitlist` with payload `{email, integration}` and expect `{success: true, message: string}` response.
+
+## DESIGN
+
+**Section Titles (.section-title):**
+- font-size: 13px
+- font-weight: 700
+- text-transform: uppercase
+- letter-spacing: 0.5px
+- margin: 32px 0 16px 0
+- Display bullet (●) as inline character before text
+
+**Live Section (.live-section):**
+- color: var(--green-mid)
+
+**Coming Soon Section (.coming-section):**
+- color: var(--gray)
+
+**Status Badges (.status-badge):**
+- display: inline-block
+- font-size: 11px
+- font-weight: 700
+- padding: 2px 8px
+- border-radius: 10px
+- margin-left: 8px
+- vertical-align: middle
+
+**Live Badge (.badge-live):**
+- background: var(--green-pale)
+- color: var(--green-mid)
+
+**Coming Soon Badge (.badge-coming):**
+- background: var(--gray-pale)
+- color: var(--gray)
+
+**Waitlist Form (.waitlist-form):**
+- margin-top: 16px
+- padding: 16px
+- background: var(--gray-pale)
+- border-radius: var(--radius-sm)
+- Display as column flex layout
+- gap: 12px
+
+**Waitlist Input:**
+- Inherit base input styles from existing system
+- width: 100%
+- font-size: 14px
+
+**Waitlist Submit Button:**
+- Use .btn .btn-primary classes
+- Full width within form container
+
+**Waitlist Success Message (.waitlist-success):**
+- color: var(--green-mid)
+- font-size: 13px
+- font-weight: 500
+- padding: 12px 16px
+- background: var(--green-pale)
+- border-radius: var(--radius-sm)
+- margin-top: 16px
+
+**Waitlist Error Message (.waitlist-error):**
+- color: var(--red)
+- font-size: 12px
+- margin-top: 4px
+
+**Join Waitlist Button:**
+- Use .btn .btn-ghost classes (white outline style)
+- Replace existing "View Setup Guide" buttons on coming-soon cards
+
+**Card Header Modification:**
+- Add flex display with align-items: center to h3 parent
+- Ensures badge aligns with title text
+
+## ERRORS
+
+**Email Validation Error:**
+- Show inline error text below email input: "Please enter a valid email"
+- Apply .invalid class to input field (red border)
+- Do not submit to localStorage
+
+**Duplicate Waitlist Entry:**
+- Check if email + integration already exists in localStorage array
+- Show message: "You're already on the waitlist"
+- Style as success message (green background)
+
+**localStorage Not Available:**
+- Wrap localStorage operations in try/catch
+- If error, show alert: "Unable to save. Please check browser settings."
+- Log error to console
+
+**Form Already Open:**
+- Before creating waitlist form, check if .waitlist-form already exists in card
+- If exists, do nothing (prevent duplicate forms)
+
+**Malformed localStorage Data:**
+- When parsing 'renzo_waitlist', catch JSON parse errors
+- Default to empty array if parse fails
+- Log warning to console
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+SINGLE_TASK: This is a straightforward visual refactor with client-side form handling. The complete implementation fits well within the 650-line limit and should be built as a single cohesive update to the integrations view.
+
+**Breakdown:**
+- CSS additions: ~80 lines (section titles, badges, waitlist form styles)
+- HTML structure modifications: ~60 lines (section headers, badge insertion, Renzo API card)
+- JavaScript functions: ~180 lines (init, form handlers, validation, localStorage logic)
+- Event listeners and DOM manipulation: ~60 lines
+- Error handling and edge cases: ~40 lines
+
+**Dependencies:**
+- Existing CSS variables and design system (already in place)
+- Existing button and form component styles (leverage inheritance)
+- localStorage API (browser native)
+
+**No splits required.** Proceed as single implementation task.

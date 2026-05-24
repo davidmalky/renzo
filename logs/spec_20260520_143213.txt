@@ -1,0 +1,205 @@
+# TECHNICAL SPECIFICATION: CSV Import for Renzo Contacts
+
+## OVERVIEW
+Add CSV import functionality to the existing Renzo contacts page. A new "Import CSV" button will allow users to select a CSV file, preview the data with auto-detected column mappings, and import contacts into localStorage. All existing contact functionality remains unchanged. This is a pure enhancement that integrates with the existing modal system, contact storage, and UI patterns.
+
+## VIEWS
+
+**ContactsPage (Existing - Modified)**
+- Add import button next to search container (inline-flex layout)
+- Hidden file input element (display: none)
+- Preserve all existing contact list, search, and action functionality
+
+**CSVPreviewModal (New)**
+- Modal overlay using existing modal-overlay pattern
+- Modal header: "Import Contacts from CSV" title + close button
+- Modal body: 
+  - Column mapping summary (detected field mappings)
+  - Preview table showing first 5 rows with detected data
+  - Table: thead with mapped column names, tbody with preview rows
+  - Warning text for skipped rows policy
+- Modal footer: Cancel button (btn-secondary) + Confirm Import button (btn-primary)
+
+**ResultModal (New)**
+- Simple modal overlay
+- Header: "Import Complete" or "Import Failed"
+- Body: Result message with counts (imported X, skipped Y duplicates)
+- Footer: single "Close" button (btn-primary)
+
+## FUNCTIONS
+
+**initCSVImport()**
+- Create hidden file input element, append to contacts page
+- Add click handler to "Import CSV" button → triggers file input click
+- Add change handler to file input → calls handleFileSelect(event)
+
+**handleFileSelect(event)**
+- Get selected file from event.target.files[0]
+- Validate file exists and extension is .csv
+- If invalid: show error modal with message
+- If valid: create FileReader instance, set onload handler, call readAsText(file)
+
+**parseCSV(csvText)**
+- Split text by newlines, filter empty lines
+- Extract header row (first line), split by comma
+- Parse remaining rows, split by comma, handle quoted values with commas
+- Return object: { headers: [], rows: [[]] }
+
+**detectColumnMapping(headers)**
+- Create mapping object: { name: null, company: null, email: null, phone: null }
+- Loop through headers (case-insensitive comparison):
+  - Match "name", "first", "last", "firstname", "lastname" → map to name (combine if split)
+  - Match "company", "organization", "org" → map to company
+  - Match "email", "e-mail" → map to email
+  - Match "phone", "telephone", "tel", "mobile" → map to phone
+- Return mapping with header indices
+
+**showPreviewModal(parsedData, columnMapping)**
+- Build preview modal HTML string
+- Column mapping section: display detected fields or "Not detected" for unmapped
+- Preview table: show first 5 rows with mapped data
+- Insert modal into DOM
+- Add event listeners: close button, cancel button, confirm button → handleImportConfirm()
+- Show modal by adding .active class
+
+**handleImportConfirm(parsedData, columnMapping)**
+- Get existing contacts from localStorage (key: "renzo_contacts")
+- Parse existing contacts JSON or initialize empty array
+- Create Set of existing contact signatures for duplicate detection (lowercase name+email)
+- Loop through parsed rows:
+  - Extract mapped values: name, company, email, phone
+  - Skip if both name and company are empty
+  - Create signature from name+email (lowercase)
+  - If duplicate: increment skipCount, continue
+  - Create contact object with id (timestamp + random), name, company, email, phone, createdAt
+  - Add to contacts array, increment importCount
+- Save updated contacts to localStorage
+- Close preview modal
+- Show result modal with counts
+- Refresh contacts list display
+
+**showResultModal(importCount, skipCount)**
+- Build result modal HTML with success message
+- Display: "Imported X contacts, skipped Y duplicates"
+- Insert into DOM, add close button listener
+- Show modal with .active class
+
+**closeModal(modalElement)**
+- Remove .active class
+- After transition (300ms), remove modal from DOM
+
+**refreshContactsList()**
+- Call existing function that re-renders contacts (if exposed)
+- Or dispatch custom event that contacts page listens to
+- Ensures newly imported contacts appear immediately
+
+## DATA
+
+**localStorage: "renzo_contacts"**
+- Array of contact objects
+- Format: [{ id: string, name: string, company: string, email: string, phone: string, createdAt: timestamp }]
+
+**CSVData (Temporary)**
+- headers: string[] - column names from CSV first row
+- rows: string[][] - data rows from CSV
+- columnMapping: { name: number|null, company: number|null, email: number|null, phone: number|null }
+
+**ImportState (In-Memory)**
+- selectedFile: File object
+- parsedData: CSVData object
+- importCount: number
+- skipCount: number
+
+## API
+
+**FileReader.readAsText(file)**
+- Browser API, no server endpoint
+- Triggers onload callback with event.target.result containing CSV text
+
+**localStorage.getItem("renzo_contacts")**
+- Returns: JSON string of contacts array or null
+- Parses to array for processing
+
+**localStorage.setItem("renzo_contacts", jsonString)**
+- Saves updated contacts array
+- Payload: JSON.stringify(contactsArray)
+
+## DESIGN
+
+**Import Button**
+- Position: Top right area of contacts page, next to search (flex-end alignment)
+- Style: btn btn-primary classes
+- Icon: Upload icon (SVG) + "Import CSV" text
+- Spacing: margin-left: 16px from search
+- Colors: var(--forest-green) background, white text
+- Hover: var(--forest-green-hover), translateY(-1px), shadow
+
+**Preview Modal**
+- Width: 600px max-width
+- Modal header: var(--forest-green) background, white text, 20px padding
+- Column mapping section: card-like box with var(--cream-dark) background, 16px padding, 12px border-radius
+- Mapping items: 12px margin-bottom, bold label + value in var(--text-secondary)
+- Preview table: full width, border-collapse, 1px solid var(--cream-dark) borders
+- Table header: var(--forest-green-light) background, var(--forest-green) text, 12px padding
+- Table cells: 12px padding, var(--text-primary) color
+- Warning text: var(--text-secondary), italic, 14px font, 12px margin-top
+
+**Result Modal**
+- Width: 400px max-width
+- Success icon: checkmark in var(--forest-green)
+- Message text: 16px font, var(--text-primary), center-aligned
+- Numbers: bold, var(--forest-green) color
+
+**Table Styles**
+- Font: 14px size, var(--font-family)
+- Row hover: var(--cream-light) background
+- Alternating rows: slight var(--cream-dark) tint on even rows
+
+## ERRORS
+
+**No File Selected**
+- Modal: "Please select a CSV file to import"
+- User action: dismiss modal, try again
+
+**Invalid File Type**
+- Modal: "Invalid file type. Please select a .csv file"
+- Check: file.name.toLowerCase().endsWith('.csv')
+
+**Empty CSV**
+- Modal: "The CSV file is empty or contains no valid data"
+- Check: parsedData.rows.length === 0
+
+**CSV Parse Error**
+- Modal: "Failed to parse CSV file. Please check the file format"
+- Catch errors in parseCSV function
+
+**No Columns Detected**
+- Warning in preview: "Could not auto-detect columns. Data will be imported as-is"
+- Allow import but show which fields are unmapped
+
+**localStorage Full**
+- Modal: "Failed to save contacts. Storage limit exceeded"
+- Catch QuotaExceededError on setItem
+
+**All Rows Skipped**
+- Result modal: "No contacts imported. All rows were empty or duplicates"
+- importCount === 0
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+**File Structure:**
+- HTML additions: ~30 lines (button + hidden input)
+- CSS additions: ~80 lines (button, table, modal-specific styles)
+- JavaScript: ~310 lines
+  - Init and event setup: ~40 lines
+  - CSV parsing: ~60 lines
+  - Column detection: ~50 lines
+  - Preview modal: ~60 lines
+  - Import logic: ~70 lines
+  - Result modal: ~30 lines
+
+**SINGLE_TASK: PROCEED AS ONE BUILD**
+
+This feature fits comfortably within the 650-line limit. All code can be added to the existing contacts page file (or a single new csv-import.js if Renzo uses modular JS). No splitting required.

@@ -1,0 +1,327 @@
+# RESEARCH REPORT: SALESFORCE INTEGRATION ANALYSIS
+
+## EXISTING_FEATURES:
+
+### Authentication & User Management
+- `loginUser()` - handles user login with email/password
+- `logoutUser()` - logs out current user and clears session
+- `getCurrentUser()` - retrieves current logged-in user from localStorage
+- localStorage key: `currentUser` - stores active user session
+
+### Contact Management (Core Data Structure)
+- `contacts` array stored in localStorage - main contact database
+- Contact fields: id, name, email, phone, company, title, lastContactDate, priority, relationship, revenue, contractExpiry, notes
+- `addContact()` - creates new contact with validation
+- `updateContact()` - modifies existing contact by ID
+- `deleteContact()` - removes contact from database
+- `getContacts()` - retrieves all contacts for current user
+- `getContact(id)` - retrieves single contact by ID
+
+### UI Components & Views
+- Sidebar navigation system with `.nav-item` and `.active` state management
+- Modal system: `.modal-overlay`, `.modal`, `showModal()`, `hideModal()`
+- Detail panel: `.detail-panel` with slide-in animation
+- View switching: `.view` with `.active` class toggle
+- `showView(viewName)` - main view routing function
+- Existing views: dashboard, contacts, outreach-queue, batch-generation, settings
+
+### Contact Display & Filtering
+- `renderContacts()` - displays contact list with search/filter
+- Search functionality by name/email/company
+- Priority filter tabs (all, high, medium, low, minimal)
+- `.contact-row` component with hover states
+- `.priority-badge` with color-coded priority levels
+
+### Settings Page (Current Structure)
+- View ID: `settings-view`
+- Profile section with display name editing
+- AI Configuration section with sliders for:
+  - Temperature (0-100)
+  - Max tokens (100-4000)
+  - Creativity (0-100)
+- Automation rules section with add/delete functionality
+- `saveSettings()` - persists settings to localStorage
+- localStorage key: `userSettings` - stores AI config and automation rules
+
+### Data Persistence Layer
+- All data stored in localStorage (no encryption currently)
+- User-scoped data structure (contacts filtered by userId)
+- Data format: JSON serialization via `JSON.parse()`/`JSON.stringify()`
+
+### Styling System
+- Inline `<style>` block with utility classes
+- Color palette: Primary #2D6A4F (green), Background #F7F4EF, Text #1A1A1A
+- Component classes: `.btn-primary`, `.btn-secondary`, `.stat-card`, `.input-group`
+- Form styling: consistent input/select/textarea styles with focus states
+
+### Utility Functions
+- `generateId()` - creates unique IDs for records (timestamp-based)
+- Event delegation patterns for dynamic content
+- Toast/notification system (implied by UI patterns)
+
+## MISSING_FEATURES:
+
+### OAuth 2.0 Authentication Flow
+- No OAuth client implementation
+- No authorization code flow handling
+- No redirect URI handling
+- No token exchange mechanism
+- No refresh token rotation logic
+
+### Encryption/Security Layer
+- No encryption for localStorage data
+- No secure token storage mechanism
+- No encryption utilities (encrypt/decrypt functions)
+- No key management system
+
+### External API Communication
+- No HTTP client/fetch wrapper
+- No Salesforce REST API integration
+- No API error handling middleware
+- No rate limiting/retry logic
+- No CORS handling
+
+### Salesforce-Specific Components
+- No "Connect to Salesforce" button UI
+- No connection status indicator
+- No Salesforce OAuth configuration (client ID, redirect URI, scopes)
+- No Salesforce API endpoint definitions
+
+### Data Synchronization Engine
+- No sync orchestration logic
+- No field mapping configuration storage
+- No mapping transformation functions (Salesforce → Renzo format)
+- No conflict detection algorithm
+- No merge strategy implementation
+- No "last modified" timestamp tracking for conflicts
+
+### Sync Status Dashboard
+- No sync history data structure
+- No sync log storage (localStorage key needed)
+- No last sync timestamp tracking
+- No sync error tracking/display
+- No sync progress UI component
+
+### Field Mapping UI
+- No drag-and-drop or selection UI for field mapping
+- No custom field mapping persistence
+- No field type validation
+- No mapping preview functionality
+
+### Conflict Resolution System
+- No conflict resolution UI (modal/side panel)
+- No per-field strategy selection (Salesforce wins/Renzo wins/manual)
+- No conflict queue storage
+- No manual review interface
+
+### Integration Architecture
+- No "Connected Systems" section in Settings
+- No integration registry/management system
+- No integration status tracking (active/inactive/error)
+- No integration configuration storage pattern
+- No integration disable/remove functionality
+
+### Salesforce Record ID Tracking
+- Contact schema missing: `salesforceId`, `salesforceAccountId`, `salesforceContactId`
+- No source system tracking field
+- No "last synced from Salesforce" timestamp field
+
+### Sync Log/History
+- No sync operation logging structure
+- No sync event storage (timestamp, records affected, operation type)
+- No sync history UI component
+- No log filtering/search
+
+## CHANGES_NEEDED:
+
+### Contact Data Structure Extension
+- Add to contact object:
+  - `salesforceId` (string) - Salesforce Contact ID
+  - `salesforceAccountId` (string) - Salesforce Account ID
+  - `sourceSystem` (string) - "salesforce" | "manual" | "other"
+  - `lastSyncedAt` (timestamp) - last sync datetime
+  - `lastModifiedAt` (timestamp) - last modification in Renzo
+  - `syncStatus` (string) - "synced" | "conflict" | "error"
+
+### Settings View Enhancement
+- Add new "Connected Systems" section before or after "Automation Rules"
+- Insert integration cards showing active connections
+- Add "Connect to Salesforce" button with connection status indicator
+- Add "Sync Now" button for manual sync trigger
+- Add "Field Mapping" button to open mapping configuration
+- Add sync status display (last sync time, records synced, errors)
+
+### localStorage Schema Additions
+- `salesforceAuth` - OAuth tokens and metadata
+  ```json
+  {
+    "accessToken": "encrypted_token",
+    "refreshToken": "encrypted_token",
+    "instanceUrl": "https://...",
+    "issuedAt": timestamp,
+    "expiresIn": seconds
+  }
+  ```
+- `salesforceConfig` - connection configuration
+  ```json
+  {
+    "clientId": "...",
+    "redirectUri": "...",
+    "isConnected": boolean,
+    "connectedAt": timestamp
+  }
+  ```
+- `fieldMappings` - custom field mapping rules
+  ```json
+  [
+    {
+      "salesforceField": "Account.Name",
+      "renzoField": "company",
+      "conflictStrategy": "salesforce" | "renzo" | "manual"
+    }
+  ]
+  ```
+- `syncLog` - sync operation history
+  ```json
+  [
+    {
+      "id": "...",
+      "timestamp": ...,
+      "operation": "pull",
+      "recordsAffected": number,
+      "errors": [],
+      "status": "success" | "partial" | "failed"
+    }
+  ]
+  ```
+
+### `updateContact()` Modification
+- Add conflict detection logic
+- Check `lastModifiedAt` timestamps before overwriting
+- Apply field-level conflict resolution strategies
+- Track sync metadata updates
+
+## REUSE:
+
+### Modal System
+- Use existing `.modal-overlay`, `.modal` classes for:
+  - OAuth authorization in-progress modal
+  - Field mapping configuration modal
+  - Conflict resolution modal
+  - Sync error display modal
+- Reuse `showModal()`/`hideModal()` pattern (if these functions exist in JS - inferred from CSS)
+
+### Button Styles
+- `.btn-primary` for "Connect to Salesforce", "Sync Now", "Save Mapping"
+- `.btn-secondary` for "Cancel", "Configure", "Disconnect"
+- `.btn-sm` for inline actions in sync log
+
+### Card Components
+- `.stat-card` pattern for:
+  - Connection status card
+  - Sync statistics cards (contacts synced, last sync time)
+  - Integration cards in "Connected Systems" section
+
+### Input Components
+- `.input-group` for field mapping configuration forms
+- Existing `select` styling for conflict strategy dropdowns
+- `label` styling for form labels
+
+### List/Table Patterns
+- `.contact-row` structure can be adapted for:
+  - Sync log entries (`.sync-log-row`)
+  - Field mapping rows (`.mapping-row`)
+  - Integration list items
+
+### Color Palette
+- Primary green (#2D6A4F) for success states, connected status
+- Error red (#B91C1C, #FEE) for sync errors, disconnected status
+- Warning yellow (#FEF3C7, #92400E) for conflicts needing review
+- Gray tones for inactive/disabled states
+
+### Data Persistence Functions
+- Reuse localStorage get/set patterns from contacts system
+- Apply same JSON serialization approach
+- Maintain user-scoped data structure (filter by `getCurrentUser().id`)
+
+### ID Generation
+- Use existing `generateId()` for sync log entries, mapping rule IDs
+
+### Navigation
+- Add "Integrations" nav item using `.nav-item` pattern
+- Reuse `.active` state management for selected nav item
+- Follow existing `showView()` routing pattern
+
+## RISKS:
+
+### Security Vulnerabilities
+- **CRITICAL**: Storing OAuth tokens in localStorage without encryption exposes sensitive credentials
+  - Tokens accessible via XSS attacks
+  - Tokens visible in browser DevTools
+  - No token expiration enforcement
+  - Recommendation: Implement proper encryption before storing tokens
+
+### localStorage Limitations
+- **HIGH**: localStorage has ~5-10MB limit per origin
+  - Salesforce data + contacts + sync logs could exceed limit
+  - No quota management currently exists
+  - Risk: Data loss or sync failure when quota exceeded
+  - Recommendation: Implement data archiving or quota monitoring
+
+### OAuth Flow Complexity
+- **MEDIUM**: Redirect-based OAuth in single-page app challenges
+  - State management lost during redirect
+  - Need to persist OAuth state in localStorage
+  - Popup blockers may prevent OAuth popup window
+  - Recommendation: Use authorization code flow with PKCE, handle state preservation
+
+### CORS & API Restrictions
+- **HIGH**: Salesforce API calls from browser will hit CORS restrictions
+  - Salesforce doesn't allow direct browser-to-API calls from arbitrary origins
+  - Need proxy server or Salesforce Connected App with proper CORS config
+  - Current codebase has no backend/proxy
+  - Recommendation: Document CORS workaround requirements (proxy or Salesforce CORS whitelist)
+
+### Data Conflict Complexity
+- **MEDIUM**: Merge conflicts can create data inconsistencies
+  - Timestamp comparison unreliable if clocks are skewed
+  - Partial sync failures leave data in inconsistent state
+  - "Manual review" strategy requires complex UI state management
+  - Recommendation: Implement transaction-like rollback for failed syncs
+
+### Rate Limiting
+- **MEDIUM**: Salesforce API has strict rate limits
+  - No rate limit tracking in current code
+  - Batch sync of large contact lists could trigger limits
+  - No exponential backoff retry logic
+  - Recommendation: Implement rate limit headers tracking and request throttling
+
+### Token Refresh Timing
+- **MEDIUM**: Access tokens expire (typically 2 hours for Salesforce)
+  - No token expiration detection
+  - No automatic refresh token flow
+  - Sync could fail mid-operation due to token expiry
+  - Recommendation: Implement preemptive token refresh before API calls
+
+### Field Mapping Validation
+- **LOW**: Invalid field mappings could cause sync errors
+  - No validation that Salesforce fields exist
+  - No type compatibility checking (e.g., mapping date to string)
+  - Required fields might not be mapped
+  - Recommendation: Validate mappings against Salesforce schema metadata
+
+### Concurrent Modification
+- **LOW**: Multiple browser tabs could cause race conditions
+  - Current localStorage access is not locked
+  - Simultaneous syncs could corrupt data
+  - Recommendation: Implement tab coordination via localStorage events or leader election
+
+### Backward Compatibility
+- **LOW**: Adding fields to contact schema affects existing contacts
+  - Existing contacts won't have new Salesforce fields
+  - Need migration logic to add default values
+  - Recommendation: Implement schema versioning and migration on load
+
+## DATA_STRUCTURES:
+
+###

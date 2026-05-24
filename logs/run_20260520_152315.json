@@ -1,0 +1,228 @@
+{
+  "task": {
+    "id": "renzo-p2-002",
+    "title": "Add CSV import button to Renzo contacts page",
+    "description": "ADD a CSV import feature to the existing Renzo contacts page. Surgical edits only:\n\n1. Add a hidden file input and 'Import CSV' button to the contacts view toolbar (next to existing Add Contact button)\n\n2. Add JS function parseCSV(text): splits by newline, detects headers (looks for name/company/email/phone case-insensitively), returns array of row objects\n\n3. Add JS function showCSVPreview(rows, headers): shows a modal with first 5 rows and column mapping dropdowns\n\n4. Add JS function confirmCSVImport(rows, mapping): creates contacts from rows, skips if name+company both empty, shows 'Imported X, skipped Y' toast\n\n5. Add CSS for csv-preview-modal and csv-preview-table styles\n\nUse FileReader API. No external libraries.",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach tool. Surgical edits only \u00e2\u20ac\u201d add CSV import without touching existing features."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 7113
+      },
+      "t": 41.0
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 90.1
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 136.4
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 1
+      },
+      "t": 197.2
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 244.8
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 1
+      },
+      "t": 293.3
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 342.7
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 14824
+      },
+      "t": 367.9
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSS is truncated - `.batch-matches-preview h` selector is incomplete at the end of chunk",
+          "Cannot verify if CSV import button exists in UI - HTML markup not present in this CSS-only chunk",
+          "Cannot verify if CSV import functionality is implemented - JavaScript not present in this chunk"
+        ],
+        "feedback": ""
+      },
+      "t": 392.7
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 14750
+      },
+      "t": 417.6
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS is truncated at line 237 with incomplete '.batch-matches-preview h' selector ending in 'max', breaking the entire stylesheet and likely causing layout failures",
+          "Duplicate closing tags (two </body> and two </html> tags) indicate corrupted HTML structure that will cause rendering issues in browsers",
+          "CSV import function confirmCSVImport() receives broken JSON data via onclick with escaped quotes (JSON.stringify + .replace(/\"/g, '&quot;')) that will fail to parse when executed, breaking the entire import workflow"
+        ],
+        "feedback": "CRITICAL: Fix the truncated CSS at line 237 - complete the selector and add closing brace. Remove duplicate closing tags at lines 238-239 (keep only the ones at 454-455). For CSV import: Instead of passing stringified JSON in onclick attributes, store the data in a data attribute like data-contacts='...' and retrieve with JSON.parse(element.dataset.contacts), or pass array indices and reference a global variable. Add CSS for .csv-preview-table (borders, padding, etc.). Verify the CSV import button exists in the HTML with proper file input element."
+      },
+      "t": 442.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 16642
+      },
+      "t": 473.1
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Code is severely truncated - confirmCSVImport function cuts off mid-execution at 'document.querySe', causing JS parsing errors and breaking CSV import functionality entirely",
+          "Missing critical function definitions (showToast, saveState, renderView) that are called in confirmCSVImport - will throw ReferenceErrors when CSV import is attempted",
+          "CSV parsing and file upload logic completely missing - no way to actually select/parse CSV files to populate window.csvImportData before import"
+        ],
+        "feedback": "CRITICAL: The code file is incomplete/truncated. 1) Complete the confirmCSVImport function - it stops mid-line at 'document.querySe'. 2) Add missing function definitions: showToast(message, type), saveState(), renderView(). 3) Implement CSV file input handler: add <input type='file' accept='.csv'> with onChange that uses Papa Parse or FileReader to parse CSV and store in window.csvImportData. 4) Add the actual CSV import button to the HTML with onclick='confirmCSVImport()'. 5) Ensure state object exists globally. Without these fixes, the CSV import feature is completely non-functional."
+      },
+      "t": 494.5
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 15462
+      },
+      "t": 520.0
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS is truncated mid-selector ('.batch-matches-preview h' and '@media (max-width: 768px)') breaking all subsequent styles and rendering",
+          "HTML structure is malformed with duplicate closing </body></html> tags before the <script> section, which will break JavaScript execution",
+          "Missing CSV import button UI element and file input - the core requirement of the task is not visible/implemented"
+        ],
+        "feedback": "Critical file corruption detected. 1) Fix CSS truncation - complete the '.batch-matches-preview h' selector and the media query that cuts off at 'max'. 2) Fix HTML structure - remove duplicate </body></html> tags, ensure proper document structure with scripts inside body. 3) Add the CSV import button UI: create a file input element like '<input type=\"file\" id=\"csvFileInput\" accept=\".csv\" style=\"display:none\">' and a visible button '<button onclick=\"document.getElementById('csvFileInput').click()\">Import CSV</button>'. 4) Add missing CSS classes: .csv-preview-modal, .csv-preview-table, .alert, .alert-success, .alert-error. 5) Fix confirmCSVImport() - pass the mappings object directly as a parameter instead of stringifying with HTML entities. These structural issues prevent the app from functioning."
+      },
+      "t": 544.3
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "CSV import button in toolbar",
+          "Hidden file input element",
+          "handleCSVButtonClick() function",
+          "handleCSVFileSelect(event) function",
+          "parseCSV(text) function",
+          "showCSVPreview(data) function",
+          "CSV preview modal structure",
+          "Column mapping dropdowns",
+          "Import confirmation logic",
+          "Error handling for invalid CSV",
+          "Toast notifications for import status",
+          "Integration with existing contact storage",
+          "File input reset after selection"
+        ],
+        "note": "The provided code contains only CSS styling definitions for the contacts page UI components (cards, modals, alerts, etc.). None of the required CSV import functionality has been implemented. Missing: HTML elements (import button, file input), all JavaScript functions for CSV parsing/preview/import, modal UI for preview, and integration logic."
+      },
+      "t": 550.5
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 20308
+      },
+      "t": 574.2
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Modal display property conflict: .modal has display:none and display:flex with align-items/justify-content. Should use visibility or separate display from flex properties",
+          "Missing mobile breakpoint completion: @media (max-width: 768px) .insights-grid rule is incomplete",
+          "Search input SVG accessibility: Background SVG search icon has no alternative for screen readers",
+          "Modal lacks focus trap: No keyboard navigation management for accessibility compliance",
+          "Contact cards use cursor:pointer but missing keyboard interaction indicators (missing :focus-visible styles)",
+          "Color contrast risk: var(--text-secondary) colors may fail WCAG AA on var(--cream) backgrounds without verification",
+          "Modal close button lacks aria-label for screen readers",
+          "Duplicate function definitions: handleCSVFile, parseCSV, showCSVPreview are defined twice causing conflicts"
+        ]
+      },
+      "t": 611.8
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 25715
+      },
+      "t": 638.7
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Modal accessibility: Missing focus trap - users can tab out of modal to background content. Add focus management on modal open/close",
+          "Modal accessibility: Missing ARIA attributes (role='dialog', aria-modal='true', aria-labelledby). Screen readers won't announce properly",
+          "Modal close button: No accessible label. Add aria-label='Close' or sr-only text",
+          "Search input: Missing associated label. Add visible label or aria-label for screen readers",
+          "Filter selects: Missing labels. Screen reader users won't know filter purpose",
+          "Loading spinner: No accessible text alternative. Add aria-live region or sr-only status text",
+          "Keyboard navigation: Contact cards use cursor:pointer but likely aren't keyboard accessible (should be buttons or have tabindex/keyboard handlers)",
+          "Color contrast: Status badges may fail WCAG AA - verify text contrast ratios meet 4.5:1 minimum"
+        ]
+      },
+      "t": 682.5
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 688.0
+    }
+  ],
+  "cost": 0.7673850000000001
+}

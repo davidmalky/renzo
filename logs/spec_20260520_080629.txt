@@ -1,0 +1,185 @@
+# TECHNICAL SPECIFICATION: SYNC MAPPING CONFIGURATION INTERFACE
+
+## OVERVIEW
+
+A comprehensive sync mapping configuration system that allows users to create, manage, and monitor bidirectional data synchronization between Salesforce and target systems. The interface features a wizard-driven mapping creation flow with field-level transformation rules, validation logic, conflict resolution strategies, and scheduling options. Built on existing CSS framework with localStorage-based persistence and RESTful API structure for future backend integration.
+
+## VIEWS
+
+- MappingListView: Primary dashboard displaying all sync mappings in a sortable/filterable table with inline actions (edit, pause/resume, delete, duplicate), search bar, filter dropdowns (direction, status, source object), and 'Create New Mapping' button. Shows mapping statistics in header cards.
+
+- MappingWizardView: Eight-step wizard interface for creating/editing mappings with progress indicator, step validation, navigation controls (Previous/Next/Save), and persistent state management. Each step renders distinct UI: basic info form, object selectors, visual field mapper with drag-drop, transformation editor, validation rule builder, conflict resolution selector, schedule configurator, and summary review.
+
+- FieldMappingCanvas: Interactive visual mapper with split-pane layout - source fields (left), target fields (right), SVG connection lines between mapped fields. Includes auto-map button, unmapped field highlighting, connection deletion, and zoom/pan controls.
+
+- TransformationEditor: Per-field transformation configuration with type selector (Direct Copy, Formula, Lookup, Custom Function), inline expression editor with syntax highlighting, test input/output fields, and validation feedback.
+
+- ValidationRuleBuilder: Dynamic form for adding/removing validation rules with field selector, operator dropdown (equals, contains, greater than, less than, regex, is null, is not null), value input, and custom error message field.
+
+- ScheduleConfigurator: Sync timing configuration with radio options (Real-time with polling interval, Scheduled with cron builder, Manual only), visual cron expression builder, filter query editor with WHERE clause syntax, and schedule preview.
+
+- MappingTestPanel: Testing interface showing sample source data, predicted target output, validation results, error highlighting, and detailed logs. Includes 'Run Test' button and result history.
+
+- VersionHistoryPanel: Sidebar panel displaying chronological list of mapping changes with timestamp, user, change summary, and 'Restore' action. Shows diff view when comparing versions.
+
+- ConfirmationModal: Reusable modal for destructive actions (delete, restore, deactivate) with action description, warning message, and confirm/cancel buttons.
+
+- ToastNotification: Temporary notification system for success/error/warning messages with auto-dismiss timer, manual close button, and queue management for multiple toasts.
+
+## FUNCTIONS
+
+- initializeMappingInterface(): Entry point that detects current view from URL hash, initializes localStorage schema if needed, loads user session data, sets up global event listeners (navigation, keyboard shortcuts), and renders appropriate view.
+
+- renderMappingListView(): Fetches all mappings from localStorage, calculates summary statistics (total count, active count, average success rate, last 24h sync count), renders stat cards in header, builds mapping table with sortable columns, attaches inline action handlers, initializes search/filter controls, and sets up pagination.
+
+- loadMappings(filters, sortBy, sortOrder, page, pageSize): Retrieves mappings from localStorage 'syncMappings' key, applies filter predicates (status, direction, source object, search term across name/description), sorts by specified column, implements pagination slice, and returns {mappings: [], total: number, page: number}.
+
+- renderMappingTable(mappings): Generates table HTML with rows for each mapping showing name (linked to edit), source/target objects with icons, direction badge, status toggle, last sync timestamp (relative format), success rate progress bar, and action buttons. Attaches click handlers to each interactive element.
+
+- handleSearch(searchTerm): Debounced function (300ms) that updates filter state, reloads mappings with search applied to name/description fields using case-insensitive includes, and re-renders table with loading state during debounce.
+
+- handleFilterChange(filterType, value): Updates filter state object for filterType (direction/status/sourceObject), persists filter state to sessionStorage for page refresh persistence, triggers mapping reload with new filters, and updates filter UI indicators.
+
+- handleSort(columnKey): Toggles sort order if same column clicked (asc->desc->none cycle), updates sort state, reloads mappings with new sort parameters, and updates column header sort indicators (arrows).
+
+- handleInlineAction(action, mappingId): Routes action (edit/pause/resume/delete/duplicate) to appropriate handler, shows loading state on action button, executes action with error handling, shows success/error toast, and refreshes table row or entire list as needed.
+
+- pauseMapping(mappingId): Fetches mapping, sets is_active to false, updates updated_at timestamp, saves to localStorage, logs audit event, shows success toast, and updates table row status badge without full page refresh.
+
+- resumeMapping(mappingId): Validates mapping configuration is complete before activation, runs server-side validation simulation, sets is_active to true if valid, updates localStorage, logs audit event, shows success/error toast with validation details, and updates table row.
+
+- deleteMapping(mappingId): Shows confirmation modal with mapping name and warning about irreversible action, on confirm performs soft delete (sets deleted_at timestamp instead of removing from localStorage), logs audit event, shows success toast, and removes row from table with fade animation.
+
+- duplicateMapping(mappingId): Fetches original mapping, creates deep copy with new ID (UUID), appends "(Copy)" to name, clears runtime fields (last_sync_time, success_rate), sets is_active to false, saves to localStorage, shows success toast, and adds new row to table top with highlight animation.
+
+- openMappingWizard(mode, mappingId): Initializes wizard state object in sessionStorage, sets mode ('create' or 'edit'), loads existing mapping data if edit mode, renders wizard UI with step 1 visible, initializes step validation state, and sets up wizard navigation handlers.
+
+- renderWizardStep(stepNumber): Hides all step containers, shows target step container with fade transition, updates progress indicator (step circles and connecting lines), enables/disables Previous/Next buttons based on step position, loads step-specific data (objects/fields from APIs), and renders step content.
+
+- renderBasicInfoStep(data): Renders form with mapping name input (required, max 100 chars), description textarea (max 500 chars), sync direction dropdown (unidirectional SF->Target, unidirectional Target->SF, bidirectional), inline validation on blur, and data binding to wizard state.
+
+- renderObjectSelectionStep(data): Renders source system selector (currently only Salesforce), source object dropdown with search (loads from getSalesforceObjects), target system dropdown (Salesforce, Database, API, Custom), target object dropdown (loads based on target system), object metadata display (record count, last modified), and handles cascading dropdown dependencies.
+
+- getSalesforceObjects(searchTerm): Simulates API call to Salesforce to fetch object list, filters by searchTerm if provided, returns array of {name, label, apiName, recordCount, fields: []} sorted alphabetically, implements debounced search (500ms), shows loading spinner in dropdown, and caches results for 5 minutes in sessionStorage.
+
+- getTargetSystemObjects(systemType, searchTerm): Fetches available objects from target system based on systemType, implements system-specific API calls or queries, returns standardized object schema, caches results, and handles authentication/connection errors.
+
+- renderFieldMappingStep(data): Initializes SVG canvas for connection drawing, renders source fields list (left pane) with field metadata (type, nullable, description), renders target fields list (right pane), draws existing mapping connections, enables drag-to-connect interaction, adds 'Auto-map by name' button, highlights unmapped required fields in yellow, and provides connection deletion on line click.
+
+- autoMapFields(): Compares source and target field names using fuzzy matching algorithm (Levenshtein distance < 3 or exact match ignoring case/underscores), creates mappings for confident matches, highlights suggested mappings in blue for user review, shows summary modal with mapping count, and allows batch accept/reject.
+
+- handleFieldDragStart(event, fieldData): Stores dragged field data in event.dataTransfer, adds visual drag indicator (ghost element), highlights valid drop targets in target field list, and sets drag state in component.
+
+- handleFieldDrop(event, targetField): Retrieves source field from dataTransfer, validates field type compatibility (string->string, number->number, date->date, with warnings for lossy conversions), creates mapping connection object {sourceField, targetField, transformationType: 'direct'}, adds to wizard state, draws SVG connection line, and shows success feedback.
+
+- drawFieldConnection(sourceFieldId, targetFieldId, connectionId): Calculates source and target element positions using getBoundingClientRect, draws SVG path (cubic bezier curve for visual appeal) from source to target, adds click handler for connection deletion, stores connection path data for redraw on scroll/resize, and animates line drawing.
+
+- deleteFieldConnection(connectionId): Shows confirmation if transformation rules exist on connection, removes connection from wizard state, removes field_mappings entry, removes transformation_rules for that field, removes SVG path element with fade animation, and re-highlights unmapped fields.
+
+- renderTransformationStep(data): Lists all mapped field pairs from previous step, renders transformation editor for each with type selector dropdown, shows type-specific configuration UI (formula editor for Formula type, lookup configuration for Lookup type, function selector for Custom Function), provides test interface per mapping, and validates all transformations before allowing next step.
+
+- renderTransformationEditor(fieldMapping): Creates editor container with transformation type selector, renders type-specific UI: Direct Copy (no config), Formula (expression editor with field reference autocomplete, function library, syntax validation), Lookup (lookup object selector, relationship field selector, lookup field selector, fallback value), Custom Function (function name input, parameter mapping interface, description field).
+
+- validateTransformationExpression(expression, sourceFieldType): Parses expression string for syntax errors, validates field references exist in source object, checks function names against allowed function library, validates type compatibility of operations, checks for infinite loops or circular references, and returns {valid: boolean, errors: [], warnings: []}.
+
+- testTransformation(fieldMapping, testValue): Applies transformation logic to testValue using selected transformation type, executes formula expression in sandboxed context (no eval, use Function constructor with whitelist), performs lookup simulation against sample data, invokes custom function with parameters, returns transformed value or error, and displays result with type highlighting.
+
+- renderValidationRulesStep(data): Renders list of existing validation rules with inline editing, provides 'Add Rule' button to insert new rule row, implements rule builder interface (field selector, operator dropdown, value input with type-appropriate control, error message textarea), validates rule logic, and shows rule execution order (drag to reorder).
+
+- addValidationRule(): Inserts new rule object {id: UUID, field: '', operator: '', value: '', errorMessage: '', isActive: true} into wizard state validation_rules array, renders new rule row in UI with focus on field selector, enables inline validation, and provides delete button.
+
+- renderValidationRuleRow(rule, index): Creates rule row with field dropdown (all mapped target fields), operator dropdown (equals, notEquals, contains, notContains, greaterThan, lessThan, regex, isNull, isNotNull, inList), value input (adapts to operator: text input for equals/contains, date picker for date fields, multi-select for inList), error message textarea, active toggle, delete button, and drag handle for reordering.
+
+- validateValidationRule(rule): Checks field reference is valid, validates operator is compatible with field type, validates value format matches field type, checks error message is not empty, validates regex patterns if regex operator, and returns validation result with specific error messages.
+
+- renderConflictResolutionStep(data): Renders radio button group for conflict strategies (Source Wins, Target Wins, Most Recent Wins, Manual Review Required, Custom Logic), shows description and implications of each strategy, enables custom logic editor if Custom Logic selected (expression editor with sourceRecord and targetRecord variables), validates custom logic, and provides examples/documentation.
+
+- renderScheduleStep(data): Renders radio options for sync timing (Real-time, Scheduled, Manual), shows polling interval slider (1-60 minutes) if Real-time selected, shows cron expression builder if Scheduled selected (dropdowns for minute, hour, day, month, weekday with preview of next 5 execution times), renders filter query builder with WHERE clause editor (field selector, operator, value with AND/OR grouping), validates cron expression and query syntax.
+
+- buildCronExpression(cronConfig): Converts visual cron builder selections {minute, hour, dayOfMonth, month, dayOfWeek} into standard cron expression string, validates ranges, handles special values (*, ?, L, W), and returns formatted expression.
+
+- parseCronExpression(cronString): Parses cron expression string into component parts, validates syntax, returns configuration object for visual builder, handles standard and extended formats, and provides error messages for invalid expressions.
+
+- calculateNextExecutions(cronExpression, count): Uses cron parser to calculate next N execution timestamps from current time, formats timestamps in user timezone, handles edge cases (February 29, daylight savings), and returns array of formatted date strings.
+
+- renderQueryBuilder(queryConfig): Renders filter query interface with condition groups (AND/OR), individual condition rows (field dropdown of source object fields, operator dropdown, value input), 'Add Condition' and 'Add Group' buttons, drag-to-reorder conditions, validates query syntax against object schema, and shows generated WHERE clause preview.
+
+- buildWhereClause(queryConfig): Converts visual query builder state into SQL-like WHERE clause string, properly escapes string values, handles date formatting, validates field references, supports nested condition groups with parentheses, and returns formatted query string.
+
+- renderReviewStep(data): Displays comprehensive summary of all wizard steps with section headers, formatted configuration details, field mapping table, transformation summary, validation rule count, conflict strategy, schedule description, filter query, calculates estimated configuration completeness percentage, shows warnings for optional missing configuration, provides 'Test Mapping' button, and displays Save/Save & Activate buttons.
+
+- testMappingConfiguration(mappingConfig): Simulates full mapping execution with sample data, loads sample source records (3-5 records), applies field mappings, executes transformations, runs validation rules, checks for conflicts, measures performance, returns detailed test results {success: boolean, recordsProcessed: number, errors: [], warnings: [], executionTime: number, transformedData: []}, and displays in modal with expandable error details.
+
+- saveMappingConfiguration(activate): Performs final validation of complete configuration, generates unique mapping ID if new, sets version number (increment if editing), sets is_active based on activate parameter, saves to localStorage 'syncMappings' array, creates version history entry, clears wizard state from sessionStorage, shows success toast, and redirects to mapping list or edit view.
+
+- renderMappingEditView(mappingId): Loads mapping data from localStorage, initializes wizard in edit mode with all steps populated, shows 'Version History' button in header, enables inline field editing with immediate validation, shows 'Discard Changes' and 'Save Changes' buttons, tracks dirty state for unsaved changes warning, and renders version comparison if viewing history.
+
+- loadVersionHistory(mappingId): Fetches all version history entries for mapping from localStorage 'syncMappingVersions' array filtered by mappingId, sorts by timestamp descending, formats change summaries (field changed, old value, new value), and returns array of version objects.
+
+- renderVersionHistoryPanel(versions): Creates sidebar panel with scrollable version list, displays each version with timestamp, user name, change count badge, expandable change details, 'Restore' button, current version indicator, and 'Compare' checkbox for diff view.
+
+- compareVersions(versionId1, versionId2): Loads both version objects, performs deep comparison of configuration objects, identifies added/removed/modified fields, generates visual diff with color coding (green for additions, red for deletions, yellow for modifications), and displays in modal with side-by-side view.
+
+- restoreVersion(versionId): Shows confirmation modal warning about overwriting current configuration, loads historical version data, creates new version entry with current state before restore (backup), replaces current mapping config with historical data, increments version number, saves to localStorage, logs audit event, shows success toast, and reloads edit view.
+
+- validateMapping(mappingConfig): Performs comprehensive validation including: checks required fields present (name, source/target objects, direction), validates field mappings cover all required target fields, checks for circular dependencies in transformations, validates transformation expressions, verifies validation rules are syntactically correct, checks conflict strategy is appropriate for direction, validates schedule configuration, checks filter query syntax, and returns {valid: boolean, errors: [], warnings: []}.
+
+- checkCircularDependencies(fieldMappings, transformations): Builds dependency graph from field references in transformation expressions, performs depth-first search to detect cycles, identifies specific fields involved in circular reference, and returns array of circular dependency chains.
+
+- validateFieldReferences(expression, availableFields): Extracts field references from expression using regex, checks each reference exists in availableFields array, validates field types are compatible with expression operations, and returns array of invalid references.
+
+- validateRequiredFieldCoverage(fieldMappings, targetObjectSchema): Fetches target object schema including required fields, checks each required field has mapping or default value, identifies unmapped required fields, and returns list of missing field mappings.
+
+- showConfirmationModal(options): Creates modal overlay and content, renders modal with title (options.title), message (options.message), warning icon for destructive actions, Confirm button (styled based on options.type: danger/warning/info), Cancel button, handles confirm callback (options.onConfirm), handles cancel/close, prevents body scroll while modal open, and manages focus trap.
+
+- showToast(message, type, duration): Creates toast notification element with message text, type-specific icon (success: checkmark, error: X, warning: exclamation, info: i), adds to toast container (max 3 visible, queues additional), positions in top-right corner, auto-dismisses after duration (default 4000ms), provides manual close button, animates slide-in and fade-out, and removes from DOM after animation.
+
+- handleNavigation(hash): Parses hash from URL, determines target view, saves current view state if needed, triggers view transition, updates active navigation link, loads view-specific data, updates page title, and logs navigation event.
+
+- exportMappingConfiguration(mappingId): Loads mapping config from localStorage, serializes to JSON format, includes metadata (export date, version, exporter), creates downloadable blob, triggers browser download with filename "sync-mapping-{name}-{date}.json", and logs export event.
+
+- importMappingConfiguration(file): Reads uploaded JSON file, validates file structure and required fields, checks for conflicts with existing mapping names, prompts user for conflict resolution (skip, rename, overwrite), imports mapping data to localStorage, validates imported configuration, creates version history entry, shows success/error toast with import summary, and refreshes mapping list.
+
+- setupAutoSave(mappingId): Initializes auto-save mechanism for edit view, listens for form field changes, debounces save operations (2 seconds after last change), saves draft to localStorage with 'draft_' prefix, shows 'Saving...' indicator, handles save errors gracefully, clears draft after successful final save, and provides 'Restore Draft' option if unsaved changes detected.
+
+- handleBulkActions(action, selectedMappingIds): Validates bulk action is allowed (pause/resume/delete/export), shows confirmation modal with count of affected mappings, executes action for each mapping ID with progress indicator, collects results (success/failure per mapping), shows summary toast with success count and error details, refreshes mapping list, and logs bulk action event.
+
+- generateMappingCode(mappingConfig): Converts mapping configuration into executable code representation, generates field mapping logic with transformations, includes validation rule checks, implements conflict resolution strategy, formats as readable code with comments, provides language options (JavaScript, Python, SQL), enables copy to clipboard, and shows syntax highlighting.
+
+- simulateAPICall(endpoint, method, payload): Mocks REST API behavior for testing without backend, introduces realistic delays (200-500ms), simulates success/error responses based on payload validation, implements rate limiting simulation, returns Promise that resolves/rejects appropriately, logs request/response for debugging, and provides toggle for online/offline mode.
+
+- initializeLocalStorage(): Checks if 'syncMappings' key exists in localStorage, creates initial schema if missing {syncMappings: [], syncMappingVersions: [], settings: {}}, validates existing data structure, performs migration if schema version outdated, sets up error recovery (corrupted data), and returns initialization status.
+
+- migrateDataSchema(currentVersion, targetVersion): Detects schema version from data or defaults to 1.0, runs migration functions sequentially for each version increment, backs up data before migration, validates migrated data, updates schema version marker, handles migration errors with rollback, and logs migration events.
+
+- handleValidationErrors(errors, context): Formats validation error array into user-friendly messages, groups errors by field/section for wizard steps, highlights fields with errors in UI (red border, error text below field), scrolls to first error, provides 'Fix All' suggestions where possible, logs errors for debugging, and returns formatted error object for display.
+
+- debounce(func, delay): Creates debounced version of function that delays execution until after delay milliseconds have elapsed since last invocation, cancels pending execution if called again within delay, preserves function context and arguments, returns cancellation function, and handles edge cases (immediate execution option).
+
+- throttle(func, limit): Creates throttled version of function that executes at most once per limit milliseconds, queues trailing call if invoked during throttle period, preserves function context and arguments, returns current throttle status, and handles rapid successive calls efficiently.
+
+- formatRelativeTime(timestamp): Converts timestamp to relative time string ('just now', '5 minutes ago', '2 hours ago', 'yesterday', '3 days ago', 'Jan 15'), handles future timestamps, respects user locale, provides full timestamp on hover (tooltip), and updates dynamically for recent times.
+
+- formatPercentage(value, decimals): Formats numeric value as percentage string, rounds to specified decimal places (default 1), handles edge cases (null, undefined, NaN, Infinity), adds % symbol, applies color class based on threshold (>90% green, <50% red), and supports compact notation for large numbers.
+
+- generateUUID(): Generates RFC4122 version 4 compliant UUID, uses crypto.randomUUID() if available or fallback to Math.random(), ensures uniqueness within session, validates format, and returns string UUID.
+
+- deepClone(object): Creates deep copy of object without reference sharing, handles nested objects and arrays, preserves dates and regex objects, handles circular references (throws error or marks), uses structured clone if available or JSON parse/stringify fallback, and validates clone integrity.
+
+- sanitizeInput(input, type): Cleans user input based on type (text, html, sql, json), removes potentially dangerous characters, prevents XSS attacks (strips script tags, event handlers), escapes special characters for SQL, validates JSON structure, limits length, and returns sanitized string.
+
+- validateEmail(email): Validates email format using RFC5322 compliant regex, checks for common typos (gmail.con, yahooo.com), validates domain exists (optional DNS check), allows international characters (punycode), and returns {valid: boolean, suggestion: string}.
+
+- validateCronExpression(expression): Parses cron expression into components, validates each field range (minute 0-59, hour 0-23, etc), checks special characters (*, ?, L, W, #), validates field combinations, ensures at least one field is not *, and returns {valid: boolean, error: string, nextRun: Date}.
+
+- parseExpression(expression, context): Parses formula expression string into AST, tokenizes input (operators, functions, field references, literals), validates syntax, type checks operations, resolves field references from context, detects unsupported operations, and returns {ast: object, errors: []}.
+
+- executeExpression(ast, record): Evaluates parsed expression AST against record data, executes functions from whitelist (UPPER, LOWER, CONCAT, IF, DATEADD, etc), handles null propagation, catches runtime errors (division by zero, null reference), applies type coercion rules, and returns result value or error.
+
+- setupEventListeners(): Attaches global event listeners (window resize, storage change, online/offline, keyboard shortcuts, popstate for navigation), implements event delegation for dynamic content, throttles expensive handlers (resize, scroll), cleans up listeners on view change, and manages listener lifecycle.
+
+- handleKeyboardShortcuts(event): Implements keyboard navigation (Ctrl+S for save, Esc for close modal, Tab for field navigation, Ctrl+Z for undo), prevents default browser shortcuts when appropriate, shows shortcut hint overlay (Ctrl+?), handles modifier keys across platforms (Cmd on Mac), and maintains shortcut context per view.
+
+- logAuditEvent(eventType, details): Records user action to audit log in localStorage, captures timestamp, user ID, action type, affected resource, before/after values, IP address (if available), session ID, implements log rotation (max 1000 entries, FIFO deletion), and provides audit trail export.
+
+- handleError(error, context): Global error handler for uncaught errors, logs error details (stack trace, context, user state), shows user-friendly error message, sends error report to analytics (optional), implements retry logic for network errors, provides recovery suggestions, and prevents error loops.

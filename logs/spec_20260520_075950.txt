@@ -1,0 +1,173 @@
+# TECHNICAL SPECIFICATION: SYNC MAPPING CONFIGURATION INTERFACE
+
+## OVERVIEW
+
+A comprehensive sync mapping configuration system that enables users to create, manage, and monitor field-level mappings between Salesforce and target systems. The interface features a mapping list dashboard, an 8-step creation/edit wizard with drag-and-drop field mapping, transformation rules, validation configuration, and conflict resolution strategies. Includes full REST API backend with version history, server-side validation, and real-time testing capabilities.
+
+## VIEWS
+
+- MappingListView: Main dashboard displaying all sync mappings in a sortable/filterable table with columns for name, objects, direction, status, last sync, success rate. Top bar contains search input, filter dropdowns (direction, status, source system), and "Create New Mapping" button. Each row has inline action menu (edit, pause/resume, delete, duplicate).
+
+- MappingWizardView: Multi-step wizard interface with progress indicator showing 8 steps. Left sidebar shows step list with checkmarks for completed steps, warnings for validation errors. Main area displays current step form. Bottom bar has "Previous", "Next", "Save Draft", and "Cancel" buttons. Step 8 adds "Test Mapping" and "Save & Activate" buttons.
+
+- Step1BasicInfoView: Form with mapping name input (required, max 100 chars), description textarea (max 500 chars), sync direction radio buttons (SF→Target, Target→SF, Bidirectional) with icon indicators.
+
+- Step2ObjectSelectionView: Two-column layout. Left: Salesforce object dropdown with search/filter (loads from Salesforce API), displays object label and API name. Right: Target system selector dropdown (Snowflake, PostgreSQL, MySQL, Custom API), target object dropdown populated based on system selection.
+
+- Step3FieldMappingView: Split panel interface. Left panel lists source fields (scrollable, searchable), right panel lists target fields. Center canvas for drawing mapping lines. Each field shows name, type icon, required indicator. Drag from source field to target field creates mapping line with delete icon. "Auto-map by name" button at top. Unmapped required fields highlighted yellow with warning icon. Mapped count indicator at top.
+
+- Step4TransformationView: Table showing each mapped field pair. Columns: Source Field, Target Field, Transformation Type (dropdown: Direct Copy, Formula, Lookup, Custom Function), Configuration (inline editor based on type - formula expression input for Formula, lookup table selector for Lookup, function selector for Custom Function), Test button (opens modal with sample input/output). Add/remove transformation rows. Formula editor has syntax highlighting and autocomplete for field references.
+
+- Step5ValidationView: Dynamic form with add/remove validation rule rows. Each row: Rule Name input, Field selector dropdown, Operator dropdown (equals, not equals, contains, not contains, starts with, ends with, regex, is null, is not null, greater than, less than), Value input (conditional based on operator), Error Message textarea. Toggle for "Stop sync on validation failure" per rule. "Test All Rules" button runs against sample data.
+
+- Step6ConflictResolutionView: Radio button group with detailed descriptions. Options: Source Wins (always use source value), Target Wins (preserve target value), Most Recent Wins (compare timestamps), Manual Review Required (flag for review queue), Custom Logic (opens code editor for JavaScript function). Shows preview of conflict scenario with example data.
+
+- Step7SyncScheduleView: Radio group for sync mode. Real-time: polling interval number input (1-60 minutes) with slider. Scheduled: cron expression input with visual builder (dropdowns for minute, hour, day, month, weekday) and next run preview. Manual: description text only. Below: Filter Query Builder with WHERE clause editor - add/remove filter conditions with field selector, operator dropdown, value input, AND/OR toggle between conditions. "Validate Query" button tests syntax.
+
+- Step8ReviewView: Read-only summary of all configuration steps. Collapsible sections for each step showing configured values. Validation status indicators (green checkmarks, red X's, yellow warnings). "Test Mapping" button (opens modal showing test execution progress, sample records processed, validation results, error logs). "Save Draft" saves inactive mapping. "Save & Activate" validates and activates.
+
+- MappingEditView: Same wizard interface with data pre-populated. Additional right sidebar showing version history list (timestamp, user, change summary). Each version has "View Diff" (opens modal with before/after comparison) and "Restore" button (confirmation modal, creates new version). "Currently Editing Version X" indicator at top.
+
+- TestMappingModal: Modal showing test execution. Progress bar, status messages stream, expandable sections for each test phase (connection test, field mapping validation, transformation test, validation rules check). Results section shows sample records with before/after values, any errors highlighted. Export test results button.
+
+- ConfirmationModal: Generic confirmation modal for destructive actions (delete, restore version). Shows action description, affected items count, "Cancel" and "Confirm" buttons. Delete shows additional "Type mapping name to confirm" input.
+
+- FieldMappingCanvas: SVG canvas component for drawing mapping lines. Manages line paths, connection points, hover states, selection states. Click line to delete. Drag endpoints to reconnect. Auto-layouts lines to avoid overlaps.
+
+## FUNCTIONS
+
+- initMappingListView(): Loads mapping list view, fetches mappings from API via getMappings(), renders table with renderMappingsTable(), attaches event listeners to search input, filter dropdowns, create button, initializes pagination controls.
+
+- getMappings(page, limit, search, filters): Makes GET request to /api/sync-mappings with query params (page, limit, search, direction, status, source_system), returns promise with {mappings: [], total, page, totalPages}, handles errors with showToast().
+
+- renderMappingsTable(mappings): Clears table body, iterates mappings array, creates table row for each with cells for name (link to edit), source/target objects, direction badge, status badge with toggle, last sync timestamp formatted with formatDateTime(), success rate with percentage bar, actions dropdown menu. Attaches event listeners to action buttons.
+
+- handleSearchInput(event): Debounces search input (300ms), updates search query, calls getMappings() with current filters, updates table, shows loading spinner in table during fetch.
+
+- handleFilterChange(filterType, value): Updates filter state object, calls getMappings() with updated filters, updates table, updates URL query params with updateURLParams().
+
+- handleCreateMapping(): Navigates to wizard view via switchView('wizard'), initializes empty mapping object in sessionStorage, sets wizard to step 1, calls renderWizardStep(1).
+
+- handleEditMapping(mappingId): Fetches mapping by ID via getMappingById(mappingId), stores in sessionStorage, navigates to edit view, renders wizard with pre-populated data, loads version history via getVersionHistory(mappingId).
+
+- handleDuplicateMapping(mappingId): Fetches mapping via getMappingById(mappingId), creates copy with new name "Copy of {original name}", removes id/timestamps, stores in sessionStorage, navigates to wizard in create mode.
+
+- handleToggleStatus(mappingId, currentStatus): Shows confirmation modal if activating, makes PATCH request to /api/sync-mappings/{id}/status with {is_active: !currentStatus}, updates UI on success, shows toast message, refreshes table row.
+
+- handleDeleteMapping(mappingId): Shows confirmation modal with "type to confirm" input, validates input matches mapping name, makes DELETE request to /api/sync-mappings/{id}, removes row from table with fade animation, shows success toast, decrements total count.
+
+- initWizardView(mode, mappingData): Initializes wizard state object {currentStep: 1, maxStepReached: 1, mapping: {}, validationErrors: {}, isDirty: false}, renders wizard chrome with renderWizardChrome(), loads mapping data if edit mode, renders step 1 via renderWizardStep(1).
+
+- renderWizardChrome(): Creates wizard container with progress indicator (8 steps), step sidebar with step list (title, number, completion icon, click handler), main step content area, bottom action bar with Previous/Next/Save Draft/Cancel buttons. Attaches navigation event listeners.
+
+- renderWizardStep(stepNumber): Validates can navigate to step (not beyond maxStepReached + 1), calls step-specific render function (renderStep1BasicInfo(), renderStep2ObjectSelection(), etc.), updates current step state, updates progress indicator, updates button states (Previous disabled on step 1, Next changes to "Review" on step 7).
+
+- renderStep1BasicInfo(): Renders form with name input (required, maxlength 100), description textarea (maxlength 500, character counter), sync direction radio group with icons. Pre-fills from wizard.mapping if exists. Attaches input event listeners that update wizard.mapping and set isDirty flag. Validates on blur: name required, no special chars, unique name check via debounced API call.
+
+- renderStep2ObjectSelection(): Renders source section with Salesforce object dropdown (loads via getSalesforceObjects()), shows loading spinner while fetching, searchable dropdown with fuzzy matching. Target section with system selector (Snowflake/PostgreSQL/MySQL/Custom API), target object dropdown loaded via getTargetObjects(systemType), disabled until system selected. Both dropdowns show object API name and label. Updates wizard.mapping on selection.
+
+- getSalesforceObjects(): Makes GET request to /api/salesforce/objects with cache (localStorage, 1 hour TTL), returns array of {apiName, label, fields[]}, handles authentication errors, shows toast on failure, returns empty array on error.
+
+- getTargetObjects(systemType): Makes GET request to /api/target-systems/{systemType}/objects, returns array of {name, label, fields[], dataTypes}, handles errors, caches per system type.
+
+- renderStep3FieldMapping(): Creates split panel layout with source fields list (left), target fields list (right), SVG canvas (center). Loads source fields from wizard.mapping.sourceObject via getSalesforceObjectFields(), loads target fields via getTargetObjectFields(). Renders field items with drag handles, type icons (string/number/date/boolean), required indicators. Initializes FieldMappingCanvas component. Renders "Auto-map by name" button, mapped count indicator. Stores mappings in wizard.mapping.fieldMappings as array of {sourceField, targetField, id}.
+
+- handleAutoMap(): Iterates source fields, for each finds target field with matching name (case-insensitive, ignores underscores/spaces), creates mapping if types compatible, highlights newly created mappings with animation, updates canvas, shows toast with count of mappings created.
+
+- handleFieldDragStart(event, field, fieldType): Sets dragging state, stores field data in event.dataTransfer, adds drag ghost element, adds dragging class to field item.
+
+- handleFieldDrop(event, targetField): Gets source field from dataTransfer, validates types are compatible via isTypeCompatible(sourceType, targetType), creates mapping line on canvas via canvas.addMapping(sourceField, targetField), adds to wizard.mapping.fieldMappings, updates mapped count, removes yellow highlight from required fields if mapped.
+
+- isTypeCompatible(sourceType, targetType): Returns boolean for type compatibility (string→string/text, number→number/decimal/integer, date→date/datetime, boolean→boolean/checkbox, any→string). Used for drag-drop validation and transformation validation.
+
+- renderStep4Transformation(): Renders table with columns: Source Field, Target Field, Transformation Type, Configuration, Actions. Iterates wizard.mapping.fieldMappings, creates row for each. Transformation Type dropdown (Direct Copy selected by default, Formula, Lookup, Custom Function). Configuration cell renders different UI based on type: Direct Copy shows nothing, Formula shows code editor with syntax highlighting via renderFormulaEditor(), Lookup shows lookup table selector and key field selectors, Custom Function shows function name selector and parameter inputs. Test button per row opens TestTransformationModal.
+
+- renderFormulaEditor(fieldMapping): Creates code editor textarea with syntax highlighting for formula expressions. Supports field references with ${fieldName} syntax, functions (UPPER, LOWER, CONCAT, IF, DATE_FORMAT, etc.), operators (+, -, *, /, ==, !=, <, >, &&, ||). Shows autocomplete dropdown on typing $ or function name. Validates syntax on blur, shows inline error if invalid. Updates wizard.mapping.transformationRules array.
+
+- validateFormula(expression): Parses formula expression, checks for valid syntax (balanced parentheses, valid function names, field references exist in source object), returns {isValid: boolean, errors: []} with error messages and positions.
+
+- handleTestTransformation(fieldMapping): Opens TestTransformationModal, generates sample data for source field based on type, executes transformation via executeTransformation(fieldMapping, sampleData), displays input/output in modal, shows error if transformation fails, allows editing sample input and re-running.
+
+- executeTransformation(fieldMapping, sourceValue): Applies transformation based on type. Direct Copy returns sourceValue. Formula evaluates expression with sourceValue context via evaluateFormula(). Lookup queries lookup table via lookupValue(). Custom Function calls registered function via callCustomFunction(). Returns transformed value or throws error.
+
+- evaluateFormula(expression, context): Replaces field references with context values, evaluates functions recursively, performs operations, returns result. Uses safe eval (no direct eval() for security) with allowed functions only.
+
+- renderStep5Validation(): Renders validation rules builder. "Add Validation Rule" button. Each rule is a row with: Rule Name input, Field selector (dropdown of source + target fields), Operator selector (equals, not equals, contains, not contains, starts with, ends with, regex, is null, is not null, greater than, less than, between), Value input (single input, dual inputs for between, disabled for null checks), Error Message textarea, "Stop Sync on Failure" checkbox, Remove button. Rules stored in wizard.mapping.validationRules array. "Test All Rules" button runs validateAllRules() with sample data.
+
+- handleAddValidationRule(): Adds new empty rule object to wizard.mapping.validationRules {id: generateId(), name: '', field: '', operator: '', value: '', errorMessage: '', stopOnFailure: false}, re-renders rules list, focuses name input of new rule.
+
+- handleRemoveValidationRule(ruleId): Removes rule from array, re-renders with fade-out animation, shows toast confirmation.
+
+- validateAllRules(sampleData): Iterates wizard.mapping.validationRules, executes each rule against sample data via executeValidationRule(), collects results {ruleId, ruleName, passed: boolean, errorMessage}, displays in TestValidationModal with pass/fail indicators, highlights failed rules.
+
+- executeValidationRule(rule, data): Gets field value from data, applies operator logic (equals: strict equality, contains: string includes, regex: RegExp test, null checks, comparisons), returns boolean result.
+
+- renderStep6ConflictResolution(): Renders radio button group with 5 options. Each option has icon, title, detailed description, example scenario. Source Wins: blue icon, "Source system value always takes precedence", example showing SF value overwriting target. Target Wins: green icon, "Target system value preserved", example showing target value retained. Most Recent Wins: yellow icon, "Compare modified timestamps", requires both systems support timestamps. Manual Review: red icon, "Flag conflicts for manual resolution", creates review queue entry. Custom Logic: purple icon, opens CustomConflictLogicEditor modal with code editor for JavaScript function that receives (sourceValue, targetValue, sourceTimestamp, targetTimestamp) and returns {winningValue, reason}. Selection stored in wizard.mapping.conflictStrategy.
+
+- renderCustomConflictLogicEditor(): Modal with code editor (Monaco-style), function template pre-filled, parameter documentation sidebar, test section with sample conflict scenario inputs, "Test Function" button executes function in sandboxed environment, shows result and console logs, "Save Function" validates and stores in wizard.mapping.conflictStrategy.customFunction.
+
+- renderStep7SyncSchedule(): Renders sync mode radio group. Real-time: shows polling interval number input (1-60 minutes) with range slider synced to input, help text explaining polling behavior. Scheduled: shows cron expression input with "Visual Builder" button that opens CronBuilderModal, displays "Next 5 runs" preview via calculateCronSchedule(), validates cron expression on blur. Manual: just description text. Below mode selector: Filter Query Builder section with "Add Filter Condition" button. Each condition row: Field selector, Operator selector (=, !=, <, >, <=, >=, IN, NOT IN, LIKE, BETWEEN, IS NULL), Value input (text/number/date based on field type, multi-value input for IN operator, dual input for BETWEEN), AND/OR toggle (not shown for first condition), Remove button. Query preview shows generated WHERE clause. "Validate Query" button makes API call to validate syntax.
+
+- renderCronBuilderModal(): Modal with visual cron builder. Dropdowns for Minute (0-59, */5, */10, */15, */30), Hour (0-23, *), Day of Month (1-31, *, Last), Month (1-12, *), Day of Week (0-6/SUN-SAT, *). Displays cron expression as user selects, updates in real-time. Common presets buttons (Every minute, Hourly, Daily at midnight, Weekly on Monday, Monthly first day). "Use Expression" button copies to step 7 input and closes modal.
+
+- calculateCronSchedule(expression): Parses cron expression, calculates next 5 execution times, returns array of Date objects, handles various cron formats (standard 5-field, 6-field with seconds), returns error if invalid expression.
+
+- handleAddFilterCondition(): Adds condition object to wizard.mapping.syncSchedule.filterConditions {id: generateId(), field: '', operator: '', value: '', logicalOperator: 'AND'}, re-renders filter builder, generates WHERE clause preview via generateWhereClause().
+
+- generateWhereClause(conditions): Iterates conditions array, builds SQL-style WHERE clause string with proper escaping, handles different operators (IN uses parentheses, BETWEEN uses AND, LIKE uses wildcards), joins conditions with AND/OR, returns string.
+
+- validateFilterQuery(whereClause): Makes POST request to /api/sync-mappings/validate-query with {query: whereClause, sourceObject, targetObject}, returns {isValid, errors: []}, displays errors inline next to invalid conditions.
+
+- renderStep8Review(): Renders collapsible sections for each previous step. Section 1 Basic Info: shows name, description, direction badge. Section 2 Objects: shows source object label + API name, target system logo + object name. Section 3 Field Mappings: table with source→target field pairs, count summary. Section 4 Transformations: list of fields with transformations, type badges. Section 5 Validation Rules: table of rules with field, operator, value. Section 6 Conflict Resolution: selected strategy with icon. Section 7 Sync Schedule: mode badge, schedule details, filter conditions if any. Validation status panel shows overall status (green check "Ready to save", yellow warning "Issues found", red X "Cannot save"), lists any validation errors with links to relevant steps. "Test Mapping" button (primary, large), "Save Draft" button (secondary), "Save & Activate" button (primary, disabled if validation errors).
+
+- handleTestMapping(): Opens TestMappingModal, makes POST request to /api/sync-mappings/{id}/test with full mapping configuration, polls for test status via GET /api/sync-mappings/test/{testId} every 2 seconds, updates progress bar and status messages in modal, displays results when complete: connection test status, field mapping validation results, sample record transformation (before/after), validation rule results, conflict resolution test if applicable. "Export Test Results" button downloads JSON report.
+
+- handleSaveDraft(): Validates basic required fields (name, objects, at least one field mapping), makes POST or PUT request to /api/sync-mappings with {is_active: false, ...mappingData}, shows loading spinner on button, disables form, on success shows toast "Draft saved", updates mapping ID if new, sets isDirty false, enables navigation away. On error shows toast with error message, re-enables form.
+
+- handleSaveAndActivate(): Runs full validation via validateMappingComplete(), if errors shows error modal with list, returns early. Confirms with user "Activate sync mapping? This will start syncing data immediately." Makes POST/PUT request with {is_active: true, ...mappingData}, on success shows toast "Mapping activated", navigates to mapping list view, highlights new mapping row. On error shows error modal with details.
+
+- validateMappingComplete(): Runs comprehensive validation checks: name required and unique, source/target objects selected, at least one field mapping exists, all required target fields mapped, transformation expressions valid, validation rule syntax valid, conflict strategy selected (if bidirectional), sync schedule valid (cron expression if scheduled), filter query valid if present. Returns {isValid: boolean, errors: [{step, field, message}]}.
+
+- initMappingEditView(mappingId): Calls getMappingById(mappingId), initializes wizard with mapping data via initWizardView('edit', mappingData), loads version history via getVersionHistory(mappingId), renders version history sidebar with renderVersionHistory(), adds "You are editing version X" banner at top.
+
+- getMappingById(id): Makes GET request to /api/sync-mappings/{id}, returns mapping object with all configuration, handles 404 with error toast and redirect to list, caches in sessionStorage for session.
+
+- getVersionHistory(mappingId): Makes GET request to /api/sync-mappings/{id}/versions, returns array of versions [{version, timestamp, userId, userName, changeSummary, diffUrl}], ordered by version descending.
+
+- renderVersionHistory(versions): Creates right sidebar with "Version History" header, scrollable list of version cards. Each card shows version number, timestamp formatted with formatDateTime(), user name, change summary text, "View Diff" button (opens ViewDiffModal), "Restore" button (shows confirmation modal). Current version highlighted with blue border.
+
+- handleViewDiff(version): Opens ViewDiffModal, makes GET request to /api/sync-mappings/{id}/versions/{version}/diff, displays side-by-side comparison with changed sections highlighted (red for removed, green for added, yellow for modified). Uses diff library to compute field-level changes. "Close" and "Restore This Version" buttons.
+
+- handleRestoreVersion(version): Shows confirmation modal "Restore version {version}? This will create a new version with the configuration from version {version}. Current unsaved changes will be lost." On confirm, makes POST request to /api/sync-mappings/{id}/restore with {version}, returns new version number, reloads wizard with restored data, adds restored version to history, shows toast "Restored to version {version} (now version {newVersion})".
+
+- switchView(viewName): Hides all .view-container elements, shows .view-container with data-view={viewName}, updates active nav link, saves current view to sessionStorage for refresh persistence, scrolls to top.
+
+- showToast(message, type, duration): Creates toast notification element with message, type class (success/error/warning/info), appends to toast container at top-right, auto-removes after duration (default 3000ms), clicking X removes immediately. Stacks multiple toasts vertically.
+
+- showModal(modalId): Shows modal element, adds .active class for fade-in animation, adds modal backdrop with click-to-close, disables body scroll, focuses first input or close button, traps focus within modal, escape key closes.
+
+- hideModal(modalId): Removes .active class for fade-out animation, after transition removes modal from DOM, removes backdrop, re-enables body scroll, returns focus to trigger element.
+
+- formatDateTime(timestamp): Formats ISO timestamp to "MMM DD, YYYY HH:MM AM/PM" using Intl.DateTimeFormat, returns "Never" if null, "Just now" if within last minute, "X minutes ago" if within hour, "X hours ago" if within day.
+
+- debounce(func, delay): Returns debounced function that delays invoking func until after delay milliseconds have elapsed since last invocation, cancels previous timeout, used for search input and validation.
+
+- generateId(): Generates unique ID string using timestamp + random string (Date.now() + Math.random().toString(36)), used for client-side IDs before server save.
+
+- updateURLParams(params): Updates browser URL query params without reload using history.pushState(), merges with existing params, removes params with null values, used for filters and pagination.
+
+- showLoadingSpinner(containerElement): Appends loading spinner overlay to container, disables all inputs within container, used during async operations.
+
+- hideLoadingSpinner(containerElement): Removes loading spinner overlay, re-enables inputs.
+
+- handleFormInput(event): Generic input handler that marks form as dirty, clears previous validation error for field, updates wizard.mapping with new value, optionally triggers validation on blur.
+
+- confirmAction(message, callback): Shows confirmation modal with message and Yes/No buttons, calls callback(true) on Yes, callback(false) on No, used for destructive actions.
+
+- exportData(data, filename, format): Exports data as JSON or CSV file, creates blob, triggers download with filename, used for test results export.
+
+- sanitizeInput(input): Sanitizes user input to prevent XSS, escapes HTML entities, trims whitespace, used before rendering user-generated content.
+
+- validateEmail(email): Validates email format using regex, returns boolean.
+
+- validateURL(url

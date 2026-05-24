@@ -1,0 +1,262 @@
+# RESEARCH REPORT: Mapping Execution Engine with Real-Time Testing
+
+## EXISTING_FEATURES:
+
+### UI Components:
+- **Modal System**: `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer` with overlay and proper structure
+- **Button Components**: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger` with hover states and disabled states
+- **Form Components**: `.form-group`, `.form-label`, `.form-input`, `.form-select`, `.form-textarea` with focus states
+- **Form Validation**: `.form-error` class with display toggle, `.form-group.error` state styling
+- **Table Components**: `.table-container`, `.table`, thead/tbody structure with hover states
+- **Search Bar**: `.search-bar`, `.search-input` with SVG icon background
+- **Toggle Switch**: `.toggle-switch`, `.toggle-slider` with checkbox input
+- **Icon Buttons**: `.icon-btn` with hover and focus states
+- **Empty State**: `.empty-state`, `.empty-state-icon` for no-data scenarios
+- **Action Buttons Group**: `.action-buttons` flex container
+
+### Layout System:
+- **App Container**: `.app-container` with max-width 1400px, centered
+- **Header**: `.header` with flex layout, title and actions
+- **Header Actions**: `.header-actions` flex container with gap
+- **Builder Container**: `.builder-container` flex column with gap
+- **Metadata Section**: `.metadata-section` with card styling
+- **Metadata Grid**: `.metadata-grid` with responsive auto-fit columns
+- **Mapping Area**: `.mapping-area` 2-column grid layout
+- **Field Panel**: `.field-panel` flex column with scrollable content
+- **Field List**: `.field-list` scrollable with gap
+
+### Visual Design System:
+- **CSS Variables**: Complete color system (primary, success, warning, error, info, backgrounds, borders, text colors, shadows)
+- **Shadow Utilities**: `--shadow-sm`, `--shadow-md`, `--shadow-lg`
+- **Accessibility**: `prefers-reduced-motion` media query support
+- **Focus Management**: `:focus-visible` states on interactive elements
+- **Responsive Design**: Grid auto-fit, mobile padding considerations
+
+### Field/Drag System:
+- **Field Item**: `.field-item` with grab cursor, drag-ready styling
+
+## MISSING_FEATURES:
+
+### Test Execution Infrastructure:
+- **Test Mapping Button**: No button to trigger test modal in MappingBuilderView
+- **Test Modal**: No test-specific modal with tab navigation
+- **Tab Navigation System**: No tab component/structure for multi-section modals
+- **Sample Data Tab**: No JSON editor or text area for sample input
+- **Live Test Tab**: No connection configuration form
+- **Results Tab**: No results display panels
+
+### Data Input & Fetching:
+- **JSON/CSV Format Detection**: No auto-detection logic
+- **Sample Data Generator**: No "Load Sample" functionality with realistic dummy data
+- **API Connection Form**: No fields for endpoint, auth, query params
+- **Fetch Records Button**: No live data fetching capability
+- **Record Selection Table**: No checkbox selection for fetched records
+- **Record Limit Logic**: No 10-record limit implementation
+
+### Execution Engine:
+- **Core Processor**: No mapping execution engine
+- **Field Mapping Application**: No logic to apply mappings in order
+- **Transformation Pipeline**: No field-level transformation execution
+- **Error Handling with Rollback**: No graceful error handling or rollback
+- **Schema Validation**: No output validation against destination schema
+- **Execution Report Generator**: No detailed report generation
+
+### Results Display:
+- **Success Panel**: No before/after comparison view
+- **Formatted JSON/Table View**: No output formatting for transformed data
+- **Validation Panel**: No error/warning list display
+- **Performance Panel**: No execution metrics display (time, counts)
+- **Inline Error Messages**: No error highlighting in results
+- **Field Highlighting**: No visual indication of problematic fields
+- **Suggested Fixes**: No error resolution suggestions
+
+### Export & Persistence:
+- **Download Results Button**: No JSON/CSV export functionality
+- **Copy to Clipboard**: No clipboard API integration
+- **localStorage Persistence**: No test results storage per mapping
+- **Execution History Log**: No history tracking (timestamp, count, status)
+- **History Display**: No UI for last 10 test runs per mapping
+
+### Data Structures:
+- **Test Configuration Schema**: No structure for test execution config
+- **Execution Report Schema**: No structure for execution results
+- **History Entry Schema**: No structure for history log entries
+- **Sample Data Templates**: No predefined sample data by field type
+
+## CHANGES_NEEDED:
+
+### MappingBuilderView Enhancement:
+- Add "Test Mapping" button to header actions or prominent location
+- Modify `.header-actions` or create builder-specific action bar
+- Add click handler to open test modal
+
+### Modal System Extension:
+- Extend existing modal to support larger size (test modal needs more width)
+- Add max-width variant (e.g., `modal-large` class for 900px+ width)
+- Add tab navigation component structure within modal-body
+
+### Form Components Enhancement:
+- Extend form inputs to support JSON editing (or integrate lightweight JSON editor)
+- Add file upload capability for CSV/JSON input
+- Add readonly/display-only form variants for showing fetched data
+
+### Table Component Extension:
+- Add checkbox column support to existing table structure
+- Add table variant for data preview (compact, scrollable)
+- Add before/after comparison table layout
+
+### localStorage Integration:
+- Create new localStorage keys structure:
+  - `mapping_test_results_{mappingId}`: Last test result
+  - `mapping_test_history_{mappingId}`: Array of last 10 executions
+  - Need to identify if mappingId key pattern already exists in code
+
+## REUSE:
+
+### Component Patterns to Preserve:
+- **Modal Structure**: Reuse `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer` hierarchy
+- **Button Styles**: Use existing `.btn`, `.btn-primary`, `.btn-secondary` for all new buttons
+- **Form Patterns**: Use existing `.form-group`, `.form-label`, `.form-input` structure for connection config
+- **Table Structure**: Use existing `.table` classes for record display and results
+- **Error Handling**: Follow existing `.form-error` and `.form-group.error` pattern
+- **Card Layout**: Use `.metadata-section` pattern for results panels
+- **Grid Layout**: Use `.metadata-grid` pattern for performance metrics display
+- **Icon Buttons**: Use `.icon-btn` for download, copy, close actions
+
+### CSS Variables to Use:
+- `--primary`, `--primary-hover` for Test button
+- `--success` for success indicators
+- `--error` for validation errors
+- `--warning` for warnings
+- `--info` for informational messages
+- `--bg-primary`, `--bg-secondary`, `--bg-tertiary` for panel backgrounds
+- `--shadow-md` or `--shadow-lg` for test modal
+- `--border` for all borders
+- `--text-primary`, `--text-secondary`, `--text-tertiary` for text hierarchy
+
+### Function Naming Conventions:
+- Observe existing naming patterns once JavaScript is analyzed
+- Follow camelCase for functions (assumed from standard practice)
+- Use descriptive names like `openTestModal`, `executeMapping`, `validateResults`
+
+### Accessibility Patterns:
+- Maintain `:focus-visible` on all interactive elements
+- Preserve keyboard navigation support
+- Use semantic HTML structure
+- Maintain ARIA labels where appropriate
+
+## RISKS:
+
+### Technical Conflicts:
+- **Unknown JavaScript Architecture**: HTML only shows CSS; JavaScript state management unknown (vanilla JS, framework, module pattern?)
+- **Modal State Management**: Multiple modals may conflict; need to check if modal system supports stacking/queuing
+- **localStorage Conflicts**: Don't know existing keys; risk of overwriting existing mapping data
+- **Performance**: Large dataset execution in browser may freeze UI; need Web Workers consideration
+- **Memory**: Storing execution history for many mappings could bloat localStorage
+
+### Integration Challenges:
+- **Mapping Configuration Access**: Don't know how current mapping config is stored/structured
+- **Field Mapping Logic**: Transformation pipeline depends on existing mapping structure (not visible in HTML)
+- **Schema Access**: Need access to source/destination schemas for validation
+- **API Integration**: Live test requires CORS-compliant endpoints or proxy
+- **Authentication**: Secure storage of API credentials is sensitive
+
+### UX Risks:
+- **Tab Navigation**: Need to implement tab switching logic; risk of state loss between tabs
+- **Large Modal**: 900px+ modal may not work on tablets; need responsive strategy
+- **Real-time Feedback**: Long-running tests need progress indicators or async handling
+- **Error Recovery**: User may lose test configuration if modal closes accidentally
+
+### Data Risks:
+- **CSV Parsing**: Need robust parser; malformed CSV could break execution
+- **JSON Validation**: Invalid JSON input needs clear error messages
+- **Data Security**: Sample/live data may contain PII; no persistence of sensitive data
+- **localStorage Limits**: 5-10MB limit could be exceeded with large test results
+
+### Browser Compatibility:
+- **Clipboard API**: `navigator.clipboard` not supported in older browsers
+- **JSON Formatting**: `JSON.stringify` with spacing works everywhere
+- **CSV Generation**: Need polyfill or fallback for download
+- **Fetch API**: Assumed for live test; may need XMLHttpRequest fallback
+
+## DATA_STRUCTURES:
+
+### Currently Unknown (Not in HTML):
+- **Mapping Configuration Schema**: Need to discover existing structure
+- **Field Mapping Object**: Structure for source-to-destination field maps
+- **Transformation Rules**: How transformations are currently stored
+- **Schema Definitions**: Source/destination schema storage format
+
+### Need to Create:
+```javascript
+// Test Execution Configuration
+{
+  mappingId: string,
+  mode: 'sample' | 'live',
+  sampleData: string | object,
+  liveConfig: {
+    endpoint: string,
+    method: string,
+    headers: object,
+    authType: string,
+    credentials: object,
+    queryParams: object
+  },
+  selectedRecords: array
+}
+
+// Execution Result
+{
+  executionId: string,
+  timestamp: number,
+  status: 'success' | 'error' | 'warning',
+  recordsProcessed: number,
+  recordsSucceeded: number,
+  recordsFailed: number,
+  executionTime: number,
+  inputData: array,
+  outputData: array,
+  validationErrors: array<{
+    recordIndex: number,
+    field: string,
+    message: string,
+    severity: 'error' | 'warning'
+  }>,
+  transformationErrors: array<{
+    recordIndex: number,
+    field: string,
+    step: string,
+    error: string
+  }>
+}
+
+// Execution History Entry
+{
+  executionId: string,
+  timestamp: number,
+  recordCount: number,
+  status: 'success' | 'error' | 'warning',
+  duration: number
+}
+
+// localStorage Keys Pattern (Assumed):
+// - 'mappings': Array of all mappings
+// - 'mapping_{id}': Individual mapping configuration
+// - 'mapping_test_results_{id}': Last test result (NEW)
+// - 'mapping_test_history_{id}': Array of last 10 executions (NEW)
+```
+
+### localStorage Investigation Needed:
+- Check existing codebase for `localStorage.setItem`, `localStorage.getItem` calls
+- Identify current key naming conventions
+- Determine if mapping IDs are GUIDs, timestamps, or sequential
+- Check if there's existing data versioning/migration logic
+
+---
+
+**RECOMMENDATION FOR PLANNER**: 
+Before implementation, request the JavaScript portion of the codebase to understand:
+1. Current mapping configuration structure
+2. Existing localStorage key patterns
+3. State management approach (vanilla JS objects, classes, or framework)
+4. Any existing transformation or validation logic to integrate with

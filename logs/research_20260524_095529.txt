@@ -1,0 +1,198 @@
+# Research Report: Integrations Page Visual Rework
+
+## EXISTING_FEATURES:
+
+**HTML Structure & Views:**
+- `#loginView` - Login page with `.login-card`, `.login-logo`, `.login-tag`
+- `#appView` - Main application view with sidebar and content area
+- `.sidebar` - Navigation sidebar with `.sidebar-logo`, `nav`, `.nav-item`, `.sidebar-footer`
+- `.main` - Main content area with `.view` containers
+- `#mobileHeader` - Mobile responsive header
+
+**CSS Variables & Design System:**
+- Color palette: `--bg`, `--white`, `--dark`, `--green`, `--green-light`, `--green-pale`, `--green-mid`, `--amber`, `--red`, `--gray`, `--gray-light`, `--gray-pale`
+- Shadow system: `--shadow`, `--shadow-lg`, `--shadow-card`
+- Border radius: `--radius` (12px), `--radius-sm` (8px), `--radius-xs` (5px)
+- Sidebar colors: `--sidebar`, `--sidebar-text`, `--sidebar-active`
+
+**Form Components:**
+- `.field` - Form field container with label styling
+- Input/select/textarea base styles with focus states
+- `.field input.invalid` - Error state styling
+- `.error-text` - Error message styling
+- `.form-row` - Two-column grid layout for forms
+
+**Button System:**
+- `.btn` - Base button class
+- `.btn-primary` - Green primary action button
+- `.btn-ghost` - White outline button
+- `.btn-danger` - Red destructive action button
+- `.btn-sm`, `.btn-xs`, `.btn-full` - Size modifiers
+- Disabled state styling
+- Hover states with transform and shadow effects
+
+**Layout Components:**
+- `.view-header` - Page header with title and actions area
+- `.view-title` - Serif display font for page titles
+- `.view-actions` - Flex container for header action buttons
+- `.stats-grid` - Auto-fit grid for statistics cards
+- `.stat-card` - Individual stat card with hover effect
+- `.stat-label` - Uppercase label styling
+
+**Typography:**
+- Primary font: 'DM Sans' (400, 500, 600 weights)
+- Display font: 'DM Serif Display' for logos and titles
+- Base font size: 14px
+- Letter-spacing and font smoothing applied
+
+**Navigation:**
+- `.nav-item` - Navigation menu items with active states
+- `.nav-icon` - Icon container in nav items
+- `.nav-badge` - Red notification badges
+- Active state with green border-left indicator
+
+## MISSING_FEATURES:
+
+**Section Headers:**
+- `.section-title` class with styled section dividers for "Live Now" and "Coming Soon"
+
+**Status Badges:**
+- Green "Live" badge component with `--green-pale` background
+- Gray "Coming Soon" badge component with `--gray-pale` background
+- Badge styling: `font-size:11px`, `font-weight:700`, `padding:2px 8px`, `border-radius:10px`
+
+**Waitlist Form:**
+- Inline email input form that appears below "Join Waitlist" button
+- Email input field (can reuse `.field` styling)
+- Submit button for waitlist form
+- Success message: "Thanks — we'll email you when it's ready"
+- Form show/hide toggle functionality
+
+**LocalStorage Integration:**
+- `renzo_waitlist` key for storing waitlist submissions
+- Array structure for waitlist data: `{email, integration, ts}`
+- Read/write functions for localStorage operations
+
+**New Integration Card:**
+- "Renzo API" card content and structure
+- API-specific description text
+
+**Button Variants:**
+- "Join Waitlist" button (likely can use `.btn-ghost` or custom variant)
+- Button state change after waitlist submission
+
+## CHANGES_NEEDED:
+
+**Integration Cards:**
+- Add status badges to card headers (CSV, Email, Salesforce, HubSpot, QuickBooks)
+- Replace "View Setup Guide" buttons with "Join Waitlist" on Coming Soon cards
+- Keep existing card structure but modify header to include badges
+- Modify button behavior on Coming Soon cards
+
+**Page Structure:**
+- Insert section headers before specific integration cards
+- Group cards into "Live Now" and "Coming Soon" sections visually
+- Add Renzo API card to Coming Soon section
+
+**Button Click Handlers:**
+- Modify "Join Waitlist" button to toggle inline form visibility
+- Add form submission handler for waitlist
+- Add localStorage write functionality
+- Add success message display logic
+
+## REUSE:
+
+**Styling Patterns to Preserve:**
+- `.field` and input styling for waitlist email input
+- `.btn` classes for "Join Waitlist" and form Submit buttons
+- Color variables: `var(--green-mid)`, `var(--green-pale)`, `var(--gray)`, `var(--gray-pale)`
+- Border radius variables: `var(--radius-xs)` for badges
+- Shadow and border patterns for consistency
+- `.stat-card` or similar card structure for integration cards (if they exist as cards)
+
+**Interaction Patterns:**
+- Button hover effects (transform, shadow)
+- Focus states for inputs (green border + shadow)
+- Transition timing (`.13s`, `.15s`)
+
+**Typography:**
+- Font weight 700 for badges
+- Font size 11px for small labels/badges
+- Uppercase text-transform pattern for labels
+- Letter-spacing for small text
+
+## RISKS:
+
+**Integration Card Structure Unknown:**
+- Cannot see actual integration card HTML structure (CSV, Email, Salesforce, HubSpot, QuickBooks cards)
+- Don't know where exactly to insert badges in card headers
+- Don't know the exact button selector to replace with "Join Waitlist"
+
+**LocalStorage Conflicts:**
+- Need to verify `renzo_waitlist` key doesn't conflict with existing keys
+- Need to handle array initialization (check if key exists before pushing)
+- Need to handle localStorage quota limits (unlikely but possible)
+
+**JavaScript Dependency:**
+- No JavaScript code visible in provided HTML/CSS
+- Don't know existing JS patterns, event handling approach, or state management
+- Don't know if jQuery, vanilla JS, or framework is used
+
+**Dynamic Content:**
+- Don't know if integration cards are dynamically generated or static HTML
+- Don't know if there's existing JavaScript that manages these cards
+
+**Form Validation:**
+- Need to add email validation for waitlist form
+- Need to handle duplicate submissions (same email + integration)
+- Need to prevent empty submissions
+
+**Mobile Responsiveness:**
+- Section headers and badges need to work on mobile
+- Inline form needs mobile-friendly layout
+- Badge text wrapping considerations
+
+**State Management:**
+- Need to track which waitlist forms are open (if multiple can be open at once)
+- Need to track submission success state per card
+- Need to prevent re-submission after success
+
+## DATA_STRUCTURES:
+
+**No Existing localStorage Keys Found in Provided Code**
+
+The HTML/CSS provided does not contain any JavaScript that reads or writes to localStorage. This means:
+- No existing localStorage data structures to conflict with
+- `renzo_waitlist` is a new key being introduced
+
+**New Data Structure (to be implemented):**
+```javascript
+// localStorage key: 'renzo_waitlist'
+// Value: JSON.stringify([
+//   {email: "user@example.com", integration: "Salesforce", ts: 1234567890},
+//   {email: "user@example.com", integration: "HubSpot", ts: 1234567891}
+// ])
+```
+
+**Data Structure Considerations:**
+- Array of objects, not single object
+- Each submission creates new entry (allows same user to join multiple waitlists)
+- `ts` field for timestamp (likely `Date.now()`)
+- Integration name must match card title exactly for proper tracking
+- Need JSON.parse/stringify for storage operations
+
+**Implementation Pattern Needed:**
+```javascript
+// Read existing data or initialize empty array
+let waitlist = JSON.parse(localStorage.getItem('renzo_waitlist') || '[]');
+
+// Add new entry
+waitlist.push({email: emailValue, integration: integrationName, ts: Date.now()});
+
+// Save back to localStorage
+localStorage.setItem('renzo_waitlist', JSON.stringify(waitlist));
+```
+
+---
+
+**CRITICAL GAPS:** The provided codebase is incomplete - it only contains login UI, app shell, and CSS framework. The actual integrations page content (card HTML structure, JavaScript event handlers) is not visible. The Planner will need to either request the full code or make assumptions about integration card structure based on common patterns.

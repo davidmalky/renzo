@@ -1,0 +1,249 @@
+{
+  "task": {
+    "id": "auto-1779278186",
+    "title": "Sync Mapping Configuration Interface",
+    "description": "Build a comprehensive UI for creating and managing sync mappings between Salesforce and target systems. The interface must include:\n\n1. **Mapping List Page**: Table view showing all sync mappings with columns (name, source object, target object, sync direction [SF\u2192Target, Target\u2192SF, Bidirectional], status [active/paused], last sync time, success rate). Include search/filter bar, 'Create New Mapping' button, and inline actions (edit, pause/resume, delete, duplicate).\n\n2. **Mapping Creation Wizard**: Step-by-step flow with:\n   - Step 1: Basic info (mapping name, description, sync direction dropdown)\n   - Step 2: Object selection (Salesforce object dropdown with search, target system selector, target object dropdown)\n   - Step 3: Field mapping builder with drag-and-drop interface - left column shows source fields, right column shows target fields, draw lines to map. Include 'Auto-map by name' button, unmapped fields highlighted in yellow\n   - Step 4: Transformation rules per field (dropdown: Direct Copy, Formula, Lookup, Custom Function) with inline expression editor and test button\n   - Step 5: Validation rules (add/remove rule rows with field selector, operator dropdown [equals, contains, regex], value input, error message field)\n   - Step 6: Conflict resolution strategy (radio buttons: Source Wins, Target Wins, Most Recent Wins, Manual Review Required, Custom Logic)\n   - Step 7: Sync schedule (radio: Real-time polling interval in minutes, Scheduled cron expression, Manual only) with sync filter query builder (WHERE clause editor)\n   - Step 8: Review summary with 'Test Mapping' button that runs validation against sample data, then 'Save' and 'Save & Activate' buttons\n\n3. **Mapping Edit Page**: Same wizard interface pre-populated with existing configuration, with version history sidebar showing past changes and 'Restore' buttons\n\n4. **REST API Endpoints**: POST /api/sync-mappings (create), GET /api/sync-mappings (list with pagination), GET /api/sync-mappings/:id (retrieve), PUT /api/sync-mappings/:id (update), DELETE /api/sync-mappings/:id (soft delete), POST /api/sync-mappings/:id/test (validate configuration), PATCH /api/sync-mappings/:id/status (activate/pause)\n\n5. **Backend Models**: SyncMapping model with fields (id, name, description, source_system, source_object, target_system, target_object, sync_direction, field_mappings JSON, transformation_rules JSON, validation_rules JSON, conflict_strategy, sync_schedule JSON, filter_query, is_active, version, created_at, updated_at, created_by). Add database migration.\n\n6. **Validation Logic**: Server-side validation for circular dependencies, invalid field references, malformed transformation expressions, conflicting mappings on same objects, and required field coverage. Return detailed error messages with field-level errors.\n\nAll forms must include inline validation, loading states, success/error toasts, and confirmation modals for destructive actions.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "The sync execution engine exists but has no way to configure WHAT to sync. Users cannot define mappings, transformations, or rules \u2014 the core configuration layer is missing. Without this, the execution engine cannot be used in production. This is the critical prerequisite that unblocks actual usage of the system. All the monitoring views are useless without mappings to execute and monitor."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 10128
+      },
+      "t": 56.3
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 203.1
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 249.5
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 397.5
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 449.2
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 601.4
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 650.8
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 28191
+      },
+      "t": 762.3
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical CSS truncation in .toast-container rule causing rendering failure and likely breaking the entire toast notification system",
+          "Complete absence of input sanitization for search-input and form-input fields combined with missing Content Security Policy headers creates high XSS vulnerability",
+          "No accessibility implementation - missing ARIA labels, keyboard navigation, focus management for modals/wizard, and no screen reader support violates WCAG standards"
+        ],
+        "feedback": "MUST FIX IMMEDIATELY: 1) Complete the truncated CSS rule for .toast-container (line appears cut off mid-declaration). 2) Implement DOMPurify or similar sanitization for all user inputs before DOM insertion. 3) Add CSP headers via meta tag: <meta http-equiv='Content-Security-Policy' content=\"default-src 'self'; font-src 'self' https://fonts.gstatic.com\">. 4) Add ARIA attributes: aria-label on all buttons, role='dialog' aria-modal='true' on modals, aria-live='polite' on toasts. 5) Implement keyboard handlers: ESC to close modals, Tab trapping in modal dialogs, Enter/Space for custom controls. 6) Add SRI hashes to Google Fonts link. 7) Implement early history limiting (slice at 50 items instead of waiting for 1000). 8) Add try-catch around localStorage with QuotaExceededError handling. 9) Add cache invalidation to getCurrentUser() on logout. 10) Replace JSON.stringify comparison in detectChanges with deep equality function that handles circular references. SECONDARY: Add responsive breakpoints for mobile, implement promised table sorting and drag-drop functionality, add loading states for async operations, and define error boundaries."
+      },
+      "t": 811.2
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 32103
+      },
+      "t": 943.1
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security: XSS vulnerability - Toast message innerHTML insertion without sanitization, localStorage stores sensitive data unencrypted, missing CSRF tokens for state-changing operations",
+          "CSP Policy Failures: Hardcoded fake SHA-384 integrity hash will break Google Fonts loading, 'unsafe-inline' weakens XSS protection, missing font-src directive blocks external fonts",
+          "Missing Input Validation: No sanitization on search-input/form-input elements, DB.set() accepts unvalidated values, weak Auth.isAuthenticated() only checks timestamp without token validation"
+        ],
+        "feedback": "CRITICAL FIXES REQUIRED: 1) Sanitize all user inputs before DOM insertion - use textContent instead of innerHTML for toast messages or implement DOMPurify. 2) Replace fake integrity hash 'sha384-rbsA2VBKQh...' with actual hash or remove attribute entirely. 3) Update CSP: add 'font-src https://fonts.googleapis.com https://fonts.gstatic.com', consider removing 'unsafe-inline' and using nonces. 4) Implement CSRF token generation/validation for all POST operations. 5) Add input sanitization middleware before localStorage/DB operations using regex/allowlists. 6) Encrypt sensitive localStorage data or move to secure httpOnly cookies. 7) Fix CSS: change 'cursor:m' to 'cursor:move' in .field-item. 8) Add rate limiting to Auth methods. 9) Implement proper JWT/session token validation instead of timestamp-only auth. 10) Add ARIA labels: nav-link buttons need aria-label, wizard needs role='progressbar'. Code shows promise but has fundamental security gaps that make it unsuitable for production."
+      },
+      "t": 1003.6
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 30051
+      },
+      "t": 1153.6
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CRITICAL SECURITY: Auth.login() performs client-side only authentication with plaintext passwords and no server verification. Credentials must be validated against a backend API with proper password hashing (bcrypt/argon2). Session tokens in localStorage are XSS-vulnerable - migrate to httpOnly cookies.",
+          "CRITICAL SECURITY: Sanitizer.sanitizeHTML() is incomplete and vulnerable to attribute-based XSS attacks. Implement comprehensive sanitization using DOMPurify library or properly parse and whitelist allowed tags/attributes. CSP 'unsafe-inline' further weakens XSS protection.",
+          "CRITICAL SECURITY: CSRF validation implemented but never enforced, rate limiting is client-side only (easily bypassed), and tokens lack cryptographic signing. No server-side session invalidation exists. All security controls must be server-enforced."
+        ],
+        "feedback": "IMMEDIATE ACTIONS REQUIRED:\n\n1. **Authentication System (BLOCKING)**:\n   - Remove client-side Auth.login() logic entirely\n   - Implement proper backend authentication endpoint (POST /api/auth/login)\n   - Hash passwords server-side using bcrypt with salt rounds \u226512\n   - Return httpOnly, secure, SameSite cookies for session management\n   - Add server-side session store (Redis/database)\n\n2. **XSS Prevention (BLOCKING)**:\n   - Replace Sanitizer.sanitizeHTML() with DOMPurify library\n   - Remove CSP 'unsafe-inline' - use nonces: <style nonce=\"{{csp_nonce}}\">\n   - Add comprehensive attribute sanitization for all user inputs\n   - Implement output encoding for all dynamic content\n\n3. **CSRF & Rate Limiting (HIGH PRIORITY)**:\n   - Enforce validateCSRF() on all state-changing operations\n   - Move rate limiting to backend with distributed counter (Redis)\n   - Add CSRF token to all form submissions and verify server-side\n\n4. **Accessibility (MEDIUM)**:\n   - Add ARIA labels: aria-label=\"Search mappings\" on search input\n   - Define :focus-visible styles with 3:1 contrast outline\n   - Add role=\"navigation\" to sidebar, role=\"main\" to content\n   - Test with prefers-reduced-motion and high-contrast media queries\n\n5. **CSS Issues (LOW)**:\n   - Define missing @keyframes slideIn animation\n   - Complete .toast-close button styles\n   - Fix search icon z-index/pointer-events to prevent input blocking\n   - Test grid layout at 320px viewport width\n\nDO NOT DEPLOY until authentication and XSS vulnerabilities are resolved with server-side validation."
+      },
+      "t": 1209.3
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 34847
+      },
+      "t": 1382.3
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical security: CSRF token stored in global AppState and missing CSRF validation in Storage.saveMapping. Direct localStorage operations bypass backend security controls. Auth.login should use HttpOnly cookies for token storage, not client-accessible state.",
+          "Critical security: Storage.generateId uses Math.random() for ID generation which is cryptographically insecure and predictable. Replace with crypto.randomUUID() or a secure server-side ID generation mechanism to prevent enumeration attacks.",
+          "Critical accessibility: Missing semantic HTML structure (no ARIA landmarks, skip links, aria-sort states, prefers-reduced-motion), keyboard navigation unsupported in dropdowns, status indicators rely solely on color, and WCAG contrast ratios not verified (--text-secondary #666)."
+        ],
+        "feedback": "SECURITY FIXES REQUIRED: (1) Replace AppState.csrfToken with HttpOnly secure cookies and implement proper CSRF validation in all Storage methods. (2) Replace Math.random() with crypto.randomUUID() in generateId(). (3) Sanitize user email in Storage.logActivity using DOMPurify or server-side validation. ACCESSIBILITY FIXES: (4) Add <nav role='navigation'>, <main role='main'>, <aside role='complementary'> landmarks. (5) Add skip link: <a href='#main-content' class='skip-link'>Skip to main content</a> with .skip-link { position: absolute; left: -9999px; } .skip-link:focus { left: 0; }. (6) Implement keyboard handlers: dropdown needs ArrowDown/ArrowUp/Escape, add aria-sort='ascending|descending|none' to sortable headers. (7) Add @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }. (8) Add aria-hidden='true' to decorative icons. (9) Status badges need aria-label='Status: Active' alongside color. (10) Verify color contrast ratios meet WCAG AA (4.5:1 for normal text). STABILITY: (11) Add try-catch error boundaries around Storage operations with user-facing error messages instead of silent failures."
+      },
+      "t": 1441.9
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "MappingWizardView - Eight-step wizard interface with progress indicator and step validation",
+          "FieldMappingCanvas - Interactive visual mapper with drag-drop, SVG connection lines, and split-pane layout",
+          "TransformationEditor - Per-field transformation configuration with syntax highlighting and test fields",
+          "ValidationRuleBuilder - Dynamic form for validation rules with operators and error messages",
+          "ConflictResolutionSelector - UI for selecting conflict resolution strategies",
+          "ScheduleConfigurator - Scheduling interface for sync operations",
+          "Summary/Review step - Final review before saving mapping",
+          "Duplicate mapping functionality",
+          "Mapping statistics calculation and display",
+          "Field-level transformation rules implementation",
+          "Validation logic system",
+          "Conflict resolution strategies",
+          "Auto-map button functionality",
+          "Zoom/pan controls for field mapper",
+          "Syntax highlighting for expressions",
+          "Test input/output fields for transformations",
+          "localStorage persistence for mappings",
+          "RESTful API structure placeholders",
+          "Bidirectional sync configuration",
+          "Inline action handlers (edit, pause, resume, delete, duplicate)",
+          "Sort functionality for table columns",
+          "Filter functionality for direction, status, source object",
+          "Wizard state persistence across steps",
+          "Step-by-step validation before proceeding",
+          "Visual connection line rendering (SVG)",
+          "Unmapped field highlighting"
+        ],
+        "note": "Code only contains basic HTML structure with CSS styling and minimal skeleton. Missing all 10 detected functions (initializeMappingInterface, renderMappingListView, loadMappings, renderMappingTable, handleSearch, handleFilterChange, handleSort, handleInlineAction, pauseMapping, resumeMapping) and most core features from spec including the entire wizard workflow, visual field mapper, transformation editor, validation builder, and all interactive functionality. Only provides static layout foundation without JavaScript implementation for the comprehensive sync mapping system."
+      },
+      "t": 1452.9
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 33778
+      },
+      "t": 1626.3
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "CSS truncated: The stylesheet is incomplete - cuts off mid-selector (.version-header). This will cause rendering issues.",
+          "No JavaScript functionality: Interface has interactive elements (wizard, modals, search, filters, tables, forms) but no JS implementation provided.",
+          "Missing form validation: No visual indication of required fields or validation states (error states).",
+          "No ARIA labels: Interactive elements lack aria-labels, aria-describedby, or aria-live regions for screen readers.",
+          "Modal trap focus missing: Modal overlay has no keyboard focus management or escape key handler.",
+          "Form inputs lack associated labels: Some form elements may not have proper id/for associations (cannot verify without complete code).",
+          "Missing aria-labels on all icon-only buttons (page-btn, toast-close, modal-close) - severe accessibility violation",
+          "No keyboard navigation support for pagination controls - blocks keyboard-only users"
+        ]
+      },
+      "t": 1694.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 31871
+      },
+      "t": 1852.6
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Missing mobile navigation - sidebar is fixed at 240px with no hamburger menu or responsive breakpoint, making content inaccessible on mobile devices",
+          "Modal lacks keyboard trap and focus management - users cannot tab through modal elements properly or escape with ESC key",
+          "Form validation errors not announced to screen readers - .form-error elements need aria-live regions",
+          "Table lacks proper ARIA labels and keyboard navigation for sortable columns - screen reader users cannot interact with sorting functionality",
+          "Wizard navigation has no keyboard controls - users cannot navigate between steps without a mouse",
+          "CSS animation @keyframes is cut off mid-declaration - breaks toast animations",
+          "Incomplete HTML rendering - renderMappingListView() function cuts off mid-execution, will cause JavaScript error and broken UI",
+          "Missing ARIA labels on interactive elements - Router.navigate() buttons lack proper accessible names"
+        ]
+      },
+      "t": 1913.8
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1929.5
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Real-time Sync Execution Engine with Live Monitoring Dashboard"
+      },
+      "t": 1944.4
+    }
+  ],
+  "cost": 1.9154579999999997
+}

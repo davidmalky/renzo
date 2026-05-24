@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo - Relationships that remember</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#F7F4EF;color:#1A1A1A;line-height:1.5}
+.hidden{display:none!important}
+.app-container{display:flex;height:100vh}
+.sidebar{width:240px;background:#1A1A1A;color:#F7F4EF;display:flex;flex-direction:column;padding:24px 0}
+.sidebar-logo{font-size:24px;font-weight:700;color:#2D6A4F;padding:0 24px;margin-bottom:32px}
+.sidebar-nav{flex:1}
+.nav-item{padding:12px 24px;cursor:pointer;transition:background .2s}
+.nav-item:hover{background:rgba(255,255,255,.05)}
+.nav-item.active{background:#2D6A4F}
+.sidebar-footer{padding:0 24px;border-top:1px solid rgba(255,255,255,.1);padding-top:16px;margin-top:auto}
+.user-name{font-size:14px;margin-bottom:8px}
+.logout-btn{background:transparent;border:1px solid #F7F4EF;color:#F7F4EF;padding:8px 16px;border-radius:8px;cursor:pointer;width:100%;font-size:14px}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+.main-content{flex:1;overflow-y:auto;padding:32px}
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F7F4EF}
+.login-card{background:#FFF;padding:48px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);width:400px;text-align:center}
+.login-logo{font-size:32px;font-weight:700;color:#1A1A1A;margin-bottom:8px}
+.login-tagline{color:#6B7280;margin-bottom:32px}
+.input-group{margin-bottom:16px;text-align:left}
+.input-group label{display:block;font-size:14px;font-weight:500;margin-bottom:4px}
+.input-group input,.input-group textarea,.input-group select{width:100%;padding:10px 12px;border:1px solid #E5E0D8;border-radius:8px;font-size:14px;font-family:inherit}
+.input-group input:focus,.input-group textarea:focus,.input-group select:focus{outline:none;border-color:#2D6A4F}
+.btn-primary{background:#2D6A4F;color:#FFF;padding:12px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+.btn-primary:hover{background:#245a40}
+.btn-secondary{background:#6B7280;color:#FFF;padding:12px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-secondary:hover{background:#4b5563}
+.error-msg{color:#DC2626;font-size:14px;margin-top:8px;text-align:center}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal-content{background:#FFF;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;padding:32px;position:relative}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.modal-title{font-size:20px;font-weight:700}
+.close-btn{background:none;border:none;font-size:28px;cursor:pointer;color:#6B7280;padding:0 8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+.close-btn:hover{color:#1A1A1A}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:#FFF;padding:20px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stat-label{font-size:14px;color:#6B7280;margin-bottom:4px}
+.stat-value{font-size:28px;font-weight:700;color:#1A1A1A}
+.section-header{font-size:18px;font-weight:700;margin-bottom:16px}
+.contact-list{background:#FFF;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
+.contact-row{display:flex;align-items:center;padding:16px;border-bottom:1px solid #E5E0D8;cursor:pointer}
+.contact-row:last-child{border-bottom:none}
+.contact-row:hover{background:#F7F4EF}
+.contact-info{flex:1}
+.contact-name{font-weight:600;margin-bottom:4px}
+.contact-meta{font-size:14px;color:#6B7280}
+.badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600;margin-left:8px}
+.badge-a{background:#d1fae5;color:#065f46}
+.badge-b{background:#fef3c7;color:#92400e}
+.badge-c{background:#e2e8f0;color:#475569}
+.pill{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500}
+.pill-overdue{background:#fee2e2;color:#991b1b}
+.pill-due{background:#fef3c7;color:#92400e}
+.pill-ok{background:#d1fae5;color:#065f46}
+.toolbar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.search-input{flex:1;min-width:200px;padding:10px 12px;border:1px solid #E5E0D8;border-radius:8px;font-size:14px}
+.table-container{background:#FFF;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;background:#F7F4EF;font-weight:600;font-size:14px;border-bottom:1px solid #E5E0D8}
+td{padding:12px 16px;border-bottom:1px solid #E5E0D8}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#F7F4EF}
+.empty-state{text-align:center;padding:48px;color:#6B7280}
+.info-box{background:#d1fae5;border-left:4px solid #2D6A4F;padding:16px;border-radius:4px;margin-bottom:16px}
+.info-box-title{font-weight:600;margin-bottom:8px}
+.activity-item{padding:12px;border-bottom:1px solid #E5E0D8}
+.activity-item:last-child{border-bottom:none}
+.activity-time{font-size:12px;color:#6B7280;margin-bottom:4px}
+.btn-small{padding:8px 16px;font-size:13px;border-radius:8px;border:none;cursor:pointer;font-weight:500}
+.btn-danger{background:#DC2626;color:#FFF}
+.btn-danger:hover{background:#b91c1c}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.greeting{font-size:28px;font-weight:700;margin-bottom:4px}
+.date-display{color:#6B7280;margin-bottom:24px}
+.loading{text-align:center;padding:24px}
+.spinner{border:3px solid #E5E0D8;border-top:3px solid #2D6A4F;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-group{display:flex;gap:8px;justify-content:flex-end;margin-top:24px}
+.warning-banner{background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;border-radius:4px;margin-bottom:16px}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.message-preview{font-size:14px;color:#6B7280;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login-container">
+<div class="login-card">
+<div class="login-logo">Renzo</div>
+<div class="login-tagline">Relationships that remember</div>
+<form id="loginForm" aria-label="Login form">
+<div class="input-group">
+<label for="username">Username</label>
+<input type="text" id="username" required autocomplete="username">
+</div>
+<div class="input-group">
+<label for="password">Password</label>
+<input type="password" id="password" required autocomplete="current-password" aria-label="Password">
+</div>
+<button type="submit" class="btn-primary">Log In</button>
+<div id="loginError" class="error-msg hidden" role="alert" aria-live="polite"></div>
+</form>
+</div>
+</div>
+
+<div id="onboardingModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="onboardingTitle" class="modal-title">Tell us about your business</h2>
+<button class="close-btn" id="skipOnboarding" aria-label="Skip onboarding">×</button>
+</div>
+<form id="onboardingForm">
+<div class="input-group">
+<label for="companyName">Company Name</label>
+<input type="text" id="companyName" required>
+</div>
+<div class="input-group">
+<label for="whatYouSell">What you sell</label>
+<textarea id="whatYouSell" rows="3" placeholder="Describe your products/services in 2-3 sentences" required></textarea>
+</div>
+<div class="input-group">
+<label for="typicalCustomer">Your typical customer</label>
+<textarea id="typicalCustomer" rows="3" placeholder="Who are they? What do they care about?" required></textarea>
+</div>
+<div class="input-group">
+<label for="commTone">Communication tone</label>
+<select id="commTone" required>
+<option value="Professional">Professional</option>
+<option value="Conversational">Conversational</option>
+<option value="Direct">Direct</option>
+<option value="Warm">Warm</option>
+</select>
+</div>
+<div class="input-group">
+<label for="repName">Your name (messages come from)</label>
+<input type="text" id="repName" required>
+</div>
+<button type="submit" class="btn-primary">Save & Continue</button>
+</form>
+</div>
+</div>
+
+<div id="appContainer" class="app-container hidden">
+<aside class="sidebar">
+<div class="sidebar-logo">Renzo</div>
+<nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+<div class="nav-item active" data-view="dashboard">Dashboard</div>
+<div class="nav-item" data-view="contacts">Contacts</div>
+<div class="nav-item" data-view="queue">Outreach Queue</div>
+<div class="nav-item" data-view="drafts">Drafts</div>
+<div class="nav-item" data-view="settings">Settings</div>
+</nav>
+<div class="sidebar-footer">
+<div class="user-name" id="sidebarUser">Admin</div>
+<button class="logout-btn" id="logoutBtn">Logout</button>
+</div>
+</aside>
+
+<main class="main-content">
+<div id="dashboardView">
+<h1 class="greeting" id="greeting">Good morning</h1>
+<div class="date-display" id="dateDisplay"></div>
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-label">Total Contacts</div><div class="stat-value" id="statTotal">0</div></div>
+<div class="stat-card"><div class="stat-label">Due Today</div><div class="stat-value" id="statDue">0</div></div>
+<div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value" id="statOverdue">0</div></div>
+<div class="stat-card"><div class="stat-label">Sent This Week</div><div class="stat-value" id="statSent">0</div></div>
+</div>
+<h2 class="section-header">Due Today</h2>
+<div id="dueList" class="contact-list"></div>
+<h2 class="section-header" style="margin-top:32px">Recent Activity</h2>
+<div id="activityList" class="contact-list"></div>
+</div>
+
+<div id="contactsView" class="hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<h1 class="section-header" style="margin:0">Contacts</h1>
+<button class="btn-primary" id="addContactBtn" style="width:auto">Add Contact</button>
+</div>
+<div class="toolbar">
+<input type="text" id="searchInput" class="search-input" placeholder="Search by name or company" aria-label="Search contacts">
+<select id="tierFilter" aria-label="Filter by tier">
+<option value="">All Tiers</option>
+<option value="A">A-Tier</option>
+<option value="B">B-Tier</option>
+<option value="C">C-Tier</option>
+</select>
+<select id="statusFilter" aria-label="Filter by status">
+<option value="">All Statuses</option>
+<option value="overdue">Overdue</option>
+<option value="due">Due Soon</option>
+<option value="ok">On Track</option>
+</select>
+</div>
+<div class="table-container">
+<table id="contactsTable">
+<thead><tr><th>Name</th><th>Company</th><th>Tier</th><th>Last Contact</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="contactsTableBody"></tbody>
+</table>
+</div>
+<div id="contactsEmpty" class="empty-state hidden">No contacts yet. Add your first contact to start building relationships.</div>
+</div>
+
+<div id="queueView" class="hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<h1 class="section-header" style="margin:0">Outreach Queue</h1>
+<button class="btn-primary" id="markAllSentBtn" style="width:auto">Mark All Sent</button>
+</div>
+<div id="queueList" class="contact-list"></div>
+<div id="queueEmpty" class="empty-state hidden">Your queue is clear. Generate messages from your contacts.</div>
+</div>
+
+<div id="draftsView" class="hidden">
+<h1 class="section-header">Drafts</h1>
+<div id="draftsList" class="contact-list"></div>
+<div id="draftsEmpty" class="empty-state hidden">No drafts saved.</div>
+</div>
+
+<div id="settingsView" class="hidden">
+<h1 class="section-header">Settings</h1>
+<div id="apiKeyWarning" class="warning-banner hidden">Please set your Anthropic API key to enable AI message generation.</div>
+<div class="table-container" style="padding:24px">
+<div class="input-group">
+<label for="apiKeyInput">Anthropic API Key</label>
+<input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+</div>
+<h3 style="margin:24px 0 16px">Company Profile</h3>
+<div class="input-group">
+<label for="settingsCompanyName">Company Name</label>
+<input type="text" id="settingsCompanyName">
+</div>
+<div class="input-group">
+<label for="settingsWhatYouSell">What you sell</label>
+<textarea id="settingsWhatYouSell" rows="3"></textarea>
+</div>
+<div class="input-group">
+<label for="settingsTypicalCustomer">Your typical customer</label>
+<textarea id="settingsTypicalCustomer" rows="3"></textarea>
+</div>
+<div class="form-row">
+<div class="input-group">
+<label for="settingsCommTone">Communication tone</label>
+<select id="settingsCommTone">
+<option value="Professional">Professional</option>
+<option value="Conversational">Conversational</option>
+<option value="Direct">Direct</option>
+<option value="Warm">Warm</option>
+</select>
+</div>
+<div class="input-group">
+<label for="settingsRepName">Your name</label>
+<input type="text" id="settingsRepName">
+</div>
+</div>
+<button class="btn-primary" id="saveSettingsBtn" style="width:auto;margin-top:16px">Save Settings</button>
+<div id="settingsSuccess" class="hidden" style="color:#2D6A4F;margin-top:8px;font-weight:500">Settings saved successfully!</div>
+</div>
+</div>
+</main>
+</div>
+
+<div id="contactFormModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="contactFormTitle">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="contactFormTitle" class="modal-title">Add Contact</h2>
+<button class="close-btn" id="closeContactForm" aria-label="Close contact form">×</button>
+</div>
+<form id="contactForm">
+<div class="form-row">
+<div class="input-group">
+<label for="contactFullName">Full Name *</label>
+<input type="text" id="contactFullName" required>
+</div>
+<div class="input-group">
+<label for="contactCompany">Company *</label>
+<input type="text" id="contactCompany" required>
+</div>
+</div>
+<div class="form-row">
+<div class="input-group">
+<label for="contactTitle">Title/Role</label>
+<input type="text" id="contactTitle">
+</div>
+<div class="input-group">
+<label for="contactEmail">Email</label>
+<input type="email" id="contactEmail">
+</div>
+</div>
+<div class="form-row">
+<div class="input-group">
+<label for="contactPhone">Phone</label>
+<input type="tel" id="contactPhone">
+</div>
+<div class="input-group">
+<label for="contactTier">Tier *</label>
+<select id="contactTier" required>
+<option value="A">A - Weekly (7 days)</option>
+<option value="B">B - Monthly (30 days)</option>
+<option value="C">C - Quarterly (90 days)</option>
+</select>
+</div>
+</div>
+<div class="form-row">
+<div class="input-group">
+<label for="contactFrequency">Touch Frequency (days)</label>
+<input type="number" id="contactFrequency" value="30">
+</div>
+<div class="input-group">
+<label for="contactLastContact">Last Contact Date</label>
+<input type="date" id="contactLastContact">
+</div>
+</div>
+<div class="form-row">
+<div class="input-group">
+<label for="contactLocation">Location/Region</label>
+<input type="text" id="contactLocation">
+</div>
+<div class="input-group">
+<label for="contactAccountSize">Account Size</label>
+<select id="contactAccountSize">
+<option value="">Select size</option>
+<option value="Small">Small</option>
+<option value="Mid-Market">Mid-Market</option>
+<option value="Large">Large</option>
+<option value="Enterprise">Enterprise</option>
+</select>
+</div>
+</div>
+<div class="input-group">
+<label for="contactProducts">Products/Services They Use</label>
+<textarea id="contactProducts" rows="3"></textarea>
+</div>
+<div class="input-group">
+<label for="contactHistory">Relationship History</label>
+<textarea id="contactHistory" rows="5" placeholder="Past conversations, key topics discussed, who has spoken with them..."></textarea>
+</div>
+<div class="input-group">
+<label for="contactNotes">Notes</label>
+<textarea id="contactNotes" rows="3"></textarea>
+</div>
+<div class="btn-group">
+<button type="button" class="btn-secondary" id="cancelContactForm">Cancel</button>
+<button type="button" class="btn-danger hidden" id="deleteContactBtn">Delete</button>
+<button type="submit" class="btn-primary" style="width:auto">Save Contact</button>
+</div>
+</form>
+</div>
+</div>
+
+<div id="aiModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="aiModalTitle">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="aiModalTitle" class="modal-title">Generate Message</h2>
+<button class="close-btn" id="closeAiModal" aria-label="Close message generation">×</button>
+</div>
+<div id="aiLoading" class="loading">
+<div class="spinner"></div>
+<p>Analyzing relationship context...</p>
+</div>
+<div id="aiResult" class="hidden">
+<div class="info-box">
+<div class="info-box-title">Why This Message</div>
+<p id="aiReason"></p>
+</div>
+<div class="input-group">
+<label for="aiMessage">Message</label>
+<textarea id="aiMessage" rows="6"></textarea>
+</div>
+<div class="btn-group">
+<button class="btn-secondary" id="cancelAiBtn">Cancel</button>
+<button class="btn-secondary" id="regenerateBtn">Regenerate</button>
+<button class="btn-primary" id="addToQueueBtn" style="width:auto">Add to Queue</button>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+let RENZO_API_KEY = '';
+let currentUser = 'admin';
+let currentContactId = null;
+let currentAiContact = null;
+
+const LS = {
+contacts: 'renzo_contacts',
+activity: 'renzo_activity',
+queue: 'renzo_queue',
+drafts: 'renzo_drafts',
+profile: 'renzo_company_profile',
+apiKey: 'renzo_api_key',
+session: 'renzo_session',
+onboarded: 'renzo_onboarded'
+};
+
+function loadData(key) {
+const data = localStorage.getItem(key);
+return data ? JSON.parse(data) : (key === LS.contacts || key === LS.activity || key === LS.queue || key === LS.drafts ? [] : null);
+}
+
+function saveData(key, data) {
+localStorage.setItem(key, JSON.stringify(data));
+}
+
+function escapeHtml(text) {
+const div = document.createElement('div');
+div.textContent = text;
+return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+if (!dateStr) return 'Never';
+const date = new Date(dateStr);
+return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getDaysSince(dateStr) {
+if (!dateStr) return 999;
+const then = new Date(dateStr);
+const now = new Date();
+return Math.floor((now - then) / (1000 * 60 * 60 * 24));
+}
+
+function getContactStatus(contact) {
+const daysSince = getDaysSince(contact.lastContact);
+const frequency = contact.frequency || 30;
+if (daysSince > frequency) return 'overdue';
+if (daysSince >= frequency - 3) return 'due';
+return 'ok';
+}
+
+function getTierFrequency(tier) {
+return tier === 'A' ? 7 : tier === 'B' ? 30 : 90;
+}
+
+function getGreeting() {
+const hour = new Date().getHours();
+if (hour < 12) return 'Good morning';
+if (hour < 18) return 'Good afternoon';
+return 'Good evening';
+}
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+e.preventDefault();
+const username = document.getElementById('username').value;
+const password = document.getElementById('password').value;
+const errorEl = document.getElementById('loginError');
+if (username === 'admin' && password === 'renzo2024') {
+currentUser = username;
+saveData(LS.session, { user: username, time: Date.now() });
+document.getElementById('loginView').classList.add('hidden');
+const onboarded = localStorage.getItem(LS.onboarded);
+if (!onboarded) {
+document.getElementById('onboardingModal').classList.remove('hidden');
+} else {
+showApp();
+}
+errorEl.classList.add('hidden');
+} else {
+errorEl.textContent = 'Invalid credentials. Try admin/renzo2024';
+errorEl.classList.remove('hidden');
+}
+});
+
+document.getElementById('password').addEventListener('keypress', function(e) {
+if (e.key === 'Enter') {
+document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+}
+});
+
+document.getElementById('onboardingForm').addEventListener('submit', function(e) {
+e.preventDefault();
+const profile = {
+companyName: document.getElementById('companyName').value,
+whatYouSell: document.getElementById('whatYouSell').value,
+typicalCustomer: document.getElementById('typicalCustomer').value,
+commTone: document.getElementById('commTone').value,
+repName: document.getElementById('repName').value
+};
+saveData(LS.profile, profile);
+localStorage.setItem(LS.onboarded, 'true');
+document.getElementById('onboardingModal').classList.add('hidden');
+showApp();
+});
+
+document.getElementById('skipOnboarding').addEventListener('click', function() {
+localStorage.setItem(LS.onboarded, 'true');
+document.getElementById('onboardingModal').classList.add('hidden');
+showApp();
+});
+
+function showApp() {
+document.getElementById('appContainer').classList.remove('hidden');
+loadSettings();
+renderDashboard();
+}
+
+function loadSettings() {
+RENZO_API_KEY = localStorage.getItem(LS.apiKey) || '';
+const profile = loadData(LS.profile);
+if (profile) {
+document.getElementById('settingsCompanyName').value = profile.companyName || '';
+document.getElementById('settingsWhatYouSell').value = profile.whatYouSell || '';
+document.getElementById('settingsTypicalCustomer').value = profile.typicalCustomer || '';
+document.getElementById('settingsCommTone').value = profile.commTone || 'Professional';
+document.getElementById('settingsRepName').value = profile.repName || '';
+document.getElementById('sidebarUser').textContent = profile.repName || 'Admin';
+}
+document.getElementById('apiKeyInput').value = RENZO_API_KEY;
+if (!RENZO_API_KEY) {
+document.getElementById('apiKeyWarning').classList.remove('hidden');
+}
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+item.addEventListener('click', function() {
+document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+this.classList.add('active');
+const view = this.getAttribute('data-view');
+showView(view);
+});
+});
+
+function showView(view) {
+document.querySelectorAll('#dashboardView, #contactsView, #queueView, #draftsView, #settingsView').forEach(v => v.classList.add('hidden'));
+if (view === 'dashboard') {
+document.getElementById('dashboardView').classList.remove('hidden');
+renderDashboard();
+} else if (view === 'contacts') {
+document.getElementById('contactsView').classList.remove('hidden');
+renderContacts();
+} else if (view === 'queue') {
+document.getElementById('queueView').classList.remove('hidden');
+renderQueue();
+} else if (view === 'drafts') {
+document.getElementById('draftsView').classList.remove('hidden');
+renderDrafts();
+} else if (view === 'settings') {
+document.getElementById('settingsView').classList.remove('hidden');
+loadSettings();
+}
+}
+
+document.getElementById('logoutBtn').addEventListener('click', function() {
+localStorage.removeItem(LS.session);
+location.reload();
+});
+
+function renderDashboard() {
+const profile = loadData(LS.profile);
+const repName = profile?.repName || 'there';
+document.getElementById('greeting').textContent = `${getGreeting()}, ${repName}`;
+const today = new Date();
+document.getElementById('dateDisplay').textContent = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+const contacts = loadData(LS.
+<!-- BUILD_ISSUES: missing </html> — file truncated -->

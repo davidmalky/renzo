@@ -1,0 +1,207 @@
+# RESEARCH REPORT: ABORTSIGNAL TIMEOUTS & ERROR HANDLING
+
+## EXISTING_FEATURES
+
+### Fetch Calls Found in Codebase:
+1. **generateMsg()** - AI message generation (line location: needs scanning)
+2. **refineDraft()** - Draft refinement feature
+3. **refineQueueMsg()** - Queue message refinement
+4. **sendGuideMsg()** - Guide message sending
+5. **readWebsite()** - Website reading in settings
+6. **Batch filter call** - Batch operations filtering
+7. **Batch per-contact call** - Individual contact batch processing
+8. **sReadWebsite listener** - Service worker/background website reader
+
+### Error Handling Patterns:
+- Toast notification system exists: `toast(message, type)` with 'error' type support
+- Catch blocks present in fetch operations
+- Button state management (enabling/disabling) during async operations
+
+### UI State Management:
+- **aiLoading** element - shows loading state during AI operations
+- **aiErr** element - displays error messages
+- Button disable/enable patterns during operations
+- `.hidden` CSS class for show/hide functionality
+
+### Toast System:
+- `toast(message, type)` function available
+- Supports 'error' type for error messages
+- Used for user notifications
+
+## MISSING_FEATURES
+
+### Timeout Implementation:
+- **No AbortSignal.timeout() usage** - None of the 8 fetch calls currently implement timeouts
+- **No timeout-specific error handling** - No distinction between timeout errors and other errors
+- **No 30-second timeout standard** - No consistent timeout policy across fetch calls
+
+### Error Type Discrimination:
+- **No TimeoutError checking** - catch blocks don't check `e.name === 'TimeoutError'`
+- **No AbortError checking** - catch blocks don't check `e.name === 'AbortError'`
+- **No specific timeout messages** - Generic error messages, not "Request timed out — try again"
+
+### Guaranteed Cleanup:
+- **Incomplete button re-enable logic** - Some catch blocks may not re-enable buttons
+- **aiLoading visibility in generateMsg()** - May not be hidden in all error paths
+
+## CHANGES_NEEDED
+
+### For ALL 8 Fetch Calls:
+
+1. **generateMsg()**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout/abort error discrimination in catch block
+   - Ensure `aiLoading` hidden at start of catch: `document.getElementById('aiLoading').classList.add('hidden')`
+   - Verify button re-enable in catch block
+
+2. **refineDraft()**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify button re-enable in both success and error paths
+
+3. **refineQueueMsg()**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify button re-enable logic
+
+4. **sendGuideMsg()**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify button re-enable in catch
+
+5. **readWebsite() in settings**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify button re-enable
+
+6. **Batch filter call**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify UI state restoration
+
+7. **Batch per-contact call**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify button/UI state
+
+8. **sReadWebsite listener**
+   - Add `signal: AbortSignal.timeout(30000)` to fetch options
+   - Add timeout error handling
+   - Verify proper error propagation
+
+### Catch Block Template Pattern:
+```javascript
+catch(e) {
+  // For generateMsg() only - add at start:
+  // document.getElementById('aiLoading').classList.add('hidden');
+  
+  if(e.name === 'TimeoutError' || e.name === 'AbortError') {
+    toast('Request timed out — try again', 'error');
+  } else {
+    toast('Error: ' + e.message, 'error');
+  }
+  
+  // Re-enable button (verify this exists):
+  // buttonElement.disabled = false;
+}
+```
+
+## REUSE
+
+### Existing Patterns to Preserve:
+- **Toast notification system** - Use existing `toast(msg, 'error')` calls
+- **Button disable pattern** - Maintain existing `button.disabled = true/false` logic
+- **CSS .hidden class** - Use existing `.classList.add('hidden')` / `.classList.remove('hidden')`
+- **Error display elements** - Use existing `aiErr`, `aiLoading` element IDs
+- **Fetch structure** - Keep existing fetch call structure, only add `signal` option
+- **Try-catch blocks** - Enhance existing catch blocks, don't replace them
+
+### Code Style to Match:
+- Single quotes for strings
+- Concise variable names
+- Inline conditionals where appropriate
+- No unnecessary refactoring of working logic
+
+## RISKS
+
+### Technical Risks:
+
+1. **AbortSignal Browser Compatibility**
+   - `AbortSignal.timeout()` is modern API (2022+)
+   - Risk: May not work in older browsers
+   - Mitigation: Assumes modern browser target (no polyfill mentioned in task)
+
+2. **Multiple Abort Sources**
+   - If code already uses AbortController elsewhere, adding timeout could conflict
+   - Risk: Existing abort logic might be overridden
+   - Mitigation: Task states these are additions, implying no existing abort logic
+
+3. **Button Reference Validity**
+   - Catch blocks must re-enable correct button
+   - Risk: Button variable might be out of scope in catch block
+   - Mitigation: Verify each function's button reference pattern
+
+4. **aiLoading Element in generateMsg()**
+   - Must ensure element exists before accessing
+   - Risk: `getElementById('aiLoading')` could be null
+   - Mitigation: Existing code presumably already uses this element safely
+
+5. **Error Message Consistency**
+   - Toast messages must match exact specification
+   - Risk: Typos or variations in error messages
+   - Mitigation: Use exact strings: "Request timed out — try again" and "Error: " + e.message
+
+6. **Success Path Button Re-enable**
+   - Task emphasizes "both success and error paths"
+   - Risk: Success path might already handle this, adding duplicate code
+   - Mitigation: Review each function's success callback/then block
+
+7. **Service Worker Fetch (sReadWebsite)**
+   - Service worker context has different error handling needs
+   - Risk: Toast notifications might not work in service worker
+   - Mitigation: May need different error handling strategy for this listener
+
+## DATA_STRUCTURES
+
+### DOM Elements:
+- **aiLoading** (id) - Loading indicator element, toggled via `.hidden` class
+- **aiErr** (id) - Error message display element
+- Various **button elements** - Need to track disabled state
+
+### Error Object Properties:
+- **e.name** - Error type identifier ('TimeoutError', 'AbortError', others)
+- **e.message** - Error message string for display
+
+### Fetch Options Structure:
+```javascript
+{
+  method: 'POST', // or GET
+  headers: { /* existing headers */ },
+  body: /* existing body */,
+  signal: AbortSignal.timeout(30000) // NEW - to be added
+}
+```
+
+### Toast Function Signature:
+```javascript
+toast(message: string, type: 'error' | other_types)
+```
+
+### CSS Classes:
+- **hidden** - Display none class for hiding elements
+
+### localStorage Keys:
+- Not directly relevant to this task (fetch timeout additions)
+- No localStorage changes required
+
+---
+
+## SUMMARY FOR PLANNER
+
+This is a **surgical enhancement task** with no restructuring required. Each of the 8 fetch calls needs:
+1. One new option added: `signal: AbortSignal.timeout(30000)`
+2. Enhanced catch block with error type discrimination
+3. Verified button re-enable in catch block
+4. Special case: generateMsg() needs aiLoading hidden at catch start
+
+The changes are **purely additive** - no existing logic should be modified, only enhanced for timeout handling and consistent error messaging.

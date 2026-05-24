@@ -1,0 +1,139 @@
+# RESEARCH REPORT: RENZO PHASE 2 ENHANCEMENTS
+
+## EXISTING_FEATURES:
+
+**CRITICAL FINDING**: The provided codebase is NOT the Renzo app. It's a "Mapping Execution Engine - Advanced Transformations" tool with drag-and-drop function mapping capabilities. This is the WRONG codebase.
+
+Based on the codebase provided:
+- Modal system with overlay and animations
+- Function library panel (slide-out sidebar)
+- Drag-and-drop mapping interface
+- Category-based function organization
+- Search input for filtering
+- Mapping row display with expression editing
+- CSS custom properties for theming
+- Responsive layout with transitions
+
+**EXPECTED Renzo features (mentioned in task but NOT in provided code):**
+- Login system (admin/renzo2024)
+- Contacts CRUD operations
+- AI message generation using Anthropic API
+- Outreach queue
+- Drafts system
+- Settings with API key storage
+- Tier A/B/C contact classification
+- localStorage data persistence
+
+## MISSING_FEATURES:
+
+**ALL features from the task are missing because this is the wrong codebase:**
+
+1. Contact data model with contractExpiry and invoiceAmount fields
+2. Priority score calculation (0-100 with weighted factors)
+3. Days since last contact tracking
+4. Contract expiry tracking
+5. Invoice amount tracking
+6. Colored priority badge display
+7. Priority-based contact sorting
+8. Outreach trigger reason computation
+9. Trigger display in message reasoning
+10. Trigger injection into AI prompts
+11. Batch Outreach navigation item
+12. Natural language query parsing for batch operations
+13. Batch AI message generation with progress indicator
+14. CSV import functionality
+15. CSV column auto-detection
+16. 5-row preview before import
+17. Duplicate detection during import
+18. "My Outreach Rules" settings section
+19. Trainable instructions storage in localStorage
+20. Rules injection into AI prompts
+
+## CHANGES_NEEDED:
+
+**CANNOT DETERMINE** - The provided codebase has no overlap with the Renzo application described in the task. The correct Renzo codebase must be provided to analyze required changes.
+
+Expected changes would include:
+- Modifying contact data structure to add new fields
+- Replacing tier system with priority score system
+- Enhancing AI message generation to include triggers
+- Extending settings page with new sections
+- Adding new navigation routes
+
+## REUSE:
+
+**From provided (incorrect) codebase - DO NOT USE:**
+- Modal system architecture
+- CSS custom properties pattern
+- Button styling classes
+- Panel slide-out mechanism
+
+**From actual Renzo codebase (to be preserved):**
+- Existing login authentication flow
+- localStorage persistence patterns
+- Anthropic API integration code
+- Contact CRUD operations
+- Queue and drafts data structures
+- Settings page layout
+- Existing design tokens (warm off-white, forest green, dark sidebar)
+- Current contact form structure
+
+## RISKS:
+
+### CRITICAL RISK:
+**WRONG CODEBASE PROVIDED** - Cannot proceed with accurate analysis without the actual Renzo application code.
+
+### Anticipated risks for Phase 2:
+1. **Data migration**: Existing contacts in localStorage lack contractExpiry, invoiceAmount, lastContactDate fields - need migration strategy
+2. **Priority score edge cases**: Missing data (null dates/amounts) could break calculation
+3. **Batch operations performance**: Generating AI messages for many contacts could hit API rate limits or cause UI freezing
+4. **CSV import data quality**: Malformed CSVs, encoding issues, column mapping errors
+5. **localStorage limits**: CSV imports could exceed 5-10MB localStorage quota
+6. **Prompt injection**: User-defined rules could conflict with system prompts or break AI generation
+7. **Date handling**: Browser timezone differences for contract expiry calculations
+8. **Backward compatibility**: Existing queue/drafts entries may reference old data structure
+
+## DATA_STRUCTURES:
+
+**CANNOT DETERMINE from provided code** - No localStorage keys found in the mapping engine codebase.
+
+**Expected Renzo localStorage keys (from task description):**
+```
+renzo_contacts          // Array of contact objects
+renzo_queue             // Array of queued outreach items
+renzo_drafts            // Array of draft messages
+renzo_settings          // Object with apiKey and new outreachRules
+renzo_auth              // Authentication state
+```
+
+**Expected NEW data structure additions:**
+```javascript
+// Contact object extensions:
+{
+  contractExpiry: "2024-06-15",      // ISO date string
+  invoiceAmount: 4200,               // Number
+  lastContactDate: "2024-01-15",     // ISO date string
+  priorityScore: 87                  // Computed 0-100
+}
+
+// Settings object extension:
+{
+  apiKey: "sk-ant-...",
+  outreachRules: [                    // NEW
+    "Always mention their company name",
+    "Keep messages under 100 words"
+  ]
+}
+```
+
+---
+
+## RECOMMENDATION:
+
+**STOP - Provide correct Renzo codebase before proceeding.** The Planner cannot create an accurate implementation plan without analyzing the actual application code containing:
+- Contact management system
+- AI integration
+- Queue/drafts logic
+- Settings page
+- Navigation structure
+- Existing localStorage schema

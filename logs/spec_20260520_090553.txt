@@ -1,0 +1,240 @@
+# TECHNICAL SPECIFICATION: Data Mapping Configuration Builder
+
+## OVERVIEW
+
+A comprehensive data mapping configuration interface enabling users to create, manage, and visualize data synchronization mappings between systems. The application features a dual-view architecture: a mapping list view for managing all configurations, and an advanced visual mapper with drag-and-drop field mapping, transformation rules, validation, and preview capabilities. All data persists to localStorage with a versioned schema supporting import/export, duplication, and complete CRUD operations.
+
+## VIEWS
+
+**MappingListView**: Primary dashboard displaying all saved mappings in a table/card grid. Shows mapping name, source/destination systems, field count, last modified date, and active/inactive toggle. Includes search/filter toolbar, action buttons (New Mapping, Import), and empty state when no mappings exist. Each mapping row has actions: Edit, Duplicate, Delete, Export.
+
+**MappingBuilderView**: Split-panel visual mapper with three main areas: (1) Left panel showing source system fields in a searchable/filterable tree/list, (2) Center canvas displaying active field mappings with connecting lines/arrows, (3) Right panel showing destination fields. Top toolbar contains mapping metadata, save/cancel buttons, and validation status indicator.
+
+**TransformationEditor**: Modal/sidebar panel for configuring transformations on a specific field mapping. Contains transformation type selector (dropdown), configuration forms for each transformation type, preview section showing sample input/output, and add/remove transformation buttons. Transformations stack in order of execution.
+
+**MappingMetadataForm**: Modal form for editing mapping configuration including name (required), description (textarea), source system (dropdown), destination system (dropdown), schedule configuration (frequency dropdown, time picker), batch size (number input), and active status toggle. Appears on new mapping creation and when editing mapping settings.
+
+**FieldPreviewPanel**: Collapsible panel showing sample data transformation. Displays source field value, each transformation step with intermediate results, and final destination value. Includes data type indicators and validation warnings.
+
+**ValidationResultsPanel**: Modal or inline panel displaying validation results. Shows errors (missing required fields, circular dependencies, incompatible types) and warnings (potential data loss, unmapped required fields). Each item links to the specific field/mapping for quick correction.
+
+## FUNCTIONS
+
+**initializeApp()**: Entry point that loads mappings from localStorage, initializes the current view state (defaults to MappingListView), sets up event listeners for navigation and global actions, checks schema version and migrates if needed, renders the initial view.
+
+**loadMappingsFromStorage()**: Reads localStorage key 'dataMappings', parses JSON, validates schema version, returns array of mapping objects. If schema version mismatch, calls migrateSchema(). Returns empty array if no data exists.
+
+**saveMappingsToStorage(mappings)**: Stringifies mappings array with current schema version metadata, writes to localStorage 'dataMappings' key, updates 'lastSaved' timestamp, handles quota exceeded errors by showing user notification.
+
+**renderMappingListView()**: Clears main content area, generates HTML for filter toolbar (search input, system filter dropdown, status filter), creates table/grid of mapping cards using mapping data, attaches event listeners for search/filter changes, toggle switches, action buttons. Shows empty state if no mappings.
+
+**filterMappings(searchTerm, systemFilter, statusFilter)**: Takes filter parameters, iterates through all mappings, applies search to name/description fields, filters by source/destination system if specified, filters by active status, returns filtered array, triggers re-render of mapping list.
+
+**createMappingCard(mapping)**: Takes mapping object, generates HTML card element with mapping name as header, system badges (source → destination), field count badge, last modified date, active toggle switch, and action buttons (Edit, Duplicate, Delete, Export). Returns DOM element or HTML string.
+
+**handleNewMapping()**: Shows MappingMetadataForm modal with empty fields, sets mode to 'create', waits for form submission, generates new mapping ID (UUID or timestamp), creates mapping object with default values, adds to mappings array, saves to storage, navigates to MappingBuilderView with new mapping ID.
+
+**handleEditMapping(mappingId)**: Finds mapping by ID, loads mapping data into state, navigates to MappingBuilderView, renders source/destination fields and existing field mappings, enables editing mode.
+
+**handleDuplicateMapping(mappingId)**: Finds mapping by ID, creates deep clone of mapping object, generates new ID, appends " (Copy)" to name, updates createdAt/updatedAt timestamps, adds to mappings array, saves to storage, shows success notification, refreshes mapping list.
+
+**handleDeleteMapping(mappingId)**: Shows confirmation modal with mapping name, waits for confirmation, removes mapping from array by ID, saves updated array to storage, shows success notification, refreshes mapping list. If currently editing this mapping, navigates back to list view.
+
+**handleToggleActive(mappingId)**: Finds mapping by ID, toggles isActive boolean, updates updatedAt timestamp, saves to storage, updates UI toggle switch state without full re-render, shows brief status notification.
+
+**renderMappingBuilderView(mappingId)**: Loads mapping data, renders three-panel layout, populates source fields in left panel from source system schema, populates destination fields in right panel from destination system schema, renders existing field mappings in center canvas, initializes drag-and-drop or connection drawing, attaches all event listeners, shows metadata in top toolbar.
+
+**loadSystemSchema(systemName)**: Takes system name, looks up system in predefined schemas or fetches from configuration, returns array of field objects with properties: fieldId, fieldName, dataType, required, description, sampleData. Supports nested field structures for complex objects.
+
+**renderSourceFields(fields, containerElement)**: Takes fields array, generates searchable/filterable tree or list UI, creates draggable field elements or selectable items, supports expand/collapse for nested structures, attaches search filter listener, renders to specified container.
+
+**renderDestinationFields(fields, containerElement)**: Same as renderSourceFields but for destination panel, highlights required fields with visual indicator, shows data type icons, enables selection for mapping creation.
+
+**renderFieldMappings(mappings, canvasElement)**: Takes fieldMappings array, clears canvas, iterates through each mapping, draws visual connection (line/arrow) from source field to destination field, creates mapping card/badge showing source → destination with transformation count, positions elements in canvas, makes mappings selectable for editing.
+
+**handleCreateFieldMapping(sourceFieldId, destFieldId)**: Validates that mapping doesn't already exist, checks data type compatibility, creates new fieldMapping object with empty transformations array, adds to current mapping's fieldMappings, updates canvas, shows TransformationEditor for new mapping, triggers validation check.
+
+**handleRemoveFieldMapping(mappingIndex)**: Shows confirmation, removes mapping from fieldMappings array at index, updates canvas by removing visual connection, triggers validation check, saves to state (doesn't persist until main save).
+
+**openTransformationEditor(mappingIndex)**: Loads field mapping at index, shows TransformationEditor modal/panel, populates current transformations, displays source/destination field info, renders transformation list with reorder capability, shows preview with sample data, enables add/remove/edit transformations.
+
+**renderTransformationList(transformations, containerElement)**: Generates list of transformation items, each showing type and configuration summary, includes reorder handles (up/down arrows or drag handles), edit and delete buttons, maintains transformation execution order.
+
+**handleAddTransformation(mappingIndex, transformationType)**: Creates new transformation object based on type with default configuration, adds to transformations array for the field mapping, shows configuration form for the transformation, updates preview, doesn't save until editor is closed with save action.
+
+**handleRemoveTransformation(mappingIndex, transformIndex)**: Removes transformation at index from the field mapping's transformations array, updates preview to reflect change, re-renders transformation list.
+
+**handleReorderTransformation(mappingIndex, fromIndex, toIndex)**: Removes transformation from fromIndex, inserts at toIndex, updates transformations array, re-renders list and preview to show execution order change.
+
+**configureTransformation(transformation, type)**: Shows configuration form based on transformation type. For text formatting: shows format options (uppercase, lowercase, trim, etc.). For date conversion: shows source format, destination format, timezone options. For concatenation: shows field selector and separator input. For split: shows delimiter and target segment. For lookup: shows lookup table editor. For conditional: shows condition builder (if-then-else). For custom JS: shows code editor. Updates transformation object with configuration.
+
+**validateTransformationConfig(transformation)**: Checks that transformation has all required configuration properties, validates regex patterns for split/format, checks that lookup tables have valid keys, validates JavaScript syntax for custom expressions, returns validation result object with isValid boolean and error messages array.
+
+**executeTransformation(value, transformation)**: Takes input value and transformation configuration, applies transformation logic based on type, returns transformed value. Handles text formatting with string methods, date conversion with date parsing/formatting, concatenation with string joining, split with string split method, lookup with table access, conditional evaluation, custom JS with eval in sandboxed context. Catches and returns errors.
+
+**generatePreview(sourceValue, transformations)**: Takes sample source value, iterates through transformations array in order, applies each transformation using executeTransformation(), collects intermediate results, returns array of preview steps with input, output, and transformation description for each step. Shows final output value with data type.
+
+**validateFieldMapping(fieldMapping, sourceSchema, destSchema)**: Looks up source and destination field definitions, checks data type compatibility (with compatibility matrix), validates that all transformations are properly configured, checks that required transformations exist for type conversion, returns validation object with errors/warnings arrays.
+
+**validateMapping(mapping)**: Iterates through all fieldMappings, calls validateFieldMapping for each, checks that all required destination fields are mapped, detects circular dependencies in field references, validates transformation execution order, compiles all errors and warnings, returns comprehensive validation result.
+
+**checkCircularDependencies(fieldMappings)**: Builds dependency graph from field mappings where transformed fields reference other fields, performs depth-first search to detect cycles, returns array of circular dependency paths if found.
+
+**checkRequiredFields(fieldMappings, destSchema)**: Filters destination schema for required fields, checks that each required field has a mapping in fieldMappings array, returns array of missing required field names.
+
+**handleSaveMapping()**: Validates current mapping using validateMapping(), shows validation errors if any exist, if valid: finds mapping in mappings array by ID, updates mapping object with current state, updates updatedAt timestamp, saves to storage using saveMappingsToStorage(), shows success notification, optionally navigates back to list view or stays in builder.
+
+**handleCancelEdit()**: Checks if there are unsaved changes by comparing current state with saved state, shows confirmation modal if changes exist, discards changes and navigates back to MappingListView, clears current mapping state.
+
+**openMetadataEditor()**: Shows MappingMetadataForm modal, populates with current mapping metadata, enables editing of name, description, systems, schedule, batch size, active status, handles save to update mapping object, validates required fields.
+
+**handleMetadataSubmit(formData)**: Validates form data (required fields, valid selections), updates mapping object with new metadata, updates updatedAt timestamp, closes modal, refreshes UI to show updated metadata, doesn't persist until main save.
+
+**exportMapping(mappingId)**: Finds mapping by ID, creates JSON string with pretty formatting, generates filename from mapping name and timestamp, creates blob and triggers browser download, includes schema version in export.
+
+**handleImportMapping()**: Shows file picker, reads selected JSON file, parses JSON, validates structure and schema version, checks for ID conflicts, generates new ID if conflict exists, adds to mappings array, saves to storage, shows success notification with mapping name, refreshes list, handles parse errors gracefully.
+
+**importMappingFromJSON(jsonString)**: Parses JSON string, validates that it matches mapping schema, checks schema version and migrates if needed, validates that source/destination systems exist in available systems, validates field references against system schemas, returns validated mapping object or throws error with details.
+
+**exportAllMappings()**: Creates JSON with all mappings in array, includes schema version and export metadata, triggers download with filename including timestamp, useful for backup and migration.
+
+**searchFields(query, fields)**: Takes search query string and fields array, filters fields by name/description containing query (case-insensitive), supports nested field search, returns filtered fields array, used by source/destination field search.
+
+**getCompatibilityWarning(sourceType, destType)**: Takes source and destination data types, consults compatibility matrix, returns warning message if types are incompatible or may lose data (e.g., number to string, datetime to date), returns null if compatible, includes suggested transformations.
+
+**showNotification(message, type)**: Creates toast notification element, sets message and type (success, error, warning, info), appends to notification container, auto-dismisses after timeout, allows manual dismissal, stacks multiple notifications.
+
+**showConfirmationModal(title, message, onConfirm)**: Creates modal overlay, shows confirmation dialog with title and message, includes Cancel and Confirm buttons, calls onConfirm callback if confirmed, closes modal on cancel, prevents background interaction.
+
+**generateMappingId()**: Generates unique identifier for new mappings, uses timestamp combined with random string, ensures uniqueness by checking against existing IDs, returns string ID.
+
+**formatDate(dateString)**: Takes ISO date string, formats to human-readable format (e.g., "Jan 15, 2024 3:30 PM"), handles timezone conversion to local, used for displaying created/updated dates.
+
+**deepClone(obj)**: Creates deep copy of object without reference sharing, handles nested objects and arrays, used for duplicating mappings and preserving state, uses JSON parse/stringify or structured clone.
+
+**migrateSchema(data, fromVersion, toVersion)**: Handles migration of data structure between schema versions, applies migration transformations based on version differences, updates schema version metadata, preserves data integrity, returns migrated data object.
+
+**initializeDragAndDrop()**: Sets up drag-and-drop functionality for field mapping creation, makes source fields draggable, makes destination fields drop targets, handles drag start/over/drop/end events, provides visual feedback during drag, creates field mapping on successful drop.
+
+**handleFieldDragStart(event, fieldId)**: Sets drag data with field information, adds visual dragging class to element, stores source field ID in event dataTransfer.
+
+**handleFieldDragOver(event)**: Prevents default to allow drop, adds hover class to drop target, validates that drop is allowed (compatible types, no duplicate mapping).
+
+**handleFieldDrop(event, destFieldId)**: Retrieves source field ID from drag data, calls handleCreateFieldMapping with source and destination IDs, removes hover classes, shows success feedback or error if mapping creation fails.
+
+**drawConnectionLine(sourceElement, destElement, canvasElement)**: Calculates coordinates for source and destination elements, draws SVG line or canvas path between elements, adds arrow head at destination, stores reference for later removal, supports curved or straight lines based on configuration.
+
+**updateConnectionLines()**: Recalculates and redraws all connection lines when panel scrolls or window resizes, maintains mapping relationships, ensures lines remain connected to field elements.
+
+**buildConditionExpression(condition)**: Takes condition configuration (field, operator, value, then-value, else-value), builds evaluable expression string, validates syntax, returns expression that can be executed during transformation.
+
+**evaluateCondition(condition, sourceData)**: Executes condition logic with actual source data, supports operators (equals, not equals, contains, greater than, less than, etc.), safely evaluates expressions, returns boolean result.
+
+**executeLookupTransformation(value, lookupTable)**: Takes input value and lookup table object (key-value pairs), searches for value in lookup keys, returns corresponding lookup value if found, returns original value or default if not found, handles case sensitivity option.
+
+**parseDateWithFormat(dateString, format)**: Parses date string using specified format pattern, supports common format tokens (YYYY, MM, DD, HH, mm, ss), returns Date object or null if parsing fails, handles timezone information.
+
+**formatDateWithFormat(dateObject, format)**: Formats Date object to string using specified format pattern, applies timezone conversion if specified, returns formatted string, handles format tokens and locale.
+
+**sanitizeJavaScript(code)**: Takes custom JavaScript code string, removes potentially dangerous functions (eval, Function constructor, etc.), validates syntax without executing, returns sanitized code or throws error, used for custom transformation expressions.
+
+**executeCustomJavaScript(code, inputValue)**: Executes custom JS transformation in isolated scope, provides input value as variable, captures return value, handles errors gracefully with try-catch, enforces timeout to prevent infinite loops, returns transformed value or error message.
+
+**calculateFieldMappingStats(mapping)**: Counts total source fields, mapped fields, unmapped required fields, transformation count, returns statistics object used for dashboard display and validation reporting.
+
+**getSystemsList()**: Returns array of available systems for source/destination selection, includes system ID, display name, and schema reference, can be hardcoded or loaded from configuration.
+
+**getSystemSchema(systemId)**: Retrieves complete field schema for specified system, includes all fields with metadata (type, required, description, sample data), supports nested structures, returns schema object or null if system not found.
+
+**serializeMapping(mapping)**: Converts mapping object to storage-ready format, ensures all required properties exist, removes transient UI state, validates data integrity, returns serialized object.
+
+**deserializeMapping(data)**: Converts stored data to working mapping object, adds default values for missing optional properties, validates required properties exist, returns mapping object ready for editing.
+
+**debounce(func, wait)**: Creates debounced version of function, delays execution until wait period without calls, used for search input and resize handlers, improves performance by reducing excessive function calls.
+
+## DATA
+
+**mappings**: Array of mapping objects stored in localStorage under key 'dataMappings'. Each mapping object contains: {id: string (UUID), name: string (required), description: string, sourceSystem: string (system ID), destinationSystem: string (system ID), fieldMappings: array of field mapping objects, schedule: {frequency: string (daily/hourly/manual), time: string (HH:MM), enabled: boolean}, batchSize: number (default 1000), isActive: boolean (default true), version: string (schema version), createdAt: string (ISO timestamp), updatedAt: string (ISO timestamp)}.
+
+**fieldMapping**: Individual mapping within fieldMappings array: {sourceField: string (field ID), destField: string (field ID), transformations: array of transformation objects, isRequired: boolean, notes: string}.
+
+**transformation**: Individual transformation within transformations array: {id: string, type: string (uppercase/lowercase/trim/dateConvert/concatenate/split/lookup/conditional/customJS), config: object (type-specific configuration), order: number (execution order)}.
+
+**textFormatTransformation**: {type: 'textFormat', config: {operation: string (uppercase/lowercase/trim/titleCase)}}.
+
+**dateConvertTransformation**: {type: 'dateConvert', config: {sourceFormat: string, destFormat: string, sourceTimezone: string, destTimezone: string}}.
+
+**concatenateTransformation**: {type: 'concatenate', config: {fields: array of field IDs, separator: string, includeEmpty: boolean}}.
+
+**splitTransformation**: {type: 'split', config: {delimiter: string, segmentIndex: number, trimSegments: boolean}}.
+
+**lookupTransformation**: {type: 'lookup', config: {lookupTable: object (key-value pairs), defaultValue: string, caseSensitive: boolean}}.
+
+**conditionalTransformation**: {type: 'conditional', config: {conditions: array of {field: string, operator: string, value: any, thenValue: any}, elseValue: any}}.
+
+**customJSTransformation**: {type: 'customJS', config: {code: string (JavaScript expression), timeout: number (milliseconds)}}.
+
+**systemSchema**: {systemId: string, systemName: string, fields: array of field definitions}. Field definition: {fieldId: string, fieldName: string, displayName: string, dataType: string (string/number/boolean/date/datetime/object/array), required: boolean, description: string, sampleData: any, nested: array of field definitions (for objects)}.
+
+**dataTypeCompatibilityMatrix**: Object mapping source types to compatible destination types with compatibility level (full/partial/requires-transformation/incompatible). Example: {string: {number: 'requires-transformation', date: 'requires-transformation', string: 'full'}, number: {string: 'full', date: 'incompatible'}}.
+
+**appState**: {currentView: string (list/builder), currentMappingId: string or null, unsavedChanges: boolean, editMode: boolean, validationResults: object or null, selectedFieldMapping: number (index) or null}.
+
+**uiState**: {searchTerm: string, systemFilter: string or null, statusFilter: string (all/active/inactive), sourceFieldSearch: string, destFieldSearch: string, expandedSections: object (tracking collapsed/expanded UI sections)}.
+
+**schemaVersion**: String constant defining current data schema version (e.g., '1.0.0'), stored with mappings data for migration compatibility checking.
+
+**storageKeys**: {MAPPINGS: 'dataMappings', SCHEMA_VERSION: 'dataMappingsSchemaVersion', LAST_SAVED: 'dataMappingsLastSaved'}.
+
+## API
+
+**localStorage.getItem(key)**: Method: Browser API. Endpoint: localStorage. Payload: key string. Returns string value or null. Used to retrieve serialized mappings data. Handle quota exceeded errors.
+
+**localStorage.setItem(key, value)**: Method: Browser API. Endpoint: localStorage. Payload: key string, value string. Returns void. May throw QuotaExceededError. Used to persist mappings data. Wrap in try-catch for error handling.
+
+**localStorage.removeItem(key)**: Method: Browser API. Endpoint: localStorage. Payload: key string. Returns void. Used to clear specific mapping data if needed during development/testing.
+
+**FileReader.readAsText(blob)**: Method: Browser API. Payload: File/Blob object. Returns file contents as text via onload callback. Used for import functionality. Handle file read errors in onerror callback.
+
+**URL.createObjectURL(blob)**: Method: Browser API. Payload: Blob object. Returns object URL string. Used to create download link for export functionality. Remember to revoke URL after download.
+
+**URL.revokeObjectURL(url)**: Method: Browser API. Payload: object URL string. Returns void. Cleans up object URL after export download to free memory.
+
+No external HTTP APIs required - all data operations use localStorage. If future backend integration needed, would add:
+
+**POST /api/mappings**: Create new mapping. Payload: mapping object without ID. Returns: created mapping with server-generated ID and timestamps. Handle 400 validation errors, 409 conflicts.
+
+**GET /api/mappings**: Retrieve all mappings for user. Query params: search, system, status filters. Returns: array of mapping objects. Handle 401 unauthorized, 500 server errors.
+
+**GET /api/mappings/:id**: Retrieve specific mapping. Params: mapping ID. Returns: mapping object. Handle 404 not found, 401 unauthorized.
+
+**PUT /api/mappings/:id**: Update existing mapping. Params: mapping ID. Payload: complete mapping object. Returns: updated mapping. Handle 400 validation, 404 not found, 409 conflicts.
+
+**DELETE /api/mappings/:id**: Delete mapping. Params: mapping ID. Returns: 204 no content. Handle 404 not found, 401 unauthorized.
+
+**GET /api/systems**: Retrieve available systems list. Returns: array of system definitions with schemas. Cached in app for performance.
+
+**POST /api/mappings/:id/validate**: Validate mapping configuration. Params: mapping ID. Payload: mapping object. Returns: validation results with errors/warnings. Used for server-side validation.
+
+## DESIGN
+
+**Color Palette**:
+- Primary: #3b82f6 (blue) for main actions, active states, connection lines
+- Secondary: #6366f1 (indigo) for secondary actions
+- Success: #10b981 (green) for success states, active mappings, valid indicators
+- Warning: #f59e0b (amber) for warnings, compatibility issues
+- Error: #ef4444 (red) for errors, validation failures, delete actions
+- Neutral-100: #f5f5f5 (background)
+- Neutral-200: #e5e5e5 (borders, dividers)
+- Neutral-700: #404040 (text primary)
+- Neutral-500: #737373 (text secondary)
+- White: #ffffff (cards, panels)
+
+**Typography**:
+- Font Family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- Heading 1: 24px, 600 weight, 1.2 line-height (page titles)
+- Heading 2: 20px, 600 weight, 1.3 line-height (section titles)
+- Heading 3: 16px, 600 weight, 1.4 line-height (card titles)
+- Body: 14px, 400 weight, 1.5 line-height (main content)
+- Small: 12px, 400 weight, 1.4 line-height (metadata, labels)
+- Code: 'Monaco',

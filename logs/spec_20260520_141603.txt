@@ -1,0 +1,185 @@
+# TECHNICAL SPECIFICATION: Smart Priority Scoring for Renzo CRM
+
+## OVERVIEW
+Add intelligent priority scoring to existing Renzo CRM contacts without disrupting current functionality. Extend contact model with three date/financial fields, implement scoring algorithm (0-100 based on contact recency, contract urgency, invoice amount), auto-sort contacts by computed score, and integrate priority triggers into AI message generation context.
+
+## VIEWS
+
+- **Contact Form Modal (EXISTING - EXTEND)**:
+  - Add three new form-group sections after existing fields, before notes
+  - contractExpiry: date input, label "Contract Expiry", .form-input class
+  - invoiceAmount: number input, label "Outstanding Invoice $", .form-input class, min="0", step="0.01"
+  - lastContactDate: date input, label "Last Contact Date", .form-input class
+  - Maintain existing layout/styling with .form-group containers
+
+- **Contact Row (EXISTING - EXTEND)**:
+  - Replace existing priority badge with computed score badge
+  - Score badge: .priority-score-badge class, positioned where current .priority-badge is
+  - Badge text: score number only (e.g., "87")
+  - Badge color: data-score-level attribute ("high" 80+, "medium" 50-79, "low" <50)
+
+- **AI Message Generation Box (EXISTING - EXTEND)**:
+  - Use existing .trigger-box container (already in codebase)
+  - Update .trigger-reason text with computeOutreachTrigger() result
+  - No layout changes, only content population
+
+## FUNCTIONS
+
+- **saveContact(contactData) - MODIFY**:
+  1. Accept existing contact object structure
+  2. Add three new fields: contractExpiry (string/null), invoiceAmount (number, default 0), lastContactDate (string/null)
+  3. Before saving to localStorage, compute and attach priorityScore using computePriorityScore(contactData)
+  4. Proceed with existing save logic (localStorage 'contacts' array update)
+  5. Return saved contact object with computed score
+
+- **computePriorityScore(contact) - NEW**:
+  1. Initialize score = 0
+  2. Calculate lastContactDate score:
+     - If lastContactDate exists: daysSince = (today - lastContactDate) / 86400000
+     - score += Math.min(daysSince / 90, 1) * 40
+  3. Calculate contract expiry score:
+     - If contractExpiry exists: daysUntil = (contractExpiry - today) / 86400000
+     - If daysUntil between 0-90: score += (1 - daysUntil / 90) * 30
+     - If daysUntil < 0 (expired): score += 30
+  4. Calculate invoice score:
+     - If invoiceAmount > 0: score += Math.min(invoiceAmount / 10000, 1) * 30
+  5. Return Math.round(score)
+
+- **computeOutreachTrigger(contact) - NEW**:
+  1. Initialize mostUrgent = null, urgencyValue = 0
+  2. Check contract expiry (highest priority):
+     - If contractExpiry exists: calculate daysUntil
+     - If daysUntil < 0: return `Contract expired ${Math.abs(daysUntil)} days ago`
+     - If daysUntil <= 90: set urgencyValue = 90 - daysUntil, mostUrgent = `Contract expires in ${daysUntil} days`
+  3. Check invoice (second priority):
+     - If invoiceAmount >= 1000 and urgencyValue < 50: mostUrgent = `Invoice $${invoiceAmount.toLocaleString()} outstanding`
+  4. Check last contact (third priority):
+     - If lastContactDate exists and mostUrgent still null: daysSince = days calculation
+     - If daysSince > 30: mostUrgent = `Not contacted in ${daysSince} days`
+  5. Return mostUrgent || 'Routine follow-up'
+
+- **renderContactsList() - MODIFY**:
+  1. Load contacts from localStorage
+  2. For each contact: compute priorityScore if not present, attach to object
+  3. Sort array: contacts.sort((a, b) => b.priorityScore - a.priorityScore)
+  4. Render each row with existing structure
+  5. Replace priority badge rendering with score badge:
+     - Create span.priority-score-badge
+     - Set textContent to contact.priorityScore
+     - Set data-score-level: score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low'
+  6. Maintain all existing click handlers and row structure
+
+- **showContactForm(contact = null) - MODIFY**:
+  1. Execute existing modal open logic
+  2. If editing (contact exists): populate new fields:
+     - Set contractExpiry input value to contact.contractExpiry || ''
+     - Set invoiceAmount input value to contact.invoiceAmount || 0
+     - Set lastContactDate input value to contact.lastContactDate || ''
+  3. If creating new: ensure new fields are empty
+  4. Maintain all existing form behaviors
+
+- **generateAIMessage(contact) - MODIFY**:
+  1. Execute existing API key validation
+  2. Call computeOutreachTrigger(contact) to get trigger string
+  3. Modify prompt construction: append trigger context:
+     - "Context: This outreach is triggered by: [trigger]. Consider this in your message tone and content."
+  4. Proceed with existing Anthropic API call
+  5. After message generation: update .trigger-reason element with trigger string
+  6. Maintain existing error handling and UI updates
+
+## DATA
+
+- **contacts (localStorage array) - EXTEND**:
+  - Existing fields: id, name, email, company, phone, notes, priority, createdAt
+  - NEW fields per contact object:
+    - contractExpiry: string (YYYY-MM-DD format) or null
+    - invoiceAmount: number (float, default 0)
+    - lastContactDate: string (YYYY-MM-DD format) or null
+    - priorityScore: number (computed, 0-100, stored for performance)
+
+- **No new localStorage keys**: All changes extend existing 'contacts' array structure
+
+## API
+
+- **Anthropic API (EXISTING - MODIFY PROMPT)**:
+  - Endpoint: https://api.anthropic.com/v1/messages
+  - Method: POST
+  - Payload modification: Add trigger context to system/user prompt
+  - Before: "[existing prompt with contact details]"
+  - After: "[existing prompt] \n\nContext: This outreach is triggered by: [computeOutreachTrigger result]. Tailor the message accordingly."
+  - Response handling: unchanged (existing error/success flows maintained)
+
+## DESIGN
+
+- **Priority Score Badge**:
+  - Font: inherit body font (system-ui stack)
+  - Size: 12px font-size, bold weight
+  - Padding: 4px 8px
+  - Border-radius: 12px (pill shape)
+  - Colors by data-score-level:
+    - high (80+): background #dc2626 (red), color white
+    - medium (50-79): background #f59e0b (amber), color white
+    - low (<50): background #059669 (green), color white
+  - Position: inline with contact name/meta area, right-aligned
+
+- **Form Input Fields (NEW)**:
+  - Match existing .form-input styling
+  - Height: 40px
+  - Border: 1px solid #d1d5db
+  - Border-radius: 6px
+  - Padding: 8px 12px
+  - Font-size: 14px
+  - Date inputs: native browser date picker
+  - Number input: step="0.01" for decimal amounts
+
+- **Trigger Box (EXISTING - CONTENT UPDATE)**:
+  - Use existing .trigger-box styles (background #f0fdf4, border-left 3px solid forest-green)
+  - Update .trigger-reason text content only
+  - No visual design changes
+
+## ERRORS
+
+- **Invalid Date Inputs**:
+  - Handle null/empty date fields gracefully in computePriorityScore (skip that scoring component)
+  - No error display needed; treat as missing data (score = 0 for that component)
+
+- **Invalid Invoice Amount**:
+  - If invoiceAmount < 0 or NaN: treat as 0 in computePriorityScore
+  - No user-facing error; sanitize on save
+
+- **Missing priorityScore on Existing Contacts**:
+  - On renderContactsList(): check if contact.priorityScore exists
+  - If missing: compute on-the-fly and update contact object in array
+  - Re-save contacts array to localStorage with computed scores
+
+- **Sorting Empty Array**:
+  - If no contacts exist: renderContactsList() handles gracefully (existing code should already handle)
+  - Ensure sort() doesn't throw on empty array (it won't, but verify in testing)
+
+- **API Context Too Long**:
+  - Trigger string max length: cap computeOutreachTrigger() output at 100 chars
+  - If trigger string exceeds: truncate with "..." suffix
+  - Prevents token overflow in Anthropic prompt
+
+## SCOPE_CHECK
+
+- **Estimated Total Lines**: 420 lines
+  - New CSS rules: ~40 lines
+  - computePriorityScore function: ~25 lines
+  - computeOutreachTrigger function: ~35 lines
+  - Modified saveContact: +15 lines
+  - Modified renderContactsList: +30 lines
+  - Modified showContactForm: +20 lines (3 new form groups in HTML)
+  - Modified generateAIMessage: +15 lines
+  - HTML form additions: ~30 lines (3 form-group blocks)
+  - Score badge rendering logic: ~20 lines
+  - Migration logic for existing contacts: ~25 lines
+  - Documentation comments: ~15 lines
+  - Testing/edge case handlers: ~30 lines
+  - Existing file base: ~3500 lines (unchanged, only targeted additions)
+
+- **SINGLE_TASK**: Proceed as one build
+  - All changes are localized extensions to existing functions
+  - No new files or major architectural changes
+  - Estimated additions fit well within 650-line delta
+  - Single coherent feature that maintains app integrity

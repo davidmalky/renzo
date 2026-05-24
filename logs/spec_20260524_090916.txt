@@ -1,0 +1,384 @@
+# TECHNICAL SPECIFICATION: Full Mobile Responsive Layout Rework
+
+## OVERVIEW
+Transform the desktop-only layout into a fully responsive mobile experience. On screens ≤768px, convert the vertical sidebar into a bottom tab bar with emoji icons, add a fixed top header, switch the contacts table to card view, and optimize all interactive elements for touch. This is a CSS-heavy layout rework with one JavaScript function modification for responsive table rendering.
+
+## VIEWS
+- **mobileHeader**: Fixed top bar (mobile only) showing Renzo logo left, user name center, logout icon right. Height 52px, background var(--sidebar), z-index 500.
+- **bottomNavBar**: Transformed sidebar at bottom, 56px height, horizontal flex layout with 8 nav items, each showing emoji icon above label.
+- **contactCards**: Replace table rows with card layout on mobile, each card displaying contact info with badges and action button.
+- **responsiveModals**: Bottom-sheet style modals on mobile, sliding up from bottom with rounded top corners.
+
+## FUNCTIONS
+- **renderContacts()**: Modify existing function to detect viewport width. If window.innerWidth <= 768, render card layout instead of table rows. Card structure: wrapper div .contact-card containing .card-header (name + priority badge), .card-body (company, tier badge, status badge row), .card-footer (Message button). Otherwise render existing table layout. Use contactsData array, loop through each contact, build card HTML string, insert into container. Cards get click handler for opening contact detail modal.
+
+- **initMobileLayout()**: Call on DOMContentLoaded and window resize (debounced 250ms). Check if window.innerWidth <= 768, add class 'mobile-layout' to body, show mobileHeader, hide sidebar-logo and sidebar-footer. If > 768, remove 'mobile-layout', hide mobileHeader, show sidebar-logo and sidebar-footer. Update renderContacts call to refresh view.
+
+- **handleMobileResize()**: Debounce wrapper for initMobileLayout. Store timeout ID, clear previous timeout on each call, set new timeout 250ms to call initMobileLayout. Prevents excessive layout recalculations during resize.
+
+## DATA
+- **isMobileView**: Boolean flag, true if window.innerWidth <= 768, updated on resize, used by render functions to determine layout mode.
+- **navItems**: Array of objects with emoji, label, view name for bottom nav: [{emoji: '🏠', label: 'Dashboard', view: 'dashboard'}, {emoji: '👥', label: 'Contacts', view: 'contacts'}, {emoji: '📤', label: 'Queue', view: 'queue'}, {emoji: '📝', label: 'Drafts', view: 'drafts'}, {emoji: '⚡', label: 'Batch', view: 'batch'}, {emoji: '🔗', label: 'Integrations', view: 'integrations'}, {emoji: '📊', label: 'Activity', view: 'activity'}, {emoji: '⚙', label: 'Settings', view: 'settings'}].
+- **mobileHeaderHTML**: String template for top header structure, inserted into DOM on init.
+
+## API
+No external API changes. This is a pure frontend layout modification.
+
+## DESIGN
+
+### Mobile Header (≤768px only)
+```
+#mobileHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--sidebar);
+  display: none;
+  align-items: center;
+  padding: 0 16px;
+  justify-content: space-between;
+  z-index: 500;
+  box-shadow: var(--shadow);
+}
+
+.mobile-layout #mobileHeader {
+  display: flex;
+}
+
+.mobile-header-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--green-mid);
+}
+
+.mobile-header-user {
+  font-size: 14px;
+  color: var(--sidebar-text);
+  font-weight: 500;
+}
+
+.mobile-header-logout {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.mobile-header-logout:hover {
+  background: rgba(255,255,255,0.1);
+}
+```
+
+### Bottom Navigation Bar
+```
+@media (max-width: 768px) {
+  #appView {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 56px;
+    flex-direction: row;
+    z-index: 500;
+    padding: 0;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  }
+
+  .sidebar nav {
+    display: flex;
+    flex-direction: row;
+    padding: 0;
+    width: 100%;
+  }
+
+  .nav-item {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 2px;
+    font-size: 10px;
+    border-left: none;
+    border-top: 3px solid transparent;
+    border-bottom: none;
+    min-height: 44px;
+  }
+
+  .nav-item.active {
+    border-top-color: var(--green-mid);
+    border-left: none;
+    background: transparent;
+  }
+
+  .nav-item::before {
+    content: attr(data-emoji);
+    font-size: 20px;
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+
+  .nav-icon {
+    display: none;
+  }
+
+  .nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    transform: translateX(10px);
+  }
+
+  .sidebar-logo,
+  .sidebar-footer {
+    display: none;
+  }
+}
+```
+
+### Main Content Adjustments
+```
+@media (max-width: 768px) {
+  .main {
+    padding-top: 52px;
+    padding-bottom: 64px;
+    width: 100%;
+  }
+
+  .view {
+    padding: 16px;
+  }
+
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .view-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-actions .btn {
+    flex: 1;
+  }
+}
+```
+
+### Contact Cards (Mobile)
+```
+.contact-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .table-wrap {
+    display: none;
+  }
+
+  .contact-cards {
+    display: block;
+  }
+
+  .contact-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    min-height: 44px;
+  }
+
+  .contact-card:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .card-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--dark);
+  }
+
+  .card-body {
+    margin-bottom: 12px;
+  }
+
+  .card-company {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin-bottom: 6px;
+  }
+
+  .card-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .card-footer .btn {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+}
+```
+
+### Modal Adjustments
+```
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .modal-header {
+    padding: 20px 16px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: calc(90vh - 140px);
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    padding: 16px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+```
+
+### Stats Grid
+```
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px 12px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+}
+```
+
+### Form Adjustments
+```
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .field label {
+    font-size: 13px;
+  }
+
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 120px;
+  }
+}
+```
+
+### Button Touch Targets
+```
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+
+  .btn-sm {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+
+  .btn-xs {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+```
+
+### Colors & Variables (ensure these exist)
+- --sidebar: existing
+- --sidebar-text: existing
+- --sidebar-active: existing
+- --green-mid: existing
+- --shadow: existing
+- --shadow-card: existing
+- --white: existing
+- --dark: existing
+- --gray-600: existing
+
+## ERRORS
+- **Viewport width detection failure**: If window.innerWidth returns undefined, default to desktop layout and log warning.
+- **Missing DOM elements**: If mobileHeader insert fails (container not found), log error but continue with bottom nav transformation.
+- **Resize thrashing**: Debounce ensures max one layout recalc per 250ms. If browser freezes, increase debounce to 500ms.
+- **Touch event conflicts**: Use passive event listeners for scroll performance. If cards don't respond to tap, check z-index stacking.
+- **Badge overflow**: If nav badges overlap on small screens, reduce badge font size to 9px and padding to 2px 4px.
+- **Modal height overflow**: Max-height 90vh with overflow-y auto on modal-body. If content still truncated, add padding-bottom 20px to modal-body.
+- **Table/card sync issue**: If contacts render as both table and cards, ensure display:none is applied correctly in media query and JS checks width before rendering.
+
+## SCOPE_CHECK
+- Estimated total lines: **420 lines**
+  - CSS media queries: 280 lines
+  - JavaScript functions: 85 lines
+  - HTML template strings: 35 lines
+  - Comments and spacing: 20 lines
+
+- **SINGLE_TASK**: Proceed as one build. This is under the 650 line limit and represents a cohesive mobile layout transformation. All changes are interdependent (header height affects main padding, bottom nav height affects main padding, card layout pairs with table hide). Splitting would create incomplete states.

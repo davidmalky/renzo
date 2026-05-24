@@ -1,0 +1,278 @@
+# CODE ANALYSIS REPORT
+
+## EXISTING_FEATURES:
+
+### Core Infrastructure
+- Modal system with overlay (`modal-overlay`, `modal`, `modal-open` body class)
+- Tab navigation system (`modal-tabs`, `tab-btn`, `tab-content`)
+- Card-based layout system (`mapping-card`, `mapping-grid`)
+- Button component system (`btn`, `btn-primary`, `btn-secondary`, `btn-success`)
+- Badge system (`badge`, `badge-success`, `badge-warning`, `badge-error`)
+- Form components (`form-group`, input/select styling)
+- Responsive grid layouts (`mapping-grid`, `live-test-layout`)
+
+### UI Components
+- Header with title and action buttons (`header`)
+- Close button component (`btn-close`)
+- Validation indicator component (`validation-indicator`)
+- Input toolbar (`input-toolbar`)
+- Remove button for dynamic rows (`btn-remove`)
+- Format selector dropdown (`format-selector`)
+
+### Data Display
+- Sample input container with textarea (`sample-input-container`, `sample-input`)
+- Records display with table (`records-display`, `records-table`, `records-header`)
+- Parameter rows for key-value pairs (`param-row`, `query-params`)
+
+### Styling System
+- CSS custom properties (variables) for theming
+- Animation system (`@keyframes fadeIn`)
+- Hover states and transitions throughout
+- Focus-visible accessibility states
+- Shadow system (`--shadow-sm`, `--shadow-md`, `--shadow-lg`)
+- Color system (primary, success, warning, error, info)
+
+### Connection/Testing Features
+- Connection form structure (`connection-form`)
+- Query parameter builder (`query-params`, `param-row`)
+- Live test layout (two-column grid)
+
+## MISSING_FEATURES:
+
+### Function Library Panel
+- Left sidebar panel structure (not in current layout)
+- Function categorization system (String, Date, Math, Conditional, Array, Lookup)
+- Search/filter input for functions
+- Draggable function chips
+- Function documentation tooltips
+- Category collapsible sections
+- Function preview on hover
+
+### Visual Expression Builder
+- Expression editor modal (separate from main modal)
+- Formula bar component
+- Visual function composer with nested blocks
+- Parameter input fields with type validation
+- Autocomplete dropdown for field/function selection
+- Live preview pane with sample data execution
+- Syntax highlighting component
+- Error indicator overlays
+- Function nesting visual representation
+
+### Function Execution Engine
+- JavaScript expression evaluator/parser
+- Function registry/catalog
+- Type coercion logic
+- Validation engine for parameters
+- Error handling system with specific messages
+- Bulk transformation optimizer
+- JavaScript sandbox for custom functions
+- Expression AST (Abstract Syntax Tree) builder
+
+### Expression Templates
+- Template library storage structure
+- Template CRUD operations
+- Template variables system
+- Import/export functionality
+- Template categorization
+- Template search/filter
+
+### Testing Integration
+- Auto-update mechanism for Results tab
+- Debug mode UI toggle
+- Transformation step-by-step display
+- Function-level error highlighting in validation panel
+- Sample data selector for live preview
+
+### Data Structures
+- Expression object model (function name, parameters, nested functions)
+- Function definition schema (name, category, params, return type, implementation)
+- Template object model (name, expression, variables, category)
+- Transformation result model (input, output, steps, errors)
+- Validation error model (function, parameter, message, position)
+
+## CHANGES_NEEDED:
+
+### Layout Modifications
+- **Main modal layout**: Change from current two-column to three-column (function library sidebar + mapping + preview)
+- **Tab system**: Add "Expression Builder" tab alongside existing tabs
+- **Mapping card**: Enhance field value area to be clickable and show expression indicator
+- **Modal body**: Support sidebar panel within modal (currently full-width)
+
+### Component Enhancements
+- **Badge component**: Add badge for "Has Expression" indicator on mapping cards
+- **Input fields**: Wrap in expression-enabled containers with edit buttons
+- **Validation indicator**: Extend to show transformation errors, not just format validation
+- **Records table**: Add columns for "Original Value" and "Transformed Value"
+
+### Existing Code to Modify
+- **`.modal`**: Adjust width/height for expression builder modal (larger, possibly full-screen)
+- **`.modal-body`**: Add flexbox/grid for sidebar integration
+- **`.mapping-card-content`**: Add click handler areas for expression editing
+- **`.records-table`**: Modify table structure to show transformation steps
+
+## REUSE:
+
+### Style Patterns to Preserve
+- **Color variables**: Use existing `--primary`, `--success`, `--error`, `--warning` for function categories
+- **Shadow system**: Apply `--shadow-md` to function chips, `--shadow-lg` to expression builder modal
+- **Border radius**: Consistent `8px` (small) and `12px` (medium) throughout
+- **Spacing**: Existing `gap: 8px/16px/20px/32px` pattern
+- **Font weights**: `600` for labels/headings, `400` for body
+
+### Component Patterns
+- **Modal overlay system**: Reuse `.modal-overlay.active` pattern for expression builder
+- **Tab navigation**: Reuse `.tab-btn.active` pattern for function categories
+- **Form structure**: Reuse `.form-group` pattern for expression parameter inputs
+- **Button styles**: Extend `.btn` classes for function chip buttons
+- **Badge system**: Reuse for function return type indicators
+
+### Animation/Transition Patterns
+- **`fadeIn` animation**: Apply to function library panel appearance
+- **`transition: all 0.2s`**: Use for function chip hover effects
+- **`transform: scale()`**: Use for expression builder modal entrance
+
+### Code Patterns
+- **Modal open/close**: Reuse `body.modal-open` pattern with `overflow: hidden`
+- **Active state management**: Follow `.active` class toggle pattern
+- **Validation states**: Extend `.validation-indicator.valid/.invalid` pattern
+
+## RISKS:
+
+### Technical Conflicts
+1. **Nested Modals**: Expression builder modal opening inside mapping modal may conflict with `.modal-overlay` z-index and body scroll lock
+2. **Event Bubbling**: Click handlers on mapping cards vs. expression edit buttons may conflict
+3. **Performance**: Real-time expression evaluation on large datasets (500+ records) may cause UI lag
+4. **Memory**: Storing transformation results for every record with step-by-step data could exceed localStorage limits
+
+### Layout Issues
+1. **Sidebar Width**: Adding 300-400px function library sidebar may break responsive design on 1366px screens
+2. **Modal Size**: Expression builder needs 90vh+ height, may conflict with existing modal constraints
+3. **Table Width**: Adding "Transformed Value" column to records table may cause horizontal scroll issues
+
+### State Management
+1. **Tab Switching**: Expression changes in builder need to persist when switching between Setup/Mapping/Results tabs
+2. **Draft Expressions**: User may start editing expression but not save—needs draft state handling
+3. **Multiple Expression Editors**: User opens expression builder, then clicks different field—needs cleanup logic
+
+### JavaScript Security
+1. **Custom Function Sandbox**: `eval()` or `Function()` constructor poses XSS risk—needs proper sandboxing
+2. **Infinite Loops**: User-defined functions could contain while(true)—needs execution timeout
+3. **Prototype Pollution**: User expressions accessing `__proto__` or `constructor` could break app
+
+### Data Integrity
+1. **Expression Serialization**: Complex nested functions may not serialize properly to localStorage JSON
+2. **Function Version Conflicts**: Saved expressions using old function signatures after updates
+3. **Type Coercion Edge Cases**: "123" + 456 = "123456" vs 579 depending on context
+
+### Browser Compatibility
+1. **Drag-and-Drop**: Function chip dragging may not work consistently across browsers
+2. **Syntax Highlighting**: Custom implementation may be slow; libraries add 50KB+ bundle size
+3. **Modal Scrolling**: iOS Safari has known issues with `position: fixed` inside scrolling containers
+
+## DATA_STRUCTURES:
+
+### Currently in Code (Implicit)
+```javascript
+// No explicit localStorage keys found in provided HTML
+// No data structure definitions in provided code
+// Current code is pure CSS/HTML template without JavaScript
+```
+
+### Inferred from Context
+Based on modal tabs ("Setup", "Mapping", "Results") and form structures:
+
+```javascript
+// Likely existing structures:
+{
+  mappings: [{
+    id: string,
+    sourceName: string,
+    targetField: string,
+    sourceField: string,
+    status: 'valid' | 'warning' | 'error'
+  }],
+  
+  connectionParams: {
+    url: string,
+    method: string,
+    params: [{ key: string, value: string }]
+  },
+  
+  sampleData: {
+    format: 'json' | 'csv' | 'xml',
+    content: string
+  }
+}
+```
+
+### Required New Structures
+
+```javascript
+// Function definitions
+{
+  functions: [{
+    id: string,
+    name: string,
+    category: 'string' | 'date' | 'math' | 'conditional' | 'array' | 'lookup',
+    description: string,
+    params: [{ name: string, type: string, required: boolean, default: any }],
+    returnType: string,
+    examples: string[],
+    implementation: Function
+  }]
+}
+
+// Expression objects
+{
+  expressions: [{
+    mappingId: string,
+    formula: string, // "CONCAT(TRIM({field1}), ' - ', {field2})"
+    ast: {
+      type: 'function',
+      name: 'CONCAT',
+      args: [
+        { type: 'function', name: 'TRIM', args: [{ type: 'field', value: 'field1' }] },
+        { type: 'literal', value: ' - ' },
+        { type: 'field', value: 'field2' }
+      ]
+    }
+  }]
+}
+
+// Templates
+{
+  expressionTemplates: [{
+    id: string,
+    name: string,
+    description: string,
+    category: string,
+    expression: string,
+    variables: [{ name: string, type: string, label: string }]
+  }]
+}
+
+// Transformation results
+{
+  transformationResults: [{
+    recordIndex: number,
+    mappingId: string,
+    input: any,
+    output: any,
+    steps: [{ function: string, input: any, output: any }],
+    errors: [{ function: string, message: string, position: number }]
+  }]
+}
+```
+
+### localStorage Keys Pattern
+Following typical naming conventions:
+- `mappingTool_functions` - Function library
+- `mappingTool_expressions` - Active expressions per mapping
+- `mappingTool_expressionTemplates` - Saved template library
+- `mappingTool_workspace_{id}_expressions` - Workspace-specific expressions
+- `mappingTool_transformCache_{mappingId}` - Cached transformation results
+
+---
+
+**RECOMMENDATION**: Proceed with incremental implementation. Start with Function Library Panel (read-only) → Expression Builder UI → Execution Engine → Templates. This minimizes risk of breaking existing modal/tab system.

@@ -1,0 +1,154 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+
+### Activity Logging System
+- `markSentSilent(qid)` function exists and writes activity records to localStorage
+- Activity records stored in localStorage under key accessed via `K.activity`
+- Activity record structure includes: `id`, `cId`, `cName`, `co`, `msg`, `trigger`, `ts` (timestamp)
+- `ga()` function used to get existing activity array
+- `uid()` function generates unique IDs
+- `s()` function saves data to localStorage
+
+### Email & Queue Management
+- `sendEmail(qid)` function exists and handles "Prepare Email Draft" button
+- `sendEmail()` calls `openEmailCompose()` to open email client
+- `sendEmail()` calls `markSentSilent(qid)` after opening compose
+- `sendEmail()` calls `renderQueue()` to update UI
+- Queue items stored with structure including: `cId`, `cName`, `co`, `msg`, `trigger`
+- Queue item data structure may include `reason` field
+
+### UI Components - Queue Item Cards
+- Queue item cards display in the queue view
+- Multiple action buttons on queue cards: "Send Email Draft", "Refine", "Save Draft", "Remove"
+- "Mark Sent" button currently exists on queue item cards (needs removal)
+
+### Contact History Modal
+- Contact history modal exists and displays activity records
+- "Mark Sent" button appears in contact history modal (should remain)
+
+### Data Structures
+- `K.activity` - localStorage key for activity records
+- Queue items contain: `qid`, `cId`, `cName`, `co`, `msg`, `trigger`, `reason` (possibly)
+- Activity records contain: `id`, `cId`, `cName`, `co`, `msg`, `trigger`, `ts`, and possibly `reason`
+
+## MISSING_FEATURES:
+
+- `reason` field is NOT currently included in activity records written by `markSentSilent()`
+- No activity record written in `sendEmail()` directly (relies only on `markSentSilent()`)
+- Explicit verification that queue items contain `reason` field in their data structure
+
+## CHANGES_NEEDED:
+
+### 1. Update `markSentSilent()` function
+- Add `reason` field to activity record structure
+- Change from: `{id:uid(),cId:item.cId,cName:item.cName,co:item.co,msg:item.msg,trigger:item.trigger,ts:new Date().toISOString()}`
+- Change to: `{id:uid(),cId:item.cId,cName:item.cName,co:item.co,msg:item.msg,trigger:item.trigger,reason:item.reason||'',ts:new Date().toISOString()}`
+- Ensure fallback to empty string if `reason` is undefined
+
+### 2. Update `sendEmail()` function (VERIFICATION NEEDED)
+- Current flow: `openEmailCompose()` → `markSentSilent(qid)` → `renderQueue()` → `return`
+- Task states: "write an activity record after calling openEmailCompose() and before returning"
+- BUT also states: "markSentSilent function already writes to activity"
+- **CLARIFICATION**: May need to verify if additional activity write is needed beyond markSentSilent update
+- If additional write needed: Insert activity write between `openEmailCompose()` and `markSentSilent()` calls
+
+### 3. Remove "Mark Sent" button from queue item cards
+- Locate button rendering code in queue item card template/generation
+- Remove/delete the "Mark Sent" button element and its event handler
+- Preserve buttons: "Send Email Draft" (Prepare Email Draft), "Refine", "Save Draft", "Remove"
+- Verify "Mark Sent" button remains in contact history modal
+
+## REUSE:
+
+### Helper Functions
+- `s(key, data)` - save to localStorage
+- `ga()` - get activity array from localStorage  
+- `uid()` - generate unique IDs
+- `renderQueue()` - re-render queue display
+
+### Code Patterns
+- Activity record structure: `{id:uid(), cId, cName, co, msg, trigger, reason, ts:new Date().toISOString()}`
+- localStorage access via `K.activity` constant
+- Safe property access with `||''` fallback pattern
+- Button event handlers already established for queue actions
+
+### Existing Functions to Call
+- `markSentSilent(qid)` - keep calling this in sendEmail
+- `openEmailCompose()` - keep calling this in sendEmail
+- `renderQueue()` - keep calling this in sendEmail
+
+## RISKS:
+
+1. **Data Integrity**: Queue items may not always have `reason` field populated - use `item.reason||''` fallback
+2. **Double Logging**: If `sendEmail()` writes activity AND `markSentSilent()` writes activity, we get duplicate records - task description ambiguous on this
+3. **Breaking Changes**: Removing "Mark Sent" button from queue cards might break existing event listeners or references
+4. **Activity Record Format**: Existing activity records won't have `reason` field - may cause display issues if code expects it
+5. **Button Identification**: Need to ensure correct button is removed (distinguish between queue card and modal buttons)
+
+## DATA_STRUCTURES:
+
+### localStorage Keys (found in code)
+```javascript
+K.activity  // Stores activity/history records array
+```
+
+### Activity Record Format (current)
+```javascript
+{
+  id: uid(),
+  cId: string,           // contact ID
+  cName: string,         // contact name
+  co: string,            // company
+  msg: string,           // message/note
+  trigger: string,       // what triggered this
+  ts: string            // ISO timestamp
+}
+```
+
+### Activity Record Format (required after changes)
+```javascript
+{
+  id: uid(),
+  cId: string,
+  cName: string,
+  co: string,
+  msg: string,
+  trigger: string,
+  reason: string,        // NEW - reason for outreach
+  ts: string
+}
+```
+
+### Queue Item Format (inferred)
+```javascript
+{
+  qid: string,           // queue item ID
+  cId: string,           // contact ID
+  cName: string,         // contact name
+  co: string,            // company
+  msg: string,           // draft message
+  trigger: string,       // trigger that created queue item
+  reason: string         // reason for outreach (may be optional)
+}
+```
+
+### Functions Signature (inferred)
+```javascript
+markSentSilent(qid)    // Takes queue ID, marks as sent, writes activity
+sendEmail(qid)         // Takes queue ID, opens email compose
+openEmailCompose()     // Opens email client/compose window
+renderQueue()          // Re-renders queue display
+ga()                   // Returns activity array from localStorage
+s(key, data)          // Saves data to localStorage key
+uid()                  // Returns unique ID string
+```
+
+---
+
+**CRITICAL AMBIGUITY TO RESOLVE**: 
+The task states "write an activity record" in `sendEmail()` after `openEmailCompose()` but ALSO says "markSentSilent function already writes to activity". This suggests either:
+- A) Just update `markSentSilent()` to include `reason` (no new write in sendEmail)
+- B) Add a new activity write in `sendEmail()` AND update `markSentSilent()`
+
+The phrase "Additionally ensure the activity record includes reason and trigger" suggests updating the existing write in `markSentSilent()`, making option A more likely.

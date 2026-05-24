@@ -1,0 +1,175 @@
+# TECHNICAL SPECIFICATION: CSV Import for Renzo Contacts
+
+## OVERVIEW
+Add CSV import capability to the Renzo contacts page through a hidden file input, Import CSV button in the toolbar, and three JavaScript functions (parseCSV, showCSVPreview, confirmCSVImport). The feature parses CSV files, shows a preview modal with column mapping, and imports contacts with validation. All changes are surgical additions to existing code.
+
+## VIEWS
+
+- **Toolbar Enhancement**: Add hidden file input (`<input type="file" id="csv-file-input" accept=".csv" style="display:none">`) and visible Import CSV button (`.btn .btn-secondary`) immediately after the existing Add Contact button
+
+- **CSV Preview Modal**: Modal overlay with header "Preview CSV Import", table showing first 5 rows, column mapping dropdowns for each detected column (maps to: Name, Company, Email, Phone, or Skip), Cancel and Confirm Import buttons in footer
+
+## FUNCTIONS
+
+- **triggerCSVUpload()**: 
+  1. Get file input element by id 'csv-file-input'
+  2. Programmatically trigger click() event on file input
+  3. No parameters, no return value
+
+- **handleCSVFile(event)**:
+  1. Get file from event.target.files[0]
+  2. Validate file exists and has .csv extension (check filename)
+  3. If invalid, show error toast "Please select a valid CSV file" and return
+  4. Create new FileReader instance
+  5. Set reader.onload to arrow function that calls parseCSV(reader.result)
+  6. Call reader.readAsText(file)
+  7. Clear file input value to allow re-upload of same file
+
+- **parseCSV(text)**:
+  1. Split text by newline character (\n), trim each line
+  2. Filter out empty lines
+  3. If less than 2 lines (no data rows), show error toast "CSV file is empty" and return null
+  4. Parse first line as potential headers: split by comma, trim each value
+  5. Check if headers exist by looking for keywords (case-insensitive): /name/i, /company/i, /email/i, /phone/i in header values
+  6. If keywords found, treat first row as headers, remaining rows as data
+  7. If no keywords, generate generic headers (Column 1, Column 2, etc.) and treat all rows as data
+  8. Parse data rows: split each by comma, handle quoted fields with commas inside
+  9. Create array of row objects: each object has detected/generic column names as keys
+  10. Call showCSVPreview(rows, headers) with parsed data
+  11. Return {headers, rows} object
+
+- **showCSVPreview(rows, headers)**:
+  1. Build preview HTML: modal div with class 'modal csv-preview-modal active'
+  2. Modal content includes header "Preview CSV Import (showing first 5 rows)"
+  3. Create table with class 'csv-preview-table'
+  4. Table header row: for each detected header, create th with header name and dropdown select
+  5. Dropdown options: "Name", "Company", "Email", "Phone", "Skip"
+  6. Auto-select dropdown based on header keyword match (case-insensitive)
+  7. Table body: show first 5 rows (or fewer if less data), each cell shows trimmed value (max 50 chars)
+  8. Modal footer: Cancel button (closes modal) and "Import X Contacts" button (calls confirmCSVImport)
+  9. Insert modal into document.body
+  10. Add click listener to Cancel button: remove modal from DOM
+  11. Add click listener to Confirm button: collect mapping from dropdowns, call confirmCSVImport(rows, mapping)
+  12. Add click listener to modal backdrop: remove modal on click outside
+
+- **confirmCSVImport(rows, mapping)**:
+  1. Initialize counters: imported = 0, skipped = 0
+  2. Get existing contacts from localStorage key 'renzo_contacts' (parse JSON or default to empty array)
+  3. Loop through each row object in rows array
+  4. For each row, create newContact object: {id, name, company, email, phone, createdAt}
+  5. Map row data to contact fields using mapping object (mapping['Column 1'] = 'name' means use row['Column 1'] for contact.name)
+  6. Skip columns mapped to 'Skip'
+  7. Validate: if both name and company are empty/whitespace, increment skipped counter and continue
+  8. Generate unique id: 'contact_' + Date.now() + '_' + Math.random()
+  9. Set createdAt to current ISO string
+  10. Push newContact to existing contacts array
+  11. Increment imported counter
+  12. Save updated contacts array to localStorage 'renzo_contacts' as JSON string
+  13. Remove preview modal from DOM
+  14. Show success toast: "Imported {imported} contacts, skipped {skipped}"
+  15. Refresh/re-render contacts view to display new contacts (call existing renderContacts function if available, or dispatch custom event 'contactsUpdated')
+
+- **showToast(message, type)**:
+  1. Create div with class 'toast' and type class ('toast-success' or 'toast-error')
+  2. Set textContent to message
+  3. Append to document.body
+  4. Add 'toast-visible' class after 10ms (for CSS transition)
+  5. After 3000ms, remove 'toast-visible' class
+  6. After 3300ms, remove toast element from DOM
+
+## DATA
+
+- **localStorage['renzo_contacts']**: JSON array of contact objects, each with {id: string, name: string, company: string, email: string, phone: string, createdAt: ISO string}
+
+- **CSV file format**: Plain text, comma-separated values, optional header row with name/company/email/phone columns (case-insensitive detection)
+
+- **Mapping object structure**: {detectedColumnName: targetField}, e.g., {"Full Name": "name", "Organization": "company", "Email Address": "email", "Phone Number": "phone", "Column 5": "Skip"}
+
+## API
+
+No external API calls required. All operations are client-side using:
+
+- **FileReader API**: 
+  - Method: readAsText(file)
+  - Triggers: onload event with result property containing file text
+  
+- **localStorage API**:
+  - Method: getItem('renzo_contacts'), setItem('renzo_contacts', JSON.stringify(array))
+  - Payload: JSON stringified array of contacts
+  - Response: JSON string or null
+
+## DESIGN
+
+**Colors:**
+- Modal backdrop: rgba(0, 0, 0, 0.5)
+- Modal background: var(--cream) or #FFFEF9
+- Modal border: var(--border) or #E5E5E0
+- Import button: var(--forest-green) background with white text (secondary button style)
+- Table header background: #F5F5F0 (light warm gray)
+- Table border: var(--border)
+- Dropdown border: var(--border), focus: var(--forest-green)
+- Toast success: var(--forest-green) background, white text
+- Toast error: #D32F2F background, white text
+
+**Fonts:**
+- Modal title: 20px, 600 weight, var(--text-primary)
+- Table headers: 14px, 600 weight, var(--text-primary)
+- Table cells: 14px, 400 weight, var(--text-secondary)
+- Dropdown: 14px, 400 weight
+- Button text: 14px, 600 weight
+- Toast: 14px, 500 weight
+
+**Layout:**
+- csv-preview-modal: max-width 900px, max-height 80vh, centered, border-radius 16px, padding 0
+- Modal header: padding 24px, border-bottom 1px solid var(--border)
+- Modal body: padding 24px, overflow-y auto
+- csv-preview-table: width 100%, border-collapse collapse
+- Table cells: padding 12px, border 1px solid var(--border)
+- Dropdowns: width 140px, height 36px, padding 0 12px, border-radius 6px
+- Modal footer: padding 24px, border-top 1px solid var(--border), flex layout with justify-content flex-end, gap 12px
+- Toast: fixed position bottom 24px right 24px, padding 16px 24px, border-radius 8px, box-shadow var(--shadow-md), z-index 10000
+- Import CSV button: margin-left 12px from Add Contact button
+
+**Animations:**
+- Modal entrance: same as existing modalSlideIn (opacity 0 to 1, transform translateY(20px) to 0, 0.3s ease)
+- Toast entrance: transform translateX(400px) to 0, opacity 0 to 1, 0.3s ease
+- Toast exit: reverse of entrance, 0.3s ease
+
+## ERRORS
+
+- **No file selected**: User clicks Import but cancels file picker → no action, silent fail (standard browser behavior)
+
+- **Invalid file type**: User selects non-CSV file → Toast error "Please select a valid CSV file" (red background, white text, 3s duration)
+
+- **Empty CSV file**: CSV has only headers or no content → Toast error "CSV file is empty" after parsing attempt
+
+- **Malformed CSV**: Parsing fails due to encoding issues → Catch in try/catch around parseCSV, show toast error "Unable to parse CSV file. Please check file format."
+
+- **No mapping selected**: User leaves all dropdowns on default "Skip" → Proceed with import but skip all rows, show toast "Imported 0 contacts, skipped X"
+
+- **localStorage full**: Catch quota exceeded error on setItem, show toast error "Storage full. Unable to import contacts."
+
+- **Duplicate detection**: None (allow duplicates by design, user must manually deduplicate)
+
+- **Invalid data in fields**: No validation, import as-is (email/phone format not validated in this implementation)
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+Breakdown:
+- HTML additions: 15 lines (file input + button)
+- CSS additions: 110 lines (modal, table, dropdowns, toast styles with media queries)
+- JavaScript functions: 295 lines
+  - triggerCSVUpload: 5 lines
+  - handleCSVFile: 25 lines
+  - parseCSV: 90 lines (includes quoted field handling)
+  - showCSVPreview: 110 lines (complex DOM building)
+  - confirmCSVImport: 50 lines
+  - showToast: 15 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+All functionality fits well under 650 lines. The feature is cohesive and should be implemented as a single surgical addition to the existing contacts page. No splitting required.
+
+**Dependencies:** Requires existing contacts page with toolbar, modal system CSS, and localStorage contact structure already in place (confirmed in research findings).

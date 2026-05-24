@@ -1,0 +1,603 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo - Smart Relationship Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#F7F4EF;color:#1A1A1A;line-height:1.5}
+.hidden{display:none!important}
+.app-container{display:flex;min-height:100vh}
+.sidebar{width:240px;background:#1A1A1A;color:#F7F4EF;display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:fixed;height:100vh;overflow-y:auto}
+.sidebar-logo{font-size:24px;font-weight:700;color:#2D6A4F;padding:0 24px;margin-bottom:32px}
+.sidebar-nav{flex:1}
+.nav-item{padding:12px 24px;cursor:pointer;transition:background .2s;display:flex;align-items:center;gap:8px}
+.nav-item:hover{background:rgba(255,255,255,.05)}
+.nav-item.active{background:#2D6A4F;border-left:3px solid #40916C}
+.sidebar-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,.1);margin-top:auto}
+.user-name{font-size:14px;margin-bottom:8px;font-weight:500}
+.logout-btn{background:transparent;border:1px solid #F7F4EF;color:#F7F4EF;padding:8px 16px;border-radius:8px;cursor:pointer;width:100%;font-size:14px;transition:background .2s}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+.main-content{flex:1;overflow-y:auto;padding:32px;margin-left:240px;max-width:calc(100% - 240px)}
+.view{display:none}
+.view.active{display:block}
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F7F4EF;padding:16px}
+.login-card{background:#FFF;padding:48px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);width:100%;max-width:400px;text-align:center}
+.login-logo{font-size:32px;font-weight:700;color:#1A1A1A;margin-bottom:8px}
+.login-tagline{color:#6B7280;margin-bottom:32px;font-size:14px}
+.input-group{margin-bottom:16px;text-align:left}
+.input-group label{display:block;font-size:14px;font-weight:500;margin-bottom:4px;color:#374151}
+.input-group input,.input-group textarea,.input-group select{width:100%;padding:10px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;font-family:inherit}
+.input-group input:focus,.input-group textarea:focus,.input-group select:focus{outline:none;border-color:#2D6A4F}
+.btn-primary{background:#2D6A4F;color:#FFF;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:background .2s;width:100%}
+.btn-primary:hover{background:#40916C}
+.btn-secondary{background:#FFF;color:#1A1A1A;border:1px solid #D1D5DB;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.btn-secondary:hover{border-color:#2D6A4F;color:#2D6A4F}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;flex-wrap:wrap;gap:16px}
+.header h1{font-size:28px;font-weight:700}
+.header-actions{display:flex;gap:12px;flex-wrap:wrap}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:32px}
+.stat-card{background:#FFF;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.stat-label{font-size:14px;color:#6B7280;margin-bottom:4px}
+.stat-value{font-size:32px;font-weight:700;color:#1A1A1A}
+.priority-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.priority-high{background:#FEE;color:#B91C1C}
+.priority-medium{background:#FEF3C7;color:#92400E}
+.priority-low{background:#FEF9C3;color:#854D0E}
+.priority-minimal{background:#D1FAE5;color:#065F46}
+.contact-list{background:#FFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.contact-row{display:flex;align-items:center;padding:16px;border-bottom:1px solid #F3F4F6;gap:16px;transition:background .2s}
+.contact-row:hover{background:#F9FAFB}
+.contact-row:last-child{border-bottom:none}
+.contact-info{flex:1;min-width:0}
+.contact-name{font-weight:600;font-size:15px;margin-bottom:2px}
+.contact-meta{font-size:13px;color:#6B7280}
+.contact-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-sm{padding:6px 12px;font-size:13px;border-radius:6px;cursor:pointer;border:none;font-weight:500;transition:all .2s}
+.btn-view{background:#F3F4F6;color:#1A1A1A}
+.btn-view:hover{background:#E5E7EB}
+.btn-edit{background:#FEF3C7;color:#92400E}
+.btn-edit:hover{background:#FDE68A}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.modal{background:#FFF;border-radius:12px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.modal-header{padding:24px;border-bottom:1px solid #F3F4F6;display:flex;justify-content:space-between;align-items:center}
+.modal-header h2{font-size:20px;font-weight:700}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#6B7280;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.modal-close:hover{background:#F3F4F6}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #F3F4F6;display:flex;gap:12px;justify-content:flex-end}
+.detail-panel{position:fixed;right:0;top:0;width:100%;max-width:600px;height:100vh;background:#FFF;box-shadow:-4px 0 20px rgba(0,0,0,.15);z-index:900;overflow-y:auto;transform:translateX(100%);transition:transform .3s}
+.detail-panel.active{transform:translateX(0)}
+.timeline{margin-top:24px}
+.timeline-item{padding:16px;background:#F9FAFB;border-radius:8px;margin-bottom:12px;border-left:3px solid #2D6A4F}
+.timeline-date{font-size:12px;color:#6B7280;margin-bottom:4px}
+.timeline-trigger{font-size:13px;font-weight:600;color:#2D6A4F;margin-bottom:8px}
+.timeline-message{font-size:14px;color:#374151}
+.queue-item{background:#FFF;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px}
+.queue-trigger{font-size:18px;font-weight:700;color:#2D6A4F;margin:8px 0}
+.queue-message{background:#F9FAFB;padding:16px;border-radius:8px;margin:12px 0;font-size:14px;color:#374151}
+.star-rating{display:flex;gap:4px;margin-top:4px}
+.star{font-size:20px;cursor:pointer;color:#D1D5DB}
+.star.filled{color:#F59E0B}
+.search-bar{padding:10px 16px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;width:100%;max-width:300px}
+.filter-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-tab{padding:8px 16px;border:1px solid #D1D5DB;border-radius:8px;background:#FFF;cursor:pointer;font-size:14px;transition:all .2s}
+.filter-tab.active{background:#2D6A4F;color:#FFF;border-color:#2D6A4F}
+.batch-prompt{width:100%;min-height:120px;padding:16px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:16px}
+.progress-bar{width:100%;height:8px;background:#E5E7EB;border-radius:4px;overflow:hidden;margin:16px 0}
+.progress-fill{height:100%;background:#2D6A4F;transition:width .3s}
+.slider-group{margin-bottom:20px}
+.slider-group label{display:block;font-size:14px;font-weight:500;margin-bottom:8px;display:flex;justify-content:space-between}
+.slider{width:100%;height:6px;border-radius:3px;background:#E5E7EB;outline:none;-webkit-appearance:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#2D6A4F;cursor:pointer}
+.slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#2D6A4F;cursor:pointer;border:none}
+.rule-list{margin-top:16px}
+.rule-item{display:flex;gap:12px;align-items:start;padding:12px;background:#F9FAFB;border-radius:8px;margin-bottom:8px}
+.rule-text{flex:1;font-size:14px;color:#374151}
+.btn-delete{background:#FEE;color:#B91C1C;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px}
+.btn-delete:hover{background:#FEE2E2}
+.empty-state{text-align:center;padding:48px 24px;color:#6B7280}
+.empty-state-icon{font-size:48px;margin-bottom:16px}
+.csv-preview{overflow-x:auto;margin:16px 0}
+.csv-table{width:100%;border-collapse:collapse;font-size:13px}
+.csv-table th,.csv-table td{padding:8px;border:1px solid #E5E7EB;text-align:left}
+.csv-table th{background:#F3F4F6;font-weight:600}
+.mapping-row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.mapping-row label{flex:1;font-size:14px}
+.mapping-row select{flex:2;padding:8px;border:1px solid #D1D5DB;border-radius:6px}
+@media(max-width:768px){
+.app-container{flex-direction:column}
+.sidebar{width:100%;height:auto;position:relative;padding:16px 0}
+.sidebar-nav{display:flex;overflow-x:auto;padding:0 16px}
+.nav-item{flex-shrink:0}
+.main-content{margin-left:0;max-width:100%;padding:16px}
+.stat-grid{grid-template-columns:1fr}
+.header{flex-direction:column;align-items:stretch}
+.header-actions{width:100%}
+.header-actions button{flex:1}
+.contact-row{flex-wrap:wrap}
+.contact-actions{width:100%;justify-content:flex-end}
+.modal,.detail-panel{max-width:100%}
+.search-bar{max-width:100%}
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-overlay{animation:fadeIn .2s}
+</style>
+</head>
+<body>
+<div id="loginContainer" class="login-container">
+<div class="login-card">
+<div class="login-logo">Renzo</div>
+<div class="login-tagline">Smart Relationship Management</div>
+<div class="input-group">
+<label>Email</label>
+<input type="email" id="loginEmail" placeholder="you@company.com">
+</div>
+<div class="input-group">
+<label>Password</label>
+<input type="password" id="loginPassword" placeholder="••••••••">
+</div>
+<button class="btn-primary" id="loginBtn">Sign In</button>
+</div>
+</div>
+<div id="appContainer" class="app-container hidden">
+<nav class="sidebar">
+<div class="sidebar-logo">Renzo</div>
+<div class="sidebar-nav">
+<div class="nav-item active" data-view="dashboard">Dashboard</div>
+<div class="nav-item" data-view="contacts">Contacts</div>
+<div class="nav-item" data-view="queue">Queue</div>
+<div class="nav-item" data-view="batch">Batch Outreach</div>
+<div class="nav-item" data-view="settings">Settings</div>
+</div>
+<div class="sidebar-
+<!-- CONTINUE:CoreJavaScript -->
+<script>
+const APP_STATE = {
+  currentUser: null,
+  currentView: 'dashboard',
+  contacts: [],
+  queue: [],
+  settings: {
+    companyName: '',
+    companyDescription: '',
+    userRole: '',
+    priorityWeights: {
+      daysSinceContact: 25,
+      contractExpiry: 25,
+      invoiceOutstanding: 20,
+      revenueValue: 20,
+      relationshipScore: 10
+    },
+    gmailEmail: '',
+    outreachRules: [],
+    apiKeys: { openrouter: '', anthropic: '' }
+  },
+  communicationLogs: {},
+  modalStack: []
+};
+
+function loadFromStorage() {
+  const stored = localStorage.getItem('renzoData');
+  if (stored) {
+    const data = JSON.parse(stored);
+    APP_STATE.contacts = data.contacts || [];
+    APP_STATE.queue = data.queue || [];
+    APP_STATE.settings = { ...APP_STATE.settings, ...data.settings };
+    APP_STATE.communicationLogs = data.communicationLogs || {};
+  }
+}
+
+function saveToStorage() {
+  localStorage.setItem('renzoData', JSON.stringify({
+    contacts: APP_STATE.contacts,
+    queue: APP_STATE.queue,
+    settings: APP_STATE.settings,
+    communicationLogs: APP_STATE.communicationLogs
+  }));
+}
+
+function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) {
+    alert('Please enter email and password');
+    return;
+  }
+  APP_STATE.currentUser = { email };
+  document.getElementById('loginContainer').classList.add('hidden');
+  document.getElementById('appContainer').classList.remove('hidden');
+  loadFromStorage();
+  renderView('dashboard');
+}
+
+function handleLogout() {
+  APP_STATE.currentUser = null;
+  document.getElementById('appContainer').classList.add('hidden');
+  document.getElementById('loginContainer').classList.remove('hidden');
+}
+
+function navigateTo(view) {
+  APP_STATE.currentView = view;
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.view === view);
+  });
+  renderView(view);
+}
+
+function calculatePriorityScore(contact) {
+  const w = APP_STATE.settings.priorityWeights;
+  let score = 0;
+  const now = Date.now();
+  const lastContact = contact.lastContactDate ? new Date(contact.lastContactDate).getTime() : 0;
+  const daysSince = lastContact ? Math.floor((now - lastContact) / 86400000) : 999;
+  score += (w.daysSinceContact / 100) * Math.min(100, (daysSince / 30) * 100);
+  if (contact.contractExpiry) {
+    const expiryDate = new Date(contact.contractExpiry).getTime();
+    const daysUntil = Math.floor((expiryDate - now) / 86400000);
+    if (daysUntil <= 30 && daysUntil >= 0) {
+      score += (w.contractExpiry / 100) * (100 - (daysUntil / 30) * 100);
+    }
+  }
+  const invoice = parseFloat(contact.invoiceOutstanding) || 0;
+  score += (w.invoiceOutstanding / 100) * Math.min(100, (invoice / 10000) * 100);
+  const revenue = parseFloat(contact.revenueValue) || 0;
+  score += (w.revenueValue / 100) * Math.min(100, (revenue / 50000) * 100);
+  const relationship = parseInt(contact.relationshipScore) || 0;
+  score += (w.relationshipScore / 100) * (relationship * 20);
+  return Math.round(Math.min(100, score));
+}
+
+function getPriorityColor(score) {
+  if (score >= 80) return '#DC2626';
+  if (score >= 60) return '#F97316';
+  if (score >= 40) return '#FBBF24';
+  return '#10B981';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'Never';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return `${diff} days ago`;
+  return date.toLocaleDateString();
+}
+
+function showModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('hidden');
+    APP_STATE.modalStack.push(id);
+    const firstInput = modal.querySelector('input, textarea, select');
+    if (firstInput) firstInput.focus();
+    document.addEventListener('keydown', handleModalKeyboard);
+  }
+}
+
+function hideModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.add('hidden');
+    APP_STATE.modalStack = APP_STATE.modalStack.filter(m => m !== id);
+    if (APP_STATE.modalStack.length === 0) {
+      document.removeEventListener('keydown', handleModalKeyboard);
+    }
+  }
+}
+
+function handleModalKeyboard(e) {
+  if (e.key === 'Escape' && APP_STATE.modalStack.length > 0) {
+    hideModal(APP_STATE.modalStack[APP_STATE.modalStack.length - 1]);
+  }
+}
+
+function showPanel(id) {
+  const panel = document.getElementById(id);
+  if (panel) panel.classList.remove('hidden');
+}
+
+function hidePanel(id) {
+  const panel = document.getElementById(id);
+  if (panel) panel.classList.add('hidden');
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginBtn').addEventListener('click', handleLogin);
+  document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleLogin();
+  });
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => navigateTo(item.dataset.view));
+  });
+});
+</script>
+<!-- END:CoreJavaScript -->
+// Feature Functions
+function handleLogin() {
+  const password = document.getElementById('loginPassword').value;
+  if (password === 'demo123') {
+    APP_STATE.authenticated = true;
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appContainer').classList.remove('hidden');
+    renderDashboard();
+  } else {
+    alert('Incorrect password. Try: demo123');
+  }
+}
+
+function navigateTo(view) {
+  APP_STATE.currentView = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+  document.getElementById(`${view}View`).classList.remove('hidden');
+  
+  switch(view) {
+    case 'dashboard': renderDashboard(); break;
+    case 'contacts': renderContacts(); break;
+    case 'queue': renderQueue(); break;
+    case 'batch': renderBatch(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+function renderDashboard() {
+  const contacts = APP_STATE.contacts;
+  const sorted = [...contacts].sort((a, b) => calculatePriority(b) - calculatePriority(a));
+  const topPriority = sorted.slice(0, 5);
+  
+  const now = Date.now();
+  const upcomingExpiry = contacts.filter(c => {
+    if (!c.contractExpiry) return false;
+    const days = Math.floor((new Date(c.contractExpiry).getTime() - now) / 86400000);
+    return days <= 30 && days >= 0;
+  }).sort((a, b) => new Date(a.contractExpiry) - new Date(b.contractExpiry));
+  
+  const highValueOverdue = contacts.filter(c => {
+    const priority = calculatePriority(c);
+    const lastContact = c.lastContact ? new Date(c.lastContact).getTime() : 0;
+    const daysSince = Math.floor((now - lastContact) / 86400000);
+    return priority >= 70 && daysSince > 14;
+  });
+  
+  document.getElementById('topPriorityCount').textContent = topPriority.length;
+  document.getElementById('totalContactsCount').textContent = contacts.length;
+  document.getElementById('queueCount').textContent = APP_STATE.queue.length;
+  
+  const priorityList = document.getElementById('topPriorityList');
+  priorityList.innerHTML = topPriority.map(c => {
+    const priority = calculatePriority(c);
+    return `<div class="priority-card" onclick="viewContactDetail('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${c.name}</strong><br><small>${c.company}</small></div>
+        <span class="priority-badge" style="background:${getPriorityColor(priority)}">${priority}</span>
+      </div>
+    </div>`;
+  }).join('') || '<p>No contacts yet</p>';
+  
+  const expiryList = document.getElementById('upcomingExpiryList');
+  expiryList.innerHTML = upcomingExpiry.slice(0, 5).map(c => {
+    const days = Math.floor((new Date(c.contractExpiry).getTime() - now) / 86400000);
+    return `<div class="priority-card" onclick="viewContactDetail('${c.id}')">
+      <strong>${c.name}</strong> - ${c.company}<br>
+      <small>Expires in ${days} days (${new Date(c.contractExpiry).toLocaleDateString()})</small>
+    </div>`;
+  }).join('') || '<p>No upcoming contract expiries</p>';
+  
+  const overdueList = document.getElementById('highValueOverdueList');
+  overdueList.innerHTML = highValueOverdue.slice(0, 5).map(c => {
+    const priority = calculatePriority(c);
+    const lastContact = c.lastContact ? new Date(c.lastContact).getTime() : 0;
+    const daysSince = Math.floor((now - lastContact) / 86400000);
+    return `<div class="priority-card" onclick="viewContactDetail('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${c.name}</strong><br><small>${daysSince} days overdue</small></div>
+        <span class="priority-badge" style="background:${getPriorityColor(priority)}">${priority}</span>
+      </div>
+    </div>`;
+  }).join('') || '<p>No high-value overdue contacts</p>';
+}
+
+function renderContacts() {
+  const searchTerm = document.getElementById('contactSearch').value.toLowerCase();
+  const filtered = APP_STATE.contacts.filter(c => 
+    c.name.toLowerCase().includes(searchTerm) || 
+    c.company.toLowerCase().includes(searchTerm) ||
+    c.email.toLowerCase().includes(searchTerm)
+  );
+  
+  const sorted = [...filtered].sort((a, b) => calculatePriority(b) - calculatePriority(a));
+  
+  const list = document.getElementById('contactsList');
+  list.innerHTML = sorted.map(c => {
+    const priority = calculatePriority(c);
+    return `<div class="contact-row">
+      <div style="flex:1">${c.name}</div>
+      <div style="flex:1">${c.company}</div>
+      <div style="flex:1">${c.email}</div>
+      <div style="flex:0.5"><span class="priority-badge" style="background:${getPriorityColor(priority)}">${priority}</span></div>
+      <div style="flex:1">${formatDate(c.lastContact)}</div>
+      <div style="flex:0.8;display:flex;gap:8px">
+        <button onclick="viewContactDetail('${c.id}')" style="padding:4px 8px">View</button>
+        <button onclick="editContact('${c.id}')" style="padding:4px 8px">Edit</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function viewContactDetail(contactId) {
+  const contact = APP_STATE.contacts.find(c => c.id === contactId);
+  if (!contact) return;
+  
+  APP_STATE.selectedContact = contact;
+  const priority = calculatePriority(contact);
+  
+  document.getElementById('detailName').textContent = contact.name;
+  document.getElementById('detailCompany').textContent = contact.company;
+  document.getElementById('detailPriority').textContent = priority;
+  document.getElementById('detailPriority').style.background = getPriorityColor(priority);
+  
+  document.getElementById('detailEmail').textContent = contact.email;
+  document.getElementById('detailPhone').textContent = contact.phone || 'N/A';
+  document.getElementById('detailNotes').textContent = contact.notes || 'No notes';
+  document.getElementById('detailContract').textContent = contact.contractExpiry ? new Date(contact.contractExpiry).toLocaleDateString() : 'N/A';
+  document.getElementById('detailInvoice').textContent = contact.invoiceOutstanding ? `$${parseFloat(contact.invoiceOutstanding).toLocaleString()}` : 'N/A';
+  document.getElementById('detailRevenue').textContent = contact.revenueValue ? `$${parseFloat(contact.revenueValue).toLocaleString()}` : 'N/A';
+  document.getElementById('detailRelationship').textContent = contact.relationshipScore ? '⭐'.repeat(parseInt(contact.relationshipScore)) : 'N/A';
+  document.getElementById('detailLastContact').textContent = formatDate(contact.lastContact);
+  
+  const log = APP_STATE.communicationLog.filter(l => l.contactId === contactId).sort((a, b) => b.timestamp - a.timestamp);
+  const timeline = document.getElementById('communicationTimeline');
+  timeline.innerHTML = log.map(entry => `
+    <div style="padding:12px;border-left:3px solid #3B82F6;background:#F3F4F6;margin-bottom:12px">
+      <div style="font-weight:600;margin-bottom:4px">${new Date(entry.timestamp).toLocaleString()}</div>
+      <div style="display:inline-block;padding:2px 8px;background:#3B82F6;color:white;border-radius:4px;font-size:12px;margin-bottom:8px">${entry.trigger}</div>
+      <div style="margin:8px 0">${entry.message}</div>
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;color:#6B7280">AI Reasoning</summary>
+        <div style="margin-top:4px;font-size:14px;color:#4B5563">${entry.reasoning}</div>
+      </details>
+    </div>
+  `).join('') || '<p>No communication history</p>';
+  
+  showPanel('contactDetailPanel');
+}
+
+function editContact(contactId) {
+  const contact = APP_STATE.contacts.find(c => c.id === contactId);
+  if (contact) {
+    document.getElementById('contactId').value = contact.id;
+    document.getElementById('contactName').value = contact.name;
+    document.getElementById('contactEmail').value = contact.email;
+    document.getElementById('contactCompany').value = contact.company;
+    document.getElementById('contactPhone').value = contact.phone || '';
+    document.getElementById('contactNotes').value = contact.notes || '';
+    document.getElementById('contactContractExpiry').value = contact.contractExpiry || '';
+    document.getElementById('contactInvoice').value = contact.invoiceOutstanding || '';
+    document.getElementById('contactRevenue').value = contact.revenueValue || '';
+    document.getElementById('contactRelationship').value = contact.relationshipScore || '3';
+    document.getElementById('contactLastContact').value = contact.lastContact || '';
+    document.getElementById('contactFormTitle').textContent = 'Edit Contact';
+    showModal('contactModal');
+  }
+}
+
+function saveContact() {
+  const id = document.getElementById('contactId').value;
+  const name = document.getElementById('contactName').value.trim();
+  const email = document.getElementById('contactEmail').value.trim();
+  const company = document.getElementById('contactCompany').value.trim();
+  
+  if (!name || !email || !company) {
+    alert('Name, email, and company are required');
+    return;
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Invalid email format');
+    return;
+  }
+  
+  const contact = {
+    id: id || generateId(),
+    name,
+    email,
+    company,
+    phone: document.getElementById('contactPhone').value.trim(),
+    notes: document.getElementById('contactNotes').value.trim(),
+    contractExpiry: document.getElementById('contactContractExpiry').value,
+    invoiceOutstanding: document.getElementById('contactInvoice').value,
+    revenueValue: document.getElementById('contactRevenue').value,
+    relationshipScore: document.getElementById('contactRelationship').value,
+    lastContact: document.getElementById('contactLastContact').value
+  };
+  
+  if (id) {
+    const index = APP_STATE.contacts.findIndex(c => c.id === id);
+    APP_STATE.contacts[index] = contact;
+  } else {
+    APP_STATE.contacts.push(contact);
+  }
+  
+  saveToLocalStorage();
+  hideModal('contactModal');
+  if (APP_STATE.currentView === 'contacts') renderContacts();
+  document.getElementById('contactForm').reset();
+  document.getElementById('contactId').value = '';
+}
+
+function renderQueue() {
+  const sorted = [...APP_STATE.queue].sort((a, b) => calculatePriority(b.contact) - calculatePriority(a.contact));
+  const list = document.getElementById('queueList');
+  list.innerHTML = sorted.map(item => {
+    const priority = calculatePriority(item.contact);
+    return `<div class="queue-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+        <div>
+          <strong>${item.contact.name}</strong> - ${item.contact.company}
+          <span class="priority-badge" style="background:${getPriorityColor(priority)};margin-left:8px">${priority}</span>
+        </div>
+      </div>
+      <div style="padding:12px;background:#FEF3C7;border-left:4px solid #F59E0B;margin-bottom:12px">
+        <strong style="font-size:16px">${item.trigger}</strong>
+      </div>
+      ${item.message ? `<div style="padding:12px;background:#F3F4F6;border-radius:4px;margin-bottom:12px">${item.message}</div>` : '<p style="color:#6B7280">No message generated yet</p>'}
+      <div style="display:flex;gap:8px">
+        ${!item.message ? `<button onclick="generateQueueMessage('${item.id}')" style="background:#3B82F6;color:white">Generate Message</button>` : ''}
+        ${item.message ? `<button onclick="createGmailDraft('${item.id}')" style="background:#10B981;color:white">Create Gmail Draft</button>` : ''}
+        <button onclick="markQueueSent('${item.id}')">Mark as Sent</button>
+        <button onclick="removeFromQueue('${item.id}')" style="background:#DC2626;color:white">Remove</button>
+      </div>
+    </div>`;
+  }).join('') || '<p>Queue is empty</p>';
+}
+
+async function generateQueueMessage(queueId) {
+  const item = APP_STATE.queue.find(q => q.id === queueId);
+  if (!item) return;
+  
+  const message = await generateMessage(item.contact, item.trigger);
+  item.message = message.text;
+  item.reasoning = message.reasoning;
+  saveToLocalStorage();
+  renderQueue();
+}
+
+function createGmailDraft(queueId) {
+  const item = APP_STATE.queue.find(q => q.id === queueId);
+  if (!item || !item.message) return;
+  
+  if (confirm('This will open Gmail in a new tab with your message pre-filled. Continue?')) {
+    const subject = `Following up - ${item.contact.company}`;
+    const body = encodeURIComponent(item.message);
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${item.contact.email}&su=${encodeURIComponent(subject)}&body=${body}`, '_blank');
+  }
+}
+
+function markQueueSent(queueId) {
+  const item = APP_STATE.queue.find(q => q.id === queueId);
+  if (!item) return;
+  
+  APP_STATE.communicationLog.push({
+    contactId: item.contact.id,
+    timestamp: Date.now(),
+    trigger: item.trigger,
+    message: item.message || 'Sent without generated message',
+    reasoning: item.reasoning || 'Manual send'
+  });
+  
+  const contact = APP_STATE.contacts.find(c => c.id === item.contact.id);
+  if
+</body>
+</html>

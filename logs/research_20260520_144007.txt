@@ -1,0 +1,127 @@
+# RESEARCH REPORT: BATCH OUTREACH AND TRAINABLE INSTRUCTIONS
+
+## EXISTING_FEATURES:
+- Contact management system with localStorage persistence (key: 'renzo_contacts')
+- Contact CRUD operations (add, edit, delete contacts)
+- Contact fields: name, company, email, phone, notes, tags, lastContactDate, contractExpiry, invoiceAmount
+- AI message generation via `generateAiMessage(contact)` function (uses OpenAI API)
+- Settings page with API key management (stored as 'renzo_api_key')
+- Navigation system between views (Contacts, Outreach Queue, Settings)
+- Modal system for forms (add/edit contact, AI message generation)
+- Search/filter functionality for contacts
+- Priority scoring system with visual badges
+- CSV import/export functionality
+- Outreach queue system for managing generated messages
+- Form validation system with error states
+- Alert/notification system (success, error, warning)
+- Responsive design with CSS custom properties
+- Accessibility features (ARIA labels, focus states, screen reader text)
+
+## MISSING_FEATURES:
+- 'Batch Outreach' navigation item and view
+- Batch outreach interface (textarea for natural language prompts, Generate button)
+- Natural language query parser for filtering contacts by keywords
+- Keyword-to-field mapping logic (contract/expiry/expire → contractExpiry; invoice/overdue → invoiceAmount; not contacted/overdue → lastContactDate)
+- Batch AI message generation with progress tracking ("Generating X of Y...")
+- Bulk addition of messages to outreach queue
+- Batch completion summary display
+- 'My Outreach Rules' section in Settings view
+- Trainable rules management UI (textarea, Add Rule button, rules list with delete)
+- Rules storage in localStorage (key: 'renzo_rules')
+- Rules injection into AI message generation prompts
+
+## CHANGES_NEEDED:
+- **Navigation system**: Add 'Batch Outreach' as a new navigation item alongside existing 'Contacts', 'Outreach Queue', 'Settings'
+- **`generateAiMessage()` function**: Modify to accept and append custom rules to the system prompt. Current function must retrieve rules from localStorage ('renzo_rules') and append them as "Follow these rules: [rule1], [rule2]..." to every AI generation request
+- **Settings view**: Extend existing Settings card to include new "My Outreach Rules" section below API key settings
+- **View rendering logic**: Add new `renderBatchOutreachView()` function to the existing view rendering pattern
+- **localStorage management**: Add new key 'renzo_rules' (array of strings) alongside existing 'renzo_contacts' and 'renzo_api_key'
+
+## REUSE:
+- **Modal system**: Reuse existing `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body` structure for any confirmation dialogs
+- **Button styles**: Use existing `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-small`, `.btn-danger` classes
+- **Card layout**: Use existing `.card` class for batch outreach view container
+- **Form components**: Reuse `.form-group`, `.form-label`, `.form-input`, `textarea.form-input` for prompt input and rules textarea
+- **Alert system**: Reuse `.alert`, `.alert-success`, `.alert-error` for batch completion summaries and error messages
+- **`generateAiMessage()` function**: Call existing function for each contact in batch - do NOT recreate
+- **Contact filtering pattern**: Extend existing search/filter logic that already filters contacts array
+- **localStorage pattern**: Follow existing `localStorage.getItem()` and `localStorage.setItem()` with JSON.parse/stringify pattern
+- **Navigation pattern**: Follow existing `showView(viewName)` pattern with view state management
+- **Empty state pattern**: Reuse `.empty-state`, `.empty-state-icon`, `.empty-state-text` if no rules exist
+
+## RISKS:
+- **API rate limiting**: Batch generation could hit OpenAI API rate limits if processing many contacts simultaneously. Implement sequential processing with progress tracking instead of parallel requests
+- **localStorage quota**: Multiple rules and large contact lists could approach localStorage 5-10MB limit. Monitor but unlikely to be immediate issue
+- **Prompt injection vulnerability**: User-provided rules get injected into AI prompts. Could lead to prompt injection attacks. Mitigate by treating rules as plaintext instructions, not executable code
+- **Keyword matching ambiguity**: Simple keyword matching (e.g., "contract" matching both contractExpiry and general notes text) may produce false positives. Keep matching specific to field names only
+- **Existing AI message flow disruption**: Modifying `generateAiMessage()` could break existing single-contact generation if rules parameter is not optional/backward compatible
+- **Navigation state conflicts**: Adding new view could conflict with existing view state management if not following exact same pattern
+- **Rule deletion index errors**: Deleting rules by array index requires careful state management to avoid deleting wrong rule
+- **Empty rules array handling**: Must handle case where 'renzo_rules' is null, undefined, or empty array when appending to prompts
+
+## DATA_STRUCTURES:
+
+### Existing localStorage keys:
+```javascript
+// Key: 'renzo_contacts'
+// Format: JSON array of contact objects
+[{
+  id: string (UUID),
+  name: string,
+  company: string,
+  email: string,
+  phone: string,
+  notes: string,
+  tags: string,
+  lastContactDate: string (ISO date or empty),
+  contractExpiry: string (ISO date or empty),
+  invoiceAmount: string (number or empty),
+  priorityScore: number (calculated)
+}]
+
+// Key: 'renzo_api_key'
+// Format: plain string (OpenAI API key)
+"sk-..."
+```
+
+### New localStorage key needed:
+```javascript
+// Key: 'renzo_rules'
+// Format: JSON array of rule strings
+[
+  "Always be polite and professional",
+  "Keep messages under 150 words",
+  "Include a clear call-to-action"
+]
+```
+
+### Existing function signature to modify:
+```javascript
+// Current (assumed based on typical implementation):
+async function generateAiMessage(contact) {
+  // Generates AI message for single contact
+  // Uses API key from localStorage
+  // Returns message string or throws error
+}
+
+// Needs to become:
+async function generateAiMessage(contact, customRules = []) {
+  // Load rules from localStorage('renzo_rules') if customRules empty
+  // Append rules to system prompt as: "Follow these rules: rule1, rule2, ..."
+  // Maintain all existing behavior
+}
+```
+
+### Contact field mappings for keyword filtering:
+- Keywords: "contract", "expiry", "expire", "expiring" → Check `contact.contractExpiry` field (ISO date string)
+- Keywords: "invoice", "overdue", "payment" → Check `contact.invoiceAmount` field (numeric string)
+- Keywords: "not contacted", "never contacted", "no contact", "overdue contact" → Check `contact.lastContactDate` field (ISO date string or empty)
+
+### Batch outreach data flow:
+1. User enters natural language query in textarea
+2. Parse query for keywords (case-insensitive matching)
+3. Filter contacts array based on matched field + value logic
+4. For each filtered contact, call `generateAiMessage(contact)` sequentially
+5. Add each generated message to outreach queue (existing queue structure)
+6. Display progress: "Generating {current} of {total}..."
+7. Show summary: "{count} messages added to outreach queue"

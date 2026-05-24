@@ -1,0 +1,219 @@
+# RESEARCH REPORT: RENZO CODEBASE ANALYSIS
+
+## EXISTING_FEATURES:
+
+### Navigation & Views
+- Sidebar navigation system with `data-view` attributes for view switching
+- Multi-view system: contacts, queue, insights, settings (implied from CSS)
+- Modal system with `.modal`, `.modal-content`, `.modal-header`, `.modal-body`, `.modal-footer`
+
+### Contact Management
+- Contact list display with `.contact-list` grid layout
+- Contact cards (`.contact-card`) with hover states
+- Contact card structure: header, title, subtitle, meta, actions
+- Search functionality with `.search-bar` and `.search-input` (icon embedded)
+- Filter system with `.filters` and `.filter-select` dropdowns
+
+### Outreach Queue System
+- Outreach queue items (`.outreach-queue-item`)
+- Queue structure: header, contact name, date, message display, actions
+- Message display area (`.outreach-queue-message`) with pre-wrap text
+- Status badges: pending, sent, failed (`.status-pending`, `.status-sent`, `.status-failed`)
+
+### AI Message Generation
+- `generateAiMessage()` function exists (referenced in task description)
+- Message formatting and display
+
+### Insights/Analytics
+- Insights grid layout (`.insights-grid`) with responsive columns
+- Insight cards with values and labels (`.insight-card`, `.insight-card-value`, `.insight-card-label`)
+- Secondary insight card variant (`.insight-card-secondary`)
+- Recommendations section (`.insights-recommendations`) with bulleted list styling
+
+### UI Components
+- Button system: primary (`btn`, `btn-primary`), secondary (`btn-secondary`), small (`btn-sm`), full width (`btn-block`)
+- Alert system: error, success, warning (`.alert-error`, `.alert-success`, `.alert-warning`) with icons
+- Empty states (`.empty-state`, `.empty-state-icon`, `.empty-state-title`)
+- Loading spinner (`.loading-spinner`) with CSS animation
+- Progress bar (`.progress-bar`, `.progress-bar-fill`)
+- API status indicator (`.api-status-connected`, `.api-status-disconnected`)
+
+### Data & Storage
+- Contact data structure includes: `contractExpiry`, `invoiceAmount`, `lastContactDate` fields
+- Priority scoring system (high/medium/low with CSS classes)
+
+### Styling System
+- CSS variables: `--forest-green`, `--forest-green-hover`, `--cream`, `--cream-dark`, `--gold`, `--gold-light`, `--border`, `--text-primary`, `--text-secondary`, `--error`, `--success`, `--warning`
+- Shadow system: `--shadow-md`, `--shadow-xl`
+- Consistent 12px border radius for cards, 8px for smaller elements
+- 2px borders standard
+- Responsive grid system with `auto-fit` and `minmax`
+
+## MISSING_FEATURES:
+
+1. **Batch Outreach View:**
+   - No `data-view='batch'` navigation button in sidebar
+   - No `#view-batch` div container
+   - No textarea for natural language batch queries
+   - No "Generate Batch" button
+   - No progress indicator for batch operations
+   - No results list display for batch matches
+   - No `executeBatchOutreach(query)` function
+
+2. **Batch Query Processing:**
+   - No keyword filtering logic for contacts (contract/expiry/invoice/contacted)
+   - No batch AI message generation loop
+   - No batch queue addition logic
+   - No progress tracking for multiple contact processing
+
+3. **Trainable Rules System:**
+   - No "My Outreach Rules" section in settings view
+   - No textarea for entering new rules
+   - No "Add Rule" button
+   - No rules list display with delete buttons
+   - No localStorage key `'renzo_rules'`
+   - No `addOutreachRule()` function
+   - No `deleteOutreachRule()` function
+   - No `loadRules()` function
+   - No `renderRules()` function
+
+4. **AI Prompt Enhancement:**
+   - No logic to append custom rules to AI prompts
+   - No "Additional instructions:" template integration
+
+## CHANGES_NEEDED:
+
+1. **Settings View Modification:**
+   - Add new section to existing settings view HTML
+   - Must maintain existing settings styling and layout
+
+2. **AI Message Generation Enhancement:**
+   - Modify existing `generateAiMessage()` function to:
+     - Load rules from localStorage
+     - Append rules to prompt with format: "Additional instructions: [rule1]. [rule2]."
+   - Must preserve existing message generation logic
+
+3. **Navigation Sidebar:**
+   - Add new navigation item with `data-view='batch'` attribute
+   - Must match existing nav button styling and behavior
+
+## REUSE:
+
+### CSS Classes to Reuse:
+- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-sm` for all buttons
+- `.form-group`, `.form-label`, `.form-input`, `.form-textarea` for form elements (assumed to exist)
+- `.contact-card` structure for batch results display
+- `.progress-bar` and `.progress-bar-fill` for batch progress
+- `.alert-success`, `.alert-error` for batch operation feedback
+- `.empty-state` for "no matches found" state
+- Color variables and spacing from existing CSS
+
+### Layout Patterns to Reuse:
+- Modal structure if batch preview needs modal
+- Grid layout pattern from `.insights-grid` or `.contact-list`
+- Card layout from `.contact-card` for displaying batch matches
+
+### JavaScript Patterns to Reuse:
+- View switching mechanism (assumed to exist for `data-view` attributes)
+- localStorage access patterns (assumed to exist)
+- Existing contact data access methods
+- Existing `generateAiMessage()` call signature and return format
+- Queue addition mechanism (assumed to exist)
+
+### Data Access to Reuse:
+- Contact array/collection access
+- Contact field names: `contractExpiry`, `invoiceAmount`, `lastContactDate`
+- Existing queue data structure
+
+## RISKS:
+
+1. **Data Structure Conflicts:**
+   - Contact field names might differ from task assumptions (contractExpiry vs contract_expiry)
+   - Contact filtering might require different logic than simple keyword matching
+   - Queue data structure format unknown - may conflict with batch additions
+
+2. **Function Signature Unknowns:**
+   - `generateAiMessage()` parameter format and return type not documented
+   - May take contact object, may take specific fields
+   - Return value might be Promise or synchronous
+   - May already have options parameter that would conflict with rule injection
+
+3. **localStorage Conflicts:**
+   - `'renzo_rules'` key could conflict if already used
+   - No versioning strategy for rules data structure
+   - No migration path if rules format needs to change
+
+4. **Performance Issues:**
+   - Batch processing all matches could freeze UI if many contacts match
+   - No indication of async/await pattern usage in existing code
+   - AI generation might be rate-limited - no throttling mentioned
+
+5. **UI/UX Integration:**
+   - Unknown existing view switching mechanism
+   - Batch view placement in DOM unknown (append where?)
+   - Settings view structure unknown - where to inject rules section
+   - Unknown if sidebar nav is static HTML or dynamically generated
+
+6. **Keyword Filtering Logic:**
+   - Task specifies "contract/expiry->contractExpiry" but unclear if:
+     - Both keywords map to same field
+     - Should check if field exists
+     - Should check field value or just presence
+     - Case sensitivity requirements
+   - "contacted" maps to `lastContactDate` but unclear what qualifies as match (date exists? recent date?)
+
+7. **State Management:**
+   - Unknown if app uses state management library
+   - Unclear how contact data updates propagate
+   - Unknown if views auto-refresh on data changes
+
+## DATA_STRUCTURES:
+
+### Found in Codebase:
+- **Contact Object Fields:** `contractExpiry`, `invoiceAmount`, `lastContactDate`
+- **Priority Levels:** high, medium, low (from CSS classes)
+- **Status Values:** pending, sent, failed (from CSS badge classes)
+
+### Implied Structures:
+- **Queue Item:** Contains contact reference, message, date, status
+- **Contact:** Has name/title, subtitle (role/company?), meta fields, priority
+
+### To Be Created:
+- **localStorage `'renzo_rules'`:** Array of rule strings
+  ```javascript
+  // Suggested format:
+  ["Rule text 1", "Rule text 2", ...]
+  ```
+
+### Unknown Structures:
+- Global contacts array name/location
+- Queue array name/location
+- Settings persistence mechanism
+- API key storage location (for AI generation)
+- Contact full schema beyond mentioned fields
+
+---
+
+## RECOMMENDATIONS FOR PLANNER:
+
+1. **Request clarification on:**
+   - Exact contact filtering logic (especially "contacted" keyword)
+   - `generateAiMessage()` function signature
+   - View switching implementation details
+   - Settings view DOM structure
+
+2. **Assume sensible defaults:**
+   - Contact data in global array `contacts` or similar
+   - View switching via click handler on `[data-view]` elements
+   - Async/await for AI generation
+   - JSON.parse/stringify for localStorage
+
+3. **Prioritize:**
+   - Implement rules system first (simpler, self-contained)
+   - Then batch outreach (depends on understanding existing systems)
+   - Add error handling for malformed data
+
+4. **Testing considerations:**
+   - Test with 0 rules, 1 rule, many rules
+   - Test batch with 0 matches, 1 match, many matches
+   - Test keyword matching edge cases

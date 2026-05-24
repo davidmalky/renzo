@@ -1,0 +1,146 @@
+# TECHNICAL SPECIFICATION: Contact Sync Dashboard & Activity Log
+
+## OVERVIEW
+A comprehensive sync monitoring system that provides real-time visibility into Salesforce-Renzo contact synchronization operations. The dashboard displays sync status, progress tracking, detailed activity logs with field-level change history, error management, and performance analytics. Integrates with existing Salesforce sync infrastructure and provides manual sync triggers, automatic refresh, filtering, and export capabilities.
+
+## VIEWS
+
+- **SyncActivityView**: Main dashboard view containing all sync monitoring components. Replaces or extends existing integration settings area. Uses `.view` class system with `.view.active` for visibility. Contains header section with breadcrumb navigation, main content grid with status cards, progress indicator, activity log table, and filter sidebar. Auto-refreshes every 30 seconds during active sync operations.
+
+- **SyncStatusOverviewCard**: Top dashboard card displaying sync health metrics. Contains last sync timestamp with relative time formatting, total contacts synced counter, health indicator dot (`.status-dot.success|warning|error` based on error rate thresholds: green <5%, yellow 5-15%, red >15%), and 'Sync Now' button (`.btn.btn-primary`) with loading state.
+
+- **SyncProgressIndicator**: Real-time progress component visible only during active sync. Contains progress bar (`.progress-bar` with `.progress-fill` animated width), operation description text ('Syncing contacts...', 'Checking for updates...', 'Finalizing...'), records counter ('247/500 contacts'), elapsed time display, and cancel button for long-running operations.
+
+- **ActivityLogTable**: Scrollable table (`.log-table`) with fixed header showing sync activity entries. Columns: timestamp (formatted as 'Jan 15, 2025 2:34 PM'), operation type icon + label, Salesforce record ID (truncated with tooltip), Renzo contact name (linked), sync direction indicator (← → ↔ symbols), status badge, and expand/collapse icon. Expandable rows show field-level changes in key-value format with old/new value comparison.
+
+- **FilterControlsPanel**: Left sidebar panel with date range picker (presets: Today, Last 7 Days, Last 30 Days, Custom), status multi-select checkboxes (Success, Failed, Conflict, In Progress), record type filter (Contact, Lead, Account), operation type filter (Initial Sync, Update, Delete), and 'Apply Filters' button with 'Clear All' link.
+
+- **ErrorSummarySection**: Collapsible section below status cards showing error breakdown. Lists error types (Authentication Failed, Field Mapping Error, Validation Failed, Network Timeout, Duplicate Record) with counts, percentage of total operations, last occurrence timestamp, and expandable 'Quick Fix' suggestions with action buttons.
+
+- **SyncStatisticsGrid**: Four-card grid displaying KPIs. Cards show: Total Syncs (30-day count with trend arrow), Average Duration (time in seconds with trend), Error Rate (percentage with color coding), Last Successful Sync (relative timestamp). Uses `.stat-card` structure with `.stat-label`, `.stat-value`, `.stat-delta`.
+
+- **ExportModal**: Modal dialog (`.modal.modal-large`) for configuring sync log export. Contains format selection (CSV, JSON, Excel), date range picker, field selection checkboxes (All Fields, Basic Info, Error Details, Field Changes), filter summary display, 'Generate Report' button, and download progress indicator.
+
+- **RetryConfirmationModal**: Small modal (`.modal`) for confirming individual record retry. Displays record details, original error message, affected fields, timestamp, and 'Retry Sync' / 'Cancel' buttons.
+
+- **ToastNotificationContainer**: Fixed position container (top-right) for sync event notifications. Displays auto-dismissing toast messages for sync completion ('Sync completed: 245 contacts updated'), errors ('Sync failed: Authentication error'), warnings ('Sync completed with 12 errors'), and individual record failures.
+
+## FUNCTIONS
+
+- **initializeSyncActivityView()**: Entry point function called when view becomes active. Checks authentication state, initializes all dashboard components by calling setupStatusCard(), setupProgressIndicator(), setupActivityLog(), setupFilters(), setupStatistics(), setupErrorSummary(). Loads initial data via fetchSyncStatus() and fetchActivityLog(). Sets up auto-refresh interval if sync is active. Attaches event listeners for manual sync button, filter changes, export button, and retry actions.
+
+- **fetchSyncStatus()**: Async function making GET request to `/api/salesforce/sync/status`. Returns object containing: lastSyncTimestamp (ISO string), totalContactsSynced (number), currentSyncId (string or null), syncProgress (object with current/total/operation), errorRate (percentage), healthStatus (green/yellow/red). Updates UI via updateStatusCard(). Handles network errors by showing cached status with warning indicator.
+
+- **fetchActivityLog(filters, page, pageSize)**: Async function making POST request to `/api/salesforce/sync/activity` with filter parameters (dateRange, statusFilter, recordTypeFilter, operationTypeFilter), pagination params. Returns array of activity objects containing: id, timestamp, operationType, salesforceId, renzoContactId, renzoContactName, direction (inbound/outbound/bidirectional), status (success/failed/conflict/in_progress), errorMessage, fieldChanges (array of {field, oldValue, newValue}), duration, retryCount. Populates activity table via renderActivityLogTable(). Caches results for offline viewing.
+
+- **startManualSync()**: Async function triggered by 'Sync Now' button. Disables button, shows loading spinner, makes POST request to `/api/salesforce/sync/trigger` with payload {syncType: 'manual', scope: 'all'}. Receives syncId in response. Stores syncId in activeSyncId variable. Shows progress indicator via showProgressIndicator(syncId). Starts polling for progress updates via pollSyncProgress(syncId). Shows error toast if sync trigger fails. Re-enables button after sync completes or fails.
+
+- **pollSyncProgress(syncId)**: Recursive async function that polls GET `/api/salesforce/sync/progress/${syncId}` every 2 seconds. Updates progress bar percentage, operation description text, records counter. Checks response status field - if 'completed' or 'failed', stops polling, hides progress indicator, refreshes activity log and statistics, shows completion toast. If 'in_progress', schedules next poll via setTimeout(). Includes exponential backoff if server errors occur.
+
+- **updateStatusCard(statusData)**: Pure UI update function taking status object. Updates last sync timestamp using formatRelativeTime(), updates total contacts counter with number formatting (commas), sets health indicator dot class (`.status-dot.success|warning|error`) based on errorRate thresholds, updates error rate text. Animates counter changes using countUp animation. Disables/enables 'Sync Now' button based on currentSyncId presence.
+
+- **renderActivityLogTable(activities, append)**: UI rendering function taking activity array and append flag. If append is false, clears tbody. For each activity, creates table row with: formatted timestamp cell, operation type icon + text cell, Salesforce ID cell with copy button, contact name cell with link to contact detail, direction symbol cell (← for inbound, → for outbound, ↔ for bidirectional), status badge cell, expand icon cell. Attaches click handler to row for expansion via toggleRowDetails(). Implements virtual scrolling for performance with large datasets (>1000 rows).
+
+- **toggleRowDetails(activityId)**: Function to expand/collapse activity row details. Checks if details row exists - if yes, toggles `.expanded` class and animates height. If no, creates new row with colspan, fetches full activity details via fetchActivityDetails(activityId), renders field changes table showing field name, old value, new value with visual diff highlighting. Includes retry button if status is 'failed', metadata section with duration, retry count, error stack trace.
+
+- **renderFieldChanges(fieldChanges)**: Helper function taking fieldChanges array. Creates table with three columns: Field Name, Previous Value, New Value. Formats values based on type (date fields use date formatting, boolean as Yes/No, null as 'Not Set'). Highlights differences using background color. Handles nested objects by flattening with dot notation. Displays picklist labels instead of API values using field metadata.
+
+- **applyFilters()**: Function triggered by 'Apply Filters' button. Collects filter values from UI: date range (startDate, endDate from date picker), status checkboxes (array of selected statuses), record type dropdown value, operation type dropdown value. Validates date range (end must be after start). Calls fetchActivityLog() with filter object. Updates URL query parameters for bookmarkable filters. Shows loading spinner in table during fetch. Displays 'No results' message if filtered results empty. Stores filters in localStorage for persistence.
+
+- **clearFilters()**: Resets all filter inputs to default states: date range to 'Last 30 Days', all status checkboxes checked, record type to 'All', operation type to 'All'. Calls applyFilters() to reload unfiltered data. Clears localStorage filters. Updates URL to remove query parameters.
+
+- **updateStatistics(stats)**: UI update function taking statistics object with totalSyncs, avgDuration, errorRate, lastSuccessfulSync. Updates each stat card's `.stat-value` element. Calculates and displays trend indicators (`.stat-delta`) by comparing to previous period data. Formats avgDuration as human-readable (e.g., '3.2s', '1m 15s'). Animates value changes using CSS transitions. Color codes error rate (green <5%, yellow 5-15%, red >15%).
+
+- **renderErrorSummary(errors)**: Function taking errorSummary object with error types as keys and {count, percentage, lastOccurrence, examples} as values. Clears existing error cards. For each error type, creates card with: error type header with icon, count badge, percentage text, 'Last seen' timestamp, expandable section with example error messages (max 3), quick fix suggestions based on error type (e.g., 'Check API credentials' for auth errors, 'Review field mappings' for mapping errors), 'View All' link to filtered activity log. Sorts errors by count descending.
+
+- **openExportModal()**: Function to display export configuration modal. Renders modal with format radio buttons (CSV selected by default), date range picker (defaulting to current filter values), field selection checkboxes (all checked by default), filter summary section showing active filters. Attaches event listener to 'Generate Report' button calling generateExport(). Includes 'Cancel' button to close modal.
+
+- **generateExport(config)**: Async function taking export config object with format, dateRange, fields, includeFilters. Validates selections (at least one field required). Makes POST request to `/api/salesforce/sync/export` with config. Shows progress bar in modal. Receives blob response with download URL or direct blob data. Triggers browser download via temporary anchor element with download attribute. Shows success message when download starts. Handles large exports (>10000 records) by streaming or pagination. Closes modal on completion.
+
+- **retryFailedRecord(activityId)**: Async function to retry individual failed sync operation. Shows confirmation modal with record details via openRetryConfirmationModal(activityId). On confirmation, makes POST request to `/api/salesforce/sync/retry` with payload {activityId}. Creates new sync operation, starts progress polling for that specific record. Updates activity log row to show 'in_progress' status. On completion, refreshes row with new result. Shows toast notification with outcome. Updates statistics if successful.
+
+- **openRetryConfirmationModal(activityId)**: Function to display retry confirmation. Fetches full activity details via fetchActivityDetails(activityId). Renders modal showing: contact name, Salesforce ID, original error message, affected fields list, timestamp of failure, retry count warning if >3 retries. 'Retry Sync' button calls retryFailedRecord(). 'Cancel' button closes modal.
+
+- **showToast(type, message, duration)**: UI notification function taking type (success/error/warning/info), message string, duration (default 5000ms). Creates toast element with appropriate icon and styling based on type. Appends to toast container. Animates slide-in from right. Auto-dismisses after duration via setTimeout(). Includes manual dismiss button. Stacks multiple toasts vertically. Removes toast from DOM after fade-out animation.
+
+- **startAutoRefresh()**: Function to begin automatic data refresh during active sync. Stores interval ID in autoRefreshInterval variable. Every 30 seconds, calls fetchSyncStatus() and fetchActivityLog() to update data. Checks if sync is still active - if currentSyncId is null, stops auto-refresh via stopAutoRefresh(). Prevents multiple intervals by clearing existing interval before creating new one.
+
+- **stopAutoRefresh()**: Clears the autoRefreshInterval using clearInterval(). Sets autoRefreshInterval to null. Called when sync completes, view becomes inactive, or user navigates away.
+
+- **formatRelativeTime(timestamp)**: Helper function taking ISO timestamp string. Calculates difference from current time. Returns human-readable relative time: 'Just now' (<1 min), 'X minutes ago' (<60 min), 'X hours ago' (<24 hrs), 'Yesterday at HH:MM' (1 day ago), 'MMM DD at HH:MM' (>1 day). Uses Intl.RelativeTimeFormat for localization. Includes fallback for older browsers.
+
+- **formatDuration(milliseconds)**: Helper function converting milliseconds to readable duration. Returns format like '2.3s' (<10s), '45s' (<60s), '2m 15s' (<60m), '1h 23m' (>=60m). Handles edge cases like 0ms ('Instant') and very long durations ('>24h').
+
+- **formatNumber(num)**: Helper function adding thousand separators to numbers. Uses Intl.NumberFormat for locale-aware formatting. Returns string like '1,245' or '1.2K' for large numbers (>9999).
+
+- **getOperationIcon(operationType)**: Returns appropriate icon HTML or class based on operation type. 'initial_sync' returns upload icon, 'update' returns refresh icon, 'delete' returns trash icon, 'error' returns alert icon. Icons use consistent sizing and color scheme.
+
+- **getStatusBadgeClass(status)**: Maps status string to CSS class. 'success' → 'status-badge success', 'failed' → 'status-badge error', 'conflict' → 'status-badge warning', 'in_progress' → 'status-badge info'. Returns base class for unknown statuses.
+
+- **getSyncDirectionSymbol(direction)**: Returns Unicode arrow symbol. 'inbound' → '←', 'outbound' → '→', 'bidirectional' → '↔'. Includes tooltip text for accessibility.
+
+- **calculateHealthStatus(errorRate)**: Pure function taking error rate percentage. Returns 'green' if <5%, 'yellow' if 5-15%, 'red' if >15%. Used for status dot color determination.
+
+- **validateDateRange(startDate, endDate)**: Validation function ensuring end date is after start date, dates are not in future, range is not longer than 1 year (API limitation). Returns {valid: boolean, error: string}. Shows error toast if invalid.
+
+- **handleSyncError(error, context)**: Centralized error handling function. Takes error object and context string. Logs error to console with context. Determines user-facing message based on error type (network, auth, validation, server). Shows appropriate error toast. Updates UI to error state (e.g., disables sync button, shows error indicator). Optionally triggers error reporting to monitoring service.
+
+- **cacheActivityData(data, filters)**: Stores activity log data in IndexedDB or localStorage for offline access and faster subsequent loads. Keys data by filter hash. Implements cache expiration (24 hours). Handles storage quota errors by clearing old cache entries.
+
+- **loadCachedActivityData(filters)**: Retrieves cached activity data matching filters. Returns null if no cache or cache expired. Displays cache indicator in UI ('Showing cached data'). Used as fallback when network request fails.
+
+- **setupKeyboardShortcuts()**: Attaches keyboard event listeners for power users. 'R' key triggers manual sync, 'F' focuses filter panel, 'E' opens export modal, 'Esc' closes modals. Prevents shortcuts when user is typing in input fields.
+
+- **initializeWebSocket()**: Establishes WebSocket connection to server for real-time sync updates (alternative to polling). Connects to `wss://[domain]/api/salesforce/sync/ws`. Listens for 'sync_progress', 'sync_complete', 'sync_error', 'new_activity' events. Updates UI in real-time without polling. Includes reconnection logic with exponential backoff. Falls back to polling if WebSocket unavailable.
+
+- **handleWebSocketMessage(event)**: Parses WebSocket message data. Routes to appropriate handler based on message type: sync progress updates progress indicator, sync completion refreshes data and shows toast, new activity prepends row to log table. Validates message structure before processing.
+
+## DATA
+
+- **activeSyncId**: String storing current sync operation ID or null if no active sync. Used to determine if progress indicator should show, if auto-refresh should run, and to prevent multiple simultaneous manual syncs.
+
+- **autoRefreshInterval**: Number storing setInterval ID for auto-refresh timer. Null when auto-refresh inactive. Cleared when sync completes or view becomes inactive.
+
+- **currentFilters**: Object storing active filter state. Structure: {dateRange: {start: Date, end: Date, preset: String}, statuses: Array<String>, recordType: String, operationType: String}. Updated by applyFilters(), persisted to localStorage, used in fetchActivityLog() calls.
+
+- **activityLogCache**: Map object caching activity log data keyed by filter hash. Values are {data: Array, timestamp: Number, filters: Object}. Max size 10 entries, LRU eviction.
+
+- **expandedRows**: Set of activity IDs for currently expanded detail rows. Used to maintain expansion state during data refresh, pagination, filtering.
+
+- **syncStatusData**: Object storing latest sync status. Structure: {lastSyncTimestamp: String, totalContactsSynced: Number, currentSyncId: String|null, syncProgress: {current: Number, total: Number, operation: String}, errorRate: Number, healthStatus: String}. Updated by fetchSyncStatus(), read by updateStatusCard().
+
+- **statisticsData**: Object storing sync statistics. Structure: {totalSyncs: Number, totalSyncsPrevious: Number, avgDuration: Number, avgDurationPrevious: Number, errorRate: Number, errorRatePrevious: Number, lastSuccessfulSync: String}. Updated by fetchSyncStatus(), read by updateStatistics().
+
+- **errorSummaryData**: Object mapping error types to details. Structure: {[errorType]: {count: Number, percentage: Number, lastOccurrence: String, examples: Array<String>, quickFixes: Array<String>}}. Updated by fetchSyncStatus(), read by renderErrorSummary().
+
+- **activityLogData**: Array of activity log entries. Each entry: {id: String, timestamp: String, operationType: String, salesforceId: String, renzoContactId: String, renzoContactName: String, direction: String, status: String, errorMessage: String|null, fieldChanges: Array<Object>, duration: Number, retryCount: Number}. Updated by fetchActivityLog(), rendered by renderActivityLogTable().
+
+- **paginationState**: Object tracking pagination. Structure: {currentPage: Number, pageSize: Number, totalPages: Number, totalRecords: Number}. Updated when fetching activity log, used for rendering pagination controls, calculating visible range.
+
+- **webSocketConnection**: WebSocket instance for real-time updates. Null if not connected or not supported. Stores connection state, handles reconnection attempts.
+
+- **exportProgress**: Object tracking export generation progress. Structure: {isExporting: Boolean, progress: Number (0-100), currentRecord: Number, totalRecords: Number}. Updated during generateExport(), displayed in export modal progress bar.
+
+- **fieldMetadata**: Object mapping Salesforce field API names to metadata. Structure: {[fieldName]: {label: String, type: String, picklistValues: Array<{value: String, label: String}>}}. Loaded once on view init, used for rendering human-readable field names and values in activity details.
+
+- **userPreferences**: Object storing user UI preferences. Structure: {defaultDateRange: String, defaultPageSize: Number, autoRefreshEnabled: Boolean, notificationsEnabled: Boolean}. Loaded from localStorage on init, updated when user changes preferences.
+
+- **toastQueue**: Array of toast notifications awaiting display. Used to prevent toast overflow, queues additional toasts when max visible toasts (3) displayed.
+
+## API
+
+- **/api/salesforce/sync/status**: GET endpoint returning current sync status. No payload. Response: {success: Boolean, data: {lastSyncTimestamp: String (ISO), totalContactsSynced: Number, currentSyncId: String|null, syncProgress: {current: Number, total: Number, operation: String}|null, errorRate: Number, healthStatus: String, errorSummary: Object}, error: String|null}. Handles by updating syncStatusData, statisticsData, errorSummaryData. Error handling shows cached data with warning indicator, displays error toast.
+
+- **/api/salesforce/sync/activity**: POST endpoint fetching activity log with filters and pagination. Payload: {filters: {dateRange: {start: String (ISO), end: String (ISO)}, statuses: Array<String>, recordType: String, operationType: String}, page: Number, pageSize: Number, sortBy: String, sortOrder: String}. Response: {success: Boolean, data: {activities: Array<Object>, pagination: {currentPage: Number, pageSize: Number, totalPages: Number, totalRecords: Number}}, error: String|null}. Handles by updating activityLogData, paginationState. Error handling shows cached data or empty state message.
+
+- **/api/salesforce/sync/trigger**: POST endpoint to start manual sync. Payload: {syncType: String ('manual'|'auto'), scope: String ('all'|'modified'|'specific'), recordIds: Array<String>|null}. Response: {success: Boolean, data: {syncId: String, estimatedDuration: Number, recordCount: Number}, error: String|null}. Handles by storing syncId in activeSyncId, starting progress polling, showing progress indicator. Error handling disables sync button temporarily, shows error toast with specific message.
+
+- **/api/salesforce/sync/progress/:syncId**: GET endpoint polling sync progress. No payload. Response: {success: Boolean, data: {syncId: String, status: String ('in_progress'|'completed'|'failed'), progress: {current: Number, total: Number, percentage: Number}, operation: String, duration: Number, errors: Array<Object>}, error: String|null}. Handles by updating progress indicator UI. On 'completed'/'failed', stops polling, refreshes activity log. Error handling implements exponential backoff, shows error toast after 3 consecutive failures.
+
+- **/api/salesforce/sync/activity/:activityId**: GET endpoint fetching full activity details. No payload. Response: {success: Boolean, data: {id: String, timestamp: String, operationType: String, salesforceId: String, salesforceRecordUrl: String, renzoContactId: String, renzoContactName: String, direction: String, status: String, errorMessage: String|null, errorStack: String|null, fieldChanges: Array<{field: String, fieldLabel: String, oldValue: Any, newValue: Any, dataType: String}>, duration: Number, retryCount: Number, metadata: Object}, error: String|null}. Handles by rendering expanded row details. Error handling shows error message in expanded row, provides retry option.
+
+- **/api/salesforce/sync/retry**: POST endpoint to retry failed sync operation. Payload: {activityId: String}. Response: {success: Boolean, data: {newSyncId: String, activityId: String}, error: String|null}. Handles by updating activity row status to 'in_progress', starting progress polling for new sync. Error handling shows error toast, reverts row status to 'failed'.
+
+- **/api/salesforce/sync/export**: POST endpoint to generate sync log export. Payload: {format: String ('csv'|'json'|'excel'), dateRange: {start: String, end: String}, fields: Array<String>, filters: Object, includeFieldChanges: Boolean}. Response: Blob (file download) or {success: Boolean, data: {downloadUrl: String, expiresAt: String}, error: String|null}. Handles by triggering browser download, showing success message. Error handling shows error toast with specific issue (e.g., 'Export too large, narrow date range').
+
+- **/api/salesforce/sync/statistics**: GET endpoint fetching detailed statistics. Query params: period (String: '7d'|'30d'|'90d'). Response: {success: Boolean, data: {current: {totalSyncs: Number, avgDuration: Number, errorRate: Number, lastSuccessfulSync: String}, previous: {totalSyncs

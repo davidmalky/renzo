@@ -1,0 +1,264 @@
+# RESEARCH REPORT: AI-Generated Subject Lines Feature
+
+## EXISTING_FEATURES:
+
+### AI Message Generation
+- **`generateMsg(contact, reason)`**: Main AI generation function that calls Claude API
+  - Uses `callClaude()` to make API requests
+  - Current prompt expects JSON format: `{reason:...,message:...}`
+  - Parses response with `JSON.parse(cleanJSON(txt))`
+  - Returns object with `reason` and `message` fields
+  - Uses `claude-3-5-sonnet-20241022` model by default
+
+### Queue Management
+- **`addToQueue(contact, reason, message)`**: Adds message to queue
+  - Creates queue item object with: `id`, `contact`, `reason`, `message`, `addedAt`
+  - Stores in localStorage key: `"queue"`
+  - Updates UI via `renderQueue()`
+  - No current `subject` field in queue items
+
+- **`renderQueue()`**: Displays queue messages
+  - Renders table with columns: Contact, Reason, Message Preview, Actions
+  - Shows message in preview column (truncated)
+  - No subject line display currently
+
+- **`sendEmail(qid)`**: Sends individual queued message
+  - Retrieves queue item by ID
+  - Generates subject using: `"Following up: ${item.contact.name}"`
+  - Calls Gmail API `sendGmailMessage()`
+  - Moves sent item to `sentLog`
+  - No use of stored subject field
+
+- **`bulkSendAll()`**: Sends all queued messages
+  - Iterates through queue
+  - Uses same subject generation: `"Following up: ${contact.name}"`
+  - No use of stored subject field
+
+### Draft Management
+- **`saveDraft(contact, message)`**: Saves to drafts
+  - Creates draft object with: `id`, `contact`, `message`, `savedAt`
+  - Stores in localStorage key: `"drafts"`
+  - No current `subject` field in draft items
+
+### Message Refinement
+- **`refineDraft(did)`**: Refines existing draft message
+  - Retrieves draft by ID
+  - Makes new Claude API call with refinement prompt
+  - Updates only the `message` field
+  - Does not handle subject line
+
+- **`refineQueueMsg(qid)`**: Refines queued message
+  - Retrieves queue item by ID
+  - Makes new Claude API call with refinement prompt
+  - Updates only the `message` field
+  - Does not handle subject line
+
+### API Integration
+- **`callClaude(prompt, maxTokens, model)`**: Core Claude API wrapper
+  - Uses stored `apiKey` from localStorage
+  - Default model: `claude-3-5-sonnet-20241022`
+  - Returns response text
+  - Handles errors and loading states
+
+- **Helper function `cleanJSON(txt)`**: Strips markdown code blocks from responses
+
+## MISSING_FEATURES:
+
+1. **Subject field in AI generation prompt** - Current prompt only requests `reason` and `message`, not `subject`
+2. **Subject field parsing** - No code to extract `parsed.subject` from API response
+3. **Subject storage in queue items** - Queue objects don't include `subject` field
+4. **Subject storage in draft items** - Draft objects don't include `subject` field
+5. **Subject display in queue UI** - `renderQueue()` doesn't show subject lines
+6. **Subject usage in email sending** - `sendEmail()` and `bulkSendAll()` generate subject on-the-fly instead of using stored value
+7. **Subject regeneration in refinement** - `refineDraft()` and `refineQueueMsg()` don't update subject after message changes
+8. **Fallback subject handling** - No logic to use stored subject or fall back to generated default
+
+## CHANGES_NEEDED:
+
+### 1. `generateMsg()` function
+- **Location**: Main generation function (around line ~800-850 based on typical structure)
+- **Change**: Modify prompt string to request 3-field JSON: `{reason:...,subject:...,message:...}`
+- **Change**: Add subject line guidelines to prompt (5-8 words, human, specific, no clichés)
+- **Change**: After parsing, capture `parsed.subject` in variable
+- **Preserve**: Existing error handling, loading states, API call pattern
+
+### 2. `addToQueue()` function
+- **Change**: Add `subject` parameter to function signature
+- **Change**: Include `subject: subject || ''` in queue item object
+- **Preserve**: Existing localStorage save logic, ID generation, timestamp
+
+### 3. `saveDraft()` function
+- **Change**: Add `subject` parameter to function signature
+- **Change**: Include `subject: subject || ''` in draft item object
+- **Preserve**: Existing localStorage save logic, ID generation, timestamp
+
+### 4. `renderQueue()` function
+- **Change**: Add subject line display in table cell
+- **Change**: Insert `<div>` with subject above message preview
+- **Style**: 13px, italic, gray text (`color: var(--gray)`)
+- **Conditional**: Only show if `item.subject` exists
+- **Preserve**: Existing table structure, action buttons, message preview truncation
+
+### 5. `sendEmail(qid)` function
+- **Change**: Use `item.subject` if available, else fall back to current generated string
+- **Logic**: `const subject = item.subject || `Following up: ${item.contact.name}`;`
+- **Preserve**: Existing Gmail API call, queue removal, sent log logic
+
+### 6. `bulkSendAll()` function
+- **Change**: Same subject usage pattern as `sendEmail()`
+- **Logic**: `const subject = item.subject || `Following up: ${contact.name}`;`
+- **Preserve**: Existing loop structure, delay mechanism, progress updates
+
+### 7. `refineDraft(did)` function
+- **Change**: After message refinement, make second API call for subject
+- **New call**: Use `claude-haiku` model for efficiency
+- **Prompt**: `"Given this email body, write a subject line (5-8 words, no cliches): [message]"`
+- **Update**: Set `draft.subject` to new subject
+- **Preserve**: Existing message refinement logic, localStorage update
+
+### 8. `refineQueueMsg(qid)` function
+- **Change**: Same pattern as `refineDraft()` - second API call for subject
+- **New call**: Use `claude-haiku` model
+- **Same prompt**: Subject generation prompt
+- **Update**: Set `queueItem.subject` to new subject
+- **Preserve**: Existing message refinement logic, localStorage update
+
+### 9. Call sites for `addToQueue()`
+- **Find all locations**: Likely in `generateMsg()` after successful generation
+- **Update**: Pass `parsed.subject` as new parameter
+- **Example**: `addToQueue(contact, parsed.reason, parsed.message, parsed.subject)`
+
+### 10. Call sites for `saveDraft()`
+- **Find all locations**: Likely in UI handlers for "Save to Drafts" buttons
+- **Update**: Pass subject field from form or generated message
+- **May need**: Extract subject from context where `saveDraft()` is called
+
+## REUSE:
+
+### API Patterns
+- **`callClaude()` wrapper**: Use existing function for both main generation and subject regeneration
+- **Model selection**: Reuse existing model parameter system
+  - Main generation: `claude-3-5-sonnet-20241022` (already in use)
+  - Subject regeneration: `claude-haiku` (efficient for short tasks)
+- **`cleanJSON()` helper**: Continue using for parsing AI responses
+- **Error handling pattern**: Maintain existing try-catch blocks and user alerts
+
+### Data Patterns
+- **localStorage keys**: 
+  - `"queue"` for queue items
+  - `"drafts"` for draft items
+  - `"sentLog"` for sent messages
+  - `"apiKey"` for Claude API key
+- **Object structures**: Extend existing patterns with `subject` field
+  - Queue item: `{id, contact, reason, message, addedAt, subject}`
+  - Draft item: `{id, contact, message, savedAt, subject}`
+
+### UI Patterns
+- **CSS variables**: Use existing color/style variables
+  - `var(--gray)` for subject text color
+  - `var(--radius-sm)` for any new containers
+- **Table rendering**: Follow existing `renderQueue()` pattern for adding subject display
+- **Button styles**: Reuse existing `.btn-*` classes for any new actions
+
+### Contact Data Structure
+- **Contact object format**: `{name, email, company, title, ...}`
+- Used in multiple places - ensure subject generation has access to full contact context
+
+## RISKS:
+
+### 1. **Breaking Changes to Existing Queue/Draft Data**
+- **Risk**: Existing localStorage data won't have `subject` field
+- **Impact**: Need to handle `undefined` or missing subject gracefully
+- **Mitigation**: Use `item.subject || ''` and `|| fallback` patterns throughout
+- **Data migration**: May need to add migration logic or just handle missing field
+
+### 2. **JSON Parsing Failures**
+- **Risk**: AI may not return properly formatted 3-field JSON
+- **Impact**: `JSON.parse()` will throw error, breaking message generation
+- **Mitigation**: 
+  - Robust error handling in `generateMsg()`
+  - Validate presence of all three fields after parsing
+  - Fallback to empty string if `subject` missing but `reason`/`message` present
+
+### 3. **Subject Generation Quality**
+- **Risk**: AI may still produce generic/clichéd subjects despite prompt instructions
+- **Impact**: User experience degradation, defeats purpose of feature
+- **Mitigation**: 
+  - Test prompt carefully
+  - May need iterative prompt refinement
+  - User can manually edit or refine
+
+### 4. **API Call Doubling in Refinement**
+- **Risk**: Two API calls per refinement (message + subject) increases latency and cost
+- **Impact**: Slower UX, higher API usage
+- **Consideration**: Using `claude-haiku` for subject helps minimize cost
+- **Alternative**: Could regenerate subject from message with single call, but task spec requires separate call
+
+### 5. **UI Layout Breaking**
+- **Risk**: Adding subject display might break existing table layout
+- **Impact**: Overflow, alignment issues, responsive breakage
+- **Mitigation**: 
+  - Test with long subjects
+  - May need CSS text truncation (`text-overflow: ellipsis`)
+  - Consider wrapping or two-line display
+
+### 6. **Backward Compatibility**
+- **Risk**: Code expects subject field but old data doesn't have it
+- **Areas affected**: 
+  - `sendEmail()` - handled with fallback
+  - `bulkSendAll()` - handled with fallback
+  - `renderQueue()` - conditional rendering with `if (item.subject)`
+  - Sent log entries (if we start storing subject there too)
+
+### 7. **Function Signature Changes**
+- **Risk**: Adding parameters to `addToQueue()` and `saveDraft()` requires updating all call sites
+- **Impact**: Missing call sites will cause bugs or incorrect behavior
+- **Mitigation**: Search codebase thoroughly for all usages before deploying
+
+## DATA_STRUCTURES:
+
+### localStorage Keys (Currently in Use)
+```javascript
+"queue"      // Array of queue items
+"drafts"     // Array of draft items
+"sentLog"    // Array of sent message records
+"contacts"   // Array of contact objects
+"apiKey"     // Claude API key string
+"gmailToken" // Gmail OAuth token
+"userEmail"  // Logged-in user email
+```
+
+### Queue Item Structure (Current)
+```javascript
+{
+  id: "uuid-string",
+  contact: {name, email, company, title, ...},
+  reason: "string",
+  message: "string",
+  addedAt: timestamp
+}
+```
+
+### Queue Item Structure (After Changes)
+```javascript
+{
+  id: "uuid-string",
+  contact: {name, email, company, title, ...},
+  reason: "string",
+  subject: "string",        // NEW FIELD
+  message: "string",
+  addedAt: timestamp
+}
+```
+
+### Draft Item Structure (Current)
+```javascript
+{
+  id: "uuid-string",
+  contact: {name, email, company, title, ...},
+  message: "string",
+  savedAt: timestamp
+}
+```
+
+### Draft Item Structure (After Changes)

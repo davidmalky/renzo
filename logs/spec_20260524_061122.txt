@@ -1,0 +1,117 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Fix the bulkSendAll() function to use the existing openEmailCompose() method instead of mailto links for opening email drafts. This involves replacing the mailto URL construction with proper email account selection and calling the web compose function, increasing the stagger interval to 1000ms, and replacing the post-send confirmation dialog with a success toast notification.
+
+## VIEWS
+No view changes required. All changes are contained within the bulkSendAll() function logic.
+
+## FUNCTIONS
+
+### bulkSendAll() - MODIFIED
+**Location:** Existing function in main JavaScript file
+
+**Changes:**
+1. After the function begins iterating through recipients, locate the mailto construction block
+2. Replace the mailto string building code with:
+   ```
+   const emails = gEmails();
+   const fromEmail = (sel && sel.value !== '' && emails[parseInt(sel.value)]) 
+     ? emails[parseInt(sel.value)].addr 
+     : '';
+   openEmailCompose(toAddr, subject, body, fromEmail);
+   ```
+3. Remove any window.open() call that was opening the mailto link
+4. Change the stagger setTimeout interval from 800 to 1000
+5. After the bulk send loop completes, remove the window.confirm() call
+6. Replace with: `toast(opened + ' email drafts opened', 'success');`
+
+**Step-by-step execution:**
+- Function receives recipient list and email content
+- For each recipient, retrieves email accounts from localStorage via gEmails()
+- Extracts selected account's email address using dropdown value (sel.value)
+- Falls back to empty string if no account selected or invalid index
+- Calls openEmailCompose() with recipient, subject, body, and from address
+- Waits 1000ms between each email draft opening
+- Increments opened counter for each draft
+- After all drafts opened, displays success toast with count
+- No confirmation dialog shown
+
+## DATA
+
+### sel (existing)
+- **Type:** HTML select element reference
+- **Purpose:** Dropdown for email account selection
+- **Properties:** .value contains index of selected email account
+
+### emails (new local variable)
+- **Type:** Array of email account objects
+- **Source:** gEmails() function return value
+- **Structure:** Each element has .addr property containing email address
+
+### fromEmail (new local variable)
+- **Type:** String
+- **Content:** Email address from selected account or empty string
+- **Usage:** Passed to openEmailCompose() as sender address
+
+### opened (existing)
+- **Type:** Integer counter
+- **Purpose:** Tracks number of email drafts successfully opened
+- **Usage:** Displayed in success toast message
+
+## API
+
+### gEmails() - EXISTING
+- **Type:** Internal function call
+- **Returns:** Array of email account objects from localStorage
+- **Usage:** Called once per bulkSendAll() execution to retrieve accounts
+
+### openEmailCompose(toAddr, subject, body, fromEmail) - EXISTING
+- **Parameters:**
+  - toAddr: recipient email address (string)
+  - subject: email subject line (string)
+  - body: email body content (string)
+  - fromEmail: sender email address (string)
+- **Returns:** void
+- **Side effect:** Opens Gmail or Outlook web compose in new tab/window
+- **Usage:** Called once per recipient with 1000ms stagger
+
+### toast(message, type) - EXISTING
+- **Parameters:**
+  - message: notification text (string) - format: "[count] email drafts opened"
+  - type: 'success' (string literal)
+- **Returns:** void
+- **Side effect:** Displays success notification to user
+- **Usage:** Called once after bulk send completes
+
+## DESIGN
+No visual changes. Function operates identically from user perspective, only the underlying email draft creation mechanism changes from mailto to web compose API.
+
+## ERRORS
+
+### No email accounts configured
+- **Condition:** gEmails() returns empty array or null
+- **Behavior:** fromEmail becomes empty string, openEmailCompose() handles gracefully
+- **No explicit error needed:** Existing openEmailCompose() error handling applies
+
+### Invalid account selection
+- **Condition:** sel.value out of bounds for emails array
+- **Behavior:** Conditional check prevents array access, fromEmail becomes empty string
+- **No explicit error needed:** Graceful degradation to no-sender scenario
+
+### openEmailCompose() failures
+- **Condition:** Web compose fails to open (popup blocked, etc)
+- **Behavior:** Handled by existing openEmailCompose() function logic
+- **No new handling needed:** Existing error management sufficient
+
+## SCOPE_CHECK
+
+**Estimated total lines:** ~15 lines changed in bulkSendAll() function
+- Remove: 3-5 lines (mailto construction + window.open)
+- Add: 3 lines (emails retrieval + fromEmail extraction + openEmailCompose call)
+- Modify: 1 line (interval 800→1000)
+- Replace: 1 line (window.confirm→toast)
+
+**SINGLE_TASK:** Proceed as one build
+
+This is a focused refactor of one function with clear before/after requirements. All supporting functions (gEmails, openEmailCompose, toast) already exist. The change is surgical: swap mailto mechanism for web compose, adjust timing, and change notification method. No new features, views, or complex logic needed.

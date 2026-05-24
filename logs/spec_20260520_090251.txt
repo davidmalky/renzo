@@ -1,0 +1,216 @@
+# TECHNICAL SPECIFICATION: Data Mapping Configuration Builder
+
+## OVERVIEW
+A comprehensive single-page application for creating and managing data synchronization mappings between systems. Users can visually map fields between source and destination systems, apply transformations, validate mappings, and manage mapping configurations. The application uses localStorage for persistence and provides drag-and-drop field mapping with transformation rule builders supporting text operations, date conversions, conditional logic, and custom expressions.
+
+## VIEWS
+
+- **MappingListView**: Main dashboard displaying all saved mappings in a table format with columns for name, source/destination systems, field count, last modified date, active/inactive toggle, and action buttons (edit, duplicate, delete). Includes header with "New Mapping" button, search input, and import/export buttons. Shows empty state when no mappings exist.
+
+- **MappingBuilderView**: Split-panel interface with source fields on left (40%), destination fields on right (40%), and mapping configuration panel at bottom (expandable). Top section contains mapping metadata form (name, description, systems, schedule). Center shows connected field pairs with transformation indicators. Bottom panel shows detailed transformation rules for selected mapping.
+
+- **TransformationRuleBuilder**: Modal/panel overlay displaying transformation configuration for a single field mapping. Contains transformation type selector (dropdown), operation-specific configuration forms, preview section showing sample input/output, and validation messages. Stacked vertically with add/remove transformation buttons for chaining multiple operations.
+
+- **MappingMetadataModal**: Modal dialog for editing mapping-level configuration including name (text input), description (textarea), source system (dropdown), destination system (dropdown), schedule configuration (frequency dropdown, time picker), batch size (number input), and active status (toggle switch).
+
+- **ImportExportModal**: Modal with tabs for Import and Export. Import tab has file upload dropzone and JSON textarea for pasting. Export tab shows mapping selector (checkboxes for multiple mappings) and export button. Both tabs show validation messages and success/error feedback.
+
+- **ConfirmationDialog**: Reusable modal for delete confirmations showing warning icon, message text, mapping name, and action buttons (Cancel, Confirm Delete). Used for delete operations and destructive actions.
+
+- **FieldSearchPanel**: Collapsible sidebar panel showing searchable, filterable list of available fields for both source and destination systems. Includes search input, field type filters (checkboxes), and scrollable field list with type indicators and descriptions.
+
+## FUNCTIONS
+
+- **initializeApp()**: Entry point that loads mappings from localStorage, initializes view state, renders initial view (MappingListView), sets up global event listeners for navigation and shortcuts, and performs schema migration if needed.
+
+- **renderMappingListView()**: Clears main content area, creates table header with column titles, iterates through mappings array to generate table rows with mapping data, attaches event listeners to action buttons and toggles, renders empty state if no mappings exist, and applies current filter/search terms.
+
+- **createNewMapping()**: Generates new mapping object with UUID, default values, empty fieldMappings array, sets timestamps, adds to mappings array, saves to localStorage, and navigates to MappingBuilderView with new mapping ID.
+
+- **loadMapping(mappingId)**: Retrieves mapping object from localStorage by ID, validates schema version, performs data migration if needed, loads source/destination system field definitions from configuration, and returns mapping object or null if not found.
+
+- **saveMapping(mappingObject)**: Validates mapping structure, updates updatedAt timestamp, saves to localStorage mappings array under mapping ID key, triggers success notification, and returns boolean success status.
+
+- **deleteMapping(mappingId)**: Shows confirmation dialog, removes mapping from localStorage array on confirmation, updates UI to remove deleted row or navigate away if in builder view, triggers success notification, and handles any errors.
+
+- **duplicateMapping(mappingId)**: Loads source mapping, creates deep copy with new UUID, appends " (Copy)" to name, resets timestamps, adds to mappings array, saves to localStorage, and shows success notification with option to edit new mapping.
+
+- **renderMappingBuilder(mappingId)**: Loads mapping data, renders three-panel layout (source fields, destination fields, mapping list), populates source field list from system definition, populates destination field list from system definition, renders existing field mappings as connection lines, attaches drag-drop handlers, and displays mapping metadata form at top.
+
+- **initializeDragDrop()**: Attaches dragstart listeners to source fields with dataTransfer containing field metadata, attaches dragover and drop listeners to destination fields, provides visual feedback during drag (highlighting, cursor changes), and calls createFieldMapping on successful drop.
+
+- **createFieldMapping(sourceFieldId, destFieldId)**: Validates field compatibility, creates new fieldMapping object with empty transformations array, adds to current mapping's fieldMappings, updates visual connection line, saves mapping, and shows validation warnings if field types incompatible.
+
+- **removeFieldMapping(mappingIndex)**: Removes mapping from fieldMappings array at index, removes visual connection line, updates field availability states, saves mapping, and shows confirmation if transformations exist on mapping.
+
+- **renderFieldConnection(sourceFieldId, destFieldId, mappingIndex)**: Calculates source and destination element positions, draws SVG line or CSS connector between elements, adds transformation indicator badge showing transformation count, attaches click handler to open transformation builder, and updates on window resize.
+
+- **openTransformationBuilder(mappingIndex)**: Loads field mapping at index, renders TransformationRuleBuilder modal with current transformations list, displays source/destination field info, shows transformation type selector, renders operation-specific forms, and displays preview section with sample data.
+
+- **addTransformation(mappingIndex, transformationType)**: Creates new transformation object with type and default parameters, adds to transformations array for field mapping at mappingIndex, renders new transformation form in builder, updates preview, and saves mapping.
+
+- **removeTransformation(mappingIndex, transformationIndex)**: Removes transformation from array, updates transformation builder UI, recalculates preview output, checks for validation errors without removed transformation, and saves mapping.
+
+- **updateTransformation(mappingIndex, transformationIndex, parameters)**: Updates transformation object parameters, validates parameter values, updates preview output, checks for transformation errors, saves mapping, and shows validation messages if invalid.
+
+- **executeTransformations(inputValue, transformationsArray)**: Iterates through transformations array in order, applies each transformation to input value, handles errors in individual transformations, returns final transformed value or error object, and provides intermediate values for preview.
+
+- **applyTextTransformation(value, operation, params)**: Executes text operations (uppercase, lowercase, trim, substring, replace, concatenate) based on operation type and params, handles null/undefined values, validates operation-specific parameters, and returns transformed string.
+
+- **applyDateTransformation(value, operation, params)**: Parses input date string using specified format, converts between timezones, formats output according to destination format, handles invalid dates, and returns formatted date string or error.
+
+- **applySplitTransformation(value, delimiter, index)**: Splits string by delimiter, returns element at specified index or all elements as array, handles out-of-bounds index, and validates delimiter parameter.
+
+- **applyLookupTransformation(value, lookupTableId)**: Retrieves lookup table from configuration, finds matching key in table, returns corresponding value, handles missing keys with default value, and validates lookup table exists.
+
+- **applyConditionalTransformation(value, conditions, operations)**: Evaluates if-then-else conditions array in order, executes corresponding transformation operation for first matching condition, handles else case, and returns transformed value.
+
+- **applyCustomJavaScript(value, jsExpression)**: Creates sandboxed function from JavaScript string, executes with input value as parameter, catches and handles JavaScript errors, validates expression safety, and returns result or error message.
+
+- **validateFieldMapping(fieldMapping)**: Checks source and destination field data type compatibility, validates all transformations in chain, verifies required destination field is mapped, checks for circular dependencies in complex mappings, and returns validation result object with errors/warnings.
+
+- **validateMapping(mappingObject)**: Iterates through all fieldMappings calling validateFieldMapping, checks all required destination fields are mapped, verifies no duplicate destination field mappings, validates schedule configuration format, checks batch size is positive integer, and returns comprehensive validation object.
+
+- **checkDataTypeCompatibility(sourceType, destType)**: Compares source and destination data types, allows compatible conversions (string to number, date to string), identifies incompatible combinations (array to number), returns compatibility object with boolean and warning message, and suggests required transformations.
+
+- **getFieldSampleData(systemId, fieldId)**: Retrieves sample data for field from system configuration, generates synthetic sample if none defined, formats according to field data type, returns array of 3-5 sample values, and handles missing field definitions.
+
+- **updatePreview(sourceValue, transformations)**: Takes sample source value, executes transformation chain, displays intermediate results after each step, shows final output value, highlights errors in transformation chain, and updates preview section in transformation builder.
+
+- **renderMetadataForm(mappingId)**: Creates form with inputs for name, description, source system selector, destination system selector, renders schedule configuration section with frequency and time inputs, shows batch size input, displays active toggle, and attaches change handlers saving on blur.
+
+- **loadSystemDefinition(systemId)**: Retrieves system configuration object containing field definitions from predefined systems configuration, parses field list with names, types, descriptions, required flags, returns field array, and handles unknown system IDs.
+
+- **filterFields(searchTerm, fieldArray, typeFilters)**: Filters field array by search term matching name or description, applies field type filters if specified, sorts results by relevance, returns filtered field array, and updates field list UI.
+
+- **searchMappings(searchTerm)**: Filters mappings array by search term matching name, description, or system names, updates MappingListView table with filtered results, highlights matching text, and shows "no results" message if empty.
+
+- **toggleMappingActive(mappingId)**: Loads mapping, toggles isActive boolean, saves mapping, updates toggle UI state, shows notification, and triggers any necessary sync job updates.
+
+- **exportMappings(mappingIds)**: Creates array of mapping objects for specified IDs, serializes to JSON with pretty printing, creates downloadable blob, triggers browser download with filename including timestamp, and shows success notification.
+
+- **importMappings(jsonString)**: Parses JSON string to array, validates mapping structure for each object, checks for ID conflicts with existing mappings, generates new IDs if conflicts exist, adds to mappings array, saves to localStorage, shows import summary with success/error counts, and refreshes mapping list view.
+
+- **validateImportData(importedData)**: Checks JSON structure is valid, validates required fields exist on each mapping, verifies field mapping structure, checks data types are correct, validates transformation syntax, and returns validation result with specific errors.
+
+- **migrateSchema(mappingObject, fromVersion, toVersion)**: Detects current schema version on mapping object, applies incremental migration functions for each version step, updates structure and field names as needed, adds new required fields with defaults, and updates schemaVersion field.
+
+- **showConfirmationDialog(message, onConfirm, onCancel)**: Renders modal overlay with confirmation message, displays warning icon, shows action buttons, attaches click handlers for confirm/cancel, closes on overlay click, and executes appropriate callback.
+
+- **showNotification(message, type)**: Creates notification element with message and type styling (success, error, warning, info), adds to notification container, auto-dismisses after timeout, allows manual dismiss, and stacks multiple notifications.
+
+- **handleError(error, context)**: Logs error with context to console, shows user-friendly error notification, saves error to localStorage for debugging, suggests recovery actions when possible, and prevents app crash.
+
+- **debounce(func, delay)**: Returns debounced version of function that delays execution until after delay milliseconds have passed since last call, used for search inputs and resize handlers, and cancels pending executions.
+
+- **deepClone(object)**: Creates deep copy of object or array, handles nested structures, preserves data types, avoids reference sharing, and returns cloned object.
+
+- **generateUUID()**: Generates RFC4122 version 4 compliant UUID, uses crypto.randomUUID if available or fallback implementation, ensures uniqueness within application context, and returns UUID string.
+
+- **formatDate(date, format)**: Formats Date object or ISO string according to format pattern (YYYY-MM-DD, MM/DD/YYYY HH:mm), handles timezone conversions, provides locale-aware formatting, and returns formatted string.
+
+- **calculateConnectorPath(sourceEl, destEl)**: Gets bounding rectangles of source and destination elements, calculates start point (right-center of source), calculates end point (left-center of destination), generates SVG path with bezier curve for smooth connection, and returns path string.
+
+- **updateAllConnectors()**: Iterates through all active field mappings, recalculates connector paths for each, updates SVG path elements, handles scrolling and layout changes, and debounces on resize events.
+
+- **initializeFieldSearch()**: Renders search panel with input field, type filter checkboxes, attaches input event with debounced search, updates field list on search, highlights matching terms, and maintains search state across navigation.
+
+- **renderScheduleConfig(scheduleObject)**: Creates schedule configuration form section, renders frequency dropdown (once, hourly, daily, weekly, monthly), shows time picker for scheduled times, displays advanced options (retry count, timeout), and saves on change.
+
+- **validateScheduleConfig(scheduleObject)**: Checks frequency value is valid option, validates time format if time-based schedule, ensures required fields present for frequency type, checks retry count and timeout are positive, and returns validation result.
+
+- **getSampleTransformationResult(transformation, inputValue)**: Executes single transformation with sample input, catches errors safely, returns result object with success status and output value or error message, and formats output for preview display.
+
+- **renderTransformationForm(transformationType)**: Generates form inputs specific to transformation type (text: operation dropdown; date: format inputs; conditional: condition builder), shows parameter labels and help text, provides default values, validates on change, and returns form element.
+
+- **setupAutoSave(mappingId)**: Initializes autosave timer that saves mapping after idle period, debounces save operations, shows save status indicator (saving, saved, error), handles save errors with retry, and clears timer on navigation away.
+
+- **clearUnsavedChanges()**: Checks for unsaved changes on mapping, shows confirmation dialog if changes exist, discards changes on confirm, cancels navigation on cancel, and resets dirty flag.
+
+## DATA
+
+- **mappings**: Array of mapping objects stored in localStorage under key "dataMappings". Each mapping: {id: UUID string, name: string, description: string, sourceSystem: string ID, destinationSystem: string ID, fieldMappings: array of field mapping objects, schedule: {frequency: string, time: string, retryCount: number, timeout: number}, batchSize: number, isActive: boolean, createdAt: ISO date string, updatedAt: ISO date string, schemaVersion: number}.
+
+- **fieldMapping**: Object structure within fieldMappings array: {sourceField: {id: string, name: string, type: string}, destField: {id: string, name: string, type: string}, transformations: array of transformation objects, validationErrors: array of error objects}.
+
+- **transformation**: Object within transformations array: {id: UUID, type: string enum (text, date, split, lookup, conditional, javascript, default), parameters: object with type-specific params, order: number, enabled: boolean}.
+
+- **systemDefinitions**: Object stored in application code (not localStorage) mapping system IDs to field definitions: {systemId: {name: string, fields: [{id: string, name: string, type: enum (string, number, date, boolean, array, object), required: boolean, description: string, sampleData: array}]}}.
+
+- **validationResult**: Object returned from validation functions: {isValid: boolean, errors: [{field: string, message: string, severity: enum (error, warning)}], requiredFieldsMissing: array of field IDs, circularDependencies: array of field paths}.
+
+- **appState**: Object in memory tracking current view, selected mapping ID, unsaved changes flag, active modal, search terms, filter states: {currentView: string, activeMappingId: string, isDirty: boolean, activeModal: string, searchTerm: string, filters: {fieldTypes: array, status: string}}.
+
+- **lookupTables**: Object in localStorage under key "lookupTables" mapping table IDs to key-value pairs: {tableId: {name: string, mappings: {key: value}}}.
+
+- **transformationPreview**: Object tracking preview state: {sourceValue: any, intermediateResults: array of {stepIndex: number, transformationType: string, output: any, error: string}, finalOutput: any}.
+
+- **notificationQueue**: Array in memory holding active notifications: [{id: UUID, message: string, type: enum (success, error, warning, info), timestamp: number, dismissed: boolean}].
+
+- **fieldConnectionMap**: Map object tracking visual connections: Map<mappingIndex, {sourceElement: HTMLElement, destElement: HTMLElement, svgPath: SVGPathElement, transformationCount: number}>.
+
+- **dragState**: Object tracking drag operation: {isDragging: boolean, sourceFieldId: string, draggedElement: HTMLElement, validDropTargets: array of HTMLElements}.
+
+- **scheduleConfig**: Object within mapping defining sync schedule: {frequency: enum (once, hourly, daily, weekly, monthly, custom), time: string (HH:mm), dayOfWeek: number (0-6), dayOfMonth: number (1-31), cronExpression: string, retryCount: number, timeout: number in seconds}.
+
+## API
+
+Note: This application is localStorage-based with no external API. The following describes the localStorage interface:
+
+- **saveMappingsToStorage**: endpoint: localStorage.setItem, method: synchronous write, payload: {key: "dataMappings", value: JSON.stringify(mappings array)}, response handling: try-catch with quota exceeded error handling, shows error notification on failure, validates JSON serialization.
+
+- **loadMappingsFromStorage**: endpoint: localStorage.getItem, method: synchronous read, payload: {key: "dataMappings"}, response handling: parse JSON string, handle null (no data), catch JSON parse errors, return empty array on error, migrate schema if needed.
+
+- **saveLookupTablesToStorage**: endpoint: localStorage.setItem, method: synchronous write, payload: {key: "lookupTables", value: JSON.stringify(lookupTables object)}, response handling: try-catch, handle quota errors, validate before save.
+
+- **loadLookupTablesFromStorage**: endpoint: localStorage.getItem, method: synchronous read, payload: {key: "lookupTables"}, response handling: parse JSON, return empty object on null, catch parse errors.
+
+- **exportToJSON**: endpoint: browser download, method: blob creation and URL.createObjectURL, payload: JSON string of selected mappings, response handling: trigger download via temporary anchor element, revoke object URL after download, show success notification.
+
+- **importFromJSON**: endpoint: file input or paste, method: FileReader.readAsText or direct string, payload: JSON string, response handling: parse JSON, validate structure, merge with existing mappings, show import summary dialog with counts.
+
+## DESIGN
+
+- **Colors**: Primary: #3b82f6 (blue), Secondary: #8b5cf6 (purple), Success: #10b981 (green), Warning: #f59e0b (orange), Error: #ef4444 (red), Background: #ffffff, Surface: #f9fafb, Border: #e5e7eb, Text primary: #111827, Text secondary: #6b7280, Disabled: #d1d5db.
+
+- **Typography**: Font family: system-ui, -apple-system, "Segoe UI", sans-serif. Sizes: h1: 24px/600, h2: 20px/600, h3: 16px/600, body: 14px/400, small: 12px/400. Line heights: 1.5 for body, 1.2 for headings.
+
+- **Layout**: Main container: max-width 1400px, centered with padding 20px. Mapping builder split panels: source 40%, destination 40%, gap 20% for connectors. Modal max-width: 600px for standard, 900px for transformation builder. Card padding: 20px. Grid gaps: 16px.
+
+- **Components**: 
+  - Buttons: height 36px, padding 0 16px, border-radius 6px, font-size 14px, font-weight 500, transition all 0.2s
+  - Inputs: height 36px, padding 0 12px, border 1px solid border color, border-radius 6px, focus: border primary + shadow
+  - Tables: border-collapse separate, border-spacing 0, header background surface, row hover background, border-bottom on rows
+  - Cards: background white, border-radius 8px, box-shadow 0 1px 3px rgba(0,0,0,0.1), border 1px solid border color
+  - Badges: padding 4px 8px, border-radius 4px, font-size 12px, font-weight 500, uppercase
+  - Toggle switches: width 44px, height 24px, border-radius 12px, animated transition, thumb size 20px
+
+- **Mapping Connectors**: SVG lines with stroke-width 2px, stroke color based on validation status (success: green, warning: orange, error: red, default: gray), bezier curves for smooth connections, dashed lines for incomplete mappings, transformation count badge positioned at midpoint with background white and border.
+
+- **Drag-Drop Feedback**: Dragged field: opacity 0.5, cursor grabbing. Valid drop target: border 2px dashed primary, background primary with 0.05 opacity. Invalid drop target: border 2px dashed error, background error with 0.05 opacity, cursor not-allowed.
+
+- **Field Lists**: Scrollable containers max-height 600px, each field: padding 12px, border-radius 6px, border 1px solid border, margin-bottom 8px, hover: background surface + shadow. Field type indicator: inline badge with color coding (string: blue, number: green, date: purple, boolean: orange, array: red, object: gray).
+
+- **Transformation Builder**: Vertical stack of transformation cards, each with drag handle for reordering, collapse/expand toggle, delete button, type badge, parameter form, and preview section. Add transformation button at bottom as dashed outline card. Preview section: split input (left) and output (right) with arrow between, monospace font, background light gray, padding 12px, border-radius 4px.
+
+- **Modals**: Overlay: background rgba(0,0,0,0.5), backdrop-filter blur(4px). Modal: background white, border-radius 12px, box-shadow 0 20px 25px rgba(0,0,0,0.15), padding 0, max-height 90vh, overflow auto. Header: padding 20px, border-bottom 1px solid border. Body: padding 20px. Footer: padding 20px, border-top 1px solid border, text-align right.
+
+- **Responsive**: Breakpoint 1024px: reduce split panel to stack vertically, full width for each. Breakpoint 768px: hide field search panel, convert to modal overlay, reduce padding to 12px, stack form fields vertically, table becomes horizontally scrollable.
+
+- **Animations**: Transitions: all 200ms ease for buttons/inputs, 300ms ease for modals, 150ms ease for dropdowns. Loading spinners: circular rotation animation 1s linear infinite. Success checkmarks: scale + fade in animation. Connector lines: draw from source to dest over 300ms.
+
+## ERRORS
+
+- **LocalStorage Quota Exceeded**: Catch QuotaExceededError on save, show error notification "Storage quota exceeded. Please delete unused mappings or export to free space", provide button to view storage usage breakdown, calculate total size of mappings, suggest oldest/largest mappings for deletion.
+
+- **Invalid Mapping Data**: On load or import, validate mapping structure, catch missing required fields, show error "Invalid mapping data: [specific field] is required", prevent save with invalid data, highlight invalid fields in red, provide "fix" button that adds missing fields with defaults.
+
+- **Transformation Execution Error**: Catch errors during transformation execution (JavaScript errors, invalid regex, type errors), show inline error in preview section "Error: [error message]", highlight failed transformation in red, allow disabling failed transformation, provide "test with different input" option.
+
+- **Data Type Mismatch**: Detect incompatible field types during mapping creation, show warning badge on connection line "Type mismatch: string → number", display in validation panel with severity warning, suggest applicable transformations, allow ignoring warning with explicit user action.
+
+- **Circular Dependency**: Detect circular references in complex mappings (if implementing calculated fields), show error "Circular dependency detected: Field A → Field B → Field A", prevent save, highlight involved fields, suggest breaking the cycle.
+
+- **Missing Required Field**: During validation, detect unmapped required destination fields, show error list "Required fields not mapped: [field names]", highlight missing fields in destination panel, provide "auto-map by name" quick action.
+
+- **Import JSON Parse Error**: Catch JSON.parse exceptions, show error "Invalid JSON format: [error message]", highlight error location if possible, provide

@@ -1,0 +1,231 @@
+# RESEARCH REPORT: Field Mapping Configuration UI
+
+## EXISTING_FEATURES:
+
+### Core Infrastructure
+- **Navigation System**: Sidebar navigation with nav-link routing, active state management
+- **Modal System**: `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer` with fadeIn/slideUp animations
+- **Card Components**: `.card`, `.card-header`, `.card-title` structure for content containers
+- **Table Components**: `.table-container`, `.table` with header/body structure, row hover states
+- **Form Components**: `.form-group`, `.form-label`, `.form-input`, `.form-select`, `.form-checkbox`
+- **Button System**: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger` with hover states
+- **Badge System**: `.sync-badge` (running/success/failed/queued), `.direction-badge` (to-renzo/to-salesforce/bidirectional)
+- **Stats Grid**: `.stats-grid` with `.stat-card` for metrics display
+- **Progress Bars**: `.progress-container`, `.progress-bar`, `.progress-fill` components
+- **Filters**: `.filters` container with `.filter-input` elements
+
+### Styling System
+- **CSS Variables**: Comprehensive design tokens (colors, shadows, transitions)
+- **Color Palette**: --primary, --danger, --warning, --success, --info
+- **Layout**: Fixed sidebar (240px), main content area with responsive padding
+- **Typography**: Inter font family with weight variants (400-700)
+- **Animations**: fadeIn, slideUp keyframes
+- **Shadows**: --shadow-sm, --shadow-md, --shadow-lg
+
+### Data Display Patterns
+- **Sync Items**: `.sync-item` structure with header, badges, progress tracking
+- **Error Logs**: `.error-log-item` with severity badges (critical/error/warning)
+- **Status Badges**: Color-coded status indicators with icons
+- **Direction Indicators**: Bidirectional/one-way sync badges already exist
+
+## MISSING_FEATURES:
+
+### Primary Components
+1. **MappingListView** (`/sync/mappings` route): Dedicated page for mapping management
+2. **MappingEditorModal**: Specialized modal for field mapping CRUD operations
+3. **TransformationBuilder**: Visual transformation configuration interface
+4. **MappingValidation**: Real-time validation feedback system
+
+### Data Management
+5. **Field Schema API Integration**: Dynamic Salesforce field fetching
+6. **Renzo Schema Storage**: Local database schema structure
+7. **Mapping Storage System**: localStorage keys for persisting mappings
+8. **Test/Preview System**: Sample data transformation preview
+
+### UI Components
+9. **Searchable/Filterable Table**: Enhanced table with search and filter capabilities
+10. **Bulk Actions**: Multi-select with batch operations (activate/deactivate/delete)
+11. **Dropdown Population**: Dynamic field dropdowns from schema APIs
+12. **Transformation Selector**: Dropdown with transformation types
+13. **Transformation Config Panels**: Context-sensitive configuration UI based on type
+14. **Conflict Resolution Selector**: Strategy dropdown component
+15. **Active/Inactive Toggle**: State toggle switch component
+16. **Picklist Mapper**: Source→destination value pair table editor
+17. **Formula Builder**: Visual formula construction with tokens and operators
+18. **Code Editor**: Syntax-highlighted JavaScript editor with error checking
+19. **Validation Error Display**: Inline error messaging system
+20. **Data Type Compatibility Checker**: Visual compatibility indicator
+
+### Interactive Features
+21. **Test Mapping Button**: Preview transformation with sample data
+22. **Real-time Validation**: As-you-type validation feedback
+23. **Circular Dependency Detection**: Bidirectional mapping validation
+24. **Date Format Preview**: Live preview of date transformations
+25. **Regex Replace Editor**: Text transformation configuration
+
+## CHANGES_NEEDED:
+
+### Navigation
+- Add new nav-link for `/sync/mappings` route in sidebar under sync section
+- Implement route handling for mappings view
+
+### Modal Enhancement
+- Extend existing `.modal` system to support larger modal sizes (`.modal-large` variant)
+- Add tabbed content support within modals for transformation configuration
+- Add nested modal support for picklist/formula builders
+
+### Table Enhancement
+- Add `.table-checkbox` for row selection
+- Add `.table-search` and `.table-filter` components
+- Implement `.table-bulk-actions` toolbar
+- Add sortable column headers
+
+### Form Enhancement
+- Create `.form-toggle` component for active/inactive switches
+- Add `.form-dropdown-dynamic` for API-populated dropdowns
+- Create `.form-validation-inline` for real-time error display
+- Add `.form-code-editor` wrapper for syntax highlighting
+
+### Badge System
+- Extend `.direction-badge` to support new visual indicators
+- Add `.validation-badge` for field compatibility status
+
+## REUSE:
+
+### Direct Reuse (No Changes)
+1. **Modal Structure**: Use existing `.modal-overlay`, `.modal`, `.modal-header/body/footer` classes
+2. **Button Styles**: `.btn-primary`, `.btn-secondary`, `.btn-danger` for all actions
+3. **Card Layout**: `.card`, `.card-header` for main mapping list container
+4. **Form Components**: `.form-group`, `.form-label`, `.form-input`, `.form-select` for all form fields
+5. **Badge System**: `.direction-badge` for sync direction display (already has bidirectional support)
+6. **Table Base**: `.table-container`, `.table` structure for mapping list
+7. **Filter UI**: `.filters`, `.filter-input` for search/filter bar
+8. **CSS Variables**: All existing design tokens (colors, shadows, transitions)
+9. **Typography**: Inter font, existing weight classes
+10. **Layout System**: `.main-content` padding and structure
+
+### Adapt and Extend
+11. **Sync Badge Pattern**: Adapt `.sync-badge` color scheme for mapping status (active/inactive/invalid)
+12. **Error Display**: Adapt `.error-log-item` structure for validation errors
+13. **Progress Pattern**: Adapt `.progress-container` for transformation test feedback
+14. **Modal Animation**: Reuse fadeIn/slideUp animations for new modals
+15. **Hover States**: Reuse `.table tbody tr:hover` pattern
+
+### Code Patterns to Follow
+16. **Naming Convention**: Continue kebab-case for CSS classes
+17. **Color Usage**: Use semantic CSS variables (--primary, --danger, etc.)
+18. **Spacing System**: Follow existing 8px increment padding/margin pattern
+19. **Shadow Hierarchy**: Use --shadow-sm/md/lg appropriately
+20. **Transition Speed**: Use var(--transition) for consistency
+
+## RISKS:
+
+### Technical Risks
+1. **localStorage Limits**: Storing complex mapping configurations may exceed 5-10MB limits
+2. **Schema API Performance**: Dynamic Salesforce field fetching could be slow; needs caching strategy
+3. **Circular Dependencies**: Bidirectional mappings may create infinite loops if not properly validated
+4. **JavaScript Eval Security**: Custom function editor requires sandboxed execution to prevent XSS
+5. **Complex Validation Logic**: Real-time validation of formulas and transformations may impact performance
+6. **Modal Nesting**: Formula/picklist builders within main modal may cause z-index conflicts
+7. **Data Type Compatibility Matrix**: Need comprehensive type mapping logic (Salesforce ↔ Renzo types)
+
+### UI/UX Risks
+8. **Modal Overload**: Too many configuration options may overwhelm users; consider progressive disclosure
+9. **Mobile Responsiveness**: Complex table with many columns will be difficult on small screens
+10. **Dropdown Performance**: Large field lists (500+ fields) may cause dropdown lag
+11. **Formula Builder Complexity**: Visual formula builder may be harder to use than text input for power users
+
+### Data Integrity Risks
+12. **Mapping Conflicts**: Multiple mappings to same destination field need conflict detection
+13. **Orphaned Mappings**: Deleted Salesforce fields will break existing mappings; need cleanup strategy
+14. **Version Control**: No backup/restore mechanism for mapping configurations
+15. **Test Data Accuracy**: Preview transformations may not catch all edge cases
+
+### Integration Risks
+16. **Schema Changes**: Salesforce schema updates may invalidate existing mappings
+17. **API Rate Limits**: Frequent schema API calls for validation may hit Salesforce rate limits
+18. **Transformation Execution**: Custom functions must run in sync engine context; preview may differ
+19. **Async Validation**: Real-time validation API calls may lag behind user input
+
+## DATA_STRUCTURES:
+
+### Found in Code (Inferred from HTML)
+None explicitly defined in the provided HTML/CSS. No JavaScript with localStorage keys visible.
+
+### Required New Structures
+
+```javascript
+// Primary mapping storage
+localStorage.setItem('renzo_field_mappings', JSON.stringify([
+  {
+    id: 'uuid',
+    sourceField: 'Salesforce__Field__c',
+    sourceType: 'text',
+    destinationField: 'renzo_field_name',
+    destinationType: 'varchar',
+    direction: 'bidirectional' | 'sf_to_renzo' | 'renzo_to_sf',
+    transformationType: 'none' | 'custom' | 'date' | 'text' | 'picklist' | 'formula',
+    transformationConfig: {}, // varies by type
+    conflictResolution: 'source_wins' | 'destination_wins' | 'most_recent' | 'manual' | 'custom',
+    active: boolean,
+    lastModified: timestamp,
+    createdBy: 'user',
+    validationStatus: 'valid' | 'invalid' | 'warning'
+  }
+]));
+
+// Salesforce schema cache
+localStorage.setItem('salesforce_schema_cache', JSON.stringify({
+  lastFetched: timestamp,
+  ttl: 3600000, // 1 hour
+  fields: [
+    { name: 'Field__c', type: 'text', label: 'Field Label', required: false }
+  ]
+}));
+
+// Renzo schema
+localStorage.setItem('renzo_schema', JSON.stringify({
+  tables: {
+    table_name: {
+      fields: [
+        { name: 'field_name', type: 'varchar', nullable: true }
+      ]
+    }
+  }
+}));
+
+// Transformation templates
+localStorage.setItem('transformation_templates', JSON.stringify({
+  date_formats: ['YYYY-MM-DD', 'MM/DD/YYYY', 'DD-MM-YYYY'],
+  text_transforms: ['uppercase', 'lowercase', 'trim', 'regex'],
+  formula_functions: ['CONCAT', 'IF', 'DATE', 'ROUND', 'SUBSTRING']
+}));
+
+// Mapping validation results
+localStorage.setItem('mapping_validation_cache', JSON.stringify({
+  'mapping_id': {
+    errors: [],
+    warnings: [],
+    lastChecked: timestamp
+  }
+}));
+
+// User preferences
+localStorage.setItem('mapping_ui_preferences', JSON.stringify({
+  defaultDirection: 'bidirectional',
+  defaultConflictResolution: 'most_recent',
+  showInactiveMatches: false,
+  tableColumns: ['source', 'destination', 'direction', 'transformation', 'status']
+}));
+```
+
+### Data Flow Requirements
+- **Schema Fetch**: Salesforce API → cache → dropdown population
+- **Validation**: Mapping config → validation engine → inline error display
+- **Test Transform**: Sample data + mapping → transformation engine → preview display
+- **CRUD Operations**: UI changes → localStorage → table re-render
+- **Bulk Actions**: Selected rows → batch operation → localStorage update → UI refresh
+
+---
+
+**SUMMARY**: The existing codebase provides a solid design system and component library (modals, tables, forms, badges) that can be directly reused. The primary development work involves creating new specialized components (MappingEditor, TransformationBuilder, ValidationSystem) and implementing localStorage-based data persistence with proper schema caching and validation logic. Key risks center on performance (large dropdowns, real-time validation), security (custom function sandboxing), and data integrity (circular dependencies, orphaned mappings).

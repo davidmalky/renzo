@@ -1,0 +1,64 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+
+- **Authentication System**: Login view with username/password fields, logout functionality
+- **Application Layout**: Sidebar navigation + main content area (2-column flex layout)
+- **Sidebar Components**:
+  - Logo area (`.sidebar-logo`) with "Renzo" branding and tagline
+  - Navigation menu (`.nav-item`) with active states, icons, and badges
+  - Sidebar footer (`.sidebar-footer`) with user display and logout button
+- **Styling System**: CSS variables for colors, shadows, radius, consistent design tokens
+- **Color Scheme**: Dark sidebar (`--sidebar:#141410`), muted text (`--sidebar-text:#EAE5DB`), green accents
+- **Typography**: DM Sans (body), DM Serif Display (headings/logo), antialiased rendering
+- **Component Library**: Buttons (primary, ghost, danger, various sizes), form fields, cards, tables, stats grid
+- **Responsive utilities**: `.hidden` class, flexible layouts
+- **View Management**: `#loginView` and `#appView` sections
+
+## MISSING_FEATURES:
+
+- **Version Number Display**: No version footer or version information anywhere in the codebase
+- **Footer Component**: No dedicated footer element below the logout button in sidebar
+- **Version Metadata**: No version number stored or referenced in code
+
+## CHANGES_NEEDED:
+
+- **Sidebar Footer**: Add version footer element after `.sidebar-logout` button within `.sidebar-footer`
+- **HTML Structure**: Insert new markup in the sidebar footer section (after line with `.sidebar-logout`)
+- **CSS Styling**: Add new styles for version footer to match dark sidebar aesthetic
+
+## REUSE:
+
+- **Color Variables**: 
+  - `--sidebar:#141410` (background match)
+  - `rgba(232,228,220,.4)` (muted text color, used in `.sidebar-user`)
+  - `rgba(255,255,255,.07)` (subtle border color)
+- **Typography Patterns**:
+  - Font size: `11px` (matches `.sidebar-user`)
+  - Letter spacing: `.4px` or `.2px` (existing sidebar text)
+  - Text transform: `uppercase` (optional, matches `.sidebar-user`)
+- **Spacing Pattern**: `.sidebar-footer` uses `padding:16px 22px`, maintain consistency
+- **Border Pattern**: `border-top:1px solid rgba(255,255,255,.07)` for separation
+- **Font Stack**: `'DM Sans',system-ui,sans-serif` (body font)
+
+## RISKS:
+
+- **Layout Overflow**: Adding content to `.sidebar-footer` could cause sidebar height issues if logout button is already at bottom edge
+- **Visual Hierarchy**: Version text should be MORE subtle than user email (`.sidebar-user`) to avoid drawing attention
+- **Spacing Conflicts**: Need to ensure proper margin/padding between logout button and version footer
+- **Text Wrapping**: "Built by Agent Pipeline" text might wrap on narrow sidebars (230px width)
+- **Color Contrast**: Must ensure text is readable but not prominent (balance between `rgba(232,228,220,.4)` and `.3`)
+
+## DATA_STRUCTURES:
+
+- **No localStorage Keys Found**: The provided codebase excerpt contains only HTML/CSS, no JavaScript
+- **No Data Persistence**: No evidence of version tracking or user preferences storage
+- **Static HTML**: All content is hardcoded markup, no dynamic data binding visible
+
+## IMPLEMENTATION NOTES:
+
+1. **Exact Placement**: Insert new HTML after `<button class="sidebar-logout">Logout</button>` within `.sidebar-footer` div
+2. **Styling Approach**: Create new CSS class (e.g., `.sidebar-version`) targeting font-size 10-11px, color `rgba(232,228,220,.3)` or similar
+3. **Content Format**: "Renzo v1.0 — Built by Agent Pipeline" with em dash (or use `&mdash;`)
+4. **Spacing Strategy**: Add `margin-top:12px` to separate from logout button, consider `text-align:center` for symmetry
+5. **Font Weight**: Use `font-weight:400` (normal) to keep it subtle vs 500/600 used elsewhere

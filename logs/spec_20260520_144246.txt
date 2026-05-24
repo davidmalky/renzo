@@ -1,0 +1,205 @@
+# TECHNICAL SPECIFICATION: BATCH OUTREACH AND TRAINABLE INSTRUCTIONS
+
+## OVERVIEW
+Add batch outreach functionality allowing natural language queries to filter contacts and generate AI messages in bulk, plus a trainable instruction system where users can define custom rules that automatically enhance all AI prompts. Both features integrate seamlessly with existing contact management and AI generation systems.
+
+## VIEWS
+
+### BatchOutreachView
+New view accessible via navigation. Contains:
+- Heading "Batch Outreach"
+- Textarea (id: batchPromptInput) for natural language query, placeholder "e.g., reach out to all contacts with contracts expiring soon"
+- Generate button (id: generateBatchBtn)
+- Progress display area (id: batchProgress) initially hidden
+- Results summary area (id: batchSummary) initially hidden
+- Back to queue link
+
+### Settings View (Modified)
+Add new section after API key section:
+- Heading "My Outreach Rules"
+- Textarea (id: newRuleInput) placeholder "Enter a custom instruction for AI messages"
+- Add Rule button (id: addRuleBtn)
+- Rules list container (id: rulesList) displaying each rule with delete button
+- Empty state message when no rules exist
+
+## FUNCTIONS
+
+### showBatchOutreach()
+- Hide all other views (contacts, queue, settings)
+- Show batch outreach view
+- Update navigation active state
+- Clear previous progress/summary
+- Focus on textarea
+
+### parseBatchQuery(query)
+- Convert query to lowercase
+- Initialize empty filter criteria object
+- Check for keywords: 'contract' OR 'expiry' OR 'expire' → set criteria.hasContractExpiring = true
+- Check for keywords: 'invoice' OR 'overdue' → set criteria.hasOverdueInvoice = true
+- Check for keywords: 'not contacted' OR 'long time' OR 'overdue contact' → set criteria.notContactedRecently = true
+- Return criteria object
+
+### filterContactsByQuery(contacts, criteria)
+- Start with all contacts
+- If criteria.hasContractExpiring: filter where contractExpiry exists and is within 60 days
+- If criteria.hasOverdueInvoice: filter where invoiceAmount > 0
+- If criteria.notContactedRecently: filter where lastContactDate is null or older than 30 days
+- Return filtered array
+
+### executeBatchOutreach(query)
+- Parse query using parseBatchQuery
+- Load contacts from localStorage 'renzo_contacts'
+- Filter contacts using filterContactsByQuery
+- If no matches: show error alert, return
+- Show progress area
+- Initialize results array
+- Loop through filtered contacts with index:
+  - Update progress: "Generating {index+1} of {total}..."
+  - Load rules from localStorage 'renzo_rules'
+  - Call generateAiMessageWithRules(contact, rules)
+  - Wait for response
+  - Add to results array with contact name and generated message
+  - Add to outreach queue in localStorage
+- Hide progress area
+- Show summary: "{count} messages generated and added to queue"
+- Provide link to view queue
+
+### generateAiMessageWithRules(contact, rules)
+- Load API key from localStorage 'renzo_api_key'
+- Build base prompt with contact details
+- If rules array exists and has length:
+  - Append to prompt: "\n\nFollow these rules: " + rules.join('; ')
+- Call OpenAI API with enhanced prompt
+- Return generated message text
+
+### loadRules()
+- Load from localStorage 'renzo_rules' or return empty array
+- Parse JSON safely with try/catch
+- Return array of rule strings
+
+### saveRules(rulesArray)
+- Stringify rulesArray
+- Save to localStorage 'renzo_rules'
+
+### renderRulesList()
+- Load rules using loadRules()
+- Clear rulesList container
+- If empty: show "No custom rules yet. Add your first rule above."
+- For each rule:
+  - Create div with class 'rule-item'
+  - Add span with rule text
+  - Add delete button with onclick calling deleteRule(index)
+  - Append to rulesList
+
+### addRule()
+- Get value from newRuleInput textarea
+- Trim whitespace
+- If empty: show error alert "Please enter a rule", return
+- Load existing rules
+- Append new rule to array
+- Save using saveRules
+- Clear textarea
+- Render updated list
+- Show success alert "Rule added"
+
+### deleteRule(index)
+- Load existing rules
+- Remove item at index using splice
+- Save updated array
+- Render updated list
+- Show success alert "Rule deleted"
+
+### modifyGenerateAiMessage()
+- Update existing generateAiMessage function signature to generateAiMessage(contact, customRules = null)
+- If customRules provided, use those; otherwise load from localStorage
+- Append rules to prompt before API call
+- Keep all other logic identical
+
+## DATA
+
+### localStorage Keys
+- renzo_contacts: existing array of contact objects
+- renzo_api_key: existing API key string
+- renzo_outreach_queue: existing array of queued messages
+- renzo_rules: NEW - array of strings, e.g., ["Always use a friendly tone", "Keep messages under 100 words"]
+
+### Contact Object (unchanged)
+- name, company, email, phone, notes, tags
+- lastContactDate: ISO date string or null
+- contractExpiry: ISO date string or null
+- invoiceAmount: number
+
+### Rule Format
+- Plain string text, max 500 characters
+- Stored in array, no IDs needed (array index serves as identifier)
+
+## API
+
+### OpenAI API (existing, modified)
+- Endpoint: https://api.openai.com/v1/chat/completions
+- Method: POST
+- Headers: Authorization with Bearer token, Content-Type application/json
+- Payload modification: messages array prompt now includes rules appended
+- Response handling: unchanged, extract message content
+
+## DESIGN
+
+### Batch Outreach View
+- Use existing view container structure
+- Textarea: min-height 120px, border-radius 8px, padding 12px, border 1px solid #ddd
+- Generate button: primary color #4F46E5, white text, padding 12px 24px, border-radius 6px
+- Progress display: centered text, color #6B7280, font-size 14px, margin-top 20px
+- Summary: background #F0FDF4, border 1px solid #86EFAC, padding 16px, border-radius 8px, color #166534
+
+### Rules Section in Settings
+- Section header: font-size 18px, font-weight 600, margin-top 32px, margin-bottom 16px
+- Textarea: same styling as batch outreach
+- Rules list: margin-top 16px
+- Rule item: display flex, justify-content space-between, align-items center, padding 12px, background #F9FAFB, border-radius 6px, margin-bottom 8px
+- Delete button: background #EF4444, color white, padding 6px 12px, border-radius 4px, font-size 12px
+- Empty state: color #9CA3AF, font-style italic, text-align center
+
+### Navigation Addition
+- Add 'Batch Outreach' between 'Outreach Queue' and 'Settings'
+- Use existing nav button styles
+- Active state: background #EEF2FF, color #4F46E5, border-left 3px solid #4F46E5
+
+## ERRORS
+
+### Batch Outreach Errors
+- No API key: show alert "Please add your OpenAI API key in Settings"
+- Empty query: show alert "Please enter a search query"
+- No matching contacts: show alert "No contacts match your query. Try different keywords."
+- API failure during batch: show alert "Error generating message for {contactName}: {error}", continue to next contact
+- Network error: show alert "Connection error. Please check your internet and try again."
+
+### Rules Errors
+- Empty rule input: show alert "Please enter a rule before adding"
+- Rule too long (>500 chars): show alert "Rules must be under 500 characters"
+- localStorage full: show alert "Storage limit reached. Please delete old rules."
+- Failed to load rules: fallback to empty array, show warning "Could not load custom rules"
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+Core additions:
+- BatchOutreachView HTML: ~40 lines
+- Settings view modifications: ~35 lines
+- Navigation update: ~8 lines
+- parseBatchQuery function: ~20 lines
+- filterContactsByQuery function: ~30 lines
+- executeBatchOutreach function: ~45 lines
+- generateAiMessageWithRules wrapper: ~25 lines
+- loadRules, saveRules: ~15 lines
+- renderRulesList: ~30 lines
+- addRule, deleteRule: ~25 lines
+- showBatchOutreach: ~15 lines
+- Event listeners and init: ~20 lines
+- CSS additions: ~60 lines
+- Error handling throughout: ~30 lines
+- Comments and structure: ~22 lines
+
+**SINGLE_TASK: This is under 650 lines and can be built in one implementation.**
+
+No split required. All functionality integrates with existing codebase without major refactoring. Both features are independent and additive only.

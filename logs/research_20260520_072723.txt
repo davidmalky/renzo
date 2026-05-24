@@ -1,0 +1,353 @@
+# RESEARCH REPORT: Real-time Sync Execution Engine
+
+## EXISTING_FEATURES:
+
+### UI Components & Layout
+- Responsive sidebar navigation system with active state tracking
+- Modal system with header, body, close functionality
+- Card-based layout with shadows and styling
+- Table components with sticky headers and hover states
+- Button system (primary, secondary, danger variants)
+- Badge system (sync-left, sync-right, sync-bi, active, inactive)
+- Toggle switch component for enable/disable functionality
+- Form components (input, select, textarea) with consistent styling
+- Tab navigation system with active state management
+- Search input and filter select components
+- Toolbar layout for action buttons
+
+### Field Mapping UI Elements
+- Three-column layout for field mapping configuration
+- Field selector components for source/destination
+- Direction selector with radio buttons (left, right, bidirectional sync options)
+- Schema tree view with node selection
+- Tree node structure with children nesting
+- Data type icon display system
+- Transformation panel with tabbed interface
+- Validation panel with collapsible header
+
+### Visual Design System
+- CSS variables for theming (primary colors, backgrounds, borders, shadows)
+- Color palette: primary (#2D6A4F), danger (#DC2626), warning (#F59E0B), success (#10B981), info (#3B82F6)
+- Transition system (0.2s ease)
+- Shadow system (sm, md, lg variants)
+- Typography system using Inter font
+- Responsive design patterns
+- Accessibility considerations (min-height 44px for touch targets)
+
+### State Management (Implied)
+- Active navigation tracking
+- Modal visibility state
+- Tab selection state
+- Toggle switch state
+- Tree node selection state
+- Form input state
+
+## MISSING_FEATURES:
+
+### Core Sync Engine
+- Polling mechanism for Salesforce API changes
+- Change Data Capture (CDC) integration
+- Last modified timestamp tracking
+- Configurable polling interval logic (5min, 15min, 30min, 1hr)
+- Background worker process for sync execution
+
+### Data Transformation Engine
+- Direct field copy transformation
+- String formatting transformation
+- Date conversion transformation
+- Lookup resolution transformation
+- Formula calculation engine
+- Transformation execution pipeline
+
+### Conflict Resolution System
+- Source wins strategy implementation
+- Destination wins strategy implementation
+- Manual review queue system
+- Most recent timestamp comparison logic
+- Conflict detection algorithm
+
+### Data Validation
+- Schema validation engine
+- Destination schema rule checking
+- Pre-write validation pipeline
+- Validation error collection and reporting
+
+### Retry & Queue Management
+- Failed sync queue data structure
+- Exponential backoff algorithm
+- Maximum retry counter (3 retries)
+- Queue processing worker
+- Retry state management
+
+### Sync Logging System
+- Detailed sync log creation
+- Timestamp tracking
+- Records processed counter
+- Fields updated tracking
+- Error message collection
+- Conflict resolution logging
+
+### REST API Endpoints
+- POST /sync/execute endpoint
+- GET /sync/status/:syncId endpoint
+- GET /sync/history endpoint with pagination
+- API authentication/authorization
+- Request/response handling
+- Error response formatting
+
+### Database Schema & Storage
+- sync_executions table (id, mapping_id, status, started_at, completed_at, records_processed, errors_count)
+- sync_logs table (id, execution_id, record_id, field_name, old_value, new_value, error_message, timestamp)
+- Database connection management
+- Query builders for CRUD operations
+- Database migration system
+- IndexedDB/localStorage strategy for client-side storage
+
+### Health Monitoring & Alerts
+- Sync health check system
+- Repeated failure detection
+- Alert trigger mechanism
+- Health dashboard metrics
+- Performance monitoring
+
+### Salesforce API Integration
+- OAuth authentication flow
+- API client for Salesforce REST API
+- Change Data Capture listener
+- SOQL query builder
+- Rate limiting handling
+- API error handling
+
+## CHANGES_NEEDED:
+
+### localStorage Integration
+- Currently no data persistence visible in HTML/CSS
+- Need to add localStorage keys for:
+  - Sync execution state
+  - Sync configuration
+  - Queue state
+  - Retry counters
+  - Health metrics
+
+### Modal Enhancement
+- Existing modal system needs to support sync status display
+- Add modal for sync execution progress
+- Add modal for conflict resolution manual review
+- Add modal for sync history details
+
+### Table Component Extension
+- Current table structure needs columns for:
+  - Sync status
+  - Last sync timestamp
+  - Records processed
+  - Error count
+  - Action buttons (execute, view logs)
+
+### Badge System Extension
+- Add badge variants for sync status:
+  - badge-running (sync in progress)
+  - badge-success (sync completed)
+  - badge-failed (sync failed)
+  - badge-queued (sync queued for retry)
+
+### Navigation Updates
+- Add nav links for:
+  - Sync History
+  - Sync Health Dashboard
+  - Queue Management
+
+## REUSE:
+
+### Design Patterns to Preserve
+- CSS variable naming convention (--primary, --bg-card, etc.)
+- BEM-style class naming for components
+- Card-based layout pattern for content sections
+- Modal structure (modal → modal-content → modal-header/body)
+- Button class hierarchy (btn, btn-primary, btn-secondary)
+- Form component styling (form-group, form-label, form-input)
+
+### Component Structure to Reuse
+- `.table-container` with overflow handling for sync history table
+- `.toolbar` layout for sync action buttons
+- `.badge` system for sync status indicators
+- `.card` wrapper for sync execution details
+- `.tabs` system for sync log categories (all, errors, conflicts)
+
+### Styling Variables to Maintain
+- Color palette consistency (use existing --primary, --success, --danger, --warning)
+- Shadow system (--shadow-sm, --shadow-md, --shadow-lg)
+- Transition timing (--transition: 0.2s ease)
+- Border radius consistency (6px for inputs/buttons, 8px for cards, 12px for modals)
+- Font weights (400, 500, 600, 700)
+
+### Layout Patterns to Extend
+- `.page-header` for sync dashboard title and actions
+- `.three-col-layout` could be adapted for sync status panels
+- `.sidebar` navigation for accessing sync features
+
+## RISKS:
+
+### Technical Conflicts
+1. **Client-side vs Server-side Architecture**: Current HTML is pure client-side, but sync engine requires server-side components (Node.js/Express for API endpoints, database connections)
+   - Risk: Complete architectural mismatch between static HTML and required backend services
+   - Mitigation needed: Clear separation of frontend (existing HTML) and backend (new Node.js service)
+
+2. **Database Storage**: Task requires SQL database tables (sync_executions, sync_logs), but existing code has no database layer
+   - Risk: Need to introduce ORM (Sequelize, TypeORM) or query builder (Knex)
+   - Conflict: localStorage mentioned in CSP, but not used; need clarification on storage strategy
+
+3. **Real-time Polling**: Continuous polling can conflict with browser tab sleep/background throttling
+   - Risk: Missed sync intervals when tab inactive
+   - Mitigation: Use Service Workers or Web Workers for background processing
+
+4. **API Rate Limiting**: Salesforce API has strict rate limits
+   - Risk: Polling too frequently causes 429 errors
+   - Mitigation: Implement request throttling and exponential backoff
+
+### Data Consistency Risks
+5. **Bidirectional Sync Conflicts**: Two-way sync can create infinite loops
+   - Risk: Record A updates B, B updates A, repeat
+   - Mitigation: Change tracking with timestamps and sync version numbers
+
+6. **Concurrent Sync Executions**: Multiple sync jobs running simultaneously
+   - Risk: Race conditions, duplicate processing
+   - Mitigation: Job queue with locking mechanism
+
+7. **Transformation Failures**: Formula calculations may fail on invalid data
+   - Risk: Sync halts mid-process leaving inconsistent state
+   - Mitigation: Transaction-based sync with rollback capability
+
+### Performance Risks
+8. **Large Dataset Sync**: Processing thousands of records
+   - Risk: Browser memory limits, UI freezing
+   - Mitigation: Batch processing with progress indicators
+
+9. **Log Storage Growth**: Detailed logs for every field change
+   - Risk: Database bloat, slow queries
+   - Mitigation: Log rotation, archival strategy, indexed queries
+
+### Security Risks
+10. **Salesforce OAuth Tokens**: Storing sensitive credentials
+    - Risk: Token exposure in client-side code
+    - Mitigation: Server-side token storage, secure cookie handling
+
+11. **API Endpoint Security**: New REST endpoints exposed
+    - Risk: Unauthorized access to sync operations
+    - Mitigation: JWT authentication, role-based access control
+
+### Integration Risks
+12. **Existing UI State Management**: No visible state management framework (React, Vue, Svelte)
+    - Risk: Complex sync state difficult to manage with vanilla JS
+    - Mitigation: May need to introduce lightweight state management
+
+13. **Schema Changes**: Salesforce schema evolution over time
+    - Risk: Mappings become invalid when fields change
+    - Mitigation: Schema validation on each sync, mapping health checks
+
+## DATA_STRUCTURES:
+
+### Currently Found in Code
+**NONE EXPLICITLY DEFINED** - The existing HTML/CSS has no JavaScript implementation visible, therefore no localStorage keys, data structures, or data formats are currently in use.
+
+### Required New Data Structures
+
+#### localStorage Keys (if client-side storage used):
+```javascript
+// Configuration
+'renzo_sync_mappings' // Array of field mapping configurations
+'renzo_sync_settings' // Global sync settings (polling intervals, retry limits)
+
+// Runtime State
+'renzo_sync_queue' // Array of queued sync jobs
+'renzo_sync_active' // Currently running sync execution
+'renzo_last_poll_timestamp' // Last successful poll time per mapping
+
+// Cache
+'renzo_salesforce_schema' // Cached Salesforce object schemas
+'renzo_sync_history_cache' // Recent sync executions for quick display
+```
+
+#### Database Tables (PostgreSQL/MySQL format):
+```sql
+-- sync_executions table
+{
+  id: UUID PRIMARY KEY,
+  mapping_id: UUID FOREIGN KEY,
+  status: ENUM('queued', 'running', 'completed', 'failed', 'retrying'),
+  started_at: TIMESTAMP,
+  completed_at: TIMESTAMP,
+  records_processed: INTEGER,
+  errors_count: INTEGER,
+  retry_count: INTEGER DEFAULT 0,
+  config_snapshot: JSONB, -- Mapping config at execution time
+  created_at: TIMESTAMP,
+  updated_at: TIMESTAMP
+}
+
+-- sync_logs table
+{
+  id: UUID PRIMARY KEY,
+  execution_id: UUID FOREIGN KEY,
+  record_id: STRING, -- Salesforce record ID
+  record_type: STRING, -- Object type (Account, Contact, etc.)
+  field_name: STRING,
+  old_value: TEXT,
+  new_value: TEXT,
+  transformation_applied: STRING,
+  error_message: TEXT,
+  conflict_resolution: ENUM('source_wins', 'destination_wins', 'manual', 'timestamp'),
+  timestamp: TIMESTAMP,
+  created_at: TIMESTAMP
+}
+
+-- sync_queue table (for retry management)
+{
+  id: UUID PRIMARY KEY,
+  execution_id: UUID FOREIGN KEY,
+  payload: JSONB, -- Record data to sync
+  retry_count: INTEGER DEFAULT 0,
+  next_retry_at: TIMESTAMP,
+  last_error: TEXT,
+  created_at: TIMESTAMP,
+  updated_at: TIMESTAMP
+}
+```
+
+#### API Request/Response Formats:
+```javascript
+// POST /sync/execute
+Request: {
+  mapping_id: "uuid",
+  mode: "manual" | "scheduled",
+  options: {
+    force_full_sync: boolean,
+    dry_run: boolean
+  }
+}
+Response: {
+  execution_id: "uuid",
+  status: "queued" | "running",
+  estimated_records: number,
+  started_at: "ISO8601"
+}
+
+// GET /sync/status/:syncId
+Response: {
+  execution_id: "uuid",
+  status: "queued" | "running" | "completed" | "failed",
+  progress: {
+    current: number,
+    total: number,
+    percentage: number
+  },
+  records_processed: number,
+  errors_count: number,
+  started_at: "ISO8601",
+  estimated_completion: "ISO8601"
+}
+
+// GET /sync/history?page=1&limit=50
+Response: {
+  executions: [
+    {
+      id: "uuid

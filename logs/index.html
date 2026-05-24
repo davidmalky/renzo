@@ -1,0 +1,3051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F0E8;--white:#FFFDFB;--dark:#1C1917;
+  --green:#1F6B47;--green-light:#237A52;--green-pale:#D1FAE5;--green-mid:#059669;
+  --amber:#D97706;--amber-pale:#FEF3C7;
+  --red:#DC2626;--red-pale:#FEE2E2;
+  --gray:#6B7280;--gray-light:#E2D9CC;--gray-pale:#EDE8DF;
+  --sidebar:#141410;--sidebar-text:#EAE5DB;--sidebar-active:rgba(31,107,71,.2);
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.05);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.06);
+  --shadow-card:0 1px 3px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.04);
+  --radius:12px;--radius-sm:8px;--radius-xs:5px;
+  --border:1px solid rgba(0,0,0,.08);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--dark);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+.hidden{display:none!important}
+button,input,select,textarea{font-family:inherit;font-size:14px}
+button{cursor:pointer}
+
+/* LOGIN */
+#loginView{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--white);border-radius:20px;box-shadow:var(--shadow-lg);width:100%;max-width:420px;padding:52px 44px;text-align:center;border:var(--border)}
+.login-logo{font-family:'DM Serif Display',serif;font-size:42px;color:var(--dark);margin-bottom:6px;letter-spacing:-.5px}
+.login-logo-dot{color:var(--green)}
+.login-tag{color:var(--gray);margin-bottom:40px;font-size:15px;letter-spacing:.01em}
+
+/* FIELDS */
+.field{margin-bottom:16px;text-align:left}
+.field label{display:block;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);background:var(--white);color:var(--dark);outline:none;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+.field textarea{resize:vertical;min-height:80px}
+.field input.invalid,.field select.invalid,.field textarea.invalid{border-color:var(--red);background:#FFF8F8}
+.field input.invalid:focus,.field select.invalid:focus,.field textarea.invalid:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.error-text{color:var(--red);font-size:12px;margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:var(--radius-sm);font-weight:600;border:none;transition:all .13s;white-space:nowrap;cursor:pointer;letter-spacing:.01em;font-size:13px}
+.btn-primary{background:var(--green);color:#fff;box-shadow:0 1px 3px rgba(31,107,71,.3)}.btn-primary:hover{background:var(--green-light);box-shadow:0 2px 6px rgba(31,107,71,.35);transform:translateY(-1px)}
+.btn-ghost{background:var(--white);color:var(--dark);border:1.5px solid var(--gray-light)}.btn-ghost:hover{background:var(--gray-pale);border-color:var(--gray);transform:translateY(-1px)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 1px 3px rgba(220,38,38,.3)}.btn-danger:hover{opacity:.9}
+.btn-sm{padding:7px 16px;font-size:13px}
+.btn-xs{padding:4px 11px;font-size:12px;font-weight:500}
+.btn-full{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* APP */
+#appView{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:230px;background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;flex-shrink:0;box-shadow:1px 0 0 rgba(255,255,255,.04)}
+.sidebar-logo{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;padding:28px 22px 22px;border-bottom:1px solid rgba(255,255,255,.07);letter-spacing:-.3px}
+.sidebar-logo em{color:var(--green-mid);font-style:normal}
+.sidebar-logo span{display:block;font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(232,228,220,.4);margin-top:3px;font-weight:400;letter-spacing:.2px}
+nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;position:relative;padding:9px 22px;color:rgba(232,228,220,.6);font-size:13px;font-weight:500;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .12s;cursor:pointer;border-radius:0}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(232,228,220,.9)}
+.nav-item.active{color:#fff;border-left-color:var(--green-mid);background:var(--sidebar-active);font-weight:600}
+.nav-icon{font-size:15px;opacity:.7}
+.nav-item.active .nav-icon{opacity:1}
+.nav-badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:auto}
+.sidebar-footer{padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)}
+.sidebar-user{font-size:11px;color:rgba(232,228,220,.4);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.sidebar-logout{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:rgba(232,228,220,.8);padding:8px 14px;border-radius:var(--radius-xs);font-size:12px;width:100%;cursor:pointer;transition:all .12s;font-weight:500}
+.sidebar-logout:hover{background:rgba(255,255,255,.1);color:#fff}
+
+
+/* MOBILE HEADER */
+#mobileHeader{position:fixed;top:0;left:0;right:0;height:52px;background:var(--sidebar);display:none;align-items:center;padding:0 16px;justify-content:space-between;z-index:500;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+#mobileHeader .mobile-logo{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:-.3px}
+#mobileHeader .mobile-logo em{color:var(--green-mid);font-style:normal}
+#mobileHeader .mobile-user{font-size:11px;color:rgba(232,228,220,.7);text-transform:uppercase;letter-spacing:.4px}
+#mobileHeader .mobile-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(232,228,220,.9);padding:6px 10px;border-radius:var(--radius-xs);font-size:20px;cursor:pointer;line-height:1;min-height:44px}
+
+
+/* MOBILE HEADER */
+#mobileHeader{position:fixed;top:0;left:0;right:0;height:52px;background:var(--sidebar);display:none;align-items:center;padding:0 16px;justify-content:space-between;z-index:500;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+#mobileHeader .mobile-logo{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:-.3px}
+#mobileHeader .mobile-logo em{color:var(--green-mid);font-style:normal}
+#mobileHeader .mobile-user{font-size:11px;color:rgba(232,228,220,.7);text-transform:uppercase;letter-spacing:.4px}
+#mobileHeader .mobile-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(232,228,220,.9);padding:6px 10px;border-radius:var(--radius-xs);font-size:20px;cursor:pointer;line-height:1}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto}
+.view{padding:32px 36px;max-width:1120px}
+.view-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--gray-pale)}
+.view-title{font-family:'DM Serif Display',serif;font-size:28px;letter-spacing:-.4px;color:var(--dark)}
+.view-actions{display:flex;gap:10px;align-items:center}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:var(--white);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow-card);border:var(--border);transition:transform .15s,box-shadow .15s}
+.stat-card:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);margin-bottom:8px}
+.stat-value{font-size:36px;font-weight:700;color:var(--dark);line-height:1;letter-spacing:-.5px}
+.stat-value.red{color:var(--red)}.stat-value.amber{color:#B45309}.stat-value.green{color:var(--green)}
+
+/* CARDS & TABLE */
+.section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:12px}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);overflow:hidden;border:var(--border)}
+.table-wrap{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);overflow:hidden;border:var(--border)}
+table{width:100%;border-collapse:collapse}
+th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);background:var(--gray-pale);border-bottom:1.5px solid var(--gray-light)}
+td{padding:13px 16px;border-bottom:1px solid var(--gray-pale);vertical-align:middle;font-size:13.5px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.clickable{cursor:pointer}
+tbody tr.clickable:hover td{background:#FAF7F2}
+.empty-state{text-align:center;padding:56px 24px;color:var(--gray)}
+.empty-state strong{display:block;font-size:17px;color:var(--dark);margin-bottom:8px;font-family:'DM Serif Display',serif}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-input{flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);background:var(--white);outline:none;transition:border .15s}
+.search-input:focus{border-color:var(--green)}
+.filter-select{padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);background:var(--white);outline:none;cursor:pointer}
+
+/* BADGES */
+.priority-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+.priority-high{background:var(--red-pale);color:#991B1B}
+.priority-med{background:var(--amber-pale);color:#92400E}
+.priority-low{background:var(--green-pale);color:#065F46}
+.tier-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.tier-a{background:#FEE2E2;color:#991B1B}
+.tier-b{background:#FEF3C7;color:#92400E}
+.tier-c{background:#E0E7FF;color:#3730A3}
+
+/* ACTIVITY */
+.activity-list{list-style:none}
+.activity-item{padding:14px 16px;border-bottom:1px solid var(--gray-pale)}
+.activity-item:last-child{border-bottom:none}
+.activity-time{font-size:11px;color:var(--gray);margin-bottom:3px}
+.activity-who{font-weight:600}
+.activity-preview{font-size:13px;color:var(--gray);margin-top:2px}
+.activity-trigger{font-size:11px;color:var(--green);font-weight:500;margin-top:2px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,20,16,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+#statModal{z-index:1100}
+#histModal{z-index:1200}
+#aiModal{z-index:1200}
+#ctModal{z-index:1200}
+#delModal{z-index:1300}
+#csvModal{z-index:1200}
+.modal-box{background:var(--white);border-radius:18px;box-shadow:0 24px 64px rgba(0,0,0,.18),0 4px 16px rgba(0,0,0,.08);width:100%;max-width:600px;max-height:92vh;overflow-y:auto;padding:36px;border:var(--border)}
+.modal-sm{max-width:420px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.modal-title{font-family:'DM Serif Display',serif;font-size:24px;letter-spacing:-.3px}
+.modal-close{background:none;border:none;font-size:22px;color:var(--gray);cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;transition:all .12s}
+.modal-close:hover{background:var(--gray-pale);color:var(--dark)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:28px;flex-wrap:wrap;padding-top:20px;border-top:1px solid var(--gray-pale)}
+
+/* TRIGGER */
+.trigger-box{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border-left:4px solid var(--green-mid);padding:14px 18px;border-radius:8px;margin-bottom:18px;border:1px solid rgba(16,185,129,.2)}
+.trigger-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--green-mid);margin-bottom:5px}
+.trigger-box p{font-size:14px;color:#065F46;line-height:1.6;font-weight:500}
+.msg-textarea{width:100%;padding:14px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);min-height:140px;resize:vertical;line-height:1.6;outline:none;transition:border .15s}
+.msg-textarea:focus{border-color:var(--green)}
+
+/* QUEUE */
+.queue-item{padding:20px 22px;border-bottom:1px solid var(--gray-pale);transition:background .1s}
+.queue-item:hover{background:#FDFAF6}
+.queue-item:last-child{border-bottom:none}
+.queue-who{font-weight:700;font-size:15px;margin-bottom:3px}
+.queue-co{font-size:12px;color:var(--gray);margin-bottom:6px;letter-spacing:.01em}
+.queue-trigger{font-size:12px;color:var(--green-mid);font-weight:600;margin-bottom:10px;display:inline-flex;align-items:center;gap:4px}
+.queue-preview{font-size:13.5px;color:#374151;line-height:1.6;margin-bottom:14px;border-left:3px solid var(--gray-light);padding-left:12px}
+.queue-actions{display:flex;gap:7px;flex-wrap:wrap}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;left:24px;z-index:4000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--dark);color:#fff;padding:12px 18px;border-radius:var(--radius-sm);font-size:14px;box-shadow:var(--shadow-lg);max-width:320px;animation:slideUp .2s ease}
+.toast.success{background:var(--green)}.toast.error{background:var(--red)}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* SPINNER */
+.spinner{border:3px solid var(--gray-light);border-top-color:var(--green);border-radius:50%;width:32px;height:32px;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box{text-align:center;padding:32px;color:var(--gray)}
+
+/* BATCH */
+.batch-prompt-area{width:100%;padding:14px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);min-height:100px;resize:vertical;outline:none;font-size:15px;line-height:1.6;transition:border .15s}
+.batch-prompt-area:focus{border-color:var(--green)}
+.progress-bar{height:6px;background:var(--gray-pale);border-radius:3px;overflow:hidden;margin:16px 0}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+
+/* CSV */
+.csv-preview-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+.csv-preview-table th{background:var(--gray-pale);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--gray-light)}
+.csv-preview-table td{padding:7px 10px;border-bottom:1px solid var(--gray-pale)}
+
+/* RULES */
+.rule-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--gray-pale);border-radius:var(--radius-sm);margin-bottom:8px}
+.rule-text{flex:1;font-size:13px;line-height:1.4}
+.rule-del{background:none;border:none;color:var(--gray);cursor:pointer;font-size:18px;padding:0;line-height:1}
+.rule-del:hover{color:var(--red)}
+
+/* DUE LIST */
+.due-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--gray-pale);gap:12px}
+.due-item:last-child{border-bottom:none}
+.due-info{flex:1}
+.due-name{font-weight:600;margin-bottom:2px}
+.due-meta{font-size:12px;color:var(--gray)}
+
+/* API WARN */
+.api-warn{background:var(--amber-pale);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:13px;color:#92400e}
+
+@media(max-width:700px){
+  #appView{flex-direction:column}
+  .sidebar{width:100%;height:auto}
+  .view{padding:16px}
+  .form-row{grid-template-columns:1fr}
+}
+.nav-emoji{display:none}@media(max-width:768px){.nav-emoji{display:block;font-size:20px}.nav-icon{display:none}}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:768px){
+  #appView{flex-direction:column}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:56px;flex-direction:row;z-index:500;padding:0;box-shadow:0 -1px 3px rgba(0,0,0,.1)}
+  .sidebar-logo{display:none}
+  .sidebar-footer{display:none}
+  nav{display:flex;flex-direction:row;padding:0;width:100%;overflow-x:auto;overflow-y:hidden}
+  .nav-item{flex:1;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px;font-size:10px;border-left:none;border-top:3px solid transparent;min-height:44px}
+  .nav-item.active{border-top-color:var(--green-mid);border-left:none}
+  .nav-item:hover{background:rgba(255,255,255,.06)}
+  .nav-icon{font-size:18px;margin:0}
+  .nav-badge{position:absolute;top:4px;right:8px;margin:0}
+  #mobileHeader{display:flex}
+  .main{padding-top:52px;padding-bottom:64px}
+  .view{padding:16px}
+  .view-header{padding-bottom:16px;margin-bottom:20px}
+  .view-title{font-size:22px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+  .stat-card{padding:16px}
+  .stat-value{font-size:28px}
+  .modal-overlay{align-items:flex-end}
+  .modal-box{border-radius:20px 20px 0 0;max-height:90vh;margin:0;width:100%;max-width:100%}
+  .form-row{grid-template-columns:1fr}
+  .table-wrap{display:none}
+  #contactCards{display:block}
+  .contact-card{background:var(--white);border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow-card);border:var(--border)}
+  .contact-card-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px}
+  .contact-card-name{font-size:16px;font-weight:600;color:var(--dark);margin-bottom:4px}
+  .contact-card-company{font-size:13px;color:var(--gray);margin-bottom:8px}
+  .contact-card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .contact-card-actions{display:flex;gap:8px}
+  .btn{min-height:44px}
+  .btn-sm{min-height:40px}
+  .btn-xs{min-height:36px}
+}
+@media(min-width:769px){
+  #mobileHeader{display:none!important}
+  #contactCards{display:none}
+}
+
+
+/* MOBILE RESPONSIVE */
+@media(max-width:768px){
+  #appView{flex-direction:column}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:56px;flex-direction:row;z-index:500;padding:0;box-shadow:0 -1px 3px rgba(0,0,0,.1)}
+  .sidebar-logo,.sidebar-footer{display:none}
+  nav{display:flex;flex-direction:row;padding:0;width:100%}
+  .nav-item{flex:1;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px;font-size:10px;border-left:none;border-top:3px solid transparent;min-height:44px}
+  .nav-item::before{content:attr(data-icon);font-size:18px;display:block;margin-bottom:2px}
+  .nav-item.active{border-top-color:var(--green-mid);border-left:none}
+  #mobileHeader{display:flex}
+  .main{padding-top:52px;padding-bottom:64px}
+  .view{padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .table-wrap{display:none}
+  .contact-card{background:var(--white);border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow-card);border:var(--border)}
+  .contact-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .contact-card-name{font-weight:600;font-size:14px;color:var(--dark)}
+  .contact-card-row{font-size:13px;color:var(--gray);margin-bottom:4px}
+  .contact-card-actions{margin-top:12px;display:flex;gap:8px}
+  .modal-overlay{align-items:flex-end}
+  .modal-box{border-radius:20px 20px 0 0;max-height:90vh;margin:0;width:100%;max-width:100%}
+  .btn{min-height:44px}
+}
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastCont"></div>
+
+<!-- LOGIN -->
+<div id="loginView">
+  <div class="login-card">
+    <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
+    <div class="login-tag">Relationships that remember</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+      <div id="loginErr" class="error-text hidden">Incorrect credentials</div>
+    </div>
+    <button class="btn btn-primary btn-full" id="loginBtn">Log In</button>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboardModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2 class="modal-title">Set up your profile</h2>
+      <div style="font-size:13px;color:var(--gray)" id="obStep">Step 1 of 2</div>
+    </div>
+
+    <!-- STEP 1: Website URL autofill -->
+    <div id="obPage1">
+      <p style="color:var(--gray);margin-bottom:20px;font-size:14px;line-height:1.6">Paste your company website and Renzo will read it to understand your business — no manual typing needed.</p>
+      <div class="field">
+        <label>Company Website</label>
+        <div style="display:flex;gap:8px">
+          <input type="url" id="obUrl" placeholder="https://primesource.com" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none;transition:border .15s" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--gray-light)'">
+          <button class="btn btn-primary btn-sm" id="obReadSite">Read Site</button>
+        </div>
+        <div style="font-size:12px;color:var(--gray);margin-top:6px">Renzo will visit your site and extract your company context automatically.</div>
+      </div>
+      <div id="obSiteResult" class="hidden" style="background:var(--green-pale);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#065F46;line-height:1.5"></div>
+      <div id="obSiteLoading" class="hidden" style="text-align:center;padding:20px;color:var(--gray)">
+        <div class="spinner" style="width:24px;height:24px;margin:0 auto 8px"></div>
+        <div style="font-size:13px">Reading your website...</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:16px">
+        <button class="btn btn-ghost" id="obSkipSite">Skip — I'll enter manually</button>
+        <button class="btn btn-primary" id="obNextStep" disabled>Continue</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Profile details -->
+    <div id="obPage2" class="hidden">
+      <p style="color:var(--gray);margin-bottom:16px;font-size:13px;line-height:1.6" id="obPage2Note">Review and adjust the details below.</p>
+      <div class="field"><label>Company Name</label><input type="text" id="obCo" placeholder="Prime Source"></div>
+      <div class="field"><label>What you sell</label><textarea id="obSell" placeholder="Describe your products or services..."></textarea></div>
+      <div class="field"><label>Typical customer</label><textarea id="obCust" placeholder="Who are they and what do they care about?"></textarea></div>
+      <div class="field"><label>Your role &amp; how you use Renzo</label><textarea id="obRole" placeholder="e.g. I manage vendor relationships and renewals. I reach out to negotiate contracts and follow up on deliveries."></textarea></div>
+      <div class="form-row">
+        <div class="field"><label>Tone</label>
+          <select id="obTone"><option>Professional</option><option>Conversational</option><option>Direct</option><option>Warm</option></select>
+        </div>
+        <div class="field"><label>Your name</label><input type="text" id="obRep" placeholder="David"></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px">
+        <button class="btn btn-ghost" id="obBack">Back</button>
+        <button class="btn btn-primary" id="obSave">Save &amp; Start</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appView" class="hidden">
+
+<div id="mobileHeader">
+  <div class="mobile-logo">Renzo<em>.</em></div>
+  <div class="mobile-user" id="mobileUser"></div>
+  <button class="mobile-logout" onclick="doLogout()" title="Logout">↗</button>
+</div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">Renz<em>o</em><span>Relationship Outreach</span></div>
+    <nav id="mainNav">
+      <button class="nav-item active" data-view="dashboard">Dashboard</button>
+      <button class="nav-item" data-view="contacts"><span class="nav-emoji">👥</span>Contacts</button>
+      <button class="nav-item" data-view="queue"><span class="nav-emoji">📤</span>Queue <span class="nav-badge hidden" id="queueBadge">0</span></button>
+      <button class="nav-item" data-view="drafts"><span class="nav-emoji">📝</span>Drafts</button>
+      <button class="nav-item" data-view="activity"><span class="nav-emoji">📜</span>Activity</button>
+      <button class="nav-item" data-view="batch"><span class="nav-emoji">⚡</span>Batch Outreach</button>
+      <button class="nav-item" data-view="integrations"><span class="nav-emoji">🔗</span>Integrations</button>
+      <button class="nav-item" data-view="settings"><span class="nav-emoji">⚙</span>Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebarUser"></div>
+      <div style="margin-bottom:8px">
+        <select id="profileSel" style="width:100%;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:var(--sidebar-text);font-size:12px;cursor:pointer;outline:none">
+          <option value="">Switch profile...</option>
+        </select>
+      </div>
+      <button class="sidebar-logout" id="logoutBtn">Logout</button>
+      <div style="margin-top:14px;font-size:12px;color:rgba(232,228,220,.95);text-align:center;letter-spacing:.4px;font-weight:600">Renzo <span id="appVersion" style="color:var(--green-mid);font-weight:700"></span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view">
+      <div style="margin-bottom:24px">
+        <div style="font-family:'DM Serif Display',serif;font-size:28px" id="greeting"></div>
+        <div style="color:var(--gray);font-size:14px;margin-top:3px" id="todayDate"></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Contacts</div><div class="stat-value" id="sTotal">0</div></div>
+        <div class="stat-card"><div class="stat-label">Due Today</div><div class="stat-value amber" id="sDue">0</div></div>
+        <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value red" id="sOverdue">0</div></div>
+        <div class="stat-card"><div class="stat-label">Sent This Week</div><div class="stat-value green" id="sSent">0</div></div>
+      </div>
+      <div class="section-title">Due for Outreach</div>
+      <div id="dueList" class="card" style="margin-bottom:24px"></div>
+      <div class="section-title">Recent Activity</div>
+      <div id="actList" class="card"></div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div id="view-contacts" class="view hidden">
+      <div class="view-header">
+        <h1 class="view-title">Contacts</h1>
+        <div class="view-actions">
+          <button class="btn btn-ghost btn-sm" id="exportCsvBtn">Export CSV</button>
+          <button class="btn btn-ghost btn-sm" id="importCsvBtn">Import CSV</button>
+          <input type="file" id="csvFile" accept=".csv" class="hidden">
+          <button class="btn btn-primary btn-sm" id="addContactBtn">+ Add Contact</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input class="search-input" id="ctSearch" placeholder="Search name, company, email, title, notes, products...">
+        <select class="filter-select" id="ctTierF">
+          <option value="">All Tiers</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="C">Tier C</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+
+<div id="contactCards" style="display:none"></div>
+        <table><thead><tr><th>Name</th><th>Company</th><th>Tier</th><th>Priority</th><th>Last Contact</th><th>Status</th><th></th></tr></thead>
+        <tbody id="ctBody"></tbody></table>
+      </div>
+      <div id="ctEmpty" class="empty-state hidden"><strong>No contacts yet</strong>Add your first contact to get started.</div>
+    </div>
+
+    <!-- QUEUE -->
+    <div id="view-queue" class="view hidden">
+      <div class="view-header">
+        <h1 class="view-title">Outreach Queue</h1>
+        <div class="view-actions">
+          <select id="queueEmailSel" class="filter-select" style="min-width:180px">
+            <option value="">Select sending account...</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="bulkSendBtn">Send All as Drafts</button>
+          <button class="btn btn-primary btn-sm" id="markAllBtn">Mark All Sent</button>
+        </div>
+      </div>
+      <div id="emailSetupBanner" class="hidden" style="background:var(--amber-pale);border:1px solid var(--amber);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span>No email account set up. Add one in Settings to enable sending.</span>
+        <button class="btn btn-sm" style="background:#92400e;color:#fff;padding:6px 14px" onclick="showView('settings')">Go to Settings</button>
+      </div>
+      <div id="queueList" class="card"></div>
+      <div id="queueEmpty" class="empty-state hidden"><strong>Queue is clear</strong>Generate messages to fill it.</div>
+    </div>
+
+    <!-- DRAFTS -->
+    <div id="view-drafts" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Drafts</h1></div>
+      <div id="draftList" class="card"></div>
+      <div id="draftEmpty" class="empty-state hidden"><strong>No drafts</strong>Saved messages appear here.</div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div id="view-activity" class="view hidden">
+      <div class="view-header">
+        <h1 class="view-title">Activity</h1>
+        <div class="view-actions">
+          <span id="actCount" style="font-size:13px;color:var(--gray)"></span>
+          <button class="btn btn-ghost btn-sm" id="actExportBtn">Export CSV</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input class="search-input" id="actSearch" placeholder="Search messages, subjects, contacts, companies...">
+        <select class="filter-select" id="actContactF"><option value="">All Contacts</option></select>
+        <select class="filter-select" id="actRangeF">
+          <option value="">All Time</option>
+          <option value="1">Today</option>
+          <option value="7">Last 7 Days</option>
+          <option value="30">Last 30 Days</option>
+          <option value="90">Last 90 Days</option>
+        </select>
+        <select class="filter-select" id="actSortF">
+          <option value="desc">Newest First</option>
+          <option value="asc">Oldest First</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="actClearBtn">Clear Filters</button>
+      </div>
+      <div id="actFullList" class="card"></div>
+      <div id="actEmpty" class="empty-state hidden"><strong>No activity matches</strong>Try clearing filters or sending some outreach.</div>
+    </div>
+
+    <!-- BATCH -->
+    <div id="view-batch" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Batch Outreach</h1></div>
+      <div class="card" style="padding:24px;max-width:680px">
+        <div class="field">
+          <label>What do you want to communicate?</label>
+          <textarea class="batch-prompt-area" id="batchPrompt" placeholder="e.g. Reach out to all contacts with contracts expiring soon&#10;e.g. Follow up with high-priority accounts not contacted in 30 days&#10;e.g. Send invoice reminders to overdue accounts"></textarea>
+          <div style="font-size:12px;color:var(--gray);margin-top:8px">Renzo finds matching contacts and generates personalized messages for each.</div>
+        </div>
+        <button class="btn btn-primary" id="runBatchBtn">Generate Batch Messages</button>
+        <div id="batchProgress" class="hidden" style="margin-top:20px">
+          <div style="font-size:13px;color:var(--gray);text-align:center;margin-bottom:8px" id="batchLabel"></div>
+          <div class="progress-bar"><div class="progress-fill" id="batchFill" style="width:0%"></div></div>
+        </div>
+        <div id="batchResults" class="hidden" style="margin-top:16px"></div>
+      </div>
+    </div>
+
+    <!-- INTEGRATIONS -->
+    <div id="view-integrations" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Integrations</h1></div>
+      <p style="color:var(--gray);font-size:14px;margin-bottom:24px;max-width:600px;line-height:1.6">Connect Renzo to your existing systems. Renzo reads contact and relationship data from these sources and works alongside them — it doesn't replace them.</p>
+
+      <!-- INTEGRATION CARDS -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px">
+
+        <!-- CSV / Universal -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:var(--green-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📄</div>
+            <div><div style="font-weight:700;font-size:15px">Any System (CSV Export)</div><div style="font-size:12px;color:var(--gray)">Universal — works with everything</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Export contacts from any CRM, ERP, or spreadsheet as a CSV file and import directly into Renzo. Works with Salesforce, HubSpot, QuickBooks, Excel, Google Sheets — anything.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to connect:</div>
+          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
+            <li>Open your CRM or spreadsheet</li>
+            <li>Export contacts to CSV (File → Export → CSV)</li>
+            <li>Go to Contacts → Import CSV in Renzo</li>
+            <li>Renzo auto-detects your columns and imports</li>
+          </ol>
+          <button class="btn btn-primary btn-sm" onclick="showView('contacts')">Go to Import CSV</button>
+        </div>
+
+        <!-- Salesforce -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:#E8F4FD;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">☁</div>
+            <div><div style="font-weight:700;font-size:15px">Salesforce</div><div style="font-size:12px;color:var(--gray)">CRM — Contacts, Accounts, Activities</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Export your Salesforce contacts with account data, activity history, and contract information into Renzo.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from Salesforce:</div>
+          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
+            <li>In Salesforce: Reports → New Report → Contacts &amp; Accounts</li>
+            <li>Add columns: Name, Account Name, Email, Phone, Last Activity Date, Contract End Date, Account Revenue</li>
+            <li>Run report → Export → CSV</li>
+            <li>Import the CSV into Renzo</li>
+          </ol>
+          <div id="sfStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Status: Using CSV export</div>
+          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('salesforce')">View Setup Guide</button>
+        </div>
+
+        <!-- HubSpot -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:#FFF0E6;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🔶</div>
+            <div><div style="font-weight:700;font-size:15px">HubSpot</div><div style="font-size:12px;color:var(--gray)">CRM — Contacts, Deals, Companies</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Pull your HubSpot contacts with company data, deal stage, and last contact date into Renzo.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from HubSpot:</div>
+          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
+            <li>HubSpot → Contacts → All Contacts</li>
+            <li>Click Actions → Export</li>
+            <li>Select: Email, Company, Last Contacted, Deal Stage, Phone</li>
+            <li>Download CSV → Import into Renzo</li>
+          </ol>
+          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('hubspot')">View Setup Guide</button>
+        </div>
+
+        <!-- QuickBooks -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:#E8F5E9;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💚</div>
+            <div><div style="font-weight:700;font-size:15px">QuickBooks</div><div style="font-size:12px;color:var(--gray)">Accounting — Customers, Invoices</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Great for collections and invoice follow-up. Export customers with outstanding balances directly into Renzo.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from QuickBooks:</div>
+          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
+            <li>Reports → Accounts Receivable Aging Detail</li>
+            <li>Customize: add Customer Name, Email, Balance, Due Date</li>
+            <li>Export to Excel → Save as CSV</li>
+            <li>Import into Renzo — set your role to "Collections" for smart prioritization</li>
+          </ol>
+          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('quickbooks')">View Setup Guide</button>
+        </div>
+
+        <!-- VCS / Custom Systems -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:#F3E8FF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">⚙</div>
+            <div><div style="font-weight:700;font-size:15px">Custom System / VCS</div><div style="font-size:12px;color:var(--gray)">Your own apps and databases</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">If you have a custom app like the Vendor Catalog Scheduler (VCS), you can embed Renzo directly or export data for import.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">Two ways to integrate:</div>
+          <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:16px">
+            <strong style="color:var(--dark)">Option 1 — CSV Export:</strong> Add an export button to your system that downloads contacts as CSV. Import into Renzo.<br><br>
+            <strong style="color:var(--dark)">Option 2 — Embed Renzo:</strong> Renzo can be embedded as an iframe or panel inside your custom app. Add this to any HTML page:<br>
+            <code style="display:block;background:var(--gray-pale);padding:8px 10px;border-radius:4px;margin-top:6px;font-size:11px;word-break:break-all">&lt;iframe src="https://renzo-beige.vercel.app" width="100%" height="700" frameborder="0"&gt;&lt;/iframe&gt;</code>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('custom')">View Embed Guide</button>
+        </div>
+
+        <!-- Outlook / Gmail Sync -->
+        <div class="card" style="padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;background:#EFF6FF;border-radius:10px;display:flex;align-items:center;justify-content:justify;font-size:20px">✉</div>
+            <div><div style="font-weight:700;font-size:15px">Email (Gmail / Outlook)</div><div style="font-size:12px;color:var(--gray)">Send outreach from your inbox</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Renzo opens email drafts directly in Gmail or Outlook web. Your messages go out from your own email — your signature, your sent folder, your reply-to.</p>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">Setup:</div>
+          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
+            <li>Go to Settings → Email Accounts</li>
+            <li>Add your email address with a label and pick a provider (Gmail or Outlook)</li>
+            <li>Renzo opens that provider's web compose for every send -- works with custom domains too (Google Workspace, Microsoft 365)</li>
+            <li>Your sent folder, signature, and reply-to are all your own</li>
+          </ol>
+          <button class="btn btn-primary btn-sm" onclick="showView('settings')">Set Up Email Account</button>
+        </div>
+
+      </div>
+
+      <!-- Integration detail panel -->
+      <div id="integrationDetail" class="hidden card" style="padding:28px;max-width:640px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h3 id="integDetailTitle" style="font-family:'DM Serif Display',serif;font-size:20px"></h3>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('integrationDetail').classList.add('hidden')">Close</button>
+        </div>
+        <div id="integDetailContent"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Settings</h1></div>
+      <div class="card" style="padding:28px;max-width:560px">
+        <div id="settingsWarn" class="api-warn hidden">Add your Anthropic API key to enable AI features.</div>
+        <div class="field"><label>Anthropic API Key</label><input type="password" id="settingsKey" placeholder="sk-ant-..."></div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Company Profile</div>
+        <div class="field"><label>Website URL</label>
+          <div style="display:flex;gap:8px">
+            <input type="url" id="sWebsite" placeholder="https://yourcompany.com" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none">
+            <button class="btn btn-ghost btn-sm" id="sReadWebsite">Auto-fill from site</button>
+          </div>
+        </div>
+        <div class="field"><label>Company Name</label><input type="text" id="sCo"></div>
+        <div class="field"><label>What you sell</label><textarea id="sSell"></textarea></div>
+        <div class="field"><label>Typical customer</label><textarea id="sCust"></textarea></div>
+        <div class="field"><label>Your role / how you use Renzo</label><textarea id="sRole" placeholder="Describe your role and what you use Renzo for. This shapes how AI messages are written."></textarea></div>
+        <div class="form-row">
+          <div class="field"><label>Tone</label>
+            <select id="sTone"><option>Professional</option><option>Conversational</option><option>Direct</option><option>Warm</option></select>
+          </div>
+          <div class="field"><label>Your name</label><input type="text" id="sRep"></div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Email Accounts</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Add the email accounts you send from. Renzo uses these to pre-fill your email drafts.</p>
+        <div id="emailAccountsList"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 130px auto;gap:8px;margin-top:10px;align-items:end">
+          <div class="field" style="margin-bottom:0">
+            <label>Email Address</label>
+            <input type="email" id="newEmailAddr" placeholder="david@primesource.com">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Label (optional)</label>
+            <input type="text" id="newEmailLabel" placeholder="Work, Vendors, Personal...">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Provider</label>
+            <select id="newEmailProvider">
+              <option value="gmail">Gmail</option>
+              <option value="outlook">Outlook</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="addEmailBtn" style="align-self:flex-end">+ Add</button>
+        </div>
+        <div style="font-size:12px;color:var(--gray);margin-top:6px">Pick Gmail for any Google-hosted address (incl. Workspace); pick Outlook for Microsoft 365 / Hotmail / Live. This controls which web compose opens.</div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Browser Storage</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:14px">Renzo stores all contacts, drafts, and activity locally in your browser. Browsers cap this at roughly 5 MB. If you get close to the limit, export your data to a CSV.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span id="storageBytesText" style="font-size:13px;color:var(--dark);font-weight:500">—</span>
+          <span id="storagePctText" style="font-size:13px;font-weight:700;color:var(--green)">0%</span>
+        </div>
+        <div style="height:8px;background:var(--gray-pale);border-radius:4px;overflow:hidden;margin-bottom:10px">
+          <div id="storageBarFill" style="height:100%;width:0%;background:var(--green);border-radius:4px;transition:width .25s,background .25s"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-xs" id="storageExportBtn">Export Contacts CSV</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="storageRefreshBtn">Refresh</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">My Outreach Rules</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Added to every AI message prompt.</p>
+        <div id="rulesList"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <input type="text" id="newRule" placeholder="e.g. Always mention our Q3 promotion" style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none">
+          <button class="btn btn-ghost btn-sm" id="addRuleBtn">+ Add</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:24px">
+          <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+          <span id="settingsOk" class="hidden" style="color:var(--green);font-size:13px;font-weight:500">Saved</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- CONTACT MODAL -->
+<div id="ctModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title" id="ctModalTitle">Add Contact</h2>
+      <button class="modal-close" id="ctModalClose">x</button>
+    </div>
+    <input type="hidden" id="ctId">
+    <div class="form-row">
+      <div class="field"><label>Full Name *</label><input type="text" id="ctName"></div>
+      <div class="field"><label>Company *</label><input type="text" id="ctCo"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Title</label><input type="text" id="ctTitle"></div>
+      <div class="field"><label>Email</label><input type="email" id="ctEmail"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Phone</label><input type="tel" id="ctPhone"></div>
+      <div class="field"><label>Location</label><input type="text" id="ctLoc"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Tier *</label>
+        <select id="ctTier">
+          <option value="">Select...</option>
+          <option value="A">A - High Value</option>
+          <option value="B">B - Mid Value</option>
+          <option value="C">C - Lower Value</option>
+        </select>
+      </div>
+      <div class="field"><label>Touch Frequency (days) *</label><input type="number" id="ctFreq" min="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Last Contact Date</label><input type="date" id="ctLast"></div>
+      <div class="field"><label>Contract Expiry</label><input type="date" id="ctExpiry"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Annual Spend ($)</label><input type="number" id="ctSpend" min="0"></div>
+      <div class="field"><label>Outstanding Invoice ($)</label><input type="number" id="ctInvoice" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Account Size</label>
+        <select id="ctSize"><option value="">Select...</option><option>Small</option><option>Mid-Market</option><option>Large</option><option>Enterprise</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Products / Services They Use</label><textarea id="ctProds"></textarea></div>
+    <div class="field"><label>Relationship History</label><textarea id="ctHist"></textarea></div>
+    <div class="field"><label>Notes</label><textarea id="ctNotes"></textarea></div>
+    <div id="ctErr" class="error-text hidden">Please fill in all required fields.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:10px">
+      <button class="btn btn-danger btn-sm hidden" id="ctDelBtn">Delete</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-ghost" id="ctCancel">Cancel</button>
+        <button class="btn btn-primary" id="ctSave">Save Contact</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI MODAL -->
+<div id="aiModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="aiTitle">Generate Message</h2>
+      <button class="modal-close" id="aiClose">x</button>
+    </div>
+    <!-- Optional prompt before generating -->
+    <div id="aiPromptBox" style="margin-bottom:16px">
+      <div class="field" style="margin-bottom:8px">
+        <label>What should this message be about? <span style="font-weight:400;color:var(--gray)">(optional — leave blank to let Renzo decide)</span></label>
+        <textarea id="aiPromptInput" rows="2" placeholder="e.g. Follow up on our Q3 pricing discussion&#10;e.g. Invite them to our trade show booth next month&#10;e.g. Contract renewal coming up, open the conversation" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:6px;outline:none;font-size:14px;resize:vertical;line-height:1.5"></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" id="aiGenBtn">Generate Message</button>
+        <button class="btn btn-ghost btn-sm" id="aiSkipPrompt">Generate Based on Context</button>
+      </div>
+    </div>
+    <div id="aiLoading" class="loading-box hidden"><div class="spinner"></div><p id="aiLoadingText">Analyzing context...</p></div>
+    <div id="aiResult" class="hidden">
+      <div class="trigger-box"><div class="trigger-label">Why this message</div><p id="aiReason"></p></div>
+      <div class="field"><label>Subject — edit before sending</label><input type="text" id="aiSubject" style="width:100%;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);background:var(--white);color:var(--dark);outline:none;transition:border .15s"></div>
+      <div class="field"><label>Message — edit before sending</label><textarea class="msg-textarea" id="aiMsg"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="aiDraft">Save Draft</button>
+        <button class="btn btn-ghost btn-sm" id="aiRegen">Regenerate</button>
+        <button class="btn btn-ghost btn-sm" id="aiRefine">Refine...</button>
+        <button class="btn btn-ghost btn-sm" id="aiGmail">Prepare Email Draft</button>
+        <button class="btn btn-primary btn-sm" id="aiQueue">Add to Queue</button>
+      </div>
+    </div>
+    <div id="aiRefineBox" class="hidden" style="margin-top:12px;display:flex;gap:8px">
+      <input type="text" id="aiRefineInput" placeholder="e.g. Make it warmer, we already have a contract" style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:6px;outline:none;font-size:14px">
+      <button class="btn btn-primary btn-sm" id="aiRefineBtn">Rewrite</button>
+    </div>
+    <div id="aiErr" class="hidden" style="color:var(--red);font-size:14px;padding:8px 0"></div>
+  </div>
+</div>
+
+<!-- CONTACT HISTORY MODAL -->
+<div id="histModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="histTitle">Contact History</h2>
+      <button class="modal-close" id="histClose">x</button>
+    </div>
+    <div id="histMeta" style="font-size:13px;color:var(--gray);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--gray-light)"></div>
+    <div class="section-title">Communication History</div>
+    <div id="histList" style="max-height:400px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="histEdit">Edit Contact</button>
+      <button class="btn btn-primary" id="histGenerate">Generate Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div id="delModal" class="modal-overlay hidden">
+  <div class="modal-box modal-sm">
+    <h3 style="margin-bottom:10px;font-size:18px">Delete Contact?</h3>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Permanently delete <strong id="delName"></strong> and all their activity. Cannot be undone.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" id="delCancel">Cancel</button>
+      <button class="btn btn-danger" id="delConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW PROFILE MODAL -->
+<div id="profileModal" class="modal-overlay hidden">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">New Profile</h2>
+      <button class="modal-close" id="profileModalClose">x</button>
+    </div>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:16px;line-height:1.5">Create a separate workspace for a different use case — contacts, drafts, and settings stay isolated per profile.</p>
+    <div class="field">
+      <label>Profile Name</label>
+      <input type="text" id="profileNameInput" placeholder="e.g. Vendors, Customers, Collections" autocomplete="off">
+      <div id="profileNameErr" class="error-text hidden">Please enter a name.</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-ghost" id="profileModalCancel">Cancel</button>
+      <button class="btn btn-primary" id="profileModalCreate">Create Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV MODAL -->
+<div id="csvModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-header">
+      <h2 class="modal-title">Import CSV</h2>
+      <button class="modal-close" id="csvClose">x</button>
+    </div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Auto-detected columns. Preview of first 5 rows:</p>
+    <div id="csvMapping"></div>
+    <div id="csvPreview" style="max-height:220px;overflow-y:auto;border:1px solid var(--gray-light);border-radius:6px"></div>
+    <div id="csvInfo" style="font-size:13px;color:var(--gray);margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="csvCancel">Cancel</button>
+      <button class="btn btn-primary" id="csvConfirm">Import Contacts</button>
+    </div>
+  </div>
+</div>
+
+<!-- STAT DETAIL MODAL -->
+<div id="statModal" class="modal-overlay hidden">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title" id="statModalTitle">Details</h2>
+      <button class="modal-close" onclick="document.getElementById('statModal').classList.add('hidden')">x</button>
+    </div>
+    <div id="statModalBody" style="max-height:400px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<script>
+// CONSTANTS
+const RENZO_VERSION = 'v1.0.0';
+const CREDS = {admin:'renzo2024'};
+// Active profile prefix -- supports multiple use-case profiles
+let PROFILE = localStorage.getItem('renzo_active_profile') || 'default';
+function setProfile(name){
+  PROFILE = name || 'default';
+  localStorage.setItem('renzo_active_profile', PROFILE);
+}
+function profileKey(base){ return PROFILE==='default'?base:base+'__'+PROFILE; }
+
+const K = {
+  get contacts(){ return profileKey('renzo_contacts'); },
+  get activity(){ return profileKey('renzo_activity'); },
+  get queue(){ return profileKey('renzo_queue'); },
+  get drafts(){ return profileKey('renzo_drafts'); },
+  get profile(){ return profileKey('renzo_profile'); },
+  get rules(){ return profileKey('renzo_rules'); },
+  apiKey:'renzo_api_key',  // shared across profiles
+  session:'renzo_session',
+  get onboarded(){ return profileKey('renzo_onboarded'); }
+};
+
+// Profile management
+function getProfiles(){
+  try{return JSON.parse(localStorage.getItem('renzo_profiles')||'["default"]');}catch{return['default'];}
+}
+function saveProfiles(profiles){ localStorage.setItem('renzo_profiles', JSON.stringify(profiles)); }
+
+function renderProfileSelector(){
+  const sel = document.getElementById('profileSel');
+  if(!sel) return;
+  const profiles = getProfiles();
+  const p = gp();
+  const label = p.company ? p.company + (p.repName?' ('+p.repName+')':'') : PROFILE==='default'?'Default Profile':PROFILE;
+  document.getElementById('sidebarUser').textContent = label;
+  sel.innerHTML = '<option value="">+ New Profile</option>'
+    + profiles.map(name=>'<option value="'+name+'" '+(name===PROFILE?'selected':'')+'>'+( name==='default'?'Default':name)+'</option>').join('');
+}
+
+function switchProfile(name){
+  if(!name){
+    // New profile -- show custom modal
+    openProfileModal();
+    return;
+  }
+  setProfile(name);
+  renderProfileSelector();
+  showView('dashboard');
+  // Check if this profile has been set up
+  if(!g(K.onboarded)) document.getElementById('onboardModal').classList.remove('hidden');
+  toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
+}
+
+function openProfileModal(){
+  const modal = document.getElementById('profileModal');
+  const input = document.getElementById('profileNameInput');
+  const err = document.getElementById('profileNameErr');
+  input.value = '';
+  err.classList.add('hidden');
+  input.classList.remove('invalid');
+  modal.classList.remove('hidden');
+  setTimeout(function(){ input.focus(); }, 50);
+}
+
+function closeProfileModal(){
+  document.getElementById('profileModal').classList.add('hidden');
+  // Reset the dropdown back to current profile so it doesn't stay on "+ New Profile"
+  renderProfileSelector();
+}
+
+function confirmProfileModal(){
+  const input = document.getElementById('profileNameInput');
+  const err = document.getElementById('profileNameErr');
+  const newName = input.value.trim();
+  if(!newName){
+    err.classList.remove('hidden');
+    input.classList.add('invalid');
+    input.focus();
+    return;
+  }
+  const profiles = getProfiles();
+  if(profiles.includes(newName)){
+    err.textContent = 'A profile with that name already exists.';
+    err.classList.remove('hidden');
+    input.classList.add('invalid');
+    input.focus();
+    return;
+  }
+  profiles.push(newName);
+  saveProfiles(profiles);
+  setProfile(newName);
+  document.getElementById('profileModal').classList.add('hidden');
+  renderProfileSelector();
+  showView('dashboard');
+  if(!g(K.onboarded)) document.getElementById('onboardModal').classList.remove('hidden');
+  toast('Switched to '+PROFILE);
+}
+
+
+
+// STATE
+let currentUser = null, aiContact = null, pendingDelete = null, csvData = null;
+
+// STORAGE
+// Browsers usually cap localStorage at ~5MB per origin. We track usage so the user can
+// export and free space before a write fails. Strings are stored as UTF-16, so each
+// character counts as 2 bytes for quota purposes.
+const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024;
+const STORAGE_WARN_PCT = 0.8;
+let storageWarnShown = false;
+
+function getStorageBytes(){
+  let bytes=0;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      const v=localStorage.getItem(k)||'';
+      bytes += (k.length + v.length) * 2;
+    }
+  }catch{}
+  return bytes;
+}
+function formatBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1024*1024) return (b/1024).toFixed(1)+' KB';
+  return (b/(1024*1024)).toFixed(2)+' MB';
+}
+function updateStorageIndicator(){
+  const fill=document.getElementById('storageBarFill');
+  if(!fill) return;
+  const used=getStorageBytes();
+  const pct=Math.min(100, Math.round((used/STORAGE_QUOTA_BYTES)*100));
+  const color=pct>=90?'var(--red)':pct>=70?'var(--amber)':'var(--green)';
+  fill.style.width=pct+'%';
+  fill.style.background=color;
+  const bytesEl=document.getElementById('storageBytesText');
+  const pctEl=document.getElementById('storagePctText');
+  if(bytesEl) bytesEl.textContent=formatBytes(used)+' of ~5 MB';
+  if(pctEl){ pctEl.textContent=pct+'%'; pctEl.style.color=color; }
+}
+function checkStorageQuota(){
+  const used=getStorageBytes();
+  if(used/STORAGE_QUOTA_BYTES >= STORAGE_WARN_PCT && !storageWarnShown){
+    storageWarnShown=true;
+    showStorageWarning(Math.round((used/STORAGE_QUOTA_BYTES)*100));
+  }
+  updateStorageIndicator();
+  return used;
+}
+
+function g(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}}
+function s(k,v){
+  try{
+    localStorage.setItem(k,JSON.stringify(v));
+    checkStorageQuota();
+    return true;
+  }catch(e){
+    if(e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014)){
+      showStorageWarning();
+      toast('Storage full — change not saved. Export contacts to free space.','error');
+    }
+    return false;
+  }
+}
+function gc(){return g(K.contacts)||[]}
+function ga(){return g(K.activity)||[]}
+function gq(){return g(K.queue)||[]}
+function gd(){return g(K.drafts)||[]}
+function gp(){return g(K.profile)||{}}
+function gr(){return g(K.rules)||[]}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+// Robust loose-JSON extractor for LLM responses: strips code fences and prose,
+// normalizes smart quotes, escapes literal newlines/tabs inside strings, strips
+// trailing commas, and auto-closes unterminated strings/brackets/braces when the
+// response was truncated at max_tokens. Returns parsed object or null.
+function parseJsonLoose(raw){
+  if(raw==null) return null;
+  let t=String(raw).trim();
+  t=t.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+  // Normalize curly/smart quotes that some models emit instead of ASCII quotes
+  t=t.replace(/[“”]/g,'"').replace(/[‘’]/g,"'");
+  const start=t.indexOf('{');
+  if(start<0) return null;
+  const lastClose=t.lastIndexOf('}');
+  // If we have a closing brace, slice to it; otherwise (truncated) take everything
+  // from { onward and let the repair pass close it.
+  const body = lastClose>start ? t.slice(start,lastClose+1) : t.slice(start);
+  if(lastClose>start){try{return JSON.parse(body);}catch{}}
+  // Repair pass: tracks string state so commas/braces inside string content are
+  // left alone. Escapes raw newlines/tabs, strips trailing commas before } or ],
+  // and closes anything left open by truncation.
+  let out='',inStr=false,escNext=false,braceDepth=0,bracketDepth=0;
+  const stripPrecedingComma=()=>{
+    while(out.length>0 && /\s/.test(out[out.length-1])) out=out.slice(0,-1);
+    if(out[out.length-1]===',') out=out.slice(0,-1);
+  };
+  for(let i=0;i<body.length;i++){
+    const ch=body[i];
+    if(escNext){out+=ch;escNext=false;continue;}
+    if(ch==='\\'){out+=ch;escNext=true;continue;}
+    if(ch==='"'){inStr=!inStr;out+=ch;continue;}
+    if(inStr){
+      if(ch==='\n') out+='\\n';
+      else if(ch==='\r') out+='\\r';
+      else if(ch==='\t') out+='\\t';
+      else out+=ch;
+    } else {
+      if(ch==='{'){braceDepth++;out+=ch;}
+      else if(ch==='}'){stripPrecedingComma();braceDepth--;out+=ch;}
+      else if(ch==='['){bracketDepth++;out+=ch;}
+      else if(ch===']'){stripPrecedingComma();bracketDepth--;out+=ch;}
+      else out+=ch;
+    }
+  }
+  if(inStr) out+='"';
+  while(bracketDepth-->0) out+=']';
+  while(braceDepth-->0) out+='}';
+  try{return JSON.parse(out);}catch{}
+  return null;
+}
+// Tolerant integer-array extractor for when full JSON parse fails -- pulls a
+// named array of integers (e.g. "matched":[0,2,5]) from a JSON-ish blob.
+function extractJsonArray(raw,field){
+  if(!raw) return null;
+  const i=raw.indexOf('"'+field+'"');
+  if(i<0) return null;
+  const lb=raw.indexOf('[',i);
+  if(lb<0) return null;
+  let depth=0,end=-1;
+  for(let j=lb;j<raw.length;j++){
+    const ch=raw[j];
+    if(ch==='[') depth++;
+    else if(ch===']'){depth--;if(depth===0){end=j;break;}}
+  }
+  const inner = end>lb ? raw.slice(lb+1,end) : raw.slice(lb+1);
+  return inner.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>Number.isInteger(n));
+}
+// Tolerant field extractor for when full JSON parse still fails -- pulls a single
+// named string field from a JSON-ish blob, joining everything up to the closing quote.
+function extractJsonField(raw,field){
+  if(!raw) return '';
+  const i=raw.indexOf('"'+field+'"');
+  if(i<0) return '';
+  const colon=raw.indexOf(':',i);
+  if(colon<0) return '';
+  const after=raw.slice(colon+1).replace(/^\s*"/,'');
+  // Find the first quote followed by a JSON delimiter (, or }) — treat that as the closing quote
+  let endIdx=-1;
+  for(let j=0;j<after.length;j++){
+    const ch=after[j];
+    if(ch==='\\'){j++;continue;}
+    if(ch==='"'){
+      let k=j+1;
+      while(k<after.length&&/\s/.test(after[k])) k++;
+      if(k>=after.length||after[k]===','||after[k]==='}'){endIdx=j;break;}
+    }
+  }
+  if(endIdx<0) return '';
+  return after.slice(0,endIdx).replace(/\\n/g,'\n').replace(/\\r/g,'\r').replace(/\\t/g,'\t').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+}
+function showStatDetail(title,html){
+  document.getElementById('statModalTitle').textContent=title;
+  document.getElementById('statModalBody').innerHTML=html||'<div class="empty-state" style="padding:24px"><strong>None</strong></div>';
+  document.getElementById('statModal').classList.remove('hidden');
+}
+
+function toggleActivity(aid){
+  const short=document.getElementById(aid+'-short');
+  const full=document.getElementById(aid+'-full');
+  if(!short||!full) return;
+  const expanded=!full.classList.contains('hidden');
+  full.classList.toggle('hidden',expanded);
+  short.classList.toggle('hidden',!expanded);
+}
+
+// TOAST
+function toast(msg,type){
+  const el=document.createElement('div');
+  el.className='toast'+(type?' '+type:'');
+  el.textContent=msg;
+  document.getElementById('toastCont').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+// PRIORITY
+function computePriority(c){
+  const p=gp();
+  const role=(p.role||'').toLowerCase();
+  const now=Date.now();
+  let score=0;
+
+  // Days since last contact (40 points)
+  if(c.lastContact){
+    const days=Math.floor((now-new Date(c.lastContact))/86400000);
+    score+=Math.min(days/90,1)*40;
+  } else {score+=40;}
+
+  // Contract expiry urgency (35 points)
+  if(c.contractExpiry){
+    const daysUntil=Math.floor((new Date(c.contractExpiry)-now)/86400000);
+    if(daysUntil<0) score+=35;
+    else if(daysUntil<=90) score+=(1-daysUntil/90)*35;
+  }
+
+  // Value weight: annual spend OR invoice amount (25 points)
+  const spend=c.annualSpend||0;
+  const invoice=c.invoiceAmount||0;
+  if(spend>0) score+=Math.min(spend/2000000,1)*25;
+  else if(invoice>0 && !role.includes('vendor')) score+=Math.min(invoice/10000,1)*25;
+
+  // Tier boost
+  if(c.tier==='A') score+=5;
+  else if(c.tier==='B') score+=2;
+
+  return Math.round(Math.min(score,100));
+}
+
+function computeTrigger(c){
+  const now=Date.now();
+  let triggers=[];
+
+  if(c.contractExpiry){
+    const d=Math.floor((new Date(c.contractExpiry)-now)/86400000);
+    if(d<0) triggers.push({score:200+Math.abs(d),text:'Contract expired '+Math.abs(d)+' days ago'});
+    else if(d<=90) triggers.push({score:150-d,text:'Contract expires in '+d+' day'+(d===1?'':'s')});
+  }
+
+  if(c.annualSpend>0 && c.lastContact){
+    const d=Math.floor((now-new Date(c.lastContact))/86400000);
+    if(d>30) triggers.push({score:c.annualSpend/10000,text:'$'+Number(c.annualSpend).toLocaleString()+' account -- '+d+' days since last contact'});
+  }
+
+  if(c.invoiceAmount>0) triggers.push({score:c.invoiceAmount/100,text:'Invoice $'+Number(c.invoiceAmount).toLocaleString()+' outstanding'});
+
+  if(c.lastContact){
+    const d=Math.floor((now-new Date(c.lastContact))/86400000);
+    if(d>(c.frequency||30)) triggers.push({score:d,text:'Not contacted in '+d+' days'});
+  } else {
+    // Has history/notes -- existing relationship, not cold
+    if(c.history||c.notes) triggers.push({score:50,text:'Existing relationship -- overdue for check-in'});
+    else triggers.push({score:30,text:'No contact on record yet'});
+  }
+
+  if(!triggers.length) return 'Regular check-in';
+  return triggers.sort((a,b)=>b.score-a.score)[0].text;
+}
+
+// Fallback subject when the AI didn't supply one (older queue items, refines, etc.)
+function defaultSubject(c,trigger){
+  const t=trigger||(c?computeTrigger(c):'');
+  const co=c&&c.company||'';
+  return 'Following up - '+co+(t?' ('+t+')':'');
+}
+
+function priorityBadge(score){
+  const cls=score>=80?'priority-high':score>=50?'priority-med':'priority-low';
+  return '<span class="priority-badge '+cls+'">'+score+'</span>';
+}
+
+function statusInfo(c){
+  if(!c.lastContact) return {label:'Never contacted',cls:'priority-high'};
+  const d=Math.floor((Date.now()-new Date(c.lastContact))/86400000)-(c.frequency||30);
+  if(d>0) return {label:d+'d overdue',cls:'priority-high'};
+  if(d>-7) return {label:'Due soon',cls:'priority-med'};
+  return {label:'On track',cls:'priority-low'};
+}
+
+// AUTH
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginErr');
+  if(CREDS[u]&&CREDS[u]===p){
+    err.classList.add('hidden');
+    currentUser=u;
+    s(K.session,u);
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    document.getElementById('sidebarUser').textContent='Logged in as '+u;
+    const key=localStorage.getItem(K.apiKey)||'';
+    if(!key) document.getElementById('settingsWarn') && document.getElementById('settingsWarn').classList.remove('hidden');
+    renderEmailAccounts();
+    renderProfileSelector();
+    if(!g(K.onboarded)) document.getElementById('onboardModal').classList.remove('hidden');
+    else showView('dashboard');
+  } else {
+    err.classList.remove('hidden');
+  }
+}
+
+function doLogout(){
+  localStorage.removeItem(K.session);
+  currentUser=null;
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+}
+
+// ONBOARDING -- Step management
+function showObStep(step){
+  document.getElementById('obPage1').classList.toggle('hidden', step!==1);
+  document.getElementById('obPage2').classList.toggle('hidden', step!==2);
+  document.getElementById('obStep').textContent='Step '+step+' of 2';
+}
+
+async function readWebsite(){
+  const url=document.getElementById('obUrl').value.trim();
+  if(!url||!url.startsWith('http')){toast('Enter a valid URL starting with https://','error');return;}
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('Add your API key in Settings first','error');return;}
+
+  document.getElementById('obSiteLoading').classList.remove('hidden');
+  document.getElementById('obSiteResult').classList.add('hidden');
+  document.getElementById('obReadSite').disabled=true;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:'Based on this company website URL: '+url+'\n\nYou cannot visit the URL, but use the domain name and your training knowledge about this company to infer a profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences:\n{"company":"company name","sell":"2-3 sentences describing what they sell or do","customer":"1-2 sentences describing their typical customers","tone":"Professional"}'}]})
+    });
+    if(!res.ok){const errData=await res.json().catch(()=>({}));throw new Error('API error '+res.status+': '+(errData.error&&errData.error.message||'unknown'));}
+    const data=await res.json();
+    let txt=data.content[0].text.trim();
+    // Strip any markdown fences regardless of position
+    txt=txt.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+    // Extract just the JSON object if there's surrounding text
+    const jsonMatch=txt.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('No JSON object in response: '+txt.slice(0,100));
+    const profile=JSON.parse(jsonMatch[0]);
+    document.getElementById('obCo').value=profile.company||'';
+    document.getElementById('obSell').value=profile.sell||'';
+    document.getElementById('obCust').value=profile.customer||'';
+    document.getElementById('obTone').value=profile.tone||'Professional';
+    document.getElementById('obSiteResult').classList.remove('hidden');
+    document.getElementById('obSiteResult').innerHTML='<strong>Profile pre-filled from domain:</strong> '+esc(profile.company)+' &mdash; '+esc((profile.sell||'').slice(0,120))+'<br><span style="font-size:12px;color:#065F46;margin-top:4px;display:block">Review the fields below and adjust anything that looks off before continuing.</span>';
+    document.getElementById('obNextStep').disabled=false;
+    document.getElementById('obPage2Note').textContent='Pre-filled based on your domain. Review and adjust below.';
+    toast('Profile pre-filled — review before continuing','success');
+  }catch(e){
+    document.getElementById('obSiteResult').classList.remove('hidden');
+    document.getElementById('obSiteResult').innerHTML='<span style="color:var(--red)">Auto-fill failed: '+esc(e.message)+'. Click <strong>Continue</strong> to enter your details manually.</span>';
+    document.getElementById('obNextStep').disabled=false;
+    toast('Auto-fill failed: '+e.message,'error');
+  }
+  document.getElementById('obSiteLoading').classList.add('hidden');
+  document.getElementById('obReadSite').disabled=false;
+}
+
+function saveOnboarding(){
+  s(K.profile,{
+    company:document.getElementById('obCo').value.trim(),
+    sell:document.getElementById('obSell').value.trim(),
+    customer:document.getElementById('obCust').value.trim(),
+    role:document.getElementById('obRole').value.trim(),
+    tone:document.getElementById('obTone').value,
+    repName:document.getElementById('obRep').value.trim()
+  });
+  s(K.onboarded,true);
+  renderProfileSelector();
+  document.getElementById('onboardModal').classList.add('hidden');
+  showView('dashboard');
+}
+
+// NAVIGATION
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const vEl=document.getElementById('view-'+name);
+  if(vEl) vEl.classList.remove('hidden');
+  const nEl=document.querySelector('[data-view="'+name+'"]');
+  if(nEl) nEl.classList.add('active');
+  if(name==='dashboard') renderDashboard();
+  if(name==='contacts') renderContacts();
+  if(name==='queue'){renderQueue();renderEmailAccounts();}
+  if(name==='drafts') renderDrafts();
+  if(name==='activity') renderActivity();
+  if(name==='settings') loadSettings();
+  updateQueueBadge();
+}
+
+function updateQueueBadge(){
+  const count=gq().length;
+  const badge=document.getElementById('queueBadge');
+  badge.textContent=count;
+  badge.classList.toggle('hidden',count===0);
+}
+
+// Re-render whichever main view is currently visible. Used after writes that the
+// open view should reflect immediately (e.g. activity logged from a modal).
+function refreshActiveView(){
+  const map={dashboard:renderDashboard,contacts:renderContacts,queue:renderQueue,drafts:renderDrafts,activity:renderActivity};
+  for(const name in map){
+    const v=document.getElementById('view-'+name);
+    if(v && !v.classList.contains('hidden')) map[name]();
+  }
+}
+
+// DASHBOARD
+function renderDashboard(){
+  const h=new Date().getHours();
+  const p=gp();
+  document.getElementById('greeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+(p.repName||'there');
+  document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const contacts=gc(),activity=ga(),wk=new Date(Date.now()-7*86400000);
+  const totalCount=contacts.length;
+  const dueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>-7&&d<=0;});
+  const overdueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>0;});
+  const sentThisWeek=activity.filter(a=>new Date(a.ts)>wk);
+
+  const sTotal=document.getElementById('sTotal');
+  sTotal.textContent=totalCount;
+  sTotal.closest('.stat-card').style.cursor='pointer';
+  sTotal.closest('.stat-card').onclick=()=>showStatDetail('Total Contacts',contacts.map(c=>'<div style="padding:10px 0;border-bottom:1px solid var(--gray-pale);display:flex;justify-content:space-between;align-items:center"><span style=\'cursor:pointer;color:var(--green);font-weight:600\' onclick=\'openHistory("'+c.id+'")\'  >'+esc(c.name)+'</span><span style=\'font-size:12px;color:var(--gray)\'>'+esc(c.company)+'</span></div>').join(''));
+
+  const sDue=document.getElementById('sDue');
+  sDue.textContent=dueContacts.length;
+  sDue.closest('.stat-card').style.cursor='pointer';
+  sDue.closest('.stat-card').onclick=()=>showStatDetail('Due for Outreach',dueContacts.map(c=>'<div style="padding:10px 0;border-bottom:1px solid var(--gray-pale)"><div style=\'cursor:pointer;color:var(--green);font-weight:600\' onclick=\'openHistory("'+c.id+'")\' >'+esc(c.name)+' at '+esc(c.company)+'</div><div style=\'font-size:12px;color:var(--gray);margin-top:2px\'>'+esc(computeTrigger(c))+'</div></div>').join(''));
+
+  const sOverdue=document.getElementById('sOverdue');
+  sOverdue.textContent=overdueContacts.length;
+  sOverdue.closest('.stat-card').style.cursor='pointer';
+  sOverdue.closest('.stat-card').onclick=()=>showStatDetail('Overdue',overdueContacts.sort((a,b)=>computePriority(b)-computePriority(a)).map(c=>'<div style="padding:10px 0;border-bottom:1px solid var(--gray-pale)"><div style=\'cursor:pointer;color:var(--red);font-weight:600\' onclick=\'openHistory("'+c.id+'")\' >'+esc(c.name)+' at '+esc(c.company)+'</div><div style=\'font-size:12px;color:var(--gray);margin-top:2px\'>'+esc(computeTrigger(c))+'</div></div>').join(''));
+
+  const sSent=document.getElementById('sSent');
+  sSent.textContent=sentThisWeek.length;
+  sSent.closest('.stat-card').style.cursor='pointer';
+  sSent.closest('.stat-card').onclick=function(){
+    var html=sentThisWeek.slice().reverse().map(function(a){
+      var aid='sa-'+a.id;
+      return '<div style="padding:12px 0;border-bottom:1px solid var(--gray-pale)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
+        +'<span style="font-weight:600;cursor:pointer;color:var(--green)" onclick="openHistory(\''+a.cId+'\')">'
+        +esc(a.cName)+'</span>'
+        +'<span style="font-size:11px;color:var(--gray)">'+new Date(a.ts).toLocaleDateString()+'</span>'
+        +'</div>'
+        +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px">'+esc(a.co||'')+'</div>'
+        +'<div style="font-size:13px;cursor:pointer;color:var(--dark);line-height:1.5" onclick="toggleActivity(\''+aid+'\')"><span id="'+aid+'-short">'+esc(a.msg.slice(0,100))+(a.msg.length>100?' <span style=\"color:var(--green);font-size:11px\">[tap to expand]</span>':'')+'</span>'
+        +'<span id="'+aid+'-full" class="hidden" style="white-space:pre-wrap">'+esc(a.msg)+'</span>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+    showStatDetail('Sent This Week',html||'<div class="empty-state" style="padding:24px"><strong>Nothing sent this week</strong></div>');
+  }
+
+  const sorted=[...contacts].sort((a,b)=>computePriority(b)-computePriority(a)).filter(c=>computePriority(c)>20).slice(0,8);
+  const dueEl=document.getElementById('dueList');
+  if(!sorted.length){dueEl.innerHTML='<div class="empty-state"><strong>All caught up!</strong>No contacts need attention right now.</div>';}
+  else dueEl.innerHTML=sorted.map(c=>'<div class="due-item"><div class="due-info"><div class="due-name"><span style="cursor:pointer;color:var(--green);font-weight:600" onclick="openHistory(\''+c.id+'\')" >'+esc(c.name)+'</span> '+priorityBadge(computePriority(c))+'</div><div class="due-meta">'+esc(c.company)+' &middot; <em style="color:var(--green)">'+esc(computeTrigger(c))+'</em></div></div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openHistory(\''+c.id+'\')" >View</button><button class="btn btn-primary btn-xs" onclick="openAi(\''+c.id+'\')" >Generate</button></div></div>').join('');;
+
+  const acts=[...activity].reverse().slice(0,8);
+  const actEl=document.getElementById('actList');
+  actEl.innerHTML=acts.length?'<ul class="activity-list">'+acts.map(a=>{
+    const short=a.msg.slice(0,100)+(a.msg.length>100?'...':'');
+    const full=a.msg;
+    const aid='act-'+a.id;
+    return '<li class="activity-item" style="cursor:pointer" onclick="toggleActivity(\''+aid+'\')">'
+      +'<div class="activity-time">'+new Date(a.ts).toLocaleString()+'</div>'
+      +'<div class="activity-who">'+esc(a.cName)+' -- '+esc(a.co||'')+'</div>'
+      +'<div class="activity-trigger">'+esc(a.trigger||a.reason||'')+'</div>'
+      +'<div class="activity-preview" id="'+aid+'-short">'+esc(short)+'</div>'
+      +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:4px;white-space:pre-wrap">'+esc(full)+'</div>'
+      +'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>'
+      +'</li>';
+  }).join('')+'</ul>':'<div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div>';
+}
+
+// ACTIVITY (full log + filtering)
+let _activityFiltersBound=false;
+function renderActivity(){
+  const search=document.getElementById('actSearch');
+  const cSel=document.getElementById('actContactF');
+  const rSel=document.getElementById('actRangeF');
+  const sSel=document.getElementById('actSortF');
+  const listEl=document.getElementById('actFullList');
+  const emptyEl=document.getElementById('actEmpty');
+  const countEl=document.getElementById('actCount');
+
+  // Populate contact filter from activity log, preserving current selection
+  const all=ga();
+  const seen=new Map();
+  all.forEach(a=>{ if(a.cId && !seen.has(a.cId)) seen.set(a.cId, a.cName||'(unknown)'); });
+  const prevC=cSel.value;
+  cSel.innerHTML='<option value="">All Contacts</option>'+
+    [...seen.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1])))
+      .map(([id,n])=>'<option value="'+esc(id)+'">'+esc(n)+'</option>').join('');
+  if(prevC && seen.has(prevC)) cSel.value=prevC;
+
+  const q=(search.value||'').toLowerCase().trim();
+  const cId=cSel.value;
+  const days=parseInt(rSel.value,10);
+  const cutoff=days>0?Date.now()-days*86400000:0;
+  const order=sSel.value==='asc'?1:-1;
+
+  let list=all.filter(a=>{
+    if(cId && a.cId!==cId) return false;
+    if(cutoff && new Date(a.ts).getTime()<cutoff) return false;
+    if(q){
+      const hay=((a.cName||'')+' '+(a.co||'')+' '+(a.subject||'')+' '+(a.msg||'')+' '+(a.trigger||'')+' '+(a.reason||'')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>order*(new Date(a.ts)-new Date(b.ts)));
+
+  countEl.textContent=list.length+' of '+all.length+' message'+(all.length!==1?'s':'');
+
+  if(!list.length){
+    listEl.innerHTML='';
+    emptyEl.classList.remove('hidden');
+  }else{
+    emptyEl.classList.add('hidden');
+    listEl.innerHTML='<ul class="activity-list">'+list.map(a=>{
+      const aid='full-'+a.id;
+      const short=(a.msg||'').slice(0,160)+((a.msg||'').length>160?'...':'');
+      const subj=a.subject?'<div style="font-weight:600;font-size:13px;margin-top:2px">'+esc(a.subject)+'</div>':'';
+      return '<li class="activity-item">'
+        +'<div class="activity-time">'+new Date(a.ts).toLocaleString()+'</div>'
+        +'<div class="activity-who" style="cursor:pointer;color:var(--green)" onclick="openHistory(\''+a.cId+'\')">'+esc(a.cName||'(unknown)')+' -- '+esc(a.co||'')+'</div>'
+        +(a.trigger||a.reason?'<div class="activity-trigger">'+esc(a.trigger||a.reason)+'</div>':'')
+        +subj
+        +'<div class="activity-preview" id="'+aid+'-short" style="cursor:pointer" onclick="toggleActivity(\''+aid+'\')">'+esc(short)+(a.msg&&a.msg.length>160?' <span style="color:var(--green);font-size:11px">[expand]</span>':'')+'</div>'
+        +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:4px;white-space:pre-wrap;cursor:pointer" onclick="toggleActivity(\''+aid+'\')">'+esc(a.msg||'')+'</div>'
+        +'</li>';
+    }).join('')+'</ul>';
+  }
+
+  if(!_activityFiltersBound){
+    _activityFiltersBound=true;
+    [search].forEach(el=>el.addEventListener('input',renderActivity));
+    [cSel,rSel,sSel].forEach(el=>el.addEventListener('change',renderActivity));
+    document.getElementById('actClearBtn').addEventListener('click',function(){
+      search.value=''; cSel.value=''; rSel.value=''; sSel.value='desc';
+      renderActivity();
+    });
+    document.getElementById('actExportBtn').addEventListener('click',exportActivityCsv);
+  }
+}
+
+function exportActivityCsv(){
+  const rows=ga();
+  if(!rows.length){ toast('No activity to export'); return; }
+  const esc=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const header=['Timestamp','Contact','Company','Trigger','Subject','Message'].map(esc).join(',');
+  const body=rows.slice().sort((a,b)=>new Date(b.ts)-new Date(a.ts)).map(a=>[
+    new Date(a.ts).toISOString(), a.cName||'', a.co||'', a.trigger||a.reason||'', a.subject||'', a.msg||''
+  ].map(esc).join(',')).join('\n');
+  const blob=new Blob([header+'\n'+body],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='renzo-activity-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// CONTACTS
+function renderContacts(){
+  const isMobile = window.innerWidth <= 768;
+  if(isMobile){
+    var cards = document.getElementById('contactCards');
+    if(!cards){
+      const tbody = gq('#contactTable tbody');
+      const wrap = tbody?.closest('.table-wrap');
+      if(wrap){
+        const div = document.createElement('div');
+        div.id = 'contactCards';
+        div.className = 'contact-cards-mobile';
+        wrap.parentNode.insertBefore(div, wrap);
+      }
+    }
+    var container = document.getElementById('contactCards');
+    if(!container) return;
+    container.innerHTML = '';
+    const p = getProfiles();
+    var cs = gc().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+    cs.forEach(c=>{
+      const card = document.createElement('div');
+      card.className = 'contact-card';
+      const pri = priorityBadge(c.priority);
+      const tier = c.tier ? `<span class="badge badge-tier">${esc(c.tier)}</span>` : '';
+      const stat = statusInfo(c);
+      card.innerHTML = `
+        <div class="contact-card-header">
+          <div class="contact-card-name">${esc(c.name)}</div>
+          ${pri}
+        </div>
+        <div class="contact-card-row">${esc(c.company||'—')}</div>
+        <div class="contact-card-row">${tier} ${stat}</div>
+        <div class="contact-card-actions">
+          <button class="btn btn-primary btn-sm" onclick="openAi('${c.id}')">Message</button>
+          <button class="btn btn-ghost btn-xs" onclick="openEditContact('${c.id}')">Edit</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    return;
+  }
+
+  var isMobileNow = window.innerWidth <= 768;
+  if(isMobileNow){ renderMobileContacts(); return; }
+  const q=document.getElementById('ctSearch').value.toLowerCase();
+  const tf=document.getElementById('ctTierF').value;
+  let list=gc().filter(c=>{
+    if(q){
+      const hay=(c.name+' '+c.company+' '+(c.email||'')+' '+(c.title||'')+' '+(c.notes||'')+' '+(c.products||'')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(tf&&c.tier!==tf) return false;
+    return true;
+  }).sort((a,b)=>computePriority(b)-computePriority(a));
+
+  const body=document.getElementById('ctBody'),empty=document.getElementById('ctEmpty');
+  if(!list.length){body.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  body.innerHTML=list.map(function(c){
+    var st=statusInfo(c);
+    var tierCls='tier-'+(c.tier||'c').toLowerCase();
+    var score=computePriority(c);
+    var pb=priorityBadge(score);
+    var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>';
+    var lc=c.lastContact?new Date(c.lastContact).toLocaleDateString():'Never';
+    var row='<tr class="clickable">';
+    row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong></td>';
+    row+='<td>'+esc(c.company)+'</td>';
+    row+='<td>'+tb+'</td>';
+    row+='<td>'+pb+'</td>';
+    row+='<td>'+lc+'</td>';
+    row+='<td><span class="priority-badge '+st.cls+'">'+st.label+'</span></td>';
+    row+='<td><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
+    row+='</tr>';
+    return row;
+  }).join('');
+  // Wire click handlers after render
+  body.querySelectorAll('.contact-name-link').forEach(function(el){
+    el.addEventListener('click',function(ev){ev.stopPropagation();openHistory(this.dataset.id);});
+  });
+  body.querySelectorAll('.msg-btn').forEach(function(el){
+    el.addEventListener('click',function(ev){ev.stopPropagation();openAi(this.dataset.id);});
+  });
+  body.querySelectorAll('tr.clickable').forEach(function(el){
+    el.addEventListener('click',function(){
+      var nameEl=this.querySelector('.contact-name-link');
+      if(nameEl) openEditContact(nameEl.dataset.id);
+    });
+  });
+}
+
+// CONTACT FORM
+const CT_TIER_DEFAULTS = {A:14, B:30, C:60};
+const CT_REQUIRED_FIELDS = ['ctName','ctCo','ctTier','ctFreq'];
+function clearCtForm(){
+  ['ctName','ctCo','ctTitle','ctEmail','ctPhone','ctLoc','ctProds','ctHist','ctNotes'].forEach(x=>document.getElementById(x).value='');
+  ['ctTier','ctSize'].forEach(x=>document.getElementById(x).value='');
+  ['ctFreq','ctInvoice','ctSpend'].forEach(x=>document.getElementById(x).value='');
+  ['ctLast','ctExpiry'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('ctId').value='';
+  CT_REQUIRED_FIELDS.forEach(id=>document.getElementById(id).classList.remove('invalid'));
+  document.getElementById('ctErr').classList.add('hidden');
+  // Reset manual-edit tracking so tier->freq auto-fill works again
+  document.getElementById('ctFreq').dataset.userEdited='';
+}
+
+function openAddContact(){
+  clearCtForm();
+  document.getElementById('ctModalTitle').textContent='Add Contact';
+  document.getElementById('ctDelBtn').classList.add('hidden');
+  document.getElementById('ctModal').classList.remove('hidden');
+}
+
+function openEditContact(id){
+  const c=gc().find(x=>x.id===id);
+  if(!c) return;
+  clearCtForm();
+  document.getElementById('ctModalTitle').textContent='Edit Contact';
+  document.getElementById('ctId').value=id;
+  document.getElementById('ctName').value=c.name||'';
+  document.getElementById('ctCo').value=c.company||'';
+  document.getElementById('ctTitle').value=c.title||'';
+  document.getElementById('ctEmail').value=c.email||'';
+  document.getElementById('ctPhone').value=c.phone||'';
+  document.getElementById('ctTier').value=c.tier||'';
+  document.getElementById('ctFreq').value=c.frequency||'';
+  // Saved frequency is treated as user-chosen so changing tier won't overwrite it
+  if(c.frequency) document.getElementById('ctFreq').dataset.userEdited='1';
+  document.getElementById('ctLast').value=c.lastContact||'';
+  document.getElementById('ctLoc').value=c.location||'';
+  document.getElementById('ctSize').value=c.accountSize||'';
+  document.getElementById('ctProds').value=c.products||'';
+  document.getElementById('ctHist').value=c.history||'';
+  document.getElementById('ctNotes').value=c.notes||'';
+  document.getElementById('ctExpiry').value=c.contractExpiry||'';
+  document.getElementById('ctInvoice').value=c.invoiceAmount||'';
+  document.getElementById('ctSpend').value=c.annualSpend||'';
+  document.getElementById('ctDelBtn').classList.remove('hidden');
+  document.getElementById('ctModal').classList.remove('hidden');
+}
+
+function saveContact(){
+  const emailField = g('ctEmail');
+  const emailValue = emailField.value.trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(emailValue && !emailRegex.test(emailValue)){
+    emailField.classList.add('invalid');
+    toast('Please enter a valid email address', 'error');
+    return;
+  }
+  emailField.classList.remove('invalid');
+
+  const name=document.getElementById('ctName').value.trim();
+  const co=document.getElementById('ctCo').value.trim();
+  const tier=document.getElementById('ctTier').value;
+  const freqRaw=document.getElementById('ctFreq').value;
+  const freq=parseInt(freqRaw);
+  CT_REQUIRED_FIELDS.forEach(id=>document.getElementById(id).classList.remove('invalid'));
+  const missing=[];
+  if(!name){document.getElementById('ctName').classList.add('invalid');missing.push('Name');}
+  if(!co){document.getElementById('ctCo').classList.add('invalid');missing.push('Company');}
+  if(!tier){document.getElementById('ctTier').classList.add('invalid');missing.push('Tier');}
+  if(!freq||freq<1){document.getElementById('ctFreq').classList.add('invalid');missing.push(freqRaw&&freq<1?'Touch Frequency (must be 1 or more)':'Touch Frequency');}
+  if(missing.length){
+    const err=document.getElementById('ctErr');
+    err.textContent=missing.length===1?missing[0]+' is required.':'Required: '+missing.join(', ')+'.';
+    err.classList.remove('hidden');
+    const first=document.querySelector('#ctModal .invalid');
+    if(first){first.scrollIntoView({block:'center',behavior:'smooth'});first.focus({preventScroll:true});}
+    return;
+  }
+  const data={
+    name,company:co,tier,frequency:freq,
+    title:document.getElementById('ctTitle').value.trim(),
+    email:document.getElementById('ctEmail').value.trim(),
+    phone:document.getElementById('ctPhone').value.trim(),
+    lastContact:document.getElementById('ctLast').value,
+    location:document.getElementById('ctLoc').value.trim(),
+    accountSize:document.getElementById('ctSize').value,
+    products:document.getElementById('ctProds').value.trim(),
+    history:document.getElementById('ctHist').value.trim(),
+    notes:document.getElementById('ctNotes').value.trim(),
+    contractExpiry:document.getElementById('ctExpiry').value,
+    invoiceAmount:parseFloat(document.getElementById('ctInvoice').value)||0,
+    annualSpend:parseFloat(document.getElementById('ctSpend').value)||0
+  };
+  const id=document.getElementById('ctId').value;
+  const contacts=gc();
+  if(id){const i=contacts.findIndex(c=>c.id===id);if(i>-1) contacts[i]={...contacts[i],...data};}
+  else contacts.push({id:uid(),createdAt:new Date().toISOString(),...data});
+  s(K.contacts,contacts);
+  document.getElementById('ctModal').classList.add('hidden');
+  renderContacts();
+  toast('Contact saved','success');
+}
+
+// CONTACT HISTORY
+let histContact=null;
+function openHistory(id){
+  const c=gc().find(x=>x.id===id);
+  if(!c) return;
+  histContact=c;
+  document.getElementById('histTitle').textContent=c.name+' -- '+c.company;
+
+  // Meta info
+  const priority=computePriority(c);
+  const trigger=computeTrigger(c);
+  const tierLabel=c.tier?'Tier '+c.tier:'No tier';
+  document.getElementById('histMeta').innerHTML=
+    '<div style="display:flex;flex-wrap:wrap;gap:16px">'
+    +'<div><strong>Email:</strong> '+(c.email||'--')+'</div>'
+    +'<div><strong>Phone:</strong> '+(c.phone||'--')+'</div>'
+    +'<div><strong>Tier:</strong> '+tierLabel+'</div>'
+    +'<div><strong>Priority:</strong> '+priority+'</div>'
+    +(c.annualSpend>0?'<div><strong>Annual Spend:</strong> $'+Number(c.annualSpend).toLocaleString()+'</div>':'')
+    +(c.contractExpiry?'<div><strong>Contract Expiry:</strong> '+c.contractExpiry+'</div>':'')
+    +'<div style="width:100%;color:var(--green);font-style:italic">'+esc(trigger)+'</div>'
+    +(c.history?'<div style="width:100%"><strong>Background:</strong> '+esc(c.history)+'</div>':'')
+    +(c.notes?'<div style="width:100%"><strong>Notes:</strong> '+esc(c.notes)+'</div>':'')
+    +'</div>';
+
+  // Communication history from activity log
+  const activity=ga().filter(a=>a.cId===id).reverse();
+  const histList=document.getElementById('histList');
+  // Show queued messages for this contact
+  const queued=gq().filter(x=>x.cId===id);
+  const drafted=gd().filter(x=>x.cId===id);
+  let pendingHtml='';
+  if(queued.length){
+    pendingHtml+='<div style="padding:12px 16px;background:var(--amber-pale);border-bottom:1px solid var(--gray-pale)">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#92400E;margin-bottom:8px">'+queued.length+' message'+(queued.length!==1?'s':'')+' in Queue</div>'
+      +queued.map(q=>'<div style="font-size:13px;margin-bottom:8px;padding:8px 10px;background:#fff;border-radius:4px">'
+        +(q.trigger?'<div style="font-size:11px;color:var(--green);font-weight:500;margin-bottom:4px">'+esc(q.trigger)+'</div>':'')
+        +'<div>'+esc(q.msg.slice(0,120))+(q.msg.length>120?'...':'')+'</div>'
+        +'<div style="display:flex;gap:6px;margin-top:6px">'
+          +'<button class="btn btn-primary btn-xs" onclick="sendEmail(\''+q.id+'\')">Send</button>'
+          +'<button class="btn btn-ghost btn-xs" onclick="markSent(\''+q.id+'\');openHistory(\''+id+'\')">Mark Sent</button>'
+        +'</div>'
+      +'</div>').join('')
+    +'</div>';
+  }
+  if(drafted.length){
+    pendingHtml+='<div style="padding:12px 16px;background:var(--gray-pale);border-bottom:1px solid var(--gray-light)">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px">'+drafted.length+' Draft'+(drafted.length!==1?'s':'')+'</div>'
+      +drafted.map(d=>'<div style="font-size:13px;margin-bottom:6px">'+esc(d.msg.slice(0,100))+(d.msg.length>100?'...':'')+'<button class="btn btn-ghost btn-xs" style="margin-left:8px" onclick="draftToQ(\''+d.id+'\');openHistory(\''+id+'\')">Move to Queue</button></div>').join('')
+    +'</div>';
+  }
+
+  if(!activity.length){
+    histList.innerHTML=pendingHtml+'<div class="empty-state" style="padding:24px"><strong>No messages sent yet</strong>Generate a message to start the history.</div>';
+  } else {
+    const sentHtml=activity.map(a=>'<div style="padding:16px;border-bottom:1px solid var(--gray-pale)">'
+      +'<div style="font-size:11px;color:var(--gray);margin-bottom:4px">'+new Date(a.ts).toLocaleString()+'</div>'
+      +(a.trigger?'<div style="font-size:12px;color:var(--green);font-weight:500;margin-bottom:6px;font-style:italic">'+esc(a.trigger)+'</div>':'')
+      +'<div style="font-size:14px;color:var(--dark);line-height:1.6;white-space:pre-wrap">'+esc(a.msg)+'</div>'
+      +(a.reason?'<div style="font-size:12px;color:var(--gray);margin-top:6px;font-style:italic">Why: '+esc(a.reason)+'</div>':'')
+      +'</div>').join('');
+    const sentHeader='<div style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);background:var(--gray-pale)">Sent -- '+activity.length+' message'+(activity.length!==1?'s':'')+'</div>';
+    histList.innerHTML=pendingHtml+sentHeader+sentHtml;
+  }
+
+  document.getElementById('histModal').classList.remove('hidden');
+}
+
+function openDelete(){
+  const id=document.getElementById('ctId').value;
+  const c=gc().find(x=>x.id===id);
+  if(!c) return;
+  pendingDelete=id;
+  document.getElementById('delName').textContent=c.name;
+  document.getElementById('delModal').classList.remove('hidden');
+}
+
+function doDelete(){
+  if(!pendingDelete) return;
+  s(K.contacts,gc().filter(c=>c.id!==pendingDelete));
+  s(K.activity,ga().filter(a=>a.cId!==pendingDelete));
+  s(K.queue,gq().filter(q=>q.cId!==pendingDelete));
+  s(K.drafts,gd().filter(d=>d.cId!==pendingDelete));
+  pendingDelete=null;
+  document.getElementById('delModal').classList.add('hidden');
+  document.getElementById('ctModal').classList.add('hidden');
+  renderContacts();
+  toast('Contact deleted');
+}
+
+// AI
+function openAi(id){
+  const c=gc().find(x=>x.id===id);
+  if(!c) return;
+  aiContact=c;
+  document.getElementById('aiTitle').textContent='Message for '+c.name;
+  document.getElementById('aiPromptBox').classList.remove('hidden');
+  document.getElementById('aiPromptInput').value='';
+  document.getElementById('aiLoading').classList.add('hidden');
+  document.getElementById('aiResult').classList.add('hidden');
+  document.getElementById('aiErr').classList.add('hidden');
+  document.getElementById('aiRefineBox').classList.add('hidden');
+  document.getElementById('aiModal').classList.remove('hidden');
+  // Show trigger so user knows context
+  const trigger=computeTrigger(c);
+  document.getElementById('aiReason').textContent=trigger;
+}
+
+async function generateMsg(c, customInstruction){
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){
+    document.getElementById('aiLoading').classList.add('hidden');
+    document.getElementById('aiErr').classList.remove('hidden');
+    document.getElementById('aiErr').textContent='No API key set. Go to Settings to add your Anthropic API key.';
+    return;
+  }
+  const p=gp(),rules=gr();
+  const trigger=computeTrigger(c);
+  const rulesStr=rules.length?'Additional instructions: '+rules.join('. '):'';
+  const hasRelationship=!!(c.history||c.notes||c.lastContact||c.annualSpend);
+  const relationshipCtx=hasRelationship
+    ?'IMPORTANT: We have an existing relationship with this contact. DO NOT introduce yourself or explain what your company does. Write as someone who already knows this person well.'
+    :'This may be an initial outreach. Keep it brief and professional.';
+  const spendLine=c.annualSpend>0?'\n- Annual spend/contract value: $'+Number(c.annualSpend).toLocaleString():'';
+  const invoiceLine=c.invoiceAmount>0?'\n- Outstanding invoice: $'+Number(c.invoiceAmount).toLocaleString():'';
+
+  const prompt='You are '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'. Write an outreach email in your own voice.\n\n'
+    +relationshipCtx+'\n\n'
+    +'YOUR ROLE: '+(p.role||'Vendor relationship manager')+'\n'
+    +'TONE: '+(p.tone||'Professional')+'\n\n'
+    +'CONTACT:\n'
+    +'Name: '+c.name+', '+c.company+(c.title?', '+c.title:'')+'\n'
+    +(c.annualSpend>0?'Contract value: $'+Number(c.annualSpend).toLocaleString()+'\n':'')
+    +'Last contact: '+(c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000)+' days ago':'no recent contact')+'\n'
+    +(c.products?'What they do with us: '+c.products+'\n':'')
+    +(c.history?'History: '+c.history+'\n':'')
+    +(c.notes?'Notes: '+c.notes+'\n':'')
+    +(c.contractExpiry?'Contract expiry: '+c.contractExpiry+'\n':'')
+    +(c.invoiceAmount>0?'Outstanding invoice: $'+Number(c.invoiceAmount).toLocaleString()+'\n':'')
+    +'\nREASON TO REACH OUT NOW: '+trigger+'\n\n'
+    +'STRICT RULES FOR THE EMAIL:\n'
+    +'1. Write 3-5 sentences maximum. Short and real.\n'
+    +'2. Sound like a human wrote this, not AI. Conversational but professional.\n'
+    +'3. Reference the specific reason to reach out -- do not be generic.\n'
+    +'4. NO bullet points. NO dashes. NO lists. Flowing sentences only.\n'
+    +'5. Do NOT start with "I hope this finds you well" or any variation.\n'
+    +'6. Do NOT sign off. Do NOT add a name, title, or company at the end. The email client handles that.\n'
+    +'7. Use "Hi [first name]," as the greeting.\n'
+    +'8. Write the body only -- no subject line inside the message.\n'
+    +'9. Also produce a short (3-7 words) subject line that references the specific reason, not generic ("Following up", "Touching base"). No emojis. No quotes wrapping it.\n'
+    +(rulesStr?'10. '+rulesStr+'\n':'')
+    +'\nReturn ONLY valid JSON, no markdown fences:\n'
+    +'{"subject":"the email subject line","reason":"One sentence: the specific trigger and why now","message":"the email body text only"}';
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
+    const data=await res.json();
+    let txt=data.content[0].text.trim();
+    if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
+    const parsed=JSON.parse(txt);
+    document.getElementById('aiReason').textContent=parsed.reason;
+    document.getElementById('aiMsg').value=parsed.message;
+    document.getElementById('aiSubject').value=(parsed.subject||'').trim()||defaultSubject(c);
+    document.getElementById('aiLoading').classList.add('hidden');
+    document.getElementById('aiResult').classList.remove('hidden');
+  }catch(e){
+    document.getElementById('aiLoading').classList.add('hidden');
+    document.getElementById('aiErr').classList.remove('hidden');
+    document.getElementById('aiErr').textContent='Error: '+e.message;
+  }
+}
+
+function addToQueue(){
+  const msg=document.getElementById('aiMsg').value.trim();
+  if(!msg||!aiContact) return;
+  const trigger=computeTrigger(aiContact);
+  const subject=(document.getElementById('aiSubject').value||'').trim()||defaultSubject(aiContact,trigger);
+  s(K.queue,[...gq(),{id:uid(),cId:aiContact.id,cName:aiContact.name,co:aiContact.company,subject,msg,reason:document.getElementById('aiReason').textContent,trigger,added:new Date().toISOString()}]);
+  document.getElementById('aiModal').classList.add('hidden');
+  aiContact=null;
+  updateQueueBadge();
+  showView('queue');
+  toast('Added to queue','success');
+}
+
+function saveDraft(){
+  const msg=document.getElementById('aiMsg').value.trim();
+  if(!msg||!aiContact) return;
+  const trigger=computeTrigger(aiContact);
+  const subject=(document.getElementById('aiSubject').value||'').trim()||defaultSubject(aiContact,trigger);
+  s(K.drafts,[...gd(),{id:uid(),cId:aiContact.id,cName:aiContact.name,co:aiContact.company,subject,msg,reason:document.getElementById('aiReason').textContent,trigger,saved:new Date().toISOString()}]);
+  document.getElementById('aiModal').classList.add('hidden');
+  aiContact=null;
+  toast('Saved to drafts');
+}
+
+function openGmail(){
+  const msg=document.getElementById('aiMsg').value.trim();
+  if(!msg||!aiContact) return;
+  const trigger=computeTrigger(aiContact);
+  const sub=(document.getElementById('aiSubject').value||'').trim()||defaultSubject(aiContact,trigger);
+  const reason=document.getElementById('aiReason').textContent||'';
+  openEmailCompose(aiContact.email||'',sub,msg,'',pickDefaultProvider());
+  // Log activity and mark contact as recently contacted, matching queue's Prepare Email Draft behavior
+  s(K.activity,[...ga(),{id:uid(),cId:aiContact.id,cName:aiContact.name,co:aiContact.company,subject:sub,msg,trigger,reason,ts:new Date().toISOString()}]);
+  const cts=gc(),i=cts.findIndex(c=>c.id===aiContact.id);
+  if(i>-1){cts[i].lastContact=new Date().toISOString().split('T')[0];s(K.contacts,cts);}
+  document.getElementById('aiModal').classList.add('hidden');
+  aiContact=null;
+  refreshActiveView();
+  toast('Email opened and logged as sent','success');
+}
+
+// Pick a provider when the caller has no chosen account (e.g. ad-hoc Prepare Email
+// Draft from AI modal). Prefer the first configured account's provider; otherwise
+// default to Gmail web compose — never mailto.
+function pickDefaultProvider(){
+  const emails=gEmails();
+  for(const e of emails){
+    const p=accountProvider(e);
+    if(p) return p;
+  }
+  return 'gmail';
+}
+
+// Route to Gmail web or Outlook web compose. `provider` is authoritative when
+// given ('gmail' | 'outlook'); otherwise we infer from the from-address, and
+// fall back to Gmail web. We deliberately do NOT use mailto — on most desktops
+// it opens an unconfigured client or nothing at all, which silently drops sends.
+function openEmailCompose(toAddr,subject,body,fromAddr,provider){
+  const p=provider||inferProvider(fromAddr)||'gmail';
+  let url;
+  if(p==='outlook'){
+    url='https://outlook.live.com/mail/0/deeplink/compose?to='+encodeURIComponent(toAddr)+'&subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  } else {
+    url='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  }
+  window.open(url,'_blank');
+}
+
+// QUEUE
+function renderQueue(){
+  const q=gq(),list=document.getElementById('queueList'),empty=document.getElementById('queueEmpty');
+  // Show email setup banner if no accounts configured
+  const emails=gEmails();
+  const emailBanner=document.getElementById('emailSetupBanner');
+  if(emailBanner){
+    emailBanner.classList.toggle('hidden', emails.length>0);
+  }
+  if(!q.length){list.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  list.innerHTML=q.map(item=>{
+    const c=gc().find(x=>x.id===item.cId);
+    const email=c&&c.email?c.email:'No email on file';
+    const subject=item.subject||defaultSubject({company:item.co},item.trigger);
+    return '<div class="queue-item" id="qi-'+item.id+'">'+
+      '<div class="queue-who">'+esc(item.cName)+'</div>'+
+      '<div class="queue-co">'+esc(item.co)+' &middot; <span style="color:var(--green);font-size:12px">'+esc(email)+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);flex-shrink:0">Subject</span><input type="text" id="qsub-'+item.id+'" value="'+esc(subject)+'" onchange="updateQSubject(\''+item.id+'\',this.value)" style="flex:1;padding:6px 9px;border:1.5px solid var(--gray-light);border-radius:6px;background:var(--white);font-size:13px;font-weight:600;color:var(--dark);outline:none"></div>'+
+      (item.trigger?'<div class="queue-trigger">'+esc(item.trigger)+'</div>':'')+
+      '<div class="queue-preview" id="qmsg-'+item.id+'">'+esc(item.msg)+'</div>'+
+      '<div id="qrefine-'+item.id+'" class="hidden" style="margin:8px 0;display:flex;gap:8px">'+
+        '<input type="text" id="qri-'+item.id+'" placeholder="e.g. Make it warmer, mention Q3 review" style="flex:1;padding:8px 10px;border:1.5px solid var(--gray-light);border-radius:6px;outline:none;font-size:13px">'+
+        '<button class="btn btn-primary btn-xs" onclick="refineQueueMsg(\''+item.id+'\')">Rewrite</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.add(\'hidden\')">Cancel</button>'+
+      '</div>'+
+      '<div class="queue-actions">'+
+        '<button class="btn btn-primary btn-xs" onclick="sendEmail(\''+item.id+'\')">Prepare Email Draft</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="markSent(\''+item.id+'\')">Mark Sent</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.toggle(\'hidden\');document.getElementById(\'qri-'+item.id+'\').focus()">Refine</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="saveDraftFromQueue(\''+item.id+'\')">Save Draft</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="removeQ(\''+item.id+'\')">Remove</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function sendEmail(qid){
+  const item=gq().find(x=>x.id===qid);
+  if(!item) return;
+  const c=gc().find(x=>x.id===item.cId);
+  const toAddr=c&&c.email?c.email:'';
+  const subject=item.subject||defaultSubject({company:item.co},item.trigger);
+  // Get selected from-email account
+  const sel=document.getElementById('queueEmailSel');
+  const emails=gEmails();
+  const acct=sel&&sel.value!==''?emails[parseInt(sel.value)]:null;
+  const fromEmail=acct?acct.addr:'';
+  const provider=acct?accountProvider(acct):pickDefaultProvider();
+  openEmailCompose(toAddr,subject,item.msg,fromEmail,provider);
+  // Log it and mark sent
+  markSentSilent(qid);
+  refreshActiveView();
+  toast('Email opened and logged as sent','success');
+}
+
+function saveDraftFromQueue(qid){
+  const item=gq().find(x=>x.id===qid);
+  if(!item) return;
+  s(K.drafts,[...gd(),{id:uid(),cId:item.cId,cName:item.cName,co:item.co,subject:item.subject||'',msg:item.msg,reason:item.reason,trigger:item.trigger,saved:new Date().toISOString()}]);
+  s(K.queue,gq().filter(x=>x.id!==qid));
+  renderQueue();updateQueueBadge();
+  toast('Saved to drafts');
+}
+
+async function refineQueueMsg(qid){
+  const instruction=document.getElementById('qri-'+qid).value.trim();
+  if(!instruction) return;
+  const item=gq().find(x=>x.id===qid);
+  if(!item) return;
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('No API key set','error');return;}
+  const btn=document.querySelector('#qrefine-'+qid+' .btn-primary');
+  btn.disabled=true;btn.textContent='Rewriting...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.cName+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
+    });
+    if(res.ok){
+      const data=await res.json();
+      const newMsg=data.content[0].text.trim();
+      // Update in queue
+      const q=gq();const i=q.findIndex(x=>x.id===qid);if(i>-1)q[i].msg=newMsg;s(K.queue,q);
+      // Update preview in DOM without full re-render
+      document.getElementById('qmsg-'+qid).textContent=newMsg;
+      document.getElementById('qrefine-'+qid).classList.add('hidden');
+      document.getElementById('qri-'+qid).value='';
+      toast('Message updated','success');
+    }
+  }catch(e){toast('Rewrite failed','error');}
+  btn.disabled=false;btn.textContent='Rewrite';
+}
+
+function markSentSilent(qid){
+  const q=gq(),item=q.find(x=>x.id===qid);
+  if(!item) return;
+  s(K.activity,[...ga(),{id:uid(),cId:item.cId,cName:item.cName,co:item.co,subject:item.subject||'',msg:item.msg,trigger:item.trigger,reason:item.reason,ts:new Date().toISOString()}]);
+  const cts=gc(),i=cts.findIndex(c=>c.id===item.cId);
+  if(i>-1) cts[i].lastContact=new Date().toISOString().split('T')[0];
+  s(K.contacts,cts);
+  s(K.queue,q.filter(x=>x.id!==qid));
+  updateQueueBadge();
+}
+
+function markSent(qid){
+  markSentSilent(qid);
+  renderQueue();
+  toast('Marked as sent','success');
+}
+
+function markAllSent(){gq().slice().forEach(item=>markSent(item.id));}
+
+function editQ(qid){
+  const item=gq().find(x=>x.id===qid);
+  if(!item) return;
+  const c=gc().find(x=>x.id===item.cId);
+  if(!c) return;
+  aiContact=c;
+  document.getElementById('aiReason').textContent=item.reason||'';
+  document.getElementById('aiSubject').value=item.subject||defaultSubject(c,item.trigger);
+  document.getElementById('aiMsg').value=item.msg;
+  document.getElementById('aiLoading').classList.add('hidden');
+  document.getElementById('aiResult').classList.remove('hidden');
+  document.getElementById('aiErr').classList.add('hidden');
+  document.getElementById('aiModal').classList.remove('hidden');
+  s(K.queue,gq().filter(x=>x.id!==qid));
+  updateQueueBadge();
+}
+
+function removeQ(qid){s(K.queue,gq().filter(x=>x.id!==qid));renderQueue();updateQueueBadge();}
+
+function updateQSubject(qid,val){
+  const q=gq(),i=q.findIndex(x=>x.id===qid);
+  if(i<0) return;
+  q[i].subject=(val||'').trim()||defaultSubject({company:q[i].co},q[i].trigger);
+  s(K.queue,q);
+}
+
+function updateDSubject(did,val){
+  const drafts=gd(),i=drafts.findIndex(x=>x.id===did);
+  if(i<0) return;
+  drafts[i].subject=(val||'').trim()||defaultSubject({company:drafts[i].co},drafts[i].trigger);
+  s(K.drafts,drafts);
+}
+
+// DRAFTS
+function renderDrafts(){
+  const drafts=gd(),list=document.getElementById('draftList'),empty=document.getElementById('draftEmpty');
+  if(!drafts.length){list.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  list.innerHTML=drafts.map(d=>{
+    const subject=d.subject||defaultSubject({company:d.co},d.trigger);
+    return '<div class="queue-item">'+
+    '<div class="queue-who">'+esc(d.cName)+'</div>'+
+    '<div class="queue-co">'+esc(d.co)+' &middot; Saved '+new Date(d.saved).toLocaleDateString()+'</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin:8px 0"><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);flex-shrink:0">Subject</span><input type="text" id="dsub-'+d.id+'" value="'+esc(subject)+'" onchange="updateDSubject(\''+d.id+'\',this.value)" style="flex:1;padding:6px 9px;border:1.5px solid var(--gray-light);border-radius:6px;background:var(--white);font-size:13px;font-weight:600;color:var(--dark);outline:none"></div>'+
+    (d.trigger?'<div class="queue-trigger">'+esc(d.trigger)+'</div>':'')+
+    (d.reason?'<div style="font-size:12px;color:var(--gray);margin-bottom:6px;font-style:italic">'+esc(d.reason)+'</div>':'')+
+    '<div class="queue-preview" id="dmsg-'+d.id+'">'+esc(d.msg)+'</div>'+
+    '<div id="drefine-'+d.id+'" class="hidden" style="margin:8px 0;display:flex;gap:8px">'+
+      '<input type="text" id="dri-'+d.id+'" placeholder="e.g. Make it more direct, add urgency" style="flex:1;padding:8px 10px;border:1.5px solid var(--gray-light);border-radius:6px;outline:none;font-size:13px">'+
+      '<button class="btn btn-primary btn-xs" onclick="refineDraft(\''+d.id+'\')">Rewrite</button>'+
+      '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'drefine-'+d.id+'\').classList.add(\'hidden\')">Cancel</button>'+
+    '</div>'+
+    '<div class="queue-actions">'+
+      '<button class="btn btn-primary btn-xs" onclick="draftToQ(\''+d.id+'\')">Move to Queue</button>'+
+      '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'drefine-'+d.id+'\').classList.toggle(\'hidden\');document.getElementById(\'dri-'+d.id+'\').focus()">Refine</button>'+
+      '<button class="btn btn-ghost btn-xs" onclick="removeDraft(\''+d.id+'\')">Remove</button>'+
+    '</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function refineDraft(did){
+  const instruction=document.getElementById('dri-'+did).value.trim();
+  if(!instruction) return;
+  const drafts=gd(),item=drafts.find(x=>x.id===did);
+  if(!item) return;
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('No API key set','error');return;}
+  const btn=document.querySelector('#drefine-'+did+' .btn-primary');
+  btn.disabled=true;btn.textContent='Rewriting...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this email based on this instruction: "'+instruction+'"\n\nOriginal:\n'+item.msg+'\n\nContact: '+item.cName+' at '+item.co+'\n\nReturn ONLY the rewritten email body. No explanation. No sign-off.'}]})
+    });
+    if(res.ok){
+      const data=await res.json();
+      const newMsg=data.content[0].text.trim();
+      const i=drafts.findIndex(x=>x.id===did);if(i>-1)drafts[i].msg=newMsg;s(K.drafts,drafts);
+      document.getElementById('dmsg-'+did).textContent=newMsg;
+      document.getElementById('drefine-'+did).classList.add('hidden');
+      document.getElementById('dri-'+did).value='';
+      toast('Draft updated','success');
+    }
+  }catch(e){toast('Rewrite failed','error');}
+  btn.disabled=false;btn.textContent='Rewrite';
+}
+
+function draftToQ(did){
+  const drafts=gd(),item=drafts.find(x=>x.id===did);
+  if(!item) return;
+  s(K.queue,[...gq(),{...item,added:new Date().toISOString()}]);
+  s(K.drafts,drafts.filter(x=>x.id!==did));
+  renderDrafts();updateQueueBadge();
+  toast('Moved to queue');
+}
+
+function exportContacts(){
+  var searchVal=(document.getElementById('ctSearch')||{value:''}).value.toLowerCase();
+  var tierVal=(document.getElementById('ctTierF')||{value:''}).value;
+  var contacts=gc().filter(function(c){
+    if(searchVal){
+      var hay=(c.name+' '+c.company+' '+(c.email||'')+' '+(c.title||'')+' '+(c.notes||'')+' '+(c.products||'')).toLowerCase();
+      if(!hay.includes(searchVal)) return false;
+    }
+    if(tierVal&&c.tier!==tierVal) return false;
+    return true;
+  });
+  if(!contacts.length){toast('No contacts to export','error');return;}
+  const headers=['Name','Company','Title','Email','Phone','Tier','Frequency','Last Contact','Contract Expiry','Annual Spend','Invoice Amount','Location','Account Size','Products','History','Notes'];
+  const rows=contacts.map(c=>[
+    c.name||'',c.company||'',c.title||'',c.email||'',c.phone||'',
+    c.tier||'',c.frequency||'',c.lastContact||'',c.contractExpiry||'',
+    c.annualSpend||0,c.invoiceAmount||0,c.location||'',c.accountSize||'',
+    c.products||'',c.history||'',c.notes||''
+  ]);
+  const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='renzo-contacts-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast(contacts.length+' contacts exported','success');
+}
+
+function removeDraft(did){s(K.drafts,gd().filter(x=>x.id!==did));renderDrafts();}
+
+// BATCH -- AI-driven filtering
+async function runBatch(){
+  const query=document.getElementById('batchPrompt').value.trim();
+  if(!query){toast('Enter a prompt first','error');return;}
+  const contacts=gc();
+  if(!contacts.length){toast('No contacts found -- import contacts first','error');return;}
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('No API key set. Go to Settings.','error');return;}
+
+  const p=gp();
+  document.getElementById('batchProgress').classList.remove('hidden');
+  document.getElementById('batchResults').classList.add('hidden');
+  document.getElementById('runBatchBtn').disabled=true;
+  document.getElementById('batchLabel').textContent='Analyzing contacts...';
+  document.getElementById('batchFill').style.width='5%';
+
+  try{
+    // Step 1: Ask AI which contacts match the criteria
+    const contactSummaries=contacts.map((c,i)=>{
+      const daysSince=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000):null;
+      const daysToExpiry=c.contractExpiry?Math.floor((new Date(c.contractExpiry)-Date.now())/86400000):null;
+      return i+'. '+c.name+' at '+c.company
+        +(c.tier?' [Tier '+c.tier+']':'')
+        +(c.annualSpend>0?' [$'+Number(c.annualSpend).toLocaleString()+' annual]':'')
+        +(daysSince!==null?' [last contact: '+daysSince+'d ago]':' [never contacted]')
+        +(daysToExpiry!==null?' [contract expires: '+daysToExpiry+'d]':'')
+        +(c.invoiceAmount>0?' [invoice: $'+Number(c.invoiceAmount).toLocaleString()+']':'')
+        +(c.products?' ['+c.products+']':'')
+        +(c.history?' [history: '+c.history.slice(0,80)+']':'')
+        +(c.notes?' [notes: '+c.notes.slice(0,80)+']':'');
+    }).join('\n');
+
+    const filterPrompt='You are a smart outreach assistant for '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
+      +'\n\nUser role: '+(p.role||'relationship manager')
+      +'\n\nThe user wants to: "'+query+'"'
+      +'\n\nHere are all contacts:\n'+contactSummaries
+      +'\n\nAnalyze each contact and decide which ones genuinely match the user\'s intent. Be intelligent -- if they say "business review" pick contacts where a review makes sense (high spend, long relationship, upcoming renewal). If they say "new product announcement about X" pick contacts who buy or use that category. If the intent is unclear, pick the most relevant subset. Do NOT just pick everyone unless the request truly applies to all.'
+      +'\n\nReturn ONLY valid JSON:'
+      +'\n{"matched":[0,2,5],"reasoning":"one sentence explaining who you picked and why","context":"what each message should focus on for this outreach"}';
+
+    const filterRes=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:filterPrompt}]})
+    });
+
+    if(!filterRes.ok) throw new Error('Filter step failed');
+    const filterData=await filterRes.json();
+    const filterTxt=(filterData.content&&filterData.content[0]&&filterData.content[0].text||'').trim();
+    let filterResult=parseJsonLoose(filterTxt);
+    if(!filterResult||(filterResult.matched==null&&!filterResult.reasoning&&!filterResult.context)){
+      // Last-resort: pull fields by name from the malformed blob
+      const m=extractJsonArray(filterTxt,'matched');
+      const r=extractJsonField(filterTxt,'reasoning');
+      const cx=extractJsonField(filterTxt,'context');
+      if((m&&m.length)||r||cx) filterResult={matched:m||[],reasoning:r,context:cx};
+      else throw new Error('Filter response not JSON: '+filterTxt.slice(0,120));
+    }
+    const matchedIndices=(Array.isArray(filterResult.matched)?filterResult.matched:[])
+      .map(v=>typeof v==='number'?v:parseInt(v,10))
+      .filter(n=>Number.isInteger(n)&&n>=0&&n<contacts.length);
+    const batchContext=(typeof filterResult.context==='string'&&filterResult.context.trim())||query;
+    const filtered=matchedIndices.map(i=>contacts[i]).filter(Boolean).slice(0,15);
+
+    if(!filtered.length){
+      document.getElementById('batchProgress').classList.add('hidden');
+      document.getElementById('batchResults').classList.remove('hidden');
+      document.getElementById('batchResults').innerHTML='<div style="background:var(--amber-pale);border-left:4px solid var(--amber);padding:14px 16px;border-radius:4px;font-size:14px;color:#92400e"><strong>No matches found.</strong> '+esc(filterResult.reasoning||'None of your contacts match that criteria.')+'</div>';
+      document.getElementById('runBatchBtn').disabled=false;
+      return;
+    }
+
+    // Show who was selected and why
+    document.getElementById('batchResults').classList.remove('hidden');
+    document.getElementById('batchResults').innerHTML='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:12px 14px;border-radius:4px;font-size:13px;color:#1B4332;margin-bottom:12px"><strong>Selected '+filtered.length+' contact'+(filtered.length!==1?'s':'')+':</strong> '+esc(filterResult.reasoning||'')+'</div>';
+
+    // Step 2: Generate messages for each matched contact
+    let generated=0,failed=0;
+    for(let i=0;i<filtered.length;i++){
+      const c=filtered[i];
+      document.getElementById('batchLabel').textContent='Generating '+(i+1)+' of '+filtered.length+': '+c.name+'...';
+      document.getElementById('batchFill').style.width=(((i+1)/filtered.length)*100)+'%';
+      try{
+        const rules=gr();
+        const hasRel=!!(c.history||c.notes||c.lastContact||c.annualSpend);
+        const relCtx=hasRel?'We have an existing relationship. Do not introduce yourself.':'Initial outreach.';
+        const spendLine=c.annualSpend>0?'\nContract value: $'+Number(c.annualSpend).toLocaleString():'';
+        const batchPromptMsg='You are '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
+          +'\n'+relCtx
+          +'\nTone: '+(p.tone||'Professional')
+          +'\nContact: '+c.name+', '+c.company+(c.title?', '+c.title:'')
+          +spendLine
+          +'\nLast contact: '+(c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000)+'d ago':'no record')
+          +(c.history?'\nRelationship: '+c.history:'')
+          +(c.notes?'\nNotes: '+c.notes:'')
+          +'\nContract expiry: '+(c.contractExpiry||'none')
+          +'\nWhat this outreach is about: '+batchContext
+          +(rules.length?'\nRules: '+rules.join('. '):'')
+          +'\n\nWrite a SHORT (3-5 sentence) email. No bullets. No dashes. No sign-off. Start with Hi [firstname]. Sound human.'
+          +'\nAlso produce a short (3-7 words) subject line that references the specific reason -- not generic ("Following up", "Touching base"). No emojis. No quotes wrapping it.'
+          +'\n\nReturn JSON: {"subject":"the email subject line","reason":"one sentence why this contact fits","message":"email body only"}';
+
+        const res=await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:batchPromptMsg}]})
+        });
+        if(res.ok){
+          const data=await res.json();
+          const txt=(data.content&&data.content[0]&&data.content[0].text||'').trim();
+          let parsed=parseJsonLoose(txt);
+          if(!parsed||typeof parsed.message!=='string'||!parsed.message.trim()){
+            // Last-resort: pull fields out of the malformed blob by name
+            const message=extractJsonField(txt,'message');
+            const reason=extractJsonField(txt,'reason');
+            if(message&&message.trim()) parsed={message,reason};
+          }
+          if(!parsed||typeof parsed.message!=='string'||!parsed.message.trim()) throw new Error('empty message');
+          const subj=(typeof parsed.subject==='string'&&parsed.subject.trim())||defaultSubject(c,batchContext);
+          s(K.queue,[...gq(),{id:uid(),cId:c.id,cName:c.name,co:c.company,email:c.email||'',subject:subj,msg:parsed.message.trim(),reason:(typeof parsed.reason==='string'?parsed.reason:''),trigger:batchContext,added:new Date().toISOString()}]);
+          generated++;
+        } else {failed++;}
+      }catch{failed++;}
+      await new Promise(r=>setTimeout(r,300));
+    }
+
+    document.getElementById('batchFill').style.width='100%';
+    document.getElementById('batchLabel').textContent='Complete!';
+    document.getElementById('batchResults').innerHTML+='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:14px 16px;border-radius:4px;font-size:14px;color:#1B4332"><strong>Done:</strong> Generated '+generated+' message'+(generated!==1?'s':'')+' added to queue.'+(failed?' '+failed+' failed.':'')+'</div>';
+    updateQueueBadge();
+    toast(generated+' messages added to queue','success');
+  }catch(e){
+    toast('Batch failed: '+e.message,'error');
+    document.getElementById('batchProgress').classList.add('hidden');
+  }
+  document.getElementById('runBatchBtn').disabled=false;
+}
+
+// CSV
+function handleCsv(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    if(lines.length<2){toast('CSV needs at least 2 rows','error');return;}
+    const parseRow=row=>{const f=[];let cur='',inQ=false;for(const c of row){if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){f.push(cur.trim());cur='';}else{cur+=c;}}f.push(cur.trim());return f;};
+    const headers=parseRow(lines[0]).map(h=>h.replace(/^"|"$/g,'').trim().toLowerCase());
+    const rows=lines.slice(1).map(l=>parseRow(l).map(v=>v.replace(/^"|"$/g,'').trim()));
+    const find=(candidates)=>headers.findIndex(h=>candidates.some(c=>h.includes(c)));
+    // Map all known fields
+    const mapping={
+      name:       find(['name','full name','contact person','contact']),
+      company:    find(['company','organization','account','vendor','client','firm']),
+      title:      find(['title','role','position','job']),
+      email:      find(['email','e-mail','mail']),
+      phone:      find(['phone','tel','mobile','cell','contact number']),
+      tier:       find(['tier','priority','level','grade']),
+      frequency:  find(['frequency','freq','touch','cadence','days']),
+      lastContact:find(['last contact','last contacted','last touch','last outreach','last call','last meeting']),
+      contractExpiry:find(['contract expiry','expiry','expiration','contract end','renewal','contract date']),
+      invoiceAmount:find(['invoice','invoice amount','outstanding','balance','amount due','overdue']),
+      annualSpend:find(['spend','annual spend','revenue','volume','contract value','spend amount']),
+      location:   find(['location','city','region','state','territory','area']),
+      accountSize:find(['account size','size','segment','category']),
+      products:   find(['products','services','product','category','what they buy','offerings']),
+      notes:      find(['notes','note','comments','history','relationship','background','context','relationship notes'])
+    };
+    csvData={headers,rows,mapping};
+
+    // Build detected fields summary
+    const detected=Object.entries(mapping).filter(([k,v])=>v>=0).map(([k,v])=>k+' ('+headers[v]+')');
+    const missed=Object.entries(mapping).filter(([k,v])=>v<0).map(([k])=>k);
+    document.getElementById('csvMapping').innerHTML=
+      '<div style="font-size:13px;margin-bottom:8px"><strong>'+detected.length+' columns mapped:</strong> '+detected.join(', ')+'</div>'+
+      (missed.length?'<div style="font-size:12px;color:var(--gray);margin-bottom:10px">Not found: '+missed.join(', ')+'</div>':'');
+
+    document.getElementById('csvPreview').innerHTML='<div style="overflow-x:auto;max-height:200px"><table class="csv-preview-table"><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.slice(0,5).map(r=>'<tr>'+r.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+    document.getElementById('csvInfo').textContent=rows.length+' total rows to import';
+    document.getElementById('csvModal').classList.remove('hidden');
+  };
+  reader.readAsText(file);
+}
+
+function confirmCsv(){
+  if(!csvData) return;
+  const {rows,mapping}=csvData;
+  const contacts=gc();let imported=0,skipped=0;
+  rows.forEach(row=>{
+    const get=(field)=>mapping[field]>=0?row[mapping[field]]:'';
+    const name=get('name'), co=get('company');
+    if(!name&&!co){skipped++;return;}
+    if(contacts.find(c=>c.name===name&&c.company===co)){skipped++;return;}
+    // Parse tier - handle "A", "A - High Value", "High", etc.
+    let tier=get('tier').toUpperCase().charAt(0);
+    if(!['A','B','C'].includes(tier)) tier='C';
+    // Parse frequency
+    const rawFreq=parseInt(get('frequency'))||0;
+    const freq=rawFreq>0?rawFreq:(tier==='A'?14:tier==='B'?30:60);
+    // Parse invoice/spend amounts - strip $ and commas
+    const parseAmt=(v)=>parseFloat(v.replace(/[$,]/g,''))||0;
+    // Build notes combining notes + annual spend context
+    let notes=get('notes')||get('products');
+    const spend=parseAmt(get('annualSpend'));
+    if(spend>0) notes=(notes?notes+'. ':'')+'Annual spend: $'+spend.toLocaleString();
+    contacts.push({
+      id:uid(),
+      name:name||'Unknown',
+      company:co||'Unknown',
+      title:get('title'),
+      email:get('email'),
+      phone:get('phone'),
+      tier,frequency:freq,
+      lastContact:get('lastContact'),
+      contractExpiry:get('contractExpiry'),
+      invoiceAmount:parseAmt(get('invoiceAmount')),
+      location:get('location'),
+      accountSize:get('accountSize'),
+      products:get('products'),
+      history:get('notes'),
+      notes:notes,
+      annualSpend:spend,
+      createdAt:new Date().toISOString()
+    });
+    imported++;
+  });
+  s(K.contacts,contacts);
+  csvData=null;
+  document.getElementById('csvModal').classList.add('hidden');
+  renderContacts();
+  toast('Imported '+imported+', skipped '+skipped,'success');
+}
+
+// SETTINGS
+// INTEGRATIONS
+const INTEGRATION_GUIDES = {
+  salesforce:{
+    title:'Salesforce -- Full Setup Guide',
+    content:'<div style="font-size:14px;line-height:1.7;color:var(--dark)">'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 1: CSV Export (Recommended)</h4>'
+      +'<ol style="padding-left:18px;margin-bottom:16px">'
+      +'<li>Log into Salesforce &gt; Reports tab</li>'
+      +'<li>Click New Report &gt; Choose Contacts &amp; Accounts</li>'
+      +'<li>Add columns: Contact Name, Account Name, Email, Phone, Last Activity Date, Contract End Date, Annual Revenue</li>'
+      +'<li>Click Run &gt; Export &gt; Format: CSV</li>'
+      +'<li>Import the CSV into Renzo &gt; Contacts &gt; Import CSV</li>'
+      +'</ol>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Tips for best results</h4>'
+      +'<ul style="padding-left:18px;margin-bottom:16px">'
+      +'<li>Include Last Activity Date -- Renzo uses this for priority scoring</li>'
+      +'<li>Include Contract End Date for renewal-based outreach</li>'
+      +'<li>Include Annual Revenue as the account value weight</li>'
+      +'<li>Export monthly and re-import to keep data fresh</li>'
+      +'</ul>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 2: API Integration (Coming Soon)</h4>'
+      +'<p style="color:var(--gray)">Direct Salesforce API connection with live sync is on the Renzo roadmap.</p>'
+      +'</div>'},
+  hubspot:{
+    title:'HubSpot -- Full Setup Guide',
+    content:'<div style="font-size:14px;line-height:1.7;color:var(--dark)"><h4 style="margin-bottom:8px;color:var(--green)">Export Contacts from HubSpot</h4><ol style="padding-left:18px;margin-bottom:16px"><li>HubSpot &gt; Contacts &gt; All Contacts</li><li>Use filters to narrow if needed (e.g. by lifecycle stage)</li><li>Click Actions &gt; Export &gt; select properties to include</li><li>Recommended: Email, First Name, Last Name, Company Name, Phone, Last Contacted, Deal Stage, Associated Deal Amount</li><li>Download CSV &gt; Import into Renzo</li></ol><h4 style="margin-bottom:8px;color:var(--green)">For deal-based outreach</h4><ul style="padding-left:18px"><li>Export from Deals to include deal value and close date</li><li>Set your Renzo role to match your use case</li></ul></div>'},
+  quickbooks:{
+    title:'QuickBooks -- Collections Setup Guide',
+    content:'<div style="font-size:14px;line-height:1.7;color:var(--dark)">'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Export Overdue Invoices</h4>'
+      +'<ol style="padding-left:18px;margin-bottom:16px">'
+      +'<li>QuickBooks -&gt; Reports -&gt; Accounts Receivable Aging Detail</li>'
+      +'<li>Date range: set to current</li>'
+      +'<li>Customize: ensure Customer Name, Email, Balance, Due Date, Days Overdue are visible</li>'
+      +'<li>Export -&gt; Excel -&gt; save as CSV</li>'
+      +'<li>Import into Renzo -- map "Balance" to Invoice Amount, "Customer Name" to Name</li>'
+      +'</ol>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Set up Renzo for Collections</h4>'
+      +'<ol style="padding-left:18px">'
+      +'<li>Go to Settings -&gt; Your Role field</li>'
+      +'<li>Enter: "I am in collections/finance. I follow up on outstanding invoices and overdue accounts."</li>'
+      +'<li>Renzo will prioritize by invoice amount and days overdue, and write appropriate follow-up messages</li>'
+      +'</ol>'
+      +'</div>'},
+  custom:{
+    title:'Custom System / VCS -- Integration Guide',
+    content:'<div style="font-size:14px;line-height:1.7;color:var(--dark)">'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 1: Add CSV Export to Your App</h4>'
+      +'<p style="margin-bottom:12px">The easiest integration -- add an export button to your system. Example for a JavaScript app:</p>'
+      +'<code style="display:block;background:var(--gray-pale);padding:12px;border-radius:6px;font-size:12px;margin-bottom:16px;white-space:pre-wrap">function exportToRenzo(contacts) {'
+      +'  const headers = [\'Name\',\'Company\',\'Email\',\'Phone\',\'Notes\'];'
+      +'  const rows = contacts.map(c => ['
+      +'    c.name, c.company, c.email, c.phone, c.notes'
+      +'  ]);'
+      +'  const csv = [headers, ...rows]'
+      +'    .map(r => r.map(v => \'"\'+String(v||\'\').replace(/"/g,\'""\')+\'"\').join(\',\'))'
+      +'    .join(\'\\n\');'
+      +'  const blob = new Blob([csv], {type:\'text/csv\'});'
+      +'  const a = document.createElement(\'a\');'
+      +'  a.href = URL.createObjectURL(blob);'
+      +'  a.download = \'contacts-for-renzo.csv\';'
+      +'  a.click();'
+      +'}</code>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 2: Embed Renzo in Your App</h4>'
+      +'<p style="margin-bottom:8px">Add this anywhere in your HTML to embed Renzo as a panel:</p>'
+      +'<code style="display:block;background:var(--gray-pale);padding:12px;border-radius:6px;font-size:12px;margin-bottom:16px">&lt;iframe src="https://renzo-beige.vercel.app" width="100%" height="800px" frameborder="0" style="border-radius:12px"&gt;&lt;/iframe&gt;</code>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 3: For VCS specifically</h4>'
+      +'<p style="color:var(--gray)">The Vendor Catalog Scheduler already has vendor data in a structured format. The fastest path: add an export button to VCS that downloads vendor contacts as CSV matching Renzo\'s column names (Name, Company, Email, Phone, Contract Expiry, Annual Spend, Notes). Contact your VCS developer to add this -- it\'s typically a 30-minute code change.</p>'
+      +'</div>'}
+};
+
+function showIntegrationDetail(key){
+  const guide=INTEGRATION_GUIDES[key];
+  if(!guide) return;
+  document.getElementById('integDetailTitle').textContent=guide.title;
+  document.getElementById('integDetailContent').innerHTML=guide.content;
+  document.getElementById('integrationDetail').classList.remove('hidden');
+  document.getElementById('integrationDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function loadSettings(){
+  const key=localStorage.getItem(K.apiKey)||'',p=gp();
+  document.getElementById('settingsKey').value=key;
+  document.getElementById('sWebsite').value=p.website||'';
+  document.getElementById('sCo').value=p.company||'';
+  document.getElementById('sSell').value=p.sell||'';
+  document.getElementById('sCust').value=p.customer||'';
+  document.getElementById('sRole').value=p.role||'';
+  document.getElementById('sTone').value=p.tone||'Professional';
+  document.getElementById('sRep').value=p.repName||'';
+  document.getElementById('settingsWarn').classList[key?'add':'remove']('hidden');
+  document.getElementById('settingsOk').classList.add('hidden');
+  renderRules();
+  renderEmailAccounts();
+  updateStorageIndicator();
+}
+
+function saveSettings(){
+  const key=document.getElementById('settingsKey').value.trim();
+  localStorage.setItem(K.apiKey,key);
+  s(K.profile,{website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim()});
+  document.getElementById('settingsWarn').classList[key?'add':'remove']('hidden');
+  document.getElementById('settingsOk').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('settingsOk').classList.add('hidden'),2000);
+  toast('Settings saved','success');
+}
+
+// RULES
+// EMAIL ACCOUNTS
+function gEmails(){return g('renzo_emails')||[];}
+
+// Infer provider for legacy accounts saved before the provider field existed.
+// Returns 'gmail' | 'outlook' | '' (unknown).
+function inferProvider(addr){
+  const a=String(addr||'').toLowerCase();
+  if(a.endsWith('@gmail.com')||a.endsWith('@googlemail.com')) return 'gmail';
+  if(/@(outlook|hotmail|live|msn)\.[a-z.]+$/.test(a)) return 'outlook';
+  return '';
+}
+function accountProvider(acct){
+  if(!acct) return '';
+  return acct.provider || inferProvider(acct.addr);
+}
+
+function renderEmailAccounts(){
+  const emails=gEmails();
+  // Update settings list if on settings page
+  const el=document.getElementById('emailAccountsList');
+  if(el){
+    el.innerHTML=emails.length
+      ?emails.map((e,i)=>{
+        const prov=accountProvider(e);
+        const provLabel=prov==='gmail'?'Gmail':prov==='outlook'?'Outlook':'<span style="color:var(--red)">No provider set</span>';
+        return '<div class="rule-item"><span class="rule-text"><strong>'+esc(e.label||e.addr)+'</strong> -- '+esc(e.addr)+' <span style="color:var(--gray);font-size:11px;margin-left:6px">'+provLabel+'</span></span><button class="rule-del" onclick="deleteEmail('+i+')">x</button></div>';
+      }).join('')
+      :'<p style="font-size:13px;color:var(--gray)">No email accounts added yet. Add one above.</p>';
+  }
+  // Update queue email selector
+  const sel=document.getElementById('queueEmailSel');
+  if(sel){
+    // Rebuild options completely
+    while(sel.options.length) sel.remove(0);
+    const placeholder=document.createElement('option');
+    placeholder.value=''; placeholder.textContent='Select sending account...';
+    sel.appendChild(placeholder);
+    emails.forEach((e,i)=>{
+      const opt=document.createElement('option');
+      opt.value=String(i);
+      opt.textContent=(e.label?e.label+' -- ':'')+e.addr;
+      sel.appendChild(opt);
+    });
+    // Auto-select if only one account
+    if(emails.length===1) sel.value='0';
+    // Show/hide banner
+    const banner=document.getElementById('emailSetupBanner');
+    if(banner) banner.classList.toggle('hidden', emails.length>0);
+  }
+}
+
+function addEmail(){
+  const addr=document.getElementById('newEmailAddr').value.trim();
+  const label=document.getElementById('newEmailLabel').value.trim();
+  const providerSel=document.getElementById('newEmailProvider');
+  const provider=providerSel?providerSel.value:'gmail';
+  if(!addr||!addr.includes('@')){toast('Enter a valid email address','error');return;}
+  const emails=gEmails();
+  if(emails.find(e=>e.addr===addr)){toast('That email is already added','error');return;}
+  emails.push({addr,label,provider});
+  s('renzo_emails',emails);
+  document.getElementById('newEmailAddr').value='';
+  document.getElementById('newEmailLabel').value='';
+  if(providerSel) providerSel.value='gmail';
+  renderEmailAccounts();
+  toast('Email account added','success');
+}
+
+function deleteEmail(i){
+  const emails=gEmails();emails.splice(i,1);
+  s('renzo_emails',emails);renderEmailAccounts();
+}
+
+// BULK SEND
+function bulkSendAll(){
+  const q=gq();
+  if(!q.length){toast('Queue is empty','error');return;}
+  const sel=document.getElementById('queueEmailSel');
+  const emails=gEmails();
+  if(!emails.length){toast('Add an email account in Settings first','error');return;}
+  const acct=sel&&sel.value!==''?emails[parseInt(sel.value)]:null;
+  if(!acct){toast('Select a sending account first','error');return;}
+  const fromEmail=acct.addr;
+  const provider=accountProvider(acct);
+  if(!provider){toast('That account has no provider set -- edit it in Settings and pick Gmail or Outlook','error');return;}
+
+  q.forEach((item,i)=>{
+    setTimeout(()=>{
+      const c=gc().find(x=>x.id===item.cId);
+      const toEmail=c&&c.email?c.email:'';
+      const subject=item.subject||defaultSubject({company:item.co},item.trigger);
+      const body=item.msg;
+      openEmailCompose(toEmail,subject,body,fromEmail,provider);
+    }, i*800); // Stagger opens 800ms apart so browser doesn't block them
+  });
+
+  // After all opened, ask to mark all sent
+  setTimeout(()=>{
+    const label=provider==='outlook'?'Outlook':'Gmail';
+    if(confirm('Opened '+q.length+' '+label+' compose tabs. Mark all as sent in Renzo?')){
+      markAllSent();
+    }
+  }, q.length*800+500);
+}
+
+function renderRules(){
+  const rules=gr(),el=document.getElementById('rulesList');
+  el.innerHTML=rules.length?rules.map((r,i)=>'<div class="rule-item"><span class="rule-text">'+esc(r)+'</span><button class="rule-del" onclick="deleteRule('+i+')">x</button></div>').join(''):'<p style="font-size:13px;color:var(--gray)">No rules yet.</p>';
+}
+function addRule(){
+  const input=document.getElementById('newRule'),val=input.value.trim();
+  if(!val) return;
+  s(K.rules,[...gr(),val]);
+  input.value='';
+  renderRules();
+}
+function deleteRule(i){const rules=gr();rules.splice(i,1);s(K.rules,rules);renderRules();}
+
+// EVENT LISTENERS
+document.getElementById('loginBtn').addEventListener('click',doLogin);
+document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('logoutBtn').addEventListener('click',doLogout);
+document.getElementById('profileSel').addEventListener('change',function(){switchProfile(this.value);});
+document.getElementById('profileModalClose').addEventListener('click',closeProfileModal);
+document.getElementById('profileModalCancel').addEventListener('click',closeProfileModal);
+document.getElementById('profileModalCreate').addEventListener('click',confirmProfileModal);
+document.getElementById('profileNameInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ e.preventDefault(); confirmProfileModal(); }
+  else if(e.key==='Escape'){ closeProfileModal(); }
+});
+document.getElementById('profileModal').addEventListener('click',function(e){
+  if(e.target===this) closeProfileModal();
+});
+document.getElementById('obSave').addEventListener('click',saveOnboarding);
+document.getElementById('obReadSite').addEventListener('click',readWebsite);
+document.getElementById('obUrl').addEventListener('keydown',function(e){if(e.key==='Enter')readWebsite();});
+document.getElementById('obNextStep').addEventListener('click',function(){showObStep(2);});
+document.getElementById('obBack').addEventListener('click',function(){showObStep(1);});
+document.getElementById('obSkipSite').addEventListener('click',function(){
+  document.getElementById('obNextStep').disabled=false;
+  showObStep(2);
+});
+// Prevent modal from closing on overlay click during onboarding
+document.getElementById('onboardModal').addEventListener('click',function(e){
+  if(e.target===this){
+    // Don't close -- onboarding is important
+    toast('Complete your profile or click Skip to continue');
+  }
+});
+document.querySelectorAll('.nav-item').forEach(function(n){n.addEventListener('click',function(){showView(n.dataset.view);});});
+document.getElementById('addContactBtn').addEventListener('click',openAddContact);
+document.getElementById('ctSave').addEventListener('click',saveContact);
+document.getElementById('ctCancel').addEventListener('click',function(){document.getElementById('ctModal').classList.add('hidden');});
+// Auto-populate touch frequency from tier unless the user has typed their own value
+document.getElementById('ctTier').addEventListener('change',function(){
+  this.classList.remove('invalid');
+  const freqEl=document.getElementById('ctFreq');
+  const userEdited=freqEl.dataset.userEdited==='1';
+  // Fill if user hasn't customized, OR if the field is currently empty
+  if((!userEdited || !freqEl.value) && CT_TIER_DEFAULTS[this.value]){
+    freqEl.value=CT_TIER_DEFAULTS[this.value];
+    freqEl.classList.remove('invalid');
+  }
+  if(!document.querySelector('#ctModal .invalid')) document.getElementById('ctErr').classList.add('hidden');
+});
+// Track manual edits: a non-empty value locks out tier auto-fill; clearing the field unlocks it
+document.getElementById('ctFreq').addEventListener('input',function(){
+  this.dataset.userEdited=this.value?'1':'';
+});
+// Clear invalid state as the user types/fixes the field
+CT_REQUIRED_FIELDS.forEach(function(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const ev=(el.tagName==='SELECT')?'change':'input';
+  el.addEventListener(ev,function(){
+    if(this.value && String(this.value).trim()) this.classList.remove('invalid');
+    if(!document.querySelector('#ctModal .invalid')) document.getElementById('ctErr').classList.add('hidden');
+  });
+});
+document.getElementById('ctModalClose').addEventListener('click',function(){document.getElementById('ctModal').classList.add('hidden');});
+document.getElementById('ctDelBtn').addEventListener('click',openDelete);
+document.getElementById('delConfirm').addEventListener('click',doDelete);
+document.getElementById('delCancel').addEventListener('click',function(){document.getElementById('delModal').classList.add('hidden');});
+document.getElementById('aiClose').addEventListener('click',function(){document.getElementById('aiModal').classList.add('hidden');aiContact=null;});
+document.getElementById('aiQueue').addEventListener('click',addToQueue);
+document.getElementById('aiDraft').addEventListener('click',saveDraft);
+document.getElementById('aiGmail').addEventListener('click',openGmail);
+// Generate with optional prompt
+document.getElementById('aiGenBtn').addEventListener('click',function(){
+  if(!aiContact) return;
+  const instruction=document.getElementById('aiPromptInput').value.trim();
+  document.getElementById('aiResult').classList.add('hidden');
+  document.getElementById('aiErr').classList.add('hidden');
+  generateMsg(aiContact, instruction||null);
+});
+document.getElementById('aiPromptInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('aiGenBtn').click();}
+});
+// Skip prompt and generate from context
+document.getElementById('aiSkipPrompt').addEventListener('click',function(){
+  if(!aiContact) return;
+  document.getElementById('aiResult').classList.add('hidden');
+  document.getElementById('aiErr').classList.add('hidden');
+  generateMsg(aiContact, null);
+});
+document.getElementById('aiRegen').addEventListener('click',function(){if(!aiContact)return;document.getElementById('aiResult').classList.add('hidden');document.getElementById('aiErr').classList.add('hidden');generateMsg(aiContact,null);});
+// Refine button toggle
+document.getElementById('aiRefine') && document.getElementById('aiRefine').addEventListener('click',function(){
+  document.getElementById('aiRefineBox').classList.toggle('hidden');
+  document.getElementById('aiRefineInput').focus();
+});
+// Refine rewrite
+document.getElementById('aiRefineBtn') && document.getElementById('aiRefineBtn').addEventListener('click',async function(){
+  const instruction=document.getElementById('aiRefineInput').value.trim();
+  if(!instruction||!aiContact) return;
+  const current=document.getElementById('aiMsg').value;
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('No API key set','error');return;}
+  this.disabled=true;this.textContent='Rewriting...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Rewrite this outreach email based on this instruction: "'+instruction+'"\n\nOriginal email:\n'+current+'\n\nContact: '+aiContact.name+' at '+aiContact.company+'\n\nReturn ONLY the rewritten email text, no explanation.'}]})});
+    if(res.ok){const data=await res.json();document.getElementById('aiMsg').value=data.content[0].text.trim();document.getElementById('aiRefineBox').classList.add('hidden');document.getElementById('aiRefineInput').value='';toast('Message rewritten');}
+  }catch(e){toast('Rewrite failed: '+e.message,'error');}
+  this.disabled=false;this.textContent='Rewrite';
+});
+document.getElementById('markAllBtn').addEventListener('click',markAllSent);
+document.getElementById('saveSettingsBtn').addEventListener('click',saveSettings);
+document.getElementById('addRuleBtn').addEventListener('click',addRule);
+document.getElementById('storageExportBtn') && document.getElementById('storageExportBtn').addEventListener('click',exportContacts);
+document.getElementById('storageRefreshBtn') && document.getElementById('storageRefreshBtn').addEventListener('click',function(){storageWarnShown=false;checkStorageQuota();toast('Storage usage refreshed');});
+document.getElementById('addEmailBtn') && document.getElementById('addEmailBtn').addEventListener('click',addEmail);
+document.getElementById('bulkSendBtn') && document.getElementById('bulkSendBtn').addEventListener('click',bulkSendAll);
+document.getElementById('newEmailAddr') && document.getElementById('newEmailAddr').addEventListener('keydown',function(e){if(e.key==='Enter')addEmail();});
+document.getElementById('newRule').addEventListener('keydown',function(e){if(e.key==='Enter')addRule();});
+document.getElementById('ctSearch').addEventListener('input',renderContacts);
+document.getElementById('ctTierF').addEventListener('change',renderContacts);
+document.getElementById('importCsvBtn').addEventListener('click',function(){document.getElementById('csvFile').click();});
+document.getElementById('exportCsvBtn').addEventListener('click',exportContacts);
+document.getElementById('sReadWebsite') && document.getElementById('sReadWebsite').addEventListener('click',async function(){
+  let url=document.getElementById('sWebsite').value.trim();
+  if(!url){toast('Enter a website URL first','error');return;}
+  if(!url.startsWith('http')) url='https://'+url;
+  document.getElementById('sWebsite').value=url;
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){toast('Add API key first','error');return;}
+  this.disabled=true;this.textContent='Reading...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'Company website: '+url+'. You cannot visit this URL. Use the domain name and your training knowledge to infer a company profile. Return ONLY a raw JSON object with no markdown, no explanation, no code fences: {"company":"name","sell":"what they sell in 2 sentences","customer":"who their customers are"}'}]})});
+    if(!res.ok){const errData=await res.json().catch(()=>({}));throw new Error('API '+res.status+': '+(errData.error&&errData.error.message||'unknown'));}
+    const data=await res.json();
+    let txt=data.content[0].text.trim();
+    txt=txt.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+    const jsonMatch=txt.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('Unexpected response format');
+    const p=JSON.parse(jsonMatch[0]);
+    if(p.company) document.getElementById('sCo').value=p.company;
+    if(p.sell) document.getElementById('sSell').value=p.sell;
+    if(p.customer) document.getElementById('sCust').value=p.customer;
+    toast('Profile auto-filled — review and save','success');
+  }catch(e){toast('Auto-fill failed: '+e.message,'error');}
+  this.disabled=false;this.textContent='Auto-fill from site';
+});
+document.getElementById('csvFile').addEventListener('change',function(e){handleCsv(e.target.files[0]);});
+document.getElementById('csvConfirm').addEventListener('click',confirmCsv);
+document.getElementById('csvCancel').addEventListener('click',function(){document.getElementById('csvModal').classList.add('hidden');});
+document.getElementById('histClose').addEventListener('click',function(){document.getElementById('histModal').classList.add('hidden');histContact=null;});
+document.getElementById('histEdit').addEventListener('click',function(){if(!histContact)return;document.getElementById('histModal').classList.add('hidden');openEditContact(histContact.id);});
+document.getElementById('histGenerate').addEventListener('click',function(){if(!histContact)return;document.getElementById('histModal').classList.add('hidden');openAi(histContact.id);});
+document.getElementById('csvClose').addEventListener('click',function(){document.getElementById('csvModal').classList.add('hidden');});
+document.getElementById('runBatchBtn').addEventListener('click',runBatch);
+
+// MODAL OVERLAY CLOSE
+['ctModal','aiModal','delModal','csvModal','histModal','statModal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal'].forEach(function(id){document.getElementById(id).classList.add('hidden');});}
+});
+
+// INIT
+// AI GUIDE
+function toggleGuide(){
+  const modal=document.getElementById('guideModal');
+  modal.classList.toggle('hidden');
+  if(!modal.classList.contains('hidden')) document.getElementById('guideInput').focus();
+}
+
+async function sendGuideMsg(){
+  const input=document.getElementById('guideInput');
+  const msg=input.value.trim();
+  if(!msg) return;
+  input.value='';
+  const msgs=document.getElementById('guideMsgs');
+
+  // Add user message
+  msgs.innerHTML+='<div style="background:var(--green);color:#fff;border-radius:10px 10px 0 10px;padding:10px 13px;font-size:13px;line-height:1.5;max-width:90%;align-self:flex-end">'+esc(msg)+'</div>';
+  msgs.scrollTop=msgs.scrollHeight;
+
+  const key=localStorage.getItem(K.apiKey)||'';
+  if(!key){
+    msgs.innerHTML+='<div style="background:var(--gray-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:var(--dark);line-height:1.5;max-width:90%">Add your API key in Settings to enable AI guidance.</div>';
+    msgs.scrollTop=msgs.scrollHeight;
+    return;
+  }
+
+  // Loading
+  const loadId='guide-load-'+Date.now();
+  msgs.innerHTML+='<div id="'+loadId+'" style="background:var(--gray-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--gray);max-width:60%">Thinking...</div>';
+  msgs.scrollTop=msgs.scrollHeight;
+
+  const p=gp();
+  const systemPrompt='You are Renzo Guide, a helpful AI assistant built into the Renzo relationship outreach platform. You help users navigate and use Renzo effectively. Renzo is a B2B outreach tool that: imports contacts via CSV, uses AI to generate personalized outreach emails based on relationship context, manages an outreach queue, sends emails via Gmail or Outlook web compose, tracks activity history per contact, supports batch outreach with AI-powered contact filtering, and has an integrations page. The current user is '+(p.repName||'a rep')+' at '+(p.company||'their company')+'. Be concise, practical, and friendly. If they ask how to do something, give step-by-step instructions. Keep answers under 100 words.';
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,system:systemPrompt,messages:[{role:'user',content:msg}]})});
+    const data=await res.json();
+    const reply=res.ok?data.content[0].text.trim():'Sorry, something went wrong. Try again.';
+    document.getElementById(loadId).outerHTML='<div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">'+esc(reply)+'</div>';
+  }catch(e){
+    document.getElementById(loadId).outerHTML='<div style="background:var(--red-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--red)">Error connecting. Check your API key in Settings.</div>';
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+document.getElementById('appVersion').textContent=RENZO_VERSION;
+
+const sess=g(K.session);
+if(sess&&CREDS[sess]){
+  currentUser=sess;
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.getElementById('sidebarUser').textContent='Logged in as '+sess;
+  renderEmailAccounts(); // populate queue dropdown from saved accounts
+  renderProfileSelector();
+  showView('dashboard');
+  checkStorageQuota();
+}
+
+function showStorageWarning(pct){
+  if(document.getElementById('storageWarn')) return;
+  const el=document.createElement('div');
+  el.id='storageWarn';
+  const sev = (typeof pct==='number' && pct<95) ? 'var(--amber)' : 'var(--red)';
+  el.style.cssText='position:fixed;top:0;left:0;right:0;background:'+sev+';color:#fff;padding:10px 16px;font-size:13px;z-index:9999;display:flex;justify-content:center;align-items:center;gap:14px';
+  const msg = (typeof pct==='number')
+    ? 'Browser storage '+pct+'% full — saves may start failing.'
+    : 'Browser storage is full — a save just failed.';
+  el.innerHTML='<span>'+msg+' <a href="#" onclick="exportContacts();return false;" style="color:#fff;text-decoration:underline;font-weight:600">Export contacts</a> to free space.</span><button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:4px;padding:2px 9px;cursor:pointer;font-size:14px;line-height:1" aria-label="Dismiss">x</button>';
+  document.body.prepend(el);
+}
+
+function prevPage(){if(currentPage>0){currentPage--;renderContacts();}}
+function nextPage(){const cs=gc('contacts');if((currentPage+1)*50<cs.length){currentPage++;renderContacts();}}
+
+function updateMobileUser(){
+var mu=document.getElementById('mobileUser');if(mu){var pp=gp();mu.textContent=pp.repName||pp.company||'';}}
+window.addEventListener('resize',function(){refreshActiveView();});;
+
+function renderMobileContacts(){
+  const contacts = gc();
+  const cardContainer = g('contactCards');
+  const tableWrap = document.querySelector('.table-wrap');
+  if(tableWrap) tableWrap.style.display = 'none';
+  cardContainer.style.display = 'block';
+  if(!contacts.length){
+    cardContainer.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)">No contacts yet</div>';
+    return;
+  }
+  cardContainer.innerHTML = contacts.map(c => {
+    const pri = computePriority(c);
+    const st = statusInfo(c.status);
+    return `
+      <div class="contact-card">
+        <div class="contact-card-header">
+          <div>
+            <div class="contact-card-name">${esc(c.name)}</div>
+            ${c.company ? `<div class="contact-card-company">${esc(c.company)}</div>` : ''}
+          </div>
+        </div>
+        <div class="contact-card-badges">
+          ${priorityBadge(pri)}
+          ${c.tier ? `<span class="badge badge-tier">${esc(c.tier)}</span>` : ''}
+          <span class="badge badge-${st.cls}">${st.label}</span>
+        </div>
+        <div class="contact-card-actions">
+          <button class="btn btn-primary btn-sm" onclick="openAi('${c.id}')">💬 Message</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditContact('${c.id}')">✏️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateMobileHeader(){
+  const user = g('mobileUser');
+  if(user){
+    const email = localStorage.renzo_email || 'user';
+    user.textContent = email;
+  }
+}
+
+function addEmojiToNavItems(){
+  const navMap = {
+    'nav-dashboard': '🏠',
+    'nav-contacts': '👥',
+    'nav-queue': '📤',
+    'nav-drafts': '📝',
+    'nav-batch': '⚡',
+    'nav-integrations': '🔗',
+    'nav-activity': '📊',
+    'nav-settings': '�gear;'
+  };
+  Object.keys(navMap).forEach(id => {
+    const el = g(id);
+    if(el){
+      const icon = el.querySelector('.nav-icon');
+      if(icon){
+        icon.textContent = navMap[id];
+      }
+    }
+  });
+}
+
+function initMobileLayout(){
+  addEmojiToNavItems();
+  updateMobileHeader();
+  window.addEventListener('resize', () => {
+    var el=document.getElementById('view-contacts');
+    if(el && !el.classList.contains('hidden')){ renderContacts(); }
+  });
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => {
+    var lv=document.getElementById('loginView');
+    if(lv && !lv.classList.contains('hidden')) return;
+    initMobileLayout();
+  });
+} else {
+  var lv2=document.getElementById('loginView');
+  if(!lv2 || lv2.classList.contains('hidden')){ initMobileLayout(); }
+}
+
+
+// Mobile responsive helper
+window.addEventListener('resize', () => {
+  const currentView = document.querySelector('.view:not(.hidden)')?.id;
+  if(currentView === 'contactsView') {
+    renderContacts();
+  }
+});
+</script>
+
+<!-- AI GUIDE ASSISTANT -->
+<div id="guideBtn" style="position:fixed;bottom:28px;right:28px;z-index:3000;cursor:pointer" onclick="toggleGuide()">
+  <div style="width:52px;height:52px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(31,107,71,.4);font-size:22px;transition:transform .15s" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">💬</div>
+  <div style="position:absolute;top:-8px;right:-4px;background:var(--amber);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">AI</div>
+</div>
+
+<div id="guideModal" class="hidden" style="position:fixed;bottom:90px;right:28px;z-index:3000;width:340px;background:var(--white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid var(--gray-light);display:flex;flex-direction:column;max-height:480px">
+  <div style="padding:16px 18px;border-bottom:1px solid var(--gray-pale);display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px">Renzo Guide</div>
+      <div style="font-size:11px;color:var(--green);font-weight:600">AI-powered help</div>
+    </div>
+    <button onclick="toggleGuide()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray);padding:2px 6px">x</button>
+  </div>
+  <div id="guideMsgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">
+      Hi! I'm your Renzo guide. Ask me anything about using Renzo — how to import contacts, generate messages, set up email, run batch outreach, or anything else.
+    </div>
+  </div>
+  <div style="padding:10px 12px;border-top:1px solid var(--gray-pale);display:flex;gap:8px">
+    <input id="guideInput" type="text" placeholder="Ask anything..." style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:8px;outline:none;font-size:13px" onkeydown="if(event.key==='Enter')sendGuideMsg()">
+    <button onclick="sendGuideMsg()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer">Send</button>
+  </div>
+</div>
+
+</body>
+</html>

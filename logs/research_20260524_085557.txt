@@ -1,0 +1,294 @@
+# CODE ANALYSIS REPORT
+
+## EXISTING_FEATURES:
+
+### Authentication & Storage
+- `loadCreds()` - loads API key, phone, Claude key, Zapier webhook from localStorage
+- `saveCreds()` - saves credentials to localStorage  
+- `handleLogin()` - validates and saves login credentials
+- `logout()` - clears localStorage and returns to login
+
+### Navigation & Views
+- `switchView(viewName)` - switches between Dashboard, Leads, Queue, Drafts, Settings
+- `renderDashboard()` - displays stats and recent activity
+- `renderLeads()` - displays leads table with search/filter
+- `renderQueue()` - displays queue messages with preview
+- `renderDrafts()` - displays draft messages
+- `renderSettings()` - settings form
+
+### Lead Management
+- `addLead()` - adds new lead with name, number, notes
+- `deleteLead(id)` - removes lead from localStorage
+- `searchLeads(query)` - filters leads by name/number/notes
+- `getLeads()` - retrieves leads array from localStorage
+
+### AI Message Generation
+- `generateMsg(leadName, leadNotes)` - calls Claude API to generate message with reason
+- Returns JSON format: `{reason:string, message:string}`
+- Uses Claude Sonnet 3.5 model
+- Prompt includes 3-sentence limit, friendly tone, personal touch guidelines
+
+### Queue Management
+- `addToQueue(leadId, leadName, leadNumber, message, reason)` - adds message to queue
+- Queue items stored in localStorage as array with: `{id, leadId, leadName, leadNumber, message, reason, timestamp}`
+- `renderQueue()` - displays queue with message preview (first 100 chars)
+- `deleteFromQueue(qid)` - removes item from queue
+- `refineQueueMsg(qid)` - uses Claude Haiku to rewrite message, keeps reason unchanged
+
+### Draft Management  
+- `saveDraft(leadId, leadName, leadNumber, message, reason)` - saves to drafts array
+- Draft items: `{id, leadId, leadName, leadNumber, message, reason, timestamp}`
+- `deleteDraft(did)` - removes draft
+- `moveDraftToQueue(did)` - moves draft to queue
+- `refineDraft(did)` - uses Claude Haiku to rewrite message
+
+### Email Sending
+- `sendEmail(qid)` - sends single email via Zapier webhook
+- Generates subject line: `"Quick note, " + item.leadName.split(' ')[0]`
+- Payload: `{to, subject, body, userPhone}`
+- Removes from queue after sending
+- `bulkSendAll()` - sends all queue items sequentially
+- Uses same subject generation pattern for bulk sends
+
+### Statistics
+- `refreshStats()` - calculates total leads, queue count, sent count, draft count
+- Displays in stat cards on dashboard
+
+### UI Components
+- Search functionality for leads
+- Clickable table rows to generate messages
+- Message preview truncation
+- Badge counts in navigation
+- Loading states during API calls
+- Error handling with alerts
+
+## MISSING_FEATURES:
+
+1. **Subject field in AI generation** - `generateMsg()` does not request or return subject line
+2. **Subject storage in queue items** - queue objects lack `subject` property
+3. **Subject storage in draft items** - draft objects lack `subject` property  
+4. **Subject display in queue view** - `renderQueue()` does not show subject line
+5. **Subject display in drafts view** - `renderDrafts()` does not show subject line
+6. **Subject regeneration in refinement** - `refineQueueMsg()` and `refineDraft()` do not update subject after rewriting message
+7. **Subject fallback logic** - `sendEmail()` and `bulkSendAll()` do not check for stored subject before generating
+
+## CHANGES_NEEDED:
+
+### 1. `generateMsg()` function (line ~300-350 area)
+- Update Claude prompt to request 3-field JSON: `{reason, subject, message}`
+- Add subject line requirements: 5-8 words, human, specific, no cliches
+- Parse `parsed.subject` from API response
+- Pass subject to queue/draft functions
+
+### 2. `addToQueue()` function signature and implementation
+- Add `subject` parameter to function signature
+- Include `subject: subject || ''` in queue item object before saving to localStorage
+
+### 3. `saveDraft()` function signature and implementation  
+- Add `subject` parameter to function signature
+- Include `subject: subject || ''` in draft item object before saving to localStorage
+
+### 4. `renderQueue()` function
+- After rendering message preview, add conditional subject display
+- Show subject in div with style: `font-size:13px; font-style:italic; color:var(--gray)`
+- Only display if `item.subject` exists and is non-empty
+
+### 5. `renderDrafts()` function
+- Add same subject display logic as renderQueue()
+- Show subject above message preview with identical styling
+
+### 6. `sendEmail()` function
+- Replace hardcoded subject generation with: `item.subject || ("Quick note, " + item.leadName.split(' ')[0])`
+- Use existing subject if available, fallback to current pattern
+
+### 7. `bulkSendAll()` function  
+- Replace hardcoded subject generation with: `item.subject || ("Quick note, " + item.leadName.split(' ')[0])`
+- Same pattern as sendEmail()
+
+### 8. `refineQueueMsg()` function
+- After successful message rewrite, make second Claude Haiku API call
+- Prompt: `"Given this email body, write a subject line (5-8 words, no cliches): " + updatedMessage`
+- Update queue item's subject field with new subject
+- Save updated queue back to localStorage
+
+### 9. `refineDraft()` function
+- After successful message rewrite, make second Claude Haiku API call
+- Same prompt pattern as refineQueueMsg()
+- Update draft item's subject field
+- Save updated drafts back to localStorage
+
+### 10. Lead generation flow (where generateMsg is called)
+- Update caller to receive and pass `parsed.subject` to addToQueue() or saveDraft()
+- Ensure subject is extracted from generateMsg() response
+
+## REUSE:
+
+### Code Patterns to Preserve
+- **API call structure**: Use existing `fetch()` pattern with anthropic-version header, x-api-key auth
+- **Error handling**: Use existing try-catch with `alert()` for user feedback
+- **Loading states**: Use `btn.disabled` and `btn.textContent` pattern
+- **LocalStorage pattern**: Use `localStorage.getItem/setItem` with `JSON.parse/stringify`
+- **ID generation**: Use `Date.now()` for unique IDs (seen in addToQueue, saveDraft)
+- **Array operations**: Use `.filter()` for deletions, `.find()` for lookups
+
+### Styling to Reuse
+- Subject display should use existing CSS variables: `var(--gray)` for color
+- Use inline styles matching existing patterns in render functions
+- Font size 13px matches existing small text pattern (stat-label, th)
+- Italic style for differentiation (no existing class, use inline `font-style:italic`)
+
+### Function Patterns
+- **Render functions**: Build HTML strings with template literals, set innerHTML
+- **Data flow**: localStorage → parse → modify → stringify → save back
+- **Validation**: Check for empty/undefined with `|| ''` pattern
+- **API response handling**: `const data = await res.json()` then parse JSON string from `data.content[0].text`
+
+## RISKS:
+
+### 1. **Breaking existing queue/draft items**
+- Items in localStorage currently lack `subject` field
+- Code must handle undefined gracefully with `|| ''` fallback
+- Rendering must check `if(item.subject)` before displaying
+
+### 2. **API response parsing**
+- `generateMsg()` currently expects 2-field JSON, changing to 3 fields
+- If Claude returns incomplete JSON (missing subject), parsing will fail
+- Need robust error handling: `parsed.subject || ''`
+
+### 3. **Subject regeneration API calls**
+- Adding second API call in refine functions doubles latency and cost
+- If first call succeeds but second fails, message will update but subject won't
+- Need try-catch around subject regeneration, continue even if it fails
+
+### 4. **Subject line quality**
+- Prompt must be specific enough to avoid generic subjects
+- Risk of Claude ignoring "no cliches" instruction
+- May need iteration on prompt wording
+
+### 5. **Fallback subject pattern**
+- Current pattern `"Quick note, " + firstName` is simple
+- Must ensure fallback works when `item.subject` is undefined, empty string, or whitespace-only
+- Use: `(item.subject && item.subject.trim()) || fallbackPattern`
+
+### 6. **Function signature changes**
+- `addToQueue()` and `saveDraft()` signatures changing (adding parameter)
+- Must update ALL call sites, not just one
+- Search codebase for all invocations
+
+### 7. **Bulk send performance**
+- Bulk operations already sequential; no additional performance risk
+- Subject lookup is simple property access (fast)
+
+### 8. **Claude Haiku vs Sonnet**
+- Using Haiku for refinement is cheaper/faster
+- Haiku may produce lower-quality subjects than Sonnet
+- Consider using Sonnet for subject regeneration if quality issues arise
+
+## DATA_STRUCTURES:
+
+### LocalStorage Keys
+1. **`apiKey`** - Bland AI API key (string)
+2. **`userPhone`** - user's phone number (string)
+3. **`claudeKey`** - Anthropic Claude API key (string)  
+4. **`zapierWebhook`** - Zapier webhook URL (string)
+5. **`leads`** - array of lead objects (JSON string)
+6. **`queue`** - array of queue message objects (JSON string)
+7. **`drafts`** - array of draft message objects (JSON string)
+8. **`sentCount`** - count of sent messages (number as string)
+
+### Lead Object Structure
+```javascript
+{
+  id: number,           // timestamp
+  name: string,
+  number: string,
+  notes: string,
+  timestamp: number
+}
+```
+
+### Queue Item Structure (CURRENT)
+```javascript
+{
+  id: number,           // timestamp
+  leadId: number,
+  leadName: string,
+  leadNumber: string,
+  message: string,
+  reason: string,
+  timestamp: number
+}
+```
+
+### Queue Item Structure (AFTER CHANGES)
+```javascript
+{
+  id: number,
+  leadId: number,
+  leadName: string,
+  leadNumber: string,
+  message: string,
+  reason: string,
+  subject: string,      // NEW - may be empty string for old items
+  timestamp: number
+}
+```
+
+### Draft Item Structure (CURRENT)
+```javascript
+{
+  id: number,
+  leadId: number,
+  leadName: string,
+  leadNumber: string,
+  message: string,
+  reason: string,
+  timestamp: number
+}
+```
+
+### Draft Item Structure (AFTER CHANGES)
+```javascript
+{
+  id: number,
+  leadId: number,
+  leadName: string,
+  leadNumber: string,
+  message: string,
+  reason: string,
+  subject: string,      // NEW - may be empty string for old items
+  timestamp: number
+}
+```
+
+### Claude API Response Format (CURRENT)
+```javascript
+{
+  content: [{
+    text: '{"reason":"...","message":"..."}'
+  }]
+}
+```
+
+### Claude API Response Format (AFTER CHANGES)
+```javascript
+{
+  content: [{
+    text: '{"reason":"...","subject":"...","message":"..."}'
+  }]
+}
+```
+
+### Zapier Webhook Payload
+```javascript
+{
+  to: string,           // recipient phone
+  subject: string,      // email subject line
+  body: string,         // message text
+  userPhone: string     // sender phone
+}
+```
+
+---
+
+**SUMMARY**: The codebase has complete lead management, AI generation, queue/draft workflows, and email sending. Missing only the subject line feature across the entire pipeline. Changes are additive (new field) with fallbacks needed for backward compatibility. Main risks are API parsing fragility and ensuring all call sites are updated for new function signatures.

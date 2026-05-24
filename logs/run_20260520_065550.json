@@ -1,0 +1,248 @@
+{
+  "task": {
+    "id": "auto-1779272786",
+    "title": "Sync Execution Engine and Status Dashboard",
+    "description": "Build the core synchronization engine that executes field mappings between Salesforce and Renzo, plus a real-time status dashboard to monitor sync operations. The engine should include: (1) A background job processor that reads from the mapping configuration table and executes syncs based on the defined rules, handling batches of contacts (e.g., 200 at a time) with configurable scheduling (manual trigger, scheduled intervals, or webhook-triggered). (2) Conflict resolution logic that implements the strategies defined in mappings (newest wins, Salesforce wins, Renzo wins, manual review). (3) Transformation execution layer that applies the configured transformation rules (trim, uppercase, lowercase, format phone, etc.) during sync. (4) Error handling and retry logic with exponential backoff for failed API calls. (5) A SyncLog database table to record all sync operations with fields: sync_id, started_at, completed_at, status, direction, contacts_processed, contacts_succeeded, contacts_failed, errors_json. (6) A Status Dashboard view showing: active/recent sync jobs in a timeline, real-time progress bars, summary stats (total synced today, success rate, avg duration), filterable sync history table, and detailed error logs with stack traces. (7) Manual sync trigger button with options to sync all contacts or filter by date range/criteria. (8) Individual contact sync history showing all field changes over time for audit purposes. Include comprehensive logging, API rate limit handling for Salesforce, and the ability to pause/resume long-running syncs.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "The mapping configuration interface is complete, but it's entirely useless without an execution engine to actually perform the syncs. Users need to see their carefully configured mappings in action and monitor sync health. This is the core value proposition of the system\u2014moving data between systems reliably. Without this, the configuration interface is just metadata that goes nowhere. The status dashboard is equally critical because syncing contacts between systems is error-prone and users must have visibility into what's happening, what failed, and why. This is the natural next step that transforms the configuration into actual business value."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11335
+      },
+      "t": 61.1
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 203.5
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 253.6
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 379.4
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 422.9
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 566.6
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 614.3
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 23999
+      },
+      "t": 711.9
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CRITICAL SECURITY: WebSocket uses unsecured 'ws://' protocol and lacks authentication - production systems must use 'wss://' with auth tokens to prevent MITM attacks and unauthorized access",
+          "CRITICAL SECURITY: No authentication headers on API requests, hardcoded user permissions, missing CSRF protection - API calls are completely unsecured and vulnerable to unauthorized access",
+          "CRITICAL BUG: CSS truncation mid-declaration (.empty-state) and incomplete JavaScript (searchFilter listener cut off) - code is literally broken and non-functional as delivered"
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED:\n\n1. **Security (BLOCKING):**\n   - Change WebSocket to secure protocol: `const ws = new WebSocket('wss://your-domain.com/ws');`\n   - Add auth token to WebSocket: `new WebSocket('wss://...', { headers: { 'Authorization': 'Bearer ' + token } });`\n   - Add auth headers to fetch: `headers: { 'Authorization': 'Bearer ' + getAuthToken(), 'X-CSRF-Token': getCsrfToken() }`\n   - Remove hardcoded `currentUser` - fetch from authenticated session endpoint\n   - Add Content-Security-Policy meta tag: `<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; connect-src 'self' wss://your-domain.com;\">`\n\n2. **Code Completeness (BLOCKING):**\n   - Complete the truncated CSS `.empty-state` rule in chunk 1\n   - Complete the cut-off JavaScript: `document.getElementById('searchFilter').addEventListener('input', filterTasks);` (ensure full function implementation)\n   - Verify entire codebase was delivered without truncation\n\n3. **Accessibility (HIGH PRIORITY):**\n   - Add modal ARIA: `<div id=\"taskModal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modalTitle\" aria-describedby=\"modalDescription\">`\n   - Add progress bar attributes: `<div class=\"progress-fill\" role=\"progressbar\" aria-valuenow=\"${task.progress}\" aria-valuemin=\"0\" aria-valuemax=\"100\">`\n   - Add skip link: `<a href=\"#main-content\" class=\"skip-link\">Skip to main content</a>` with CSS: `.skip-link { position: absolute; top: -40px; } .skip-link:focus { top: 0; }`\n   - Implement focus trap in modal when open\n\n4. **Production Readiness:**\n   - Add WebSocket reconnection limits: `maxReconnectAttempts = 5` with exponential backoff\n   - Add mobile responsive CSS: `@media (max-width: 768px) { .sidebar { transform: translateX(-100%); } }`\n   - Add loading states: `<div class=\"skeleton-loader\">...</div>` for async content\n   - Move shimmer animation to only active skeleton elements\n\nDO NOT DEPLOY until security vulnerabilities are fixed. Current code exposes system to attacks."
+      },
+      "t": 759.3
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 24587
+      },
+      "t": 858.3
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical XSS vulnerability: innerHTML usage without sanitization in formatTimestamp() and formatDuration() functions allows code injection when rendering untrusted data to DOM",
+          "Missing closing tag breaks HTML structure: success rate value div ends with '<d' instead of '</div>' (causes rendering failure), and document.body.style.overflow assignment is incomplete at end of file",
+          "Security: Content Security Policy includes 'unsafe-inline' for style-src defeating CSP protection, authToken/csrfToken exposed as global variables accessible via console, and no input validation on WebSocket messages before processing"
+        ],
+        "feedback": "CRITICAL FIXES REQUIRED: 1) Fix line with success rate div - change '<d' to '</div>' to close the tag properly. 2) Replace all innerHTML calls with textContent for user data, or use DOMPurify library if HTML rendering is needed. 3) Remove 'unsafe-inline' from CSP style-src and use nonce-based inline styles or external stylesheet. 4) Move authToken and csrfToken into closure/module scope instead of global window. 5) Add JSON schema validation for WebSocket messages before processing. 6) Complete the incomplete line at end: 'document.body.style.overflow = isOpen ? \"hidden\" : \"\";'. 7) Add ARIA live regions for dynamic stats updates (aria-live='polite' on stats containers). 8) Replace hardcoded 'wss://your-domain.com' with environment configuration. 9) Add prefers-reduced-motion query to disable skeleton animations. 10) Implement rate limiting on apiCall with exponential backoff. For accessibility: add aria-label to modal close button, use semantic <nav> element for navigation, add table <caption>, and replace emoji icons with proper SVG icons with aria-labels."
+      },
+      "t": 908.7
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 30154
+      },
+      "t": 1048.6
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Security vulnerabilities: CSP allows unrestricted 'wss:' origins, sessionStorage stores auth tokens unencrypted exposing to XSS, WebSocket sends tokens without verifying secure connection, and no CSRF token validation before use",
+          "Critical code incompleteness: CSS truncated mid-definition, showModal() function cut off during closeBtn initialization, suggesting incomplete file delivery that would cause runtime failures",
+          "Missing robust error handling: No WebSocket exponential backoff leading to infinite reconnection storms, STATE.get() returns shallow copies allowing nested object mutation, no connection state validation before send() causing race conditions"
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED: 1) Complete the truncated code - showModal() and CSS are incomplete causing runtime errors. 2) Fix CSP: change 'wss:' to 'wss://your-domain.com' and add SRI hashes for Google Fonts. 3) Secure auth: encrypt tokens before sessionStorage, validate CSRF token exists, verify WebSocket uses wss:// before sending credentials. 4) Add WebSocket exponential backoff with max retries (e.g., Math.min(1000 * 2^attempts, 30000), max 5 retries). 5) Deep clone in STATE.get() or freeze returned objects. 6) Add connection state check: if (ws.readyState !== WebSocket.OPEN) before send(). 7) Validate message.type against whitelist before Map lookup. 8) Add ARIA labels to tables (aria-sort, role='grid') and implement keyboard focus trap in modals."
+      },
+      "t": 1100.0
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 32748
+      },
+      "t": 1277.1
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security Flaw: Base64 encoding used as 'encryption' - credentials stored in sessionStorage are trivially reversible. This is not encryption at all. Need proper encryption (AES-GCM) or move to httpOnly cookies with backend session management.",
+          "XSS Vulnerability: sessionStorage data passed through btoa(encodeURIComponent(JSON.stringify(data))) without sanitization allows script injection. CSRF tokens and auth tokens vulnerable to XSS attacks - must use httpOnly cookies and proper token validation.",
+          "Incomplete/Truncated CSS: Code cuts off mid-declaration ('.form-label{display:block;font-siz') indicating incomplete file. Cannot verify remaining styles, mobile responsiveness, or accessibility features. Must provide complete implementation."
+        ],
+        "feedback": "MUST FIX BEFORE DEPLOYMENT: 1) Replace fake 'encryption' with real security: remove sessionStorage credential storage, implement httpOnly cookies with backend session tokens, or use proper Web Crypto API (AES-GCM with key derivation). 2) Sanitize all data before storage/transmission and implement proper CSRF protection (SameSite cookies, backend validation). 3) Complete the CSS file - it's truncated. 4) Add CSP nonces for inline styles instead of 'unsafe-inline'. 5) Implement prefers-reduced-motion media query. 6) Add ARIA live regions for dynamic sync status updates. 7) Move WebSocket URL to environment variable rather than hardcoding in CSP. The current 'security' implementation creates a false sense of protection while being completely broken."
+      },
+      "t": 1332.9
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Batch processing (200 contacts per batch)",
+          "Background job processor implementation",
+          "Configurable scheduling (manual/scheduled/webhook)",
+          "Conflict resolution strategies",
+          "Transformation execution",
+          "Exponential backoff retry logic",
+          "Comprehensive logging to SyncLog table",
+          "Real-time WebSocket connection for live updates",
+          "Timeline visualization of recent operations",
+          "Filterable sync history table with date range, direction, status filters",
+          "SyncDetailsModal with per-contact processing results",
+          "Field-level changes tracking",
+          "ContactSyncHistory view (/contacts/{contact_id}/history)",
+          "Diff viewer comparing field values before/after sync",
+          "ManualSyncTrigger modal with direction selector",
+          "API endpoints for sync operations",
+          "SyncLog database table integration",
+          "Active syncs with real-time progress bars",
+          "Error log viewer with expandable stack traces",
+          "Retry functionality for failed syncs",
+          "Per-contact error messages display",
+          "Field mapping execution logic",
+          "Salesforce and Renzo API integration",
+          "Audit trail for individual contacts",
+          "Transformation application tracking"
+        ],
+        "note": "Code only contains HTML/CSS structure for basic dashboard UI skeleton. Missing all core functionality: sync execution engine, batch processing, retry logic, conflict resolution, real-time WebSocket updates, database integration, API endpoints, and all interactive features. No JavaScript implementation detected. Only has static layout with sidebar, stats grid, and incomplete table structure. Database columns (sync_id, mapping_id, started_by, etc.) referenced but not implemented."
+      },
+      "t": 1341.7
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 26561
+      },
+      "t": 1483.6
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No keyboard navigation support for modal - missing tab trapping and escape key handler",
+          "Form inputs lack associated labels with 'for' attributes (some use nesting but not all)",
+          "No ARIA labels on icon-only buttons (modal close button, stat trends)",
+          "Color-only status indicators (sync badges) fail WCAG for color blindness - need icons/patterns",
+          "No focus visible styles defined for keyboard navigation",
+          "Missing skip-to-content link for keyboard users to bypass sidebar",
+          "Table lacks proper ARIA roles or caption for screen readers",
+          "No loading/error states announced to screen readers (missing ARIA live regions)"
+        ]
+      },
+      "t": 1536.1
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 26462
+      },
+      "t": 1681.1
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Mobile responsiveness severely broken: sidebar is fixed 240px with no mobile menu toggle - content will be hidden/overlapped on mobile devices",
+          "No hamburger menu or mobile navigation implementation - sidebar navigation completely inaccessible on small screens",
+          "Stats grid uses minmax(240px, 1fr) which will cause horizontal overflow on screens < 240px width",
+          "Modal max-width 90% with max-height 90vh may cause usability issues on small mobile screens in landscape mode",
+          "Table has no mobile-responsive treatment - will cause horizontal scroll with no indication for users",
+          "Form inputs and interactive elements may be too small for touch targets (buttons at 6px/4px padding in some cases - below 44px minimum)",
+          "No viewport height considerations for fixed sidebar on mobile - will block content entirely",
+          "Missing closing tag for stat-value div on line 12 (Success Rate card)"
+        ]
+      },
+      "t": 1723.3
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1738.9
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Field Mapping Configuration UI"
+      },
+      "t": 1758.8
+    }
+  ],
+  "cost": 1.7677319999999996
+}

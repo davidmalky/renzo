@@ -1,0 +1,192 @@
+{
+  "task": {
+    "id": "renzo-quick-008",
+    "title": "Replace profile switcher browser prompt with custom modal",
+    "description": "Replace the window.prompt() call in switchProfile() with a custom modal. (1) Add modal HTML before closing body tag: <div id=\"newProfileModal\" class=\"modal-overlay hidden\"><div class=\"modal-box modal-sm\"><div class=\"modal-header\"><h2 class=\"modal-title\">Create a New Profile</h2><button class=\"modal-close\" id=\"newProfileClose\">x</button></div><p style=\"color:var(--gray);font-size:14px;margin-bottom:16px;\">Use profiles for different outreach contexts \u2014 e.g. Vendors vs Customers \u2014 each with its own contacts and settings.</p><div class=\"field\"><label>Profile Name</label><input type=\"text\" id=\"newProfileName\" placeholder=\"e.g. Vendors, Customers, Collections\"></div><div id=\"newProfileErr\" class=\"error-text hidden\">Enter a unique profile name.</div><div style=\"display:flex;gap:10px;justify-content:flex-end;margin-top:16px;\"><button class=\"btn btn-ghost\" id=\"newProfileCancel\">Cancel</button><button class=\"btn btn-primary\" id=\"newProfileCreate\">Create Profile</button></div></div></div> (2) In switchProfile(name): when name is empty string (new profile), instead of calling prompt(), show the modal: document.getElementById('newProfileModal').classList.remove('hidden');document.getElementById('newProfileName').value='';document.getElementById('newProfileName').focus(); (3) Wire newProfileCreate button: read newProfileName value, validate not empty and not in existing profiles, call setProfile(val), add to profiles list, save, close modal, call renderProfileSelector(), showView('dashboard'), updateQueueBadge(), toast. (4) Wire close/cancel buttons. (5) Add updateQueueBadge() call at the end of switchProfile() after showView('dashboard').",
+    "priority": "low",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 7655
+      },
+      "t": 47.0
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 79.1
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 96.6
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 154023
+      },
+      "t": 211.1
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Code is severely truncated at multiple points causing broken HTML structure and incomplete JavaScript functions (openNewProfileModal, switchProfile incomplete, missing closing tags throughout)",
+          "Task requires replacing profile switcher browser prompt with custom modal, but the newProfileModal implementation is incomplete/broken - switchProfile() function is cut off mid-execution",
+          "Multiple syntax errors will cause JavaScript crashes: incomplete function definitions, unclosed HTML tags (aiLoading div, QuickBooks card, settings input), broken style attributes"
+        ],
+        "feedback": "The file is critically incomplete with truncated code that will prevent the app from running. Complete these fixes: 1) Finish the switchProfile() function to properly show the newProfileModal without using browser prompt(), 2) Close all unclosed HTML tags (aiLoading div, QuickBooks integration card, settings email input, onboarding modal paragraph), 3) Complete the openNewProfileModal() function with proper modal visibility logic, 4) Fix CSS typo in integration cards (justify-content:justify \u2192 center), 5) Ensure the profile switcher select element triggers the custom modal instead of browser prompt when changed. The modal HTML exists but the JavaScript to trigger it is broken/incomplete."
+      },
+      "t": 329.4
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 154139
+      },
+      "t": 442.4
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 0,
+        "issues": [
+          "Code is severely truncated mid-line in multiple places (CSS, HTML, JS) causing syntax errors that will break the page completely",
+          "Profile switcher has no change event listener and no profiles are loaded - the select dropdown is non-functional",
+          "Missing closing tags for critical modal elements (#onboardModal, #obPage1, #aiModal) will break all modal rendering"
+        ],
+        "feedback": "CRITICAL: The submitted code is incomplete/truncated. Fix: 1) Submit the complete file - CSS ends mid-property, HTML ends mid-tag, JS ends mid-statement. 2) Add event listener: `document.getElementById('profileSel').addEventListener('change', (e) => switchProfile(e.target.value))` 3) Populate profiles in `renderProfileSelector()` - currently only shows placeholder. 4) Ensure all modal divs have closing tags. The truncation makes it impossible to verify if the custom modal task was completed."
+      },
+      "t": 552.0
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 154233
+      },
+      "t": 642.9
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "TASK NOT IMPLEMENTED: No custom modal exists for profile switching. The #profileSel dropdown still uses browser's native select, but task requires replacing browser prompt with a custom modal.",
+          "CRITICAL: Code is severely truncated at multiple points (CSS transition cut off at 'bo', onboarding modal ends mid-attribute '<div class=\"f', QuickBooks card incomplete, extractJsonField function ends at 'return after.slice(0'). This will cause JS runtime errors and broken UI.",
+          "Profile switcher has no event handler on #profileSel to intercept selection and show custom modal. The dropdown will just use native browser behavior instead of the required custom modal."
+        ],
+        "feedback": "Primary task failure: You need to create a custom modal (HTML structure, CSS styling, and JS handlers) for profile switching. Add modal HTML similar to your onboarding modal pattern, then add change event listener on #profileSel that prevents default, shows the custom modal, and handles profile selection through the modal. Fix all code truncation - the file was cut off in multiple places causing incomplete functions (extractJsonField, closeProfileModal comment) and broken HTML elements. Ensure all functions, CSS properties, and HTML tags are complete before submitting."
+      },
+      "t": 751.7
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 154002
+      },
+      "t": 844.2
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "File is severely truncated mid-CSS at `.search-input` declaration causing all subsequent styles to break - this will result in broken layouts and visual rendering errors across the entire application",
+          "Task completely unaddressed: Required custom modal for profile switching is not implemented - profile switcher still uses native HTML <select> dropdown instead of the required custom modal interface",
+          "Multiple incomplete HTML structures with missing closing tags (onboarding modal, QuickBooks card, aiLoading div) will cause DOM parsing errors and broken page functionality"
+        ],
+        "feedback": "CRITICAL: The file is incomplete/truncated which breaks basic functionality. 1) Complete the CSS - the `.search-input` rule and all styles after it are cut off. 2) TASK REQUIREMENT: Remove the native `<select id='profileSel'>` dropdown and implement a custom modal with profile list UI, close button, and selection confirmation. Add modal HTML structure (e.g., `<div id='profileSwitcherModal' class='modal-box'>`) with styled content. 3) Add JavaScript to trigger the modal on profile switcher click and handle profile selection without browser prompts. 4) Close all incomplete HTML elements (onboardmModal div, QuickBooks card div, aiLoading div). 5) Fix typo: `justify-content:justify` \u2192 `justify-content:center`. Test that the custom profile modal opens, displays profiles, and switches correctly without using `window.prompt()` or native dropdowns."
+      },
+      "t": 951.4
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "newProfileModal HTML structure not present in code",
+          "Modal CSS classes (.modal-overlay, .modal-box, .modal-header, .modal-body, .modal-actions) not defined",
+          "showNewProfileModal() function not implemented",
+          "hideNewProfileModal() function not implemented",
+          "handleCreateProfile() function not implemented",
+          "initProfileModal() function not implemented",
+          "Modal event handlers not attached",
+          "Integration with profile switcher to show modal instead of window.prompt()",
+          "Toast notification system for success message",
+          "Error message display logic within modal"
+        ],
+        "note": "The provided code only shows the first 5000 characters containing base styles, login view, and sidebar structure. None of the required custom profile creation modal infrastructure is present. The spec requires: modal HTML (#newProfileModal with #newProfileName input, #newProfileErr error display, #newProfileClose, #newProfileCancel buttons), modal-specific CSS classes for overlay/box/header/body/actions, four new functions (showNewProfileModal, hideNewProfileModal, handleCreateProfile, initProfileModal), event handler attachments, and integration with the existing profile system to replace window.prompt(). All these features are completely missing from the visible code."
+      },
+      "t": 958.5
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 154002
+      },
+      "t": 1032.2
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 7,
+        "blocking_issues": [
+          "AI Guide modal has no mobile responsive styles - fixed positioning at 340px width will overflow on small screens and bottom:90px may cause button overlap",
+          "Guide modal max-height:480px may exceed viewport on mobile devices with no scrolling fallback",
+          "Guide button (52px) positioned at bottom:28px right:28px will overlap with mobile browser chrome/UI on many devices"
+        ]
+      },
+      "t": 1066.5
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 154002
+      },
+      "t": 1156.1
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No skip-to-content link for keyboard navigation accessibility",
+          "Form inputs missing explicit <label> association (no 'for'/'id' attributes) - breaks screen readers",
+          "No focus management when modals open/close - keyboard users trapped",
+          "Modals lack proper ARIA roles (role='dialog', aria-labelledby, aria-modal='true')",
+          "Color contrast likely fails WCAG AA on sidebar nav items (.6 opacity text on dark background)",
+          "Touch targets under 44x44px minimum (nav-badge, modal-close, btn-xs) - fails mobile accessibility",
+          "No viewport height handling on mobile - 100vh causes issues with mobile browser chrome",
+          "Active states rely solely on color - no shape/icon change for colorblind users"
+        ]
+      },
+      "t": 1185.5
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1186.7
+    }
+  ],
+  "cost": 1.08405
+}

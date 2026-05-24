@@ -1,0 +1,210 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES
+
+### Contact Form Structure & Fields
+- **Form ID**: `#contactForm` (implied from task context)
+- **Contact Fields**: 
+  - `#ctName` (Name input)
+  - `#ctEmail` (Email input)
+  - `#ctPhone` (Phone input)
+  - `#ctTier` (Tier dropdown/select)
+  - `#ctFreq` (Frequency input/select)
+  - `#ctHist` (History textarea)
+  - `#ctNotes` (Notes textarea)
+- **Error Display**: `#ctErr` div (mentioned in task - shows validation errors)
+- **Function**: `saveContact()` - handles contact form submission with validation
+
+### Styling System
+- **CSS Variables**:
+  - `--red: #DC2626` (error color)
+  - `--gray: #6B7280` (text color for counters)
+  - `--green: #1F6B47` (focus color)
+  - `--gray-light: #E2D9CC` (border color)
+- **Field Styles**:
+  - `.field` container class
+  - `.field input`, `.field select`, `.field textarea` - standard form elements
+  - Focus states with green border: `border-color:var(--green)`
+  - Border transitions: `transition:border .15s`
+- **Typography**: 
+  - Base font size: 14px
+  - Small text: 12px (for labels, error text)
+  - `.error-text` class: `color:var(--red); font-size:12px; margin-top:4px`
+
+### Form Layout
+- `.form-row` - grid layout for side-by-side fields: `display:grid; grid-template-columns:1fr 1fr; gap:12px`
+- Standard `.field` with label structure
+
+### Validation Patterns
+- Required field validation exists in `saveContact()`
+- Error display via `#ctErr` div
+- `.error-text` styling for error messages
+
+## MISSING_FEATURES
+
+### Visual Field Validation Feedback
+- **Red border styling on invalid fields** - no mechanism to apply `border-color:var(--red)` to individual input/select elements on validation failure
+- **Dynamic border removal on focus** - no `focusin` event listeners on required fields to clear error styling
+
+### Email Format Validation
+- **Email regex validation** - no email format check in `saveContact()`:
+  - Pattern: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+  - Error message display on `#ctEmail` field
+  - Validation return/abort logic
+
+### Tier-to-Frequency Auto-population
+- **Change event listener** on `#ctTier` dropdown
+- **Frequency defaults mapping**: A=14, B=30, C=60
+- **Conditional population logic** - only populate if `#ctFreq` is empty
+
+### Character Counter UI Components
+- **Counter display elements** - small divs after `#ctHist` and `#ctNotes` textareas
+- **Counter text format**: "N / 500 characters" in 12px gray
+- **Real-time input event handlers** - `oninput` for both textareas
+- **Character count calculation and display logic**
+
+### Character Limit Enforcement
+- **500-character truncation** in `saveContact()` for history and notes fields
+- **Truncation warning toast** - notification when content is truncated
+- **Toast notification system** (may or may not exist in codebase - not visible in provided HTML)
+
+## CHANGES_NEEDED
+
+### `saveContact()` Function Modifications
+1. **Enhanced validation loop** - iterate through required fields and apply red border styling:
+   - Add `style.borderColor = 'var(--red)'` to each missing field
+   - Keep existing `#ctErr` display logic
+   
+2. **Email validation insertion** - add after required field validation, before data processing:
+   ```javascript
+   if(data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){
+     // show error on ctEmail
+     // return early
+   }
+   ```
+
+3. **Character truncation** - before saving data:
+   - Truncate `data.history` and `data.notes` to 500 chars
+   - Track if truncation occurred
+   - Show warning toast if truncated
+
+### HTML Structure Additions
+- Insert counter divs immediately after `#ctHist` and `#ctNotes` textareas
+- Counter div styling: inline or class-based, 12px font, gray color
+
+### Event Listener Setup
+1. **Focus listeners on required fields** - add after DOM ready/form initialization:
+   - Select all required inputs/selects in contact form
+   - Add `focusin` listener to remove `borderColor` style
+
+2. **Tier change listener** - add event listener to `#ctTier`:
+   - Check if `#ctFreq` is empty
+   - Map tier value to frequency default
+   - Set frequency value
+
+3. **Textarea input listeners** - add to `#ctHist` and `#ctNotes`:
+   - Update corresponding counter div on every keystroke
+   - Format: "{current} / 500 characters"
+
+## REUSE
+
+### Styling Patterns to Preserve
+- **CSS variable usage**: Use `var(--red)`, `var(--gray)` for consistency
+- **Error display pattern**: `.error-text` class structure
+- **Field structure**: Keep `.field` wrapper, label, input hierarchy
+- **Transition behavior**: Maintain `.15s` transition on borders
+
+### Form Validation Approach
+- Existing `saveContact()` validation flow - extend rather than replace
+- `#ctErr` error div display mechanism - keep intact
+- Required field checking logic - add red border styling to existing checks
+
+### JavaScript Patterns
+- Event listener attachment style
+- DOM element selection via `document.getElementById()`
+- Data object construction pattern in `saveContact()`
+
+### Typography & Spacing
+- 12px for small/meta text (labels, counters, errors)
+- 4px margin-top for error messages
+- Existing textarea styling and padding
+
+## RISKS
+
+### CSS Specificity Conflicts
+- **Risk**: Inline `style.borderColor` may conflict with existing CSS transitions or :focus pseudo-class
+- **Mitigation**: Use `!important` sparingly; test focus behavior after adding red borders
+- **Watch for**: Focus state (green border) not overriding error state (red border)
+
+### Field Reference Assumptions
+- **Risk**: Task assumes field IDs (`#ctName`, `#ctEmail`, etc.) but actual IDs in full codebase may differ
+- **Impact**: All selectors would fail, breaking all four fixes
+- **Verify**: Actual contact form HTML structure before implementation
+
+### Toast Notification System
+- **Risk**: Task requires "warning toast" for truncation, but no toast system visible in provided code
+- **Impact**: Cannot implement truncation warning without toast infrastructure
+- **Options**: 
+  - Use `alert()` as fallback (poor UX)
+  - Use existing error display mechanism (`#ctErr`)
+  - Implement minimal toast system
+- **Dependency**: Check if toast/notification system exists elsewhere in codebase
+
+### Event Listener Timing
+- **Risk**: Adding listeners before DOM elements exist will fail silently
+- **Mitigation**: Wrap listener setup in DOMContentLoaded or ensure execution after form render
+- **Watch for**: Contact form rendered dynamically (modal/SPA view) - may need delegated events
+
+### Frequency Field Type Uncertainty
+- **Risk**: Task doesn't specify if `#ctFreq` is input[type=text], input[type=number], or select
+- **Impact**: Value setting approach may differ (`.value` vs `.selectedIndex`)
+- **Verify**: Actual field type to ensure proper value assignment
+
+### Data Structure Impact
+- **Risk**: Truncating history/notes to 500 chars may cause data loss if existing records exceed limit
+- **Impact**: Users may lose content on edit/save
+- **Mitigation**: Warn before truncation (covered by toast requirement)
+- **Watch for**: localStorage corruption if data format changes
+
+## DATA_STRUCTURES
+
+### LocalStorage Keys (Inferred)
+- Contact data likely stored in localStorage (common pattern for this type of app)
+- **Probable keys**:
+  - `contacts` or `renzo_contacts` - array of contact objects
+  - Each contact object likely contains: `name`, `email`, `phone`, `tier`, `freq`, `history`, `notes`
+
+### Contact Data Object Format (Inferred from Fields)
+```javascript
+{
+  name: string,        // from #ctName
+  email: string,       // from #ctEmail
+  phone: string,       // from #ctPhone
+  tier: string,        // from #ctTier (likely 'A', 'B', or 'C')
+  freq: number/string, // from #ctFreq (frequency in days: 14, 30, 60)
+  history: string,     // from #ctHist (max 500 chars after fix)
+  notes: string        // from #ctNotes (max 500 chars after fix)
+}
+```
+
+### New Data Constraints After Implementation
+- `history`: max 500 characters
+- `notes`: max 500 characters
+- `email`: must match regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` if provided
+
+### Tier-Frequency Mapping
+```javascript
+{
+  'A': 14,  // days
+  'B': 30,  // days
+  'C': 60   // days
+}
+```
+
+---
+
+**CRITICAL VERIFICATION NEEDED**: 
+1. Confirm actual contact form field IDs in complete codebase
+2. Verify existence of toast/notification system
+3. Check if contact form is static HTML or dynamically rendered
+4. Confirm `saveContact()` function signature and current validation logic

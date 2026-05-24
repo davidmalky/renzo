@@ -1,0 +1,205 @@
+# TECHNICAL SPECIFICATION: BATCH OUTREACH AND TRAINABLE INSTRUCTIONS
+
+## OVERVIEW
+Add batch outreach and trainable instructions features to existing Renzo app. Batch outreach allows natural language queries to filter contacts and generate AI messages in bulk. Trainable instructions let users define custom rules that automatically augment all AI prompts. All existing functionality remains unchanged.
+
+## VIEWS
+
+### BatchOutreachView
+- Navigation item labeled "Batch Outreach" added to main nav
+- View container with heading "Batch Outreach"
+- Textarea input (id: batchPromptInput) with placeholder "Example: reach out to all contacts with contracts expiring soon"
+- "Generate Messages" button (primary style, disabled if textarea empty)
+- Progress indicator div (hidden by default): "Generating X of Y..."
+- Results summary div (hidden by default): "Generated N messages and added to outreach queue"
+- Matches preview section showing filtered contacts before generation
+
+### SettingsView (Modified)
+- Add new section "My Outreach Rules" below API key section
+- Textarea (id: newRuleInput) with placeholder "Enter a rule like: Always mention their company name"
+- "Add Rule" button (secondary style)
+- Rules list container (ul element, id: rulesList)
+- Each rule item displays text with delete button (×)
+- Empty state text when no rules: "No rules yet. Add your first rule above."
+
+## FUNCTIONS
+
+### parseBatchQuery(queryText)
+1. Convert queryText to lowercase
+2. Initialize empty filters object with fields: checkContractExpiry, checkInvoiceAmount, checkLastContactDate
+3. If query contains "contract" OR "expiry" OR "expire", set checkContractExpiry = true
+4. If query contains "invoice" OR "overdue" AND not already checking lastContactDate, set checkInvoiceAmount = true
+5. If query contains "not contacted" OR "overdue contact" OR "follow up", set checkLastContactDate = true
+6. Return filters object
+
+### filterContactsByQuery(contacts, filters)
+1. Start with all contacts array
+2. If filters.checkContractExpiry, filter to contacts where contractExpiry exists and date is within 60 days
+3. If filters.checkInvoiceAmount, filter to contacts where invoiceAmount > 0
+4. If filters.checkLastContactDate, filter to contacts where lastContactDate is null OR > 30 days ago
+5. Return filtered array
+
+### generateBatchMessages(contacts)
+1. Get rules from loadRules()
+2. Show progress indicator div
+3. Initialize results array
+4. For each contact (index i):
+   - Update progress text: "Generating {i+1} of {contacts.length}..."
+   - Call generateAiMessage(contact, rules) with 500ms delay between calls
+   - Push result {contactId, message} to results array
+5. Hide progress indicator
+6. Call addBatchToQueue(results)
+7. Show summary: "Generated {results.length} messages and added to outreach queue"
+8. Return results
+
+### generateAiMessage(contact, rules) [MODIFIED]
+1. Build base prompt with contact details (name, company, context)
+2. If rules array exists and has length > 0:
+   - Append to prompt: "\n\nFollow these rules:\n"
+   - For each rule, append "- {rule}\n"
+3. Call OpenAI API with augmented prompt
+4. Return generated message text
+
+### addBatchToQueue(results)
+1. Load existing outreach queue from localStorage ('renzo_outreach_queue')
+2. For each result in results array:
+   - Create queue item: {id: generateId(), contactId: result.contactId, message: result.message, status: 'pending', createdAt: Date.now()}
+   - Push to queue array
+3. Save updated queue to localStorage
+4. Trigger queue view refresh if visible
+
+### loadRules()
+1. Get item from localStorage with key 'renzo_rules'
+2. Parse JSON or return empty array if null
+3. Return rules array
+
+### saveRules(rulesArray)
+1. Stringify rulesArray to JSON
+2. Save to localStorage with key 'renzo_rules'
+
+### addRule(ruleText)
+1. Trim ruleText
+2. If empty, show error alert "Rule cannot be empty"
+3. Load existing rules with loadRules()
+4. Check if rule already exists (case-insensitive), if so show warning "Rule already exists"
+5. Push ruleText to rules array
+6. Call saveRules(rules)
+7. Call renderRules()
+8. Clear newRuleInput textarea
+9. Show success alert "Rule added"
+
+### deleteRule(index)
+1. Load rules with loadRules()
+2. Remove element at index with splice()
+3. Call saveRules(rules)
+4. Call renderRules()
+5. Show success alert "Rule deleted"
+
+### renderRules()
+1. Load rules with loadRules()
+2. Get rulesList container element
+3. If rules.length === 0, show empty state text
+4. Otherwise, clear container and for each rule (index i):
+   - Create li element with rule text
+   - Add delete button with onclick calling deleteRule(i)
+   - Append to rulesList
+
+### initBatchOutreach()
+1. Add click listener to "Generate Messages" button
+2. On click:
+   - Get query text from batchPromptInput
+   - Call parseBatchQuery(queryText) to get filters
+   - Load contacts from localStorage ('renzo_contacts')
+   - Call filterContactsByQuery(contacts, filters) to get matches
+   - If matches.length === 0, show alert "No contacts match your query"
+   - Otherwise call generateBatchMessages(matches)
+
+### initTrainableRules()
+1. Call renderRules() to populate initial list
+2. Add click listener to "Add Rule" button calling addRule()
+3. Add enter key listener on newRuleInput calling addRule()
+
+## DATA
+
+### renzo_rules (localStorage)
+- Format: JSON stringified array of strings
+- Example: ["Always mention their company name", "Keep messages under 100 words"]
+- Default: []
+
+### Batch outreach state (runtime only)
+- currentProgress: {current: number, total: number}
+- batchResults: array of {contactId: string, message: string}
+
+### No changes to existing data structures:
+- renzo_contacts (existing)
+- renzo_api_key (existing)
+- renzo_outreach_queue (existing, receives new items)
+
+## API
+
+### OpenAI API call (existing, modified)
+- Endpoint: https://api.openai.com/v1/chat/completions
+- Method: POST
+- Modification: Augment system/user message with rules text
+- Headers: Authorization: Bearer {api_key}, Content-Type: application/json
+- Payload: {model: "gpt-3.5-turbo", messages: [...with appended rules], temperature: 0.7}
+- Response handling: Extract message content from choices[0].message.content
+- Error handling: Catch and show user-friendly error alert
+
+## DESIGN
+
+### Batch Outreach View
+- Container: max-width 800px, margin auto, padding 2rem
+- Textarea: min-height 120px, border 1px solid var(--border-color), border-radius 8px, padding 1rem, font-size 1rem, font-family inherit
+- Generate button: background var(--primary-color, #4F46E5), color white, padding 0.75rem 2rem, border-radius 8px, font-weight 600
+- Progress indicator: color var(--text-secondary), font-style italic, margin-top 1rem
+- Summary: background var(--success-light, #D1FAE5), border-left 4px solid var(--success-color, #10B981), padding 1rem, margin-top 1rem
+
+### My Outreach Rules Section
+- Section border-top: 1px solid var(--border-color), margin-top 2rem, padding-top 2rem
+- Rules list: list-style none, padding 0
+- Rule item: background var(--bg-secondary, #F9FAFB), padding 0.75rem 1rem, margin-bottom 0.5rem, border-radius 6px, display flex, justify-content space-between, align-items center
+- Delete button: background transparent, color var(--danger-color, #EF4444), border none, cursor pointer, font-size 1.25rem, padding 0.25rem 0.5rem, hover opacity 0.7
+
+### Existing design system preserved
+- Colors: Use existing CSS custom properties
+- Typography: Match existing font stack and sizes
+- Spacing: Consistent with existing 8px grid system
+- Buttons: Match existing button styles (primary, secondary)
+- Alerts: Use existing alert component styles
+
+## ERRORS
+
+### Batch Outreach Errors
+- Empty query: Show alert "Please enter a search query" (warning style)
+- No matches: Show alert "No contacts match your query. Try different keywords." (info style)
+- API key missing: Show alert "Please set your OpenAI API key in Settings" (error style)
+- API call failure: Show alert "Failed to generate message for {contact.name}. Error: {error.message}" (error style), continue with next contact
+- Rate limit hit: Show alert "Rate limit reached. Please wait and try again." (warning style)
+
+### Trainable Rules Errors
+- Empty rule submission: Show alert "Rule cannot be empty" (warning style)
+- Duplicate rule: Show alert "This rule already exists" (info style)
+- localStorage full: Show alert "Unable to save rule. Storage limit reached." (error style)
+
+### Existing error handling preserved
+- Contact operations errors (existing)
+- Navigation errors (existing)
+- Data parsing errors (existing)
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+Breaking down by component:
+- BatchOutreachView HTML/rendering: ~60 lines
+- Batch query parsing and filtering: ~80 lines
+- Batch message generation with progress: ~90 lines
+- Trainable rules UI and storage: ~70 lines
+- Modified generateAiMessage function: ~25 lines
+- Event listeners and initialization: ~40 lines
+- CSS additions: ~55 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+The implementation is well under 650 lines and cohesively adds two related features that share the AI message generation pipeline. Both features integrate cleanly into existing view structure and localStorage patterns. No splitting needed.

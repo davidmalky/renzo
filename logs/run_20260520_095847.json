@@ -1,0 +1,240 @@
+{
+  "task": {
+    "id": "auto-1779283701",
+    "title": "Mapping Execution Engine with Real-Time Testing",
+    "description": "Build a mapping execution system that allows users to test their configurations with real or sample data before deployment. Features include: (1) Test Execution Panel - Add a 'Test Mapping' button to MappingBuilderView that opens a modal with three tabs: 'Sample Data', 'Live Test', and 'Results'. (2) Sample Data Tab - Text area or JSON editor where users can paste sample source data (JSON/CSV format), with format auto-detection and a 'Load Sample' button that populates with realistic dummy data based on field types. (3) Live Test Tab - Connection configuration form for source system (API endpoint, authentication, query parameters) with 'Fetch Records' button to retrieve real records (limit to 10 for testing), display fetched records in a table with checkbox selection. (4) Results Tab - Shows execution results with three sections: Success panel showing transformed output data in formatted JSON/table view with before/after comparison; Validation panel listing all validation errors/warnings with field names and error messages; Performance panel showing execution time, records processed, success/failure counts. (5) Execution Engine - Core processor that takes mapping configuration and input data, applies all field mappings in order, executes transformation pipeline for each field, handles errors gracefully with rollback, validates output against destination schema, returns detailed execution report with success status, transformed data, validation results, and performance metrics. (6) Error Handling - Display inline error messages for transformation failures, highlight problematic fields in the results view, provide suggested fixes for common errors. (7) Export Results - Add 'Download Results' button to export transformed data as JSON/CSV, and 'Copy to Clipboard' for quick sharing. Persist last test results to localStorage for each mapping. Add execution history log showing timestamp, record count, and status for last 10 test runs per mapping.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "Users have built mapping configurations but have no way to verify they work correctly before deploying to production. A testing engine is critical for building confidence in mappings, catching transformation errors early, and validating that the output matches destination system requirements. This bridges the gap between configuration and real-world usage, making the tool actually usable in production scenarios. Without this, users are blindly deploying mappings that may fail or produce incorrect data transformations."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11607
+      },
+      "t": 70.5
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 210.9
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 257.6
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 392.1
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 437.5
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 583.5
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 630.4
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 22198
+      },
+      "t": 724.2
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "Critical: Incomplete CSS syntax with unclosed braces in `.error-it` and `.history` classes causing potential rendering failures",
+          "Critical: No XSS protection for dynamic content rendering and missing JSON.parse() error handling causing security and runtime vulnerabilities",
+          "Critical: Missing comprehensive accessibility implementation including ARIA labels, keyboard navigation (ESC/Tab), focus management, and label associations violating WCAG standards"
+        ],
+        "feedback": "1. Fix CSS syntax errors: Close all class selectors properly, especially `.error-it` and `.history` classes. Validate entire stylesheet for matching braces. 2. Add security measures: Wrap all `JSON.parse()` calls in try-catch blocks in `parseInputData` function, sanitize all user inputs before rendering, and escape HTML entities for dynamic content. 3. Implement accessibility: Add ARIA roles/labels to modals (`role='dialog'`, `aria-labelledby`), tables (`role='grid'`), and forms; implement keyboard handlers for ESC to close modals and Tab trapping; associate all inputs with labels using `for`/`id` attributes; add focus management to return focus after modal closes. 4. Add error handling: Wrap localStorage operations in try-catch for quota/disabled scenarios, add null checks before accessing `currentMapping.fields`, fix `switchTab(event)` parameter passing. 5. Add validation feedback: Implement visual validation states, loading skeletons, and check color contrast ratios for WCAG AA compliance."
+      },
+      "t": 763.7
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 35918
+      },
+      "t": 900.4
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "Critical: Code is truncated/incomplete - CSS class '.history-dra' is cut off and closeTestMappingModal function is incomplete, making the code non-functional",
+          "Security vulnerability: innerHTML/insertAdjacentHTML used without sanitization creates XSS risk, and missing CSRF protection on API requests exposes endpoints to attacks",
+          "Accessibility failures: Missing ARIA labels on modal dialogs, no keyboard trap management (ESC key), no focus management, and modal close buttons lack screen reader support violating WCAG standards"
+        ],
+        "feedback": "1) Complete the truncated code - finish the CSS rules and JavaScript functions before deployment. 2) Implement input sanitization using DOMPurify or textContent instead of innerHTML for all dynamic content insertion. Add CSRF tokens to all API requests. 3) Add comprehensive accessibility: aria-label='Close' on close buttons, aria-labelledby and role='dialog' on modals, trap focus within open modals, handle ESC key closure, and manage focus return. 4) Add form validation with client-side checks, add responsive breakpoints for mobile/tablet layouts (max-width: 768px, 1024px), and implement body scroll prevention when modals open. 5) Test color contrast ratios to ensure WCAG AA compliance for all text."
+      },
+      "t": 958.0
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 30198
+      },
+      "t": 1091.5
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "Critical Security: JWT token parsing uses insecure atob() without signature verification - tokens can be trivially forged, bypassing authentication entirely",
+          "Critical Security: sanitizeHTML() doesn't strip dangerous attributes (onclick, onerror, style with javascript:) - XSS vulnerability despite tag filtering",
+          "Critical Bug: CSS class '.results-panel' definition is truncated at line 467 - missing closing brace will break all subsequent styles and render UI unusable"
+        ],
+        "feedback": "MUST FIX IMMEDIATELY: 1) Complete the truncated CSS at line 467 by adding closing brace and properties. 2) Replace client-side JWT parsing with server-side validation - NEVER trust atob() decoded tokens for auth decisions. 3) Enhance sanitizeHTML() to strip ALL attributes except a strict whitelist (e.g., only 'href' on 'a' tags), and validate attribute values don't contain 'javascript:'. 4) Add proper error boundaries and loading states in CSS. 5) Include ARIA labels for all interactive elements. 6) Implement proper CSRF protection using httpOnly cookies with SameSite=Strict instead of sessionStorage tokens."
+      },
+      "t": 1139.0
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 30580
+      },
+      "t": 1302.0
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CRITICAL SECURITY: XSS vulnerability in sanitizeHTML function - uses textContent then innerHTML which defeats sanitization, and regex-based tag filtering is incomplete. This allows malicious script injection through user inputs.",
+          "CRITICAL SECURITY: Missing HttpOnly flag on authToken cookie makes it accessible to JavaScript, exposing authentication to XSS attacks. CSRF tokens also completely missing for state-changing operations.",
+          "CRITICAL ACCESSIBILITY: No keyboard navigation, ARIA labels/roles, or focus management for modal dialogs and interactive elements. Missing focus trap and proper focus restoration violates WCAG 2.1 Level A requirements."
+        ],
+        "feedback": "SECURITY FIXES REQUIRED: 1) Replace sanitizeHTML with DOMPurify library or use DOM methods only: `const div = document.createElement('div'); div.textContent = html; return div.innerHTML;` 2) Add HttpOnly flag to cookies: `document.cookie = 'authToken=' + token + '; Secure; HttpOnly; SameSite=Strict'` (note: HttpOnly can't be set via JS, must be server-side). 3) Implement CSRF tokens for all POST/PUT/DELETE requests. ACCESSIBILITY FIXES: 4) Add ARIA attributes: `role='dialog' aria-modal='true' aria-labelledby='modal-title'` to modal. 5) Implement focus trap using focusable element queries and keydown listeners. 6) Add keyboard handlers: arrow keys for tab navigation, Escape to close modal, Enter/Space for buttons. 7) Store and restore focus: `const previousFocus = document.activeElement` before opening modal. CODE QUALITY: 8) Complete truncated code (showNotification, records-table CSS). 9) Add responsive breakpoints: `@media (max-width: 768px) { .two-panel-layout { grid-template-columns: 1fr; } }`. 10) Add error boundary divs with `.error-message` class. 11) Remove unused token_budget comment if no AI integration. These issues prevent production deployment due to security vulnerabilities and accessibility violations."
+      },
+      "t": 1362.0
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Complete modal structure (header, tabs navigation, body content switcher, footer)",
+          "SampleDataTab implementation (format selector, JSON/CSV editor, Load Sample button, validation indicator, record count)",
+          "LiveTestTab implementation (Connection Configuration form with endpoint URL, auth type, API key fields, query parameters, request method selector, Fetched Records display table with checkboxes, Select All functionality, Fetch Records button)",
+          "ResultsTab implementation (Success Panel with before/after comparison, side-by-side JSON viewers, field-level diff highlighting, Validation Panel with grouped error list by severity, field name badges, expandable error details, download functionality)",
+          "Execution engine for processing field mappings and transformations",
+          "Comprehensive error handling and validation logic",
+          "Execution history tracking",
+          "Performance metrics implementation",
+          "Persistent storage of test results",
+          "Export capabilities (Download Results functionality)",
+          "Tab switching logic with smooth transitions",
+          "Format detection for JSON/CSV",
+          "Auto-generate dummy data functionality",
+          "API integration for live testing",
+          "Record selection with checkboxes",
+          "Diff highlighting algorithm",
+          "Suggested fixes generation"
+        ],
+        "note": "Code only contains basic HTML structure, CSS styling for app container, header, mapping cards, buttons, badges, and partial modal overlay/structure. Missing all three tab implementations (Sample Data, Live Test, Results), the core execution engine for data transformation, error handling logic, history tracking, storage persistence, and all interactive JavaScript functionality for testing, fetching, validation, and result visualization."
+      },
+      "t": 1371.7
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 28329
+      },
+      "t": 1519.3
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete JavaScript - code is cut off mid-implementation, making the application non-functional",
+          "Missing ARIA labels and roles for modals, drawers, and dynamic content - critical for screen readers",
+          "No keyboard navigation support for modals (Escape to close, Tab trapping) - fails WCAG 2.1 AA",
+          "Color contrast issues: badge text colors may not meet WCAG AA requirements (needs verification with contrast checker)",
+          "Modal doesn't prevent background scroll on mobile devices (body.modal-open may not work on iOS)",
+          "No focus management when opening/closing modals - keyboard users lose context",
+          "Forms lack associated labels using 'for' attribute - accessibility issue",
+          "No error announcements for screen readers (missing aria-live regions)"
+        ]
+      },
+      "t": 1570.8
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 32379
+      },
+      "t": 1739.4
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete CSS: The `.metric-label` rule is cut off mid-declaration, causing parsing errors",
+          "Incomplete JavaScript: Code chunk ends abruptly with `testResult` variable incomplete - likely missing critical application logic",
+          "Missing form validation: No client-side validation visible for connection forms, API inputs could be submitted with invalid data",
+          "No ARIA labels: Interactive elements (modals, tabs, buttons) lack proper ARIA attributes for screen readers",
+          "Missing keyboard navigation: Modal trapping, tab navigation, and ESC key handling not visible in provided code",
+          "No error boundary: Missing try-catch blocks or error handling mechanisms for runtime failures",
+          "Missing keyboard trap in modal - users can tab outside modal while it's open",
+          "No focus management when opening/closing modal - violates WCAG 2.1.2"
+        ]
+      },
+      "t": 1789.2
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1804.9
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Advanced Transformation Functions & Expression Builder"
+      },
+      "t": 1820.9
+    }
+  ],
+  "cost": 1.8360359999999998
+}

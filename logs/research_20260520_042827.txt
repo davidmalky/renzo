@@ -1,0 +1,295 @@
+# RESEARCH REPORT: RENZO PHASE 2 ANALYSIS
+
+## EXISTING_FEATURES
+
+### Authentication & User Management
+- `login()` - Hardcoded demo login (demo/password)
+- `logout()` - Clears localStorage and returns to login
+- `getCurrentUser()` - Returns stored user from localStorage
+- User session stored in `localStorage.currentUser`
+
+### Contact Management (CRUD)
+- `loadContacts()` - Loads from localStorage.contacts
+- `saveContact(contact)` - Creates/updates contacts with ID generation
+- `deleteContact(id)` - Removes contact by ID
+- Contact fields: id, name, email, company, tier (A/B/C), frequency (days), lastContact (date), notes
+- Contact list view with sorting and filtering
+- Modal-based contact form (add/edit)
+
+### AI Message Generation
+- `generateMessage(contact)` - Uses OpenRouter API with Claude Sonnet 3.5
+- Considers: contact name, company, tier, frequency, days since last contact, user's company name/voice/products
+- Shows loading spinner during generation
+- Error handling for API failures
+- Message displayed in modal with copy-to-clipboard option
+
+### Queue/Drafts System
+- "Queue" view shows contacts needing outreach
+- Queue logic: filters contacts where daysSince >= frequency OR lastContact is null
+- Queue items show: contact name, company, days overdue, tier badge
+- Actions: "Generate Message" and "Mark as Sent"
+- `markAsSent(contactId)` - Updates lastContact to current date
+
+### Settings Management
+- Settings stored in `localStorage.userSettings`
+- Fields: companyName, businessDescription, products, communicationStyle, openRouterApiKey
+- Onboarding modal (first-time setup)
+- Settings page with form to update all fields
+
+### Dashboard/Statistics
+- Shows total contacts count
+- Shows active relationships (contacts contacted within frequency window)
+- Shows overdue contacts count
+- Displays greeting with current date
+- Recent activity list (recent contacts by lastContact date)
+
+### UI/Navigation
+- Sidebar navigation: Dashboard, Contacts, Queue, Settings
+- Active nav highlighting
+- Responsive layout (sidebar + main content)
+- Modal system for forms and messages
+- Toast/alert system (not implemented, uses alerts)
+
+### Data Persistence
+- All data in localStorage
+- Keys: `currentUser`, `contacts`, `userSettings`
+- No backend/database
+
+### Styling
+- Custom CSS with Inter font
+- Color scheme: #2D6A4F (green), #F7F4EF (beige), #1A1A1A (dark)
+- Responsive grid layouts
+- Badge system for tiers (A/B/C)
+- Status pills (overdue/due/ok)
+
+## MISSING_FEATURES
+
+### Smart Contact Intelligence
+- Dynamic priority scoring system (0-100)
+- Priority factors: contract expiry, invoice amount, revenue/spend, relationship score
+- User-configurable weights for priority factors
+- Priority score computation engine
+- Dashboard sorting by priority score (not just overdue)
+- Contact fields: contractExpiry, invoiceAmount, revenueSpend, relationshipScore (1-5)
+- Priority weight configuration UI in settings
+
+### Outreach Reason Engine
+- Trigger/reason detection logic (contract expiry countdown, invoice overdue, high-value no-contact)
+- Trigger display in queue items
+- Trigger-based message generation (AI uses specific trigger as message core)
+- Reason explanation UI component
+- Trigger calculation functions (days until expiry, days invoice overdue, etc.)
+
+### Gmail Draft Integration
+- Gmail settings section (email field, connect button)
+- Two-option modal on "Mark Sent": "Log as Sent" vs "Create Gmail Draft"
+- Gmail compose URL builder with mailto: or gmail.com URL scheme
+- Subject line auto-generation (AI or template-based)
+- Pre-filled body text formatting for Gmail
+- Gmail window/tab opening logic
+
+### Batch Outreach with Prompt
+- Batch outreach view/page (task description cut off but implies multi-contact selection)
+- Likely needs: contact multi-select UI, bulk message generation, custom prompt input
+
+### Enhanced Contact Form
+- Contract Expiry Date picker
+- Invoice Amount Outstanding field (currency)
+- Revenue/Spend Value field (currency)
+- Relationship Score selector (1-5 stars)
+
+### Priority Weights Configuration
+- UI for setting priority weights (sliders or number inputs)
+- Weight validation (must sum to 100% or similar)
+- Storage in settings
+
+### Advanced Analytics
+- Priority score distribution chart
+- Trigger breakdown (how many contacts for each trigger type)
+
+## CHANGES_NEEDED
+
+### Contact Data Structure
+- **MODIFY**: `saveContact()` to include new fields: contractExpiry, invoiceAmount, revenueSpend, relationshipScore
+- **MODIFY**: Contact modal form HTML to add new input fields
+- **MODIFY**: `localStorage.contacts` schema (add migration logic for existing contacts)
+
+### Queue Logic
+- **REPLACE**: Simple frequency-based queue filtering with priority score calculation
+- **MODIFY**: `loadQueueContacts()` to compute priority scores and sort by score
+- **ADD**: Trigger detection function that determines WHY contact is in queue
+
+### Message Generation
+- **MODIFY**: `generateMessage()` to accept trigger/reason parameter
+- **MODIFY**: AI prompt to incorporate specific trigger ("their contract expires in 23 days")
+- **ADD**: Subject line generation (separate function or part of generateMessage)
+
+### Queue UI
+- **MODIFY**: Queue item display to show priority score and trigger reason
+- **MODIFY**: "Mark as Sent" button to open two-option modal
+- **ADD**: Gmail draft creation function
+
+### Settings Page
+- **ADD**: Gmail section with email input and connect button (may be informational only for mailto: approach)
+- **ADD**: Priority weights configuration section
+- **MODIFY**: `saveSettings()` to include new fields
+
+### Dashboard
+- **MODIFY**: Statistics to show priority-based insights (not just overdue count)
+- **CONSIDER**: Add top-priority contacts widget
+
+## REUSE
+
+### Code Patterns to Preserve
+- Modal system: `.modal`, `.modal-content`, `showModal(id)`, `hideModal(id)` pattern
+- localStorage CRUD: `loadContacts()`, `saveContact()`, `deleteContact()` structure
+- Navigation system: `showView(viewName)`, `.nav-item.active` toggle
+- Form handling: `event.preventDefault()`, form data extraction, validation
+- Button styles: `.btn-primary`, `.btn-secondary`, `.btn-small`
+- Error handling: try-catch blocks, alert() for errors
+- Date handling: `new Date()`, `formatDate()`, `getDaysSince()` functions
+
+### Functions to Reuse
+- `formatDate(date)` - For displaying contract expiry dates
+- `getDaysSince(date)` - Can be adapted for "days until expiry" (negative days)
+- `getCurrentUser()`, `getSettings()` - User/settings retrieval
+- `generateId()` - For any new entities
+- `showView(viewName)` - Navigation
+- OpenRouter API call structure in `generateMessage()` - Extend for new prompts
+
+### UI Components to Reuse
+- `.stat-card` - For displaying priority metrics
+- `.badge` system - Can add `.badge-priority-high`, `.badge-priority-medium`
+- `.pill` system - Can add `.pill-contract-expiry`, `.pill-invoice-overdue`
+- `.info-box` - For explaining priority system
+- `.toolbar` - For batch outreach controls
+- `.contact-row` structure - Adapt for priority display
+- `.input-group` - For new form fields
+
+### Styling to Maintain
+- Color palette: #2D6A4F, #F7F4EF, #1A1A1A, #6B7280
+- Typography: Inter font, existing font-size scale
+- Spacing: 8px/16px/24px/32px rhythm
+- Border radius: 8px standard, 12px for cards
+- Shadow: `0 1px 3px rgba(0,0,0,.08)` standard
+
+## RISKS
+
+### Data Migration
+- **RISK**: Existing contacts in localStorage lack new fields (contractExpiry, invoiceAmount, etc.)
+- **MITIGATION**: Add default values on load, or migration script to add null/0 defaults
+
+### Priority Score Complexity
+- **RISK**: Users may not understand how priority score is calculated
+- **MITIGATION**: Add tooltip/help text, show score breakdown on hover
+
+### Gmail Integration Limitations
+- **RISK**: mailto: links have length limits (~2000 chars), may truncate long messages
+- **RISK**: gmail.com URL scheme may not work on all browsers/devices
+- **MITIGATION**: Detect message length, warn user, offer copy-to-clipboard fallback
+
+### Weight Configuration UX
+- **RISK**: Users may set weights that don't sum to 100%, causing confusion
+- **MITIGATION**: Auto-normalize weights or provide real-time validation feedback
+
+### Trigger Detection Edge Cases
+- **RISK**: Multiple triggers for one contact (expiry soon AND invoice overdue) - which to prioritize?
+- **MITIGATION**: Define trigger priority hierarchy (e.g., invoice > expiry > recency)
+
+### API Cost
+- **RISK**: Batch message generation could consume many API tokens quickly
+- **MITIGATION**: Add confirmation dialog showing estimated token cost, rate limiting
+
+### Date Handling
+- **RISK**: Contract expiry dates in past, invoice amounts negative, relationship scores out of range
+- **MITIGATION**: Input validation, date picker constraints
+
+### Performance
+- **RISK**: Priority score calculation on every queue load may be slow with many contacts
+- **MITIGATION**: Cache scores with timestamp, recalculate only when contact data changes
+
+### Backwards Compatibility
+- **RISK**: Removing tier A/B/C system entirely may confuse existing users
+- **MITIGATION**: Keep tier as optional visual indicator, but don't use for queue logic
+
+## DATA_STRUCTURES
+
+### Current localStorage Keys
+
+#### `localStorage.currentUser`
+```javascript
+{
+  username: "demo",
+  name: "Demo User"
+}
+```
+
+#### `localStorage.contacts`
+```javascript
+[
+  {
+    id: "c_1234567890",  // Generated with generateId()
+    name: "John Doe",
+    email: "john@example.com",
+    company: "Acme Corp",
+    tier: "A",  // "A", "B", or "C"
+    frequency: 30,  // days
+    lastContact: "2024-01-15",  // ISO date string or null
+    notes: "Met at conference"
+  },
+  // ... more contacts
+]
+```
+
+#### `localStorage.userSettings`
+```javascript
+{
+  companyName: "My Company",
+  businessDescription: "We provide...",
+  products: "Product A, Product B",
+  communicationStyle: "professional",  // or "casual", "friendly"
+  openRouterApiKey: "sk-or-v1-..."
+}
+```
+
+### Proposed New Structures
+
+#### Updated Contact Object
+```javascript
+{
+  // ...existing fields...
+  contractExpiry: "2024-12-31",  // ISO date string or null
+  invoiceAmount: 4200,  // number (currency in cents or dollars)
+  revenueSpend: 50000,  // number
+  relationshipScore: 4,  // 1-5 integer
+  // Computed fields (not stored, calculated on load):
+  priorityScore: 87,  // 0-100
+  trigger: "contract_expiry"  // or "invoice_overdue", "high_value_dormant", etc.
+}
+```
+
+#### Updated Settings Object
+```javascript
+{
+  // ...existing fields...
+  gmailEmail: "user@gmail.com",  // for display/reference
+  priorityWeights: {
+    recency: 30,        // percentage
+    contractExpiry: 40,
+    invoiceAmount: 20,
+    revenueSpend: 5,
+    relationshipScore: 5
+  }
+}
+```
+
+#### New Trigger Types (enumeration)
+```javascript
+const TRIGGERS = {
+  CONTRACT_EXPIRY: 'contract_expiry',      // expiry within threshold
+  INVOICE_OVERDUE: 'invoice_overdue',       // invoice + lastContact overdue
+  HIGH_VALUE_DORMANT: 'high_value_dormant', // high revenue/spend + overdue
+  RELATIONSHIP_ATTENTION: 'relationship_attention', // low score + overdue
+  STANDARD_FOLLOWUP: 'standard_followup'    // regular frequency-based
+};
+```

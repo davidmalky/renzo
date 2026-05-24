@@ -1,0 +1,197 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+
+**Profile Management:**
+- `switchProfile(name)` - function to switch between profiles
+- `setProfile(profileName)` - sets current profile in localStorage
+- `getProfile()` - retrieves current profile
+- `renderProfileSelector()` - renders profile dropdown UI
+- Profile data stored in localStorage key `profiles` (array)
+- Current profile stored in localStorage key `profile` (string)
+- Profile switcher uses `window.prompt()` for new profile creation
+
+**UI Components:**
+- Login view (`#loginView`)
+- App view (`#appView`) with sidebar and main content
+- Sidebar navigation with `.nav-item` elements
+- View system with `.view` containers
+- Toast notification system (referenced in task)
+- Badge system (`.nav-badge`) for queue counts
+
+**Styling System:**
+- CSS custom properties (`:root` variables) for colors, shadows, spacing
+- Button styles: `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.btn-sm`, `.btn-xs`, `.btn-full`
+- Form field styles: `.field`, `label`, `input`, `select`, `textarea`
+- Error states: `.invalid`, `.error-text`
+- Card styles: `.card`, `.table-wrap`, `.stat-card`
+- Modal would use `.hidden` class for show/hide
+- Layout uses flexbox patterns
+
+**State Management:**
+- localStorage for persistence
+- Profile-specific data isolation
+- Dashboard view (`showView('dashboard')`)
+- Queue badge updates (`updateQueueBadge()`)
+
+## MISSING_FEATURES:
+
+**Modal Infrastructure:**
+- `#newProfileModal` HTML element
+- `.modal-overlay` CSS class
+- `.modal-box` CSS class
+- `.modal-sm` size variant class
+- `.modal-header` CSS class
+- `.modal-title` CSS class
+- `.modal-close` CSS class and styling
+- Modal backdrop/overlay styling
+- Modal centering/positioning CSS
+- Modal animation/transition effects
+
+**New Profile Modal Specific:**
+- `#newProfileModal` container element
+- `#newProfileName` input field
+- `#newProfileErr` error message element
+- `#newProfileClose` close button
+- `#newProfileCancel` cancel button
+- `#newProfileCreate` create button
+
+**Event Handlers:**
+- Click handler for `#newProfileCreate` button
+- Click handler for `#newProfileClose` button
+- Click handler for `#newProfileCancel` button
+- Enter key handler for `#newProfileName` input (implied best practice)
+- Click handler for modal overlay backdrop close (common pattern)
+
+**Validation Logic:**
+- Profile name empty check
+- Profile name uniqueness check against existing profiles
+- Error display/hide logic for `#newProfileErr`
+
+## CHANGES_NEEDED:
+
+**1. `switchProfile(name)` function modifications:**
+- Remove `window.prompt()` call when `name === ''`
+- Add modal show logic: `document.getElementById('newProfileModal').classList.remove('hidden')`
+- Add input clear: `document.getElementById('newProfileName').value = ''`
+- Add focus: `document.getElementById('newProfileName').focus()`
+- Add `updateQueueBadge()` call at end of function after `showView('dashboard')`
+
+**2. Profile creation flow:**
+- Move profile creation logic from inline prompt to button handler
+- Validate input is not empty
+- Validate input is not duplicate of existing profiles
+- Call `setProfile(val)` with validated name
+- Add new profile to profiles array
+- Save profiles array to localStorage
+- Close modal: `document.getElementById('newProfileModal').classList.add('hidden')`
+- Call `renderProfileSelector()` to refresh dropdown
+- Call `showView('dashboard')` to show dashboard
+- Call `updateQueueBadge()` to update badge
+- Show success toast notification
+
+## REUSE:
+
+**Existing Patterns to Preserve:**
+- `.hidden` class toggle pattern for show/hide
+- `.field` structure for form inputs with labels
+- `.btn`, `.btn-primary`, `.btn-ghost` button classes
+- `.error-text` class for validation messages
+- Color variables: `var(--gray)`, `var(--red)`, etc.
+- CSS custom property usage throughout
+- localStorage get/set patterns used in profile functions
+- Toast notification function (signature unknown but referenced)
+- Font sizes: `14px` for body text, `font-size:14px` in description
+- Spacing: `margin-bottom:16px`, `gap:10px` patterns
+- Border radius: `var(--radius)`, `var(--radius-sm)` usage
+
+**Function Signatures to Match:**
+- `setProfile(profileName)` - existing signature
+- `renderProfileSelector()` - no arguments
+- `showView('dashboard')` - string argument
+- `updateQueueBadge()` - no arguments (assumed from task)
+- Toast function - signature unknown, needs research in full code
+
+**Data Structure Patterns:**
+- `localStorage.getItem('profiles')` returns JSON array
+- `localStorage.getItem('profile')` returns string
+- Profile names are strings
+- Profiles array manipulation with array methods
+
+## RISKS:
+
+**1. Incomplete Code Analysis:**
+- Full `switchProfile()` implementation not visible
+- Toast notification function signature unknown
+- `updateQueueBadge()` implementation details unknown
+- Complete profiles array management pattern unclear
+- Possible race conditions in profile switching flow
+
+**2. Modal CSS Conflicts:**
+- No existing modal CSS in provided code
+- z-index layering needs careful management
+- Overlay click-outside behavior not specified
+- Focus trap behavior for accessibility not addressed
+- Scroll lock on body when modal open not addressed
+
+**3. State Management:**
+- Modal state timing with profile switching could conflict
+- Profile selector refresh timing critical
+- Multiple rapid clicks could cause duplicate profiles
+- localStorage quota limits not handled
+- Profile name sanitization not specified
+
+**4. Validation Edge Cases:**
+- Case-sensitive vs case-insensitive duplicate checking not specified
+- Whitespace-only names not explicitly handled
+- Special characters in profile names not validated
+- Maximum profile name length not specified
+- Maximum number of profiles not limited
+
+**5. Accessibility Concerns:**
+- Keyboard navigation (Tab, Escape, Enter) not specified
+- Focus management when opening/closing modal
+- Screen reader announcements for errors
+- ARIA attributes not mentioned
+
+**6. Browser Compatibility:**
+- `.classList` API is modern but well-supported
+- `.focus()` timing may need `setTimeout` in some browsers
+- Event delegation vs direct binding not specified
+
+## DATA_STRUCTURES:
+
+**localStorage Keys:**
+
+1. **`profile`** (string)
+   - Stores: Current active profile name
+   - Format: Plain string (e.g., "Vendors", "Customers")
+   - Used by: `getProfile()`, `setProfile()`
+
+2. **`profiles`** (array)
+   - Stores: List of all profile names
+   - Format: JSON stringified array of strings (e.g., `["Default", "Vendors", "Customers"]`)
+   - Accessed by: Profile management functions
+   - Needs: Parse with `JSON.parse()`, save with `JSON.stringify()`
+
+**Profile-Related Variables:**
+- Profile names are strings (user-provided, displayed in UI)
+- Profile selector dropdown contains profile names
+- New profile flow: empty string `''` triggers creation modal
+- Existing profile flow: profile name string triggers direct switch
+
+**Modal State:**
+- Visibility controlled by `.hidden` class presence
+- Input value: `#newProfileName.value` (string)
+- Error visibility: `#newProfileErr.hidden` (boolean via class)
+
+**Unknown Data Structures (need code inspection):**
+- Profile-specific data storage format
+- Queue data structure for badge count
+- Contact/outreach data associated with profiles
+- Settings data per profile
+
+---
+
+**RECOMMENDATION FOR PLANNER:**
+The task is well-defined with specific HTML and implementation steps. Main unknowns are: (1) complete CSS for modal styling, (2) toast function signature, (3) full `switchProfile()` current implementation. Planner should request these sections if not in full codebase, or make reasonable assumptions based on existing patterns.

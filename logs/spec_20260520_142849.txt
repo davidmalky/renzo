@@ -1,0 +1,234 @@
+# TECHNICAL SPECIFICATION: CSV Import for Renzo Contacts
+
+## OVERVIEW
+Add CSV import capability to existing contacts page using vanilla JavaScript FileReader API. Feature includes file selection button, automatic column detection for name/company/email/phone fields, preview modal showing first 5 rows with detected mappings, and import execution with duplicate detection. All existing contact functionality remains untouched.
+
+## VIEWS
+
+**ContactsPage (existing - modifications only)**:
+- Add "Import CSV" button next to existing search/add controls
+- Button styling: btn + btn-secondary classes with upload icon
+- Position: flex container with existing controls, gap: 12px
+
+**CSVPreviewModal (new)**:
+- Modal overlay structure using existing modal-overlay pattern
+- Modal header: "Import Contacts from CSV" title + close button
+- Modal body: 
+  - Column mapping section showing detected fields (4 rows: Name, Company, Email, Phone)
+  - Each row: label + detected column name in read-only format
+  - Preview table with 5 rows max showing raw CSV data
+  - Table styling: border-collapse, th background --cream-dark, td padding 8px
+- Modal footer: 
+  - Cancel button (btn-secondary)
+  - Confirm Import button (btn-primary)
+  - Buttons right-aligned with gap: 12px
+
+**ImportResultToast (new)**:
+- Overlay notification at top-center
+- Shows: "Imported X contacts, skipped Y duplicates"
+- Auto-dismiss after 4 seconds
+- Styling: --forest-green background, white text, border-radius 8px, padding 16px 24px
+
+## FUNCTIONS
+
+**initCSVImport()**:
+- Attach event listener to Import CSV button
+- Create hidden file input element (accept=".csv")
+- Trigger file input on button click
+- Listen for file selection change event
+- Call handleFileSelect(file) when file chosen
+
+**handleFileSelect(file)**:
+- Validate file extension is .csv
+- If invalid: show error toast "Please select a CSV file"
+- Create FileReader instance
+- Set reader.onload to call parseCSV(result)
+- Call reader.readAsText(file)
+
+**parseCSV(csvText)**:
+- Split text by newline (\n), trim each line
+- Extract headers from first row, split by comma
+- Parse remaining rows: split by comma, handle quoted values
+- Return object: { headers: [], rows: [[]], totalRows: number }
+- Handle edge case: empty file returns null
+
+**detectColumns(headers)**:
+- Create mapping object: { name: null, company: null, email: null, phone: null }
+- For each header (case-insensitive):
+  - Match "name", "first", "last", "full" → name field
+  - Match "company", "organization", "org" → company field
+  - Match "email", "e-mail", "mail" → email field
+  - Match "phone", "telephone", "tel", "mobile" → phone field
+- Store matched header indices
+- Return mapping with column indices
+
+**showPreviewModal(csvData, columnMapping)**:
+- Build modal HTML dynamically
+- Column mapping section: display 4 rows with labels and detected columns
+- If column not detected, show "Not detected" in muted text
+- Preview table: loop first 5 rows from csvData.rows
+- Display all columns in table for context
+- Highlight detected columns with --forest-green-light background
+- Attach event listeners: close modal on cancel/X, confirmImport on confirm button
+
+**confirmImport(csvData, columnMapping)**:
+- Get existing contacts from localStorage (key: "renzo_contacts")
+- Parse JSON or initialize empty array
+- Create Set of existing contact keys for duplicate detection: "name|company"
+- Loop through all csvData.rows:
+  - Extract values using columnMapping indices
+  - Clean/trim each value
+  - Skip if name AND company are both empty
+  - Create normalized key: `${name}|${company}`.toLowerCase()
+  - If key exists in Set: increment skipped counter, continue
+  - Add key to Set
+  - Create contact object: { id: Date.now() + random, name, company, email, phone, createdAt: Date.now() }
+  - Push to contacts array
+  - Increment imported counter
+- Save updated contacts to localStorage
+- Close preview modal
+- Show result toast with imported/skipped counts
+- Refresh contacts display by calling existing renderContacts() function
+
+**closeCSVModal()**:
+- Remove .active class from modal overlay
+- Remove modal HTML from DOM after 300ms transition
+
+**showToast(message, duration)**:
+- Create toast element with message
+- Append to document body
+- Position fixed top: 20px, left: 50%, transform: translateX(-50%)
+- Add show class for fade-in animation
+- setTimeout to remove after duration (default 4000ms)
+
+## DATA
+
+**localStorage: "renzo_contacts"**:
+- Array of contact objects
+- Contact schema: { id: number, name: string, company: string, email: string, phone: string, createdAt: timestamp }
+- Updated with new imported contacts appended
+
+**csvFileInput (DOM element)**:
+- Hidden input type="file"
+- Accept attribute: ".csv"
+- Stored in closure for reuse
+
+**activeCSVData (temporary)**:
+- Stored in closure during preview modal interaction
+- Structure: { headers: string[], rows: string[][], totalRows: number }
+- Cleared after import completes
+
+**activeColumnMapping (temporary)**:
+- Stored in closure during preview modal interaction
+- Structure: { name: number|null, company: number|null, email: number|null, phone: number|null }
+- Cleared after import completes
+
+## API
+
+**No external API calls required**
+
+**localStorage API**:
+- GET: localStorage.getItem("renzo_contacts") - retrieve existing contacts
+- SET: localStorage.setItem("renzo_contacts", JSON.stringify(contacts)) - save updated contacts
+
+**FileReader API**:
+- Method: readAsText(file)
+- Event: onload - triggers when file read complete
+- Response: event.target.result contains CSV text content
+
+## DESIGN
+
+**Import CSV Button**:
+- Classes: btn btn-secondary
+- Icon: Upload icon (⬆) before text, gap: 8px
+- Padding: 10px 20px
+- Border-radius: 8px
+- Background: transparent, border: 2px solid --forest-green
+- Hover: background --forest-green-light
+- Font: 500 weight, 14px size
+
+**CSV Preview Modal**:
+- Overlay: rgba(0, 0, 0, 0.5) background
+- Modal container: max-width 700px, background --cream, border-radius 12px
+- Header: padding 20px 24px, border-bottom 2px solid --cream-dark
+- Body: padding 24px, max-height 60vh, overflow-y auto
+- Column mapping rows: margin-bottom 12px, display flex, label width 100px, value color --text-secondary
+- Preview table: width 100%, margin-top 20px, border 2px solid --cream-dark
+- Table header: background --cream-dark, font-weight 600, padding 12px 8px
+- Table cells: padding 8px, border-bottom 1px solid --cream-dark
+- Highlighted columns: background --forest-green-light
+- Footer: padding 20px 24px, border-top 2px solid --cream-dark, justify-content flex-end
+
+**Result Toast**:
+- Position: fixed, top 20px, left 50%, transform translateX(-50%)
+- Background: --forest-green, color white
+- Padding: 16px 24px, border-radius 8px
+- Box-shadow: 0 4px 12px rgba(0,0,0,0.15)
+- Font-weight: 500, font-size: 14px
+- Z-index: 2000
+- Animation: fadeIn 0.3s ease, fadeOut 0.3s ease
+
+**Error Toast** (invalid file):
+- Same positioning as result toast
+- Background: --error color (#dc3545)
+- Text: "Please select a CSV file"
+
+## ERRORS
+
+**Invalid file type**:
+- User selects non-CSV file
+- Show error toast: "Please select a CSV file"
+- Reset file input value
+
+**Empty CSV file**:
+- File contains no data rows
+- Show error toast: "CSV file is empty"
+- Do not open preview modal
+
+**Malformed CSV**:
+- Parsing errors (unclosed quotes, inconsistent columns)
+- Attempt to parse row-by-row, skip malformed rows
+- Show warning in preview: "Some rows could not be parsed"
+
+**No columns detected**:
+- CSV headers don't match any known patterns
+- Still show preview modal
+- Display "Not detected" for all fields
+- User can still import (all fields will be empty)
+
+**localStorage quota exceeded**:
+- Try-catch around localStorage.setItem
+- If quota exceeded: show error toast "Storage limit reached. Cannot import contacts."
+- Rollback: do not modify existing contacts
+
+**Duplicate detection edge case**:
+- Both name and company empty: skip row (already handled in logic)
+- Normalize keys to lowercase for case-insensitive matching
+- Trim whitespace before comparison
+
+**File read error**:
+- FileReader onerror event
+- Show error toast: "Failed to read file. Please try again."
+
+**Modal interaction errors**:
+- User closes modal during import: cancel operation
+- Multiple rapid clicks: disable confirm button after first click
+
+## SCOPE_CHECK
+
+**Estimated total lines: 480**
+
+**Breakdown**:
+- HTML additions: 25 lines (button + hidden input)
+- CSS additions: 120 lines (modal, table, toast, animations)
+- JavaScript: 335 lines
+  - Init/setup: 30 lines
+  - CSV parsing: 60 lines
+  - Column detection: 45 lines
+  - Preview modal: 85 lines
+  - Import logic: 70 lines
+  - Helper functions: 45 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+This implementation fits well within the 650-line limit. The feature is cohesive and splitting would create unnecessary dependencies. All functionality can be added in a single file modification pass covering the existing contacts HTML, CSS, and JS files.

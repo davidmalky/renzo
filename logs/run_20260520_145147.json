@@ -1,0 +1,228 @@
+{
+  "task": {
+    "id": "renzo-p2-003",
+    "title": "Add batch outreach and trainable instructions to Renzo",
+    "description": "Add two features to the existing Renzo app. Keep ALL existing functionality. ADD ONLY:\n\n1. BATCH OUTREACH: Add 'Batch Outreach' nav item. View shows a textarea prompt input and a Generate button. User types natural language like 'reach out to all contacts with contracts expiring soon'. App filters contacts using simple keyword matching (contract/expiry/expire -> check contractExpiry field; invoice/overdue -> check invoiceAmount; not contacted/overdue -> check lastContactDate). For each matching contact, generates an AI message using the existing generateAiMessage function. Shows progress 'Generating 1 of 5...'. Adds all results to the outreach queue. Shows completion summary.\n\n2. TRAINABLE INSTRUCTIONS: In Settings view, add a section 'My Outreach Rules' with: a textarea to type a new rule, an Add Rule button, a list of existing rules each with a delete button. Rules stored in localStorage as array under key 'renzo_rules'. These rules get appended to every AI message generation prompt as 'Follow these rules: [rule1], [rule2]...'",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Renzo is a frontend-only AI outreach tool. Single HTML file. localStorage. No backend. Add batch outreach and trainable instructions."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 7200
+      },
+      "t": 41.8
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 100.6
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 153.0
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 1
+      },
+      "t": 201.2
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 250.9
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 1
+      },
+      "t": 302.5
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 353.4
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 9884
+      },
+      "t": 394.8
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 0,
+        "issues": [
+          "CSS file is severely truncated - ends mid-declaration without closing braces or </style> tag, making it completely invalid",
+          "Missing both required features from task: 'batch outreach' and 'trainable instructions' - no UI or functionality present",
+          "No HTML body content or JavaScript provided - only incomplete CSS that cannot render or function"
+        ],
+        "feedback": "This submission is incomplete CSS-only code that's been cut off mid-declaration. You need to: 1) Provide the complete HTML file with proper structure including <!DOCTYPE>, <html>, <body> tags, 2) Add UI for batch outreach (checkboxes to select multiple contacts, bulk actions), 3) Add trainable instructions interface (settings panel where users can customize AI behavior/templates), 4) Include complete CSS with all closing braces, 5) Add JavaScript to make features interactive. Currently there's no working application at all - just broken CSS fragments."
+      },
+      "t": 413.8
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 9923
+      },
+      "t": 455.1
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS is truncated mid-declaration with incomplete properties ('borde', 'line') causing parsing errors that will break page styling",
+          "Missing critical closing tags (</style>, </body>, </html>) means the HTML structure is incomplete and will not render properly",
+          "Cannot verify the required 'batch outreach and trainable instructions' features exist since the code chunk cuts off before the main HTML body and JavaScript implementation"
+        ],
+        "feedback": "The submitted code is severely truncated and incomplete. Fix: 1) Complete all CSS declarations (fix 'borde' \u2192 'border', complete 'line-height' property in '.queue-item-message') 2) Ensure all closing tags are present (</style>, </body>, </html>) 3) Include the full HTML body with the batch outreach UI elements and JavaScript implementing trainable instructions functionality. Resubmit the complete, untruncated file."
+      },
+      "t": 471.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 9899
+      },
+      "t": 512.4
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS is truncated mid-property (.queue-item-message { backgr...) and missing closing </style> tag - will cause complete UI breakdown and malformed HTML rendering",
+          "CSS property incomplete: .match-item has 'font-size: 14' without unit (px/rem/em) - browser will ignore this rule causing layout issues",
+          "Missing opening <style> tag at chunk start - floating CSS without container creates invalid HTML that browsers may not parse correctly"
+        ],
+        "feedback": "CRITICAL: The file is incomplete with truncated CSS and malformed HTML structure. Fix immediately: 1) Add opening <style> tag at the start of CSS section, 2) Complete the truncated .queue-item-message property (likely 'background'), 3) Fix .match-item font-size to include unit (e.g., '14px'), 4) Add closing </style> tag before </body>. Provide CHUNK 2/2 to verify batch outreach and trainable instructions features are actually implemented in JavaScript. Without complete code, cannot verify if required functionality exists or if there are JS errors."
+      },
+      "t": 532.4
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 9850
+      },
+      "t": 575.1
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS is truncated at line 463 - '.results-summary' style block incomplete with missing closing brace and cut-off 'font-weigh' property",
+          "HTML structure incomplete - missing closing </style>, </body>, and </html> tags causing broken page rendering",
+          "Cannot verify required features exist - batch outreach UI (checkboxes, batch buttons) and trainable instructions interface are not visible in truncated code"
+        ],
+        "feedback": "The file is severely truncated. Fix: 1) Complete the CSS at line 463 by finishing 'font-weight: bold;' and adding closing brace for .results-summary. 2) Add missing closing tags: </style></head><body content></body></html>. 3) Ensure chunk 2 contains: batch selection checkboxes on each contact row, a batch action toolbar with 'Send Batch Outreach' button, and a trainable instructions section with textarea for custom instructions and 'Save Instructions' button. 4) Verify JavaScript implements batch selection state management, batch email sending logic, and instruction persistence (localStorage). Without these, core task requirements are not met."
+      },
+      "t": 593.3
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "BatchOutreachView - complete view not found in provided code (only 5000 chars shown)",
+          "parseBatchQuery function - cannot verify implementation",
+          "filterContactsByQuery function - cannot verify implementation",
+          "generateBatchMessages function - cannot verify implementation",
+          "addBatchToQueue function - cannot verify implementation",
+          "SettingsView modifications for 'My Outreach Rules' section - cannot verify",
+          "loadRules function - cannot verify implementation",
+          "saveRules function - cannot verify implementation",
+          "addRule function - cannot verify implementation",
+          "deleteRule function - cannot verify implementation",
+          "renderRulesList function - cannot verify implementation",
+          "augmentPromptWithRules function - cannot verify implementation",
+          "Integration of trainable rules into generateAIMessage and generateBatchMessages - cannot verify"
+        ],
+        "note": "Only first 5000 characters of code provided - insufficient to verify implementation of batch outreach and trainable instructions features. The visible portion shows basic app structure, styling, and navigation setup, but none of the required new functionality (BatchOutreachView, batch processing functions, rules management, or SettingsView modifications) can be confirmed in the provided code snippet. Full code review required to complete QA assessment."
+      },
+      "t": 601.6
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 9957
+      },
+      "t": 642.0
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "HTML structure incomplete - closing style tag and remaining HTML missing",
+          "No keyboard navigation implemented for modals - users cannot tab through or escape",
+          "Focus trap missing in modals - keyboard users will tab behind modal",
+          "No ARIA labels on icon-only buttons (close button uses \u00d7 symbol only)",
+          "Modal close button lacks accessible label - screen readers cannot identify purpose",
+          "Contact cards marked as cursor:pointer but no keyboard interaction (click handler likely JS-only)",
+          "Form validation errors not announced to screen readers - missing aria-live regions",
+          "Priority badges use color only for meaning - no text alternative for colorblind users"
+        ]
+      },
+      "t": 659.1
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 10165
+      },
+      "t": 706.6
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Modal animation conflict: `.modal` has `display: none` with `opacity: 0` transition, but `display` is not animatable. The modal will appear instantly then fade, breaking the animation. Use `visibility: hidden` instead of `display: none`.",
+          "Search input background SVG has unencoded characters: The `<svg>` in `background-image` needs proper URL encoding. Current format will fail in some browsers.",
+          "Incomplete media query at line 768: `.insights-grid` rule is cut off mid-property (`grid-`), causing CSS parse error.",
+          "Modal accessibility: No focus trap implementation visible. Users can tab to elements behind modal, breaking keyboard navigation.",
+          "Contact cards lack keyboard interaction: `cursor: pointer` on `.contact-card` but no keyboard event handling (Enter/Space) for accessibility.",
+          "Loading spinner animation uses `transform` without setting `transform-box` property, may cause issues in Safari with inline SVG contexts.",
+          "Incomplete CSS rule: `.modal-content` has incomplete `max` property that will cause parsing errors",
+          "Missing closing brace for `.modal-content` media query rule"
+        ]
+      },
+      "t": 732.7
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 734.3
+    }
+  ],
+  "cost": 0.8397540000000001
+}

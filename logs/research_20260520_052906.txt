@@ -1,0 +1,223 @@
+# CODE ANALYSIS REPORT
+
+## EXISTING_FEATURES:
+
+### UI Components:
+- **Sidebar navigation system** with active state indicators (`.nav-item`, `.nav-item.active`)
+- **Modal system** with overlay (`.modal-overlay`, `.modal`, `.modal-large`)
+- **Integration card layout** (`.integration-card`) with icon, name, status, and actions
+- **Status indicators** with colored dots (`.status-dot.connected`, `.status-dot.disconnected`, `.status-dot.warning`, `.status-dot.error`)
+- **Status badges** (`.status-badge.success`, `.status-badge.error`, `.status-badge.warning`)
+- **Button system** (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`)
+- **Dashboard statistics cards** (`.dashboard-stats`, `.stat-card`, `.stat-label`, `.stat-value`, `.stat-delta`)
+- **Progress bar** component (`.progress-bar`, `.progress-fill`)
+- **Spinner/loading indicator** (`.spinner` with CSS animation)
+- **Success/error icons** (`.success-icon`, `.error-icon`)
+- **Tooltip system** (`.tooltip` with CSS hover effects)
+- **Log table structure** (`.log-table` with thead/tbody styling)
+- **Expandable table rows** (`.expandable-row`, `.row-details`, `.row-details.expanded`)
+- **Filter controls** (`.filter-controls` with inputs/selects)
+
+### Salesforce Integration Features:
+- **Sync dashboard container** (`.sync-dashboard`)
+- **Sync actions container** (`.sync-actions`)
+- **Field mapping interface** (`.field-mapping-container`, `.field-column`, `.field-item`, `.mapping-arrow`)
+- **Conflict resolution interface** (`.conflict-resolution`, `.conflict-card`, `.conflict-comparison`)
+- **Conflict cards** with header, field comparison, and timestamp displays
+
+### Layout & Structure:
+- **View system** with `.view` and `.view.active` for multi-page navigation
+- **Section headers** (`.section-header`, `.section-title`, `.section-subtitle`)
+- **Fixed sidebar** with `position:fixed` and `height:100vh`
+- **Main content area** with `margin-left:240px` offset for sidebar
+- **Responsive grid layouts** using CSS Grid (`grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`)
+- **Sidebar footer** with user info (`.sidebar-footer`, `.user-name`, `.logout-btn`)
+
+### Styling System:
+- **Color palette**: Primary green (#2D6A4F, #40916C), Background (#F7F4EF), Text (#1A1A1A), Gray scale
+- **Border radius system**: 4px, 6px, 8px, 12px, 16px for different components
+- **Shadow system**: `box-shadow: 0 2px 8px rgba(0,0,0,.06)` for cards
+- **Transition system**: `.2s` and `.3s` for hover effects
+- **Typography**: Inter font family with weights 400, 500, 600, 700
+
+### Security:
+- **Content Security Policy** meta tag with restricted sources
+
+## MISSING_FEATURES:
+
+### Core Sync Dashboard Components:
+- **SyncActivityView** JavaScript class/module
+- **Sync status overview card** implementation
+- **Last sync timestamp** display logic
+- **Total contacts synced** counter
+- **Sync health indicator** with green/yellow/red logic based on error rate calculation
+- **"Sync Now" manual trigger button** with event handler
+- **Real-time sync progress indicator** with dynamic updates
+- **Current operation description** state management ('Syncing contacts...', 'Checking for updates...')
+- **Records processed counter** with dynamic update (e.g., '247/500 contacts')
+
+### Activity Log Features:
+- **Activity log data structure** and storage mechanism
+- **Timestamp column** with formatted date/time display
+- **Operation type column** (initial sync/update/error)
+- **Salesforce record ID column**
+- **Renzo contact name column**
+- **Sync direction indicator** (bidirectional arrows/icons)
+- **Status column** (success/failed/conflict)
+- **Expandable row details** JavaScript logic for toggling
+- **Field-level changes display** in expanded rows
+- **Row expansion toggle functionality**
+
+### Filtering & Search:
+- **Date range filter** with calendar picker integration
+- **Sync status filter dropdown** (all/success/failed) with event handlers
+- **Record type filter** implementation
+- **Filter application logic** to table data
+- **Filter reset functionality**
+
+### Error Management:
+- **Error summary section** HTML structure
+- **Common error types aggregation** logic
+- **Error counts calculation**
+- **Quick resolution suggestions** content and display
+- **Retry failed records button** for individual rows
+- **Retry logic** for individual sync operations
+
+### Export & Reporting:
+- **Export sync log button** functionality
+- **CSV generation** from log data
+- **CSV download trigger** mechanism
+
+### Statistics & Metrics:
+- **Total syncs in last 30 days** calculation
+- **Average sync duration** calculation
+- **Error rate percentage** calculation
+- **Last successful sync timestamp** tracking
+- **30-day historical data** storage and retrieval
+
+### Real-time Updates:
+- **Auto-refresh mechanism** (30-second interval when sync active)
+- **Sync state detection** (active/idle)
+- **Toast notification system** for sync completion
+- **Toast notification system** for errors
+- **WebSocket or polling** for real-time sync status updates
+
+### Data Persistence:
+- **localStorage schema** for sync activity logs
+- **localStorage schema** for sync statistics
+- **localStorage schema** for sync status
+- **localStorage schema** for error logs
+- **Data retention policy** implementation
+
+## CHANGES_NEEDED:
+
+### HTML Structure:
+- **Add new nav-item** in `.sidebar-nav` for "Sync Activity" link
+- **Create new view div** with `id="syncActivityView"` and class `view`
+- **Extend `.integration-card`** to include "View Activity" button in `.integration-actions`
+
+### JavaScript (Not Present - Needs Creation):
+- **Create SyncActivityView class** with initialization, render, and update methods
+- **Implement view routing** to show/hide `#syncActivityView`
+- **Add event listeners** for navigation to sync activity view
+- **Create data fetching functions** for sync logs from localStorage
+- **Create filtering functions** for log table
+- **Implement auto-refresh interval** with clearInterval on view hide
+
+### CSS Additions:
+- **Add `.sync-overview-card`** specific styling (may reuse `.stat-card`)
+- **Add `.sync-progress-indicator`** container styling
+- **Add `.operation-description`** text styling
+- **Add `.records-counter`** badge styling
+- **Add `.sync-direction-icon`** arrow/bidirectional indicator styling
+- **Add `.error-summary-section`** layout styling
+- **Add `.error-type-item`** list item styling
+- **Add `.resolution-suggestion`** text styling
+- **Add `.export-button`** specific styling
+- **Add `.toast-notification`** fixed position notification styling
+- **Add toast animations** (slide-in, fade-out)
+
+## REUSE:
+
+### UI Components to Reuse:
+- **`.integration-card`** - Use as base for sync status overview card
+- **`.stat-card`** - Reuse for statistics cards (total syncs, avg duration, error rate, last sync)
+- **`.dashboard-stats`** - Reuse grid layout for statistics section
+- **`.progress-bar` + `.progress-fill`** - Reuse for real-time sync progress indicator
+- **`.log-table`** - Reuse entire table structure and styling for activity log
+- **`.status-badge`** - Reuse for sync status column (success/error/warning)
+- **`.expandable-row` + `.row-details`** - Reuse toggle pattern for field-level changes
+- **`.filter-controls`** - Reuse for date range, status, and record type filters
+- **`.btn-primary`** - Reuse for "Sync Now" and "Export" buttons
+- **`.btn-secondary`** - Reuse for filter reset and cancel actions
+- **`.spinner`** - Reuse for loading states during sync operations
+- **`.modal-overlay` + `.modal`** - Reuse for confirmation dialogs (retry operations)
+- **`.conflict-card`** pattern - Adapt for error detail displays
+- **`.tooltip`** - Reuse for column headers and icon explanations
+
+### Code Patterns to Preserve:
+- **View switching pattern** - `.view.active` class toggle mechanism
+- **Hidden state management** - `.hidden` class for show/hide
+- **Color palette** - Maintain #2D6A4F primary, #40916C secondary, status colors
+- **Border radius system** - Use consistent 8px/12px for cards and buttons
+- **Grid layout pattern** - `grid-template-columns: repeat(auto-fit, minmax(...))`
+- **Hover transitions** - `.2s` timing for interactive elements
+- **Shadow depth** - `box-shadow: 0 2px 8px rgba(0,0,0,.06)` for elevation
+- **Status dot pattern** - 8px circular indicators with semantic colors
+
+### Data Structure Patterns:
+- **Integration status model** - Follow existing connected/disconnected/warning/error states
+- **Timestamp formatting** - Use consistent date/time display format
+- **Field mapping structure** - Adopt existing field-name/field-type pattern
+
+## RISKS:
+
+### Performance Risks:
+1. **Large log table rendering** - Rendering 1000+ activity log rows could cause performance issues
+   - *Mitigation*: Implement pagination or virtual scrolling
+2. **30-second auto-refresh** - Frequent DOM updates may cause UI jank
+   - *Mitigation*: Only refresh if view is active and sync is running; use requestAnimationFrame
+3. **localStorage size limits** - Activity logs could exceed 5-10MB quota
+   - *Mitigation*: Implement log rotation, keep only last 30 days or 1000 records
+
+### Data Consistency Risks:
+4. **Race conditions** - Auto-refresh may conflict with user interactions (filtering, expanding rows)
+   - *Mitigation*: Debounce refresh, preserve UI state (scroll position, expanded rows)
+5. **Sync state synchronization** - Multiple tabs may show inconsistent sync status
+   - *Mitigation*: Use localStorage events or single source of truth
+6. **Timestamp accuracy** - Client-side timestamps may not match Salesforce server time
+   - *Mitigation*: Store both local and server timestamps if available
+
+### UI/UX Risks:
+7. **Modal conflicts** - Existing modal system may conflict with new toast notifications
+   - *Mitigation*: Use different z-index layers (modals: 1000, toasts: 1100)
+8. **Mobile responsiveness** - Fixed sidebar and wide tables may break on small screens
+   - *Mitigation*: Test log table with horizontal scroll or card layout on mobile
+9. **Expandable rows accessibility** - Keyboard navigation and screen reader support
+   - *Mitigation*: Add ARIA attributes, keyboard event handlers
+
+### Integration Risks:
+10. **Missing Salesforce API** - No actual Salesforce sync logic visible in HTML
+    - *Mitigation*: API calls must be implemented in separate JS file
+11. **Authentication state** - Sync operations may fail if Salesforce token expires
+    - *Mitigation*: Handle 401 errors, show re-authentication prompt
+12. **Field mapping dependencies** - Activity log needs to understand existing field mappings
+    - *Mitigation*: Load field mapping config from localStorage
+
+### Security Risks:
+13. **CSP violations** - Toast notifications with inline styles may violate CSP
+    - *Mitigation*: Use class-based styling only
+14. **XSS in log data** - Salesforce field values could contain malicious scripts
+    - *Mitigation*: Sanitize all user-generated content, use textContent not innerHTML
+
+## DATA_STRUCTURES:
+
+### Currently Defined (Inferred from CSS):
+*Note: No JavaScript found in provided code - these are inferred from HTML structure and CSS classes*
+
+**Integration Status:**
+```javascript
+// Inferred from .integration-status and .status-dot classes
+{
+  status: 'connected' | 'disconnected' | 'warning' | 'error',
+  // Other fields not visible in CSS-only

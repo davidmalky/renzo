@@ -1,0 +1,569 @@
+# TECHNICAL SPECIFICATION: CONTACT FIELD MAPPING CONFIGURATION INTERFACE
+
+## OVERVIEW
+
+A comprehensive field mapping configuration system that enables administrators to customize bidirectional field synchronization between Salesforce and Renzo contacts. The interface provides drag-and-drop reordering, field type validation, transformation rules, conflict resolution strategies, and real-time preview capabilities. All configurations persist to a database and support import/export for environment migration.
+
+## VIEWS
+
+**Main Configuration View (mapping-config-view)**
+- Page header with breadcrumb navigation showing "Settings > Contact Field Mappings"
+- Section header with title "Contact Field Mapping Configuration" and subtitle explaining purpose
+- Action toolbar with "Add Mapping", "Reset to Defaults", "Export Configuration", "Import Configuration" buttons
+- Mapping table displaying all configured field mappings with columns: drag handle, enabled toggle, Salesforce field, direction icon, Renzo field, data types, transformation badges, conflict resolution, actions (edit/delete)
+- Empty state message when no mappings exist with illustration and "Add Your First Mapping" CTA
+- Footer with "Save Configuration" primary button and "Cancel" secondary button
+- Unsaved changes indicator banner when modifications exist
+
+**Add/Edit Mapping Modal (mapping-modal)**
+- Modal overlay with large modal container
+- Modal header with title "Add Field Mapping" or "Edit Field Mapping: {field name}"
+- Close button in top-right corner
+- Form section with labeled inputs:
+  - Salesforce Field dropdown (searchable) with field type icons
+  - Renzo Field dropdown (searchable) with field type icons
+  - Data type compatibility indicator (checkmark or warning icon with message)
+  - Sync Direction selector (three radio buttons with icons: SF→Renzo, Renzo→SF, Bidirectional)
+  - Transformation Options section with checkboxes and input fields for rules
+  - Conflict Resolution dropdown with strategy descriptions
+  - Enabled toggle switch with label
+- Preview section showing sample data transformation with before/after columns
+- Validation error display area for incompatible types or configuration issues
+- Modal footer with "Save Mapping" primary button and "Cancel" secondary button
+
+**Save Confirmation Modal (save-confirmation-modal)**
+- Modal overlay with standard modal container
+- Warning icon and title "Save Configuration Changes?"
+- Impact summary section listing: number of mappings modified, number of contacts affected, estimated sync time
+- Warning message about sync implications
+- Checkbox "I understand this will trigger a data sync for affected contacts"
+- Modal footer with "Confirm Save" primary button (disabled until checkbox checked) and "Cancel" secondary button
+
+**Import Configuration Modal (import-modal)**
+- Modal overlay with standard modal container
+- Modal header with title "Import Field Mapping Configuration"
+- File upload area with drag-and-drop zone and "Browse Files" button
+- OR divider
+- JSON text area for pasting configuration directly
+- Validation status indicator showing parse results and compatibility checks
+- Preview list of mappings to be imported with conflict warnings
+- Import strategy selector (Replace All, Merge, Update Only)
+- Modal footer with "Import Configuration" primary button and "Cancel" secondary button
+
+**Export Configuration Modal (export-modal)**
+- Modal overlay with standard modal container
+- Modal header with title "Export Field Mapping Configuration"
+- Export options: All Mappings or Selected Only (if applicable)
+- Include metadata toggle (timestamps, user info, environment)
+- Format selector (JSON, pretty-printed JSON)
+- Preview area showing formatted JSON
+- Copy to Clipboard button
+- Download button with filename input field
+- Modal footer with "Close" button
+
+## FUNCTIONS
+
+**initializeMappingConfig()**
+- Call loadMappings() to fetch existing configurations
+- Call loadSalesforceFields() to get available Salesforce field metadata
+- Call loadRenzoSchema() to get Renzo contact field definitions
+- Initialize drag-and-drop library for table rows
+- Attach event listeners to all interactive elements
+- Check for unsaved changes in session storage and restore if found
+- Initialize field type compatibility matrix
+- Set up auto-save draft functionality with 30-second interval
+
+**loadMappings()**
+- Send GET request to /api/field-mappings endpoint
+- Parse JSON response containing array of mapping objects
+- Store mappings in local state variable (currentMappings array)
+- Sort mappings by sort_order ascending
+- Call renderMappingTable(currentMappings) to display data
+- If response is empty, call renderEmptyState()
+- Handle error by calling showError() and displaying error notification
+- Return Promise resolving to mappings array
+
+**loadSalesforceFields()**
+- Send GET request to /api/salesforce/fields?object=Contact
+- Parse JSON response containing field metadata with name, label, type, required, length
+- Store in salesforceFields array
+- Create field type lookup map for validation (fieldTypeMap object)
+- Cache results in sessionStorage with 1-hour expiration
+- Handle API errors with retry logic (3 attempts with exponential backoff)
+- Return Promise resolving to fields array
+
+**loadRenzoSchema()**
+- Send GET request to /api/renzo/contact-schema endpoint
+- Parse JSON response containing Renzo field definitions
+- Store in renzoFields array
+- Create field type lookup map (renzoTypeMap object)
+- Cache in sessionStorage with 1-hour expiration
+- Return Promise resolving to schema object
+
+**renderMappingTable(mappings)**
+- Clear existing table body content
+- If mappings is empty, call renderEmptyState() and return
+- For each mapping in mappings array:
+  - Create table row element with data-mapping-id attribute
+  - Add drag handle cell with icon and draggable attribute
+  - Add enabled toggle cell with switch component bound to mapping.enabled
+  - Add Salesforce field cell with field name and type badge
+  - Add direction cell with appropriate icon (→, ←, or ↔) based on mapping.direction
+  - Add Renzo field cell with field name and type badge
+  - Add transformation cell with badges for each rule in mapping.transformation_rules
+  - Add conflict resolution cell with text display of mapping.conflict_resolution
+  - Add actions cell with edit button and delete button
+  - Append row to table body
+- Reinitialize drag-and-drop handlers for new rows
+- Update row count display in table footer
+
+**renderEmptyState()**
+- Clear table body content
+- Create empty state container div with centered layout
+- Add SVG illustration or icon
+- Add heading "No Field Mappings Configured"
+- Add description text explaining purpose of field mappings
+- Add "Add Your First Mapping" CTA button
+- Attach click handler to button calling openMappingModal(null)
+- Append to table container
+
+**openMappingModal(mappingId)**
+- If mappingId is null, set modal mode to "add" and clear form
+- If mappingId exists, set mode to "edit" and call loadMappingDetails(mappingId)
+- Update modal title based on mode
+- Call populateSalesforceFieldDropdown() to load options
+- Call populateRenzoFieldDropdown() to load options
+- Reset validation errors array
+- Show modal by removing .hidden class and setting aria-hidden="false"
+- Focus first input field for accessibility
+- Disable body scroll by adding .modal-open class
+
+**loadMappingDetails(mappingId)**
+- Find mapping object in currentMappings array by id
+- Populate Salesforce field dropdown with mapping.salesforce_field as selected value
+- Populate Renzo field dropdown with mapping.renzo_field as selected value
+- Set direction radio button to mapping.direction
+- Populate transformation options by parsing mapping.transformation_rules JSON
+- Set conflict resolution dropdown to mapping.conflict_resolution
+- Set enabled toggle to mapping.enabled
+- Store original mapping in modalState object for comparison
+- Call validateFieldCompatibility() to check current selection
+- Call generatePreview() to show sample transformation
+
+**populateSalesforceFieldDropdown()**
+- Clear existing dropdown options
+- Add placeholder "Select Salesforce Field" option with value=""
+- For each field in salesforceFields array:
+  - Create option element with value=field.name
+  - Set text content to field.label
+  - Add data-type attribute with field.type
+  - Add data-required attribute if field.required
+  - Append option to dropdown
+- Initialize searchable dropdown library (if using Select2 or similar)
+- Attach change event listener calling onSalesforceFieldChange()
+
+**populateRenzoFieldDropdown()**
+- Clear existing dropdown options
+- Add placeholder "Select Renzo Field" option
+- For each field in renzoFields array:
+  - Create option element with value=field.key
+  - Set text content to field.displayName
+  - Add data-type attribute with field.type
+  - Append option to dropdown
+- Initialize searchable dropdown library
+- Attach change event listener calling onRenzoFieldChange()
+
+**onSalesforceFieldChange(event)**
+- Get selected field name from event.target.value
+- Find field object in salesforceFields array
+- Update selected Salesforce field in modalState
+- Call validateFieldCompatibility() with current selections
+- Call updateDataTypeBadges() to show type information
+- Call generatePreview() to refresh preview section
+- Clear any previous validation errors for this field
+
+**onRenzoFieldChange(event)**
+- Get selected field key from event.target.value
+- Find field object in renzoFields array
+- Update selected Renzo field in modalState
+- Call validateFieldCompatibility() with current selections
+- Call updateDataTypeBadges() to show type information
+- Call generatePreview() to refresh preview section
+- Clear any previous validation errors for this field
+
+**validateFieldCompatibility()**
+- Get selected Salesforce field type from salesforceFields lookup
+- Get selected Renzo field type from renzoFields lookup
+- Check compatibility using typeCompatibilityMatrix object
+- If compatible, show green checkmark icon and return true
+- If incompatible, show red warning icon with error message explaining issue
+- Add error to validationErrors array
+- Disable save button if any validation errors exist
+- Return boolean indicating compatibility
+
+**typeCompatibilityMatrix**
+- Object mapping Salesforce types to compatible Renzo types:
+  - string: [string, text, textarea]
+  - email: [email, string]
+  - phone: [phone, string]
+  - url: [url, string]
+  - date: [date]
+  - datetime: [datetime, timestamp]
+  - boolean: [boolean, checkbox]
+  - picklist: [select, string]
+  - multipicklist: [multiselect, array]
+  - number: [number, integer, decimal]
+  - currency: [currency, decimal]
+  - percent: [percent, decimal]
+  - textarea: [textarea, text, string]
+- Return true if match found, false otherwise
+
+**updateDataTypeBadges()**
+- Get Salesforce field type from selected field
+- Get Renzo field type from selected field
+- Create or update Salesforce type badge with color-coded background
+- Create or update Renzo type badge with color-coded background
+- Add compatibility icon between badges (checkmark or warning)
+- Update aria-labels for accessibility
+
+**generatePreview()**
+- Check if both fields are selected, if not show "Select fields to see preview" message
+- Create sample data object with realistic values based on Salesforce field type
+- Apply transformation rules from form to sample data
+- Display original value in "Before" column
+- Display transformed value in "After" column
+- Show data type conversion information
+- Highlight any data loss or truncation warnings
+- Update preview section DOM with results
+
+**onTransformationChange(event)**
+- Get transformation type from event.target dataset or value
+- Update modalState.transformations object with new rule
+- If trim whitespace checked, add trim rule
+- If format phone enabled, add phone formatting rule with selected format
+- If default value specified, add default rule with value
+- If custom transform provided, validate JavaScript expression
+- Call generatePreview() to show updated transformation result
+- Enable save button if no validation errors
+
+**onDirectionChange(event)**
+- Get selected direction from radio button value (sf_to_renzo, renzo_to_sf, bidirectional)
+- Update modalState.direction
+- Update visual indicator icon in form
+- Show/hide relevant conflict resolution options based on direction
+- If bidirectional, enable all conflict resolution strategies
+- If unidirectional, disable "most recent wins" option
+- Call generatePreview() to refresh display
+
+**onConflictResolutionChange(event)**
+- Get selected strategy from dropdown value
+- Update modalState.conflictResolution
+- Show description of selected strategy in help text
+- If "manual review" selected, show additional warning message
+- Update preview section to show example conflict scenario
+
+**saveMappingFromModal()**
+- Call validateForm() to check all required fields and compatibility
+- If validation fails, show error messages and return early
+- Create mapping object from modalState:
+  - salesforce_field: selected SF field name
+  - renzo_field: selected Renzo field key
+  - direction: selected direction value
+  - enabled: toggle state
+  - transformation_rules: JSON string of transformation array
+  - conflict_resolution: selected strategy
+  - sort_order: current max sort_order + 1 (for new) or keep existing (for edit)
+- If edit mode, add id field from original mapping
+- Call saveMappingToServer(mappingObject) to persist
+- On success, close modal and refresh table
+- On error, show error notification and keep modal open
+
+**validateForm()**
+- Clear validationErrors array
+- Check if Salesforce field selected, if not add error
+- Check if Renzo field selected, if not add error
+- Check if direction selected, if not add error
+- Call validateFieldCompatibility() and add result to errors
+- Validate transformation rules JSON syntax
+- Check for duplicate mapping (same SF field to same Renzo field)
+- If any errors exist, call displayValidationErrors() and return false
+- Return true if validation passes
+
+**displayValidationErrors()**
+- Clear existing error display container
+- For each error in validationErrors array:
+  - Create error message div with icon and text
+  - Add .error-message class with red styling
+  - Append to error container
+- Show error container by removing .hidden class
+- Scroll to first error in modal
+- Focus first invalid input field
+
+**saveMappingToServer(mappingObject)**
+- Determine HTTP method (POST for new, PUT for edit)
+- Determine endpoint (/api/field-mappings for new, /api/field-mappings/{id} for edit)
+- Send request with JSON body containing mappingObject
+- Set Content-Type header to application/json
+- On success (200/201 response):
+  - Parse response JSON containing saved mapping with id
+  - Update currentMappings array (add or replace existing)
+  - Call closeModal()
+  - Call renderMappingTable() to refresh display
+  - Show success notification "Mapping saved successfully"
+  - Mark configuration as having unsaved changes for sync
+- On error:
+  - Parse error response for specific error messages
+  - Call showError() with error details
+  - Keep modal open for user correction
+- Return Promise resolving to saved mapping or rejecting with error
+
+**closeModal()**
+- Add .hidden class to modal
+- Set aria-hidden="true" for accessibility
+- Clear modalState object
+- Reset form fields to empty/default values
+- Clear validation errors
+- Remove .modal-open class from body to restore scroll
+- Return focus to element that opened modal (stored in modalTrigger variable)
+
+**deleteMappingWithConfirmation(mappingId)**
+- Find mapping object in currentMappings array
+- Show browser confirm dialog with message "Delete mapping for {SF field} → {Renzo field}?"
+- If user cancels, return early
+- Call deleteMappingFromServer(mappingId)
+- On success, remove mapping from currentMappings array and refresh table
+- On error, show error notification
+
+**deleteMappingFromServer(mappingId)**
+- Send DELETE request to /api/field-mappings/{mappingId}
+- On success (200/204 response):
+  - Show success notification "Mapping deleted successfully"
+  - Mark configuration as having unsaved changes
+  - Return Promise resolving to true
+- On error:
+  - Parse error response
+  - Call showError() with details
+  - Return Promise rejecting with error
+
+**toggleMappingEnabled(mappingId, enabledState)**
+- Find mapping in currentMappings array
+- Update mapping.enabled property to enabledState
+- Send PATCH request to /api/field-mappings/{mappingId} with {enabled: enabledState}
+- On success:
+  - Update toggle UI state
+  - Show brief notification "Mapping {enabled/disabled}"
+  - Mark configuration as changed
+- On error:
+  - Revert toggle UI state
+  - Show error notification
+  - Return Promise rejecting with error
+
+**initializeDragAndDrop()**
+- Select all table rows with .mapping-row class
+- Initialize drag library (Sortable.js or similar) with options:
+  - handle: .drag-handle class
+  - animation: 150ms
+  - ghostClass: dragging-ghost
+  - onEnd: handleDragEnd callback
+- Set draggable="true" on row elements
+- Add visual drag cursor on hover over drag handle
+
+**handleDragEnd(event)**
+- Get new order of rows from DOM
+- Update sort_order property for each mapping in currentMappings
+- Build array of {id, sort_order} objects
+- Send PUT request to /api/field-mappings/reorder with array payload
+- On success:
+  - Update currentMappings array with new order
+  - Show brief notification "Mapping order updated"
+  - Mark configuration as changed
+- On error:
+  - Revert row order in DOM to original
+  - Show error notification
+  - Return Promise rejecting with error
+
+**saveConfiguration()**
+- Check if any mappings have unsaved changes
+- If no changes, show info notification "No changes to save" and return
+- Call validateAllMappings() to ensure all configurations are valid
+- If validation fails, show error and return
+- Call fetchAffectedContactsCount() to get impact estimate
+- Open save confirmation modal with impact data
+- Wait for user confirmation or cancellation
+
+**validateAllMappings()**
+- For each mapping in currentMappings:
+  - Check field compatibility using typeCompatibilityMatrix
+  - Validate transformation rules JSON
+  - Check for duplicate mappings
+  - Validate conflict resolution strategy for direction
+- Collect all validation errors in array
+- If errors exist, show error summary and return false
+- Return true if all valid
+
+**fetchAffectedContactsCount()**
+- Send POST request to /api/field-mappings/estimate-impact with current mappings
+- Parse response containing:
+  - totalContacts: number
+  - contactsWithData: number
+  - estimatedSyncTime: seconds
+  - warnings: array of potential issues
+- Return Promise resolving to impact object
+- On error, return default conservative estimate
+
+**confirmSaveConfiguration()**
+- Get all mappings from currentMappings array
+- Send PUT request to /api/field-mappings/save-all with mappings array payload
+- On success:
+  - Clear unsaved changes flag
+  - Update last saved timestamp display
+  - Close confirmation modal
+  - Show success notification "Configuration saved successfully. Sync started."
+  - Optionally redirect to sync status page or show sync progress
+- On error:
+  - Close confirmation modal
+  - Show error notification with details
+  - Keep changes in UI for retry
+
+**resetToDefaults()**
+- Show confirm dialog "This will reset all mappings to default configuration. Continue?"
+- If user cancels, return early
+- Send POST request to /api/field-mappings/reset-defaults
+- On success:
+  - Call loadMappings() to refresh with defaults
+  - Show success notification "Mappings reset to defaults"
+  - Mark as having unsaved changes
+- On error:
+  - Show error notification
+  - Keep current configuration
+
+**exportConfiguration()**
+- Open export modal
+- Get current mappings from server (fresh data) via loadMappings()
+- Build export object:
+  - version: schema version number
+  - exported_at: ISO timestamp
+  - exported_by: current user info
+  - environment: current environment name
+  - mappings: array of mapping objects with all properties
+- Convert to JSON with JSON.stringify(exportObject, null, 2) for pretty printing
+- Display JSON in preview text area
+- Enable copy and download buttons
+
+**copyConfigToClipboard()**
+- Get JSON from preview text area
+- Use navigator.clipboard.writeText(json) to copy
+- Show success notification "Configuration copied to clipboard"
+- On error (no clipboard API), select text area content and exec document.execCommand('copy')
+
+**downloadConfigAsFile()**
+- Get JSON from preview text area
+- Get filename from input field or use default "field-mappings-{timestamp}.json"
+- Create Blob with JSON content and type application/json
+- Create temporary anchor element with download attribute
+- Set href to Blob URL using URL.createObjectURL()
+- Trigger click on anchor to start download
+- Clean up Blob URL with URL.revokeObjectURL()
+- Show success notification "Configuration downloaded"
+
+**openImportModal()**
+- Show import modal
+- Reset file input and text area
+- Clear validation status
+- Set import strategy to default "merge"
+
+**handleFileUpload(event)**
+- Get file from event.target.files[0] or event.dataTransfer.files[0] for drag-drop
+- Check file type is application/json or .json extension
+- If invalid type, show error "Please select a JSON file" and return
+- Create FileReader instance
+- Read file as text with reader.readAsText(file)
+- On load, call parseImportJSON(reader.result)
+- On error, show error notification "Failed to read file"
+
+**parseImportJSON(jsonString)**
+- Try to parse JSON with JSON.parse(jsonString)
+- On parse error, show validation error "Invalid JSON format" and return
+- Validate structure has required properties (version, mappings array)
+- For each mapping in mappings array:
+  - Validate has required fields (salesforce_field, renzo_field, direction)
+  - Check field compatibility
+  - Check if Salesforce field exists in current metadata
+  - Check if Renzo field exists in current schema
+- Collect validation errors and warnings
+- Display validation results in import modal
+- If valid, enable import button and show preview list
+- If invalid, disable import button and show errors
+
+**executeImport(importStrategy)**
+- Get validated import data from import modal state
+- Build request payload with strategy and mappings array
+- Send POST request to /api/field-mappings/import with payload
+- On success:
+  - Close import modal
+  - Call loadMappings() to refresh table with imported data
+  - Show success notification "{count} mappings imported successfully"
+  - Mark as having unsaved changes
+- On error:
+  - Show error notification with details
+  - Keep import modal open for retry
+  - Return Promise rejecting with error
+
+**trackUnsavedChanges()**
+- Set hasUnsavedChanges flag to true
+- Show unsaved changes banner at top of page
+- Store current mappings in sessionStorage as draft
+- Disable page navigation without confirmation
+- Add beforeunload event listener with "You have unsaved changes" message
+
+**clearUnsavedChanges()**
+- Set hasUnsavedChanges flag to false
+- Hide unsaved changes banner
+- Clear draft from sessionStorage
+- Remove beforeunload event listener
+
+**showError(message, details)**
+- Create error notification element with message
+- Add .notification and .notification-error classes
+- If details provided, add expandable details section
+- Append to notification container at top of page
+- Auto-dismiss after 5 seconds with fade-out animation
+- Provide manual close button
+
+**showSuccess(message)**
+- Create success notification element
+- Add .notification and .notification-success classes
+- Append to notification container
+- Auto-dismiss after 3 seconds
+- Provide manual close button
+
+**searchMappings(searchTerm)**
+- Filter currentMappings array by searchTerm
+- Search in salesforce_field and renzo_field properties
+- Case-insensitive partial match
+- Call renderMappingTable() with filtered results
+- Show "No results found" if filter returns empty array
+- Update result count display
+
+## DATA
+
+**currentMappings**: Array of mapping objects loaded from server
+- id: integer
+- salesforce_field: string (Salesforce field API name)
+- renzo_field: string (Renzo field key)
+- direction: string enum (sf_to_renzo, renzo_to_sf, bidirectional)
+- enabled: boolean
+- transformation_rules: JSON string containing array of rule objects
+- conflict_resolution: string enum (salesforce_wins, renzo_wins, most_recent, manual_review)
+- sort_order: integer
+- created_at: ISO timestamp string
+- updated_at: ISO timestamp string
+
+**salesforceFields**: Array of Salesforce field metadata objects
+- name: string (API name)
+- label: string (display label)
+- type: string (field type: string, email, phone, date, datetime, boolean, picklist, etc.)
+- required: boolean
+- length: integer (max length for string types)
+- picklistValues: array of strings (for picklist types)
+- referenceTo: string (for lookup/reference types)

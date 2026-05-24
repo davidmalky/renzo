@@ -1,0 +1,232 @@
+# RESEARCH REPORT: Real-time Sync Execution Engine with Live Monitoring Dashboard
+
+## EXISTING_FEATURES:
+
+### UI Components & Framework
+- **Sidebar Navigation**: Fully functional navigation system with active states (`nav-link`, `nav-link.active`)
+- **Card System**: Reusable card components (`card`, `card-header`, `card-body`, `card-title`)
+- **Button System**: Primary, secondary, danger variants with hover states (`btn`, `btn-primary`, `btn-secondary`, `btn-danger`, `btn-sm`)
+- **Badge System**: Status badges with multiple variants (`badge`, `badge-active`, `badge-paused`, `badge-error`, `badge-sync`, `badge-bidirectional`)
+- **Modal System**: Complete modal overlay with header, body, footer (`modal-overlay`, `modal`, `modal-header`, `modal-body`, `modal-footer`)
+- **Table System**: Sortable table with hover states (`table-container`, `thead`, `tbody`, `th`, `td`)
+- **Stats Cards**: Pre-built stat display cards (`stat-card`, `stat-label`, `stat-value`, `stat-change`)
+- **Toolbar Components**: Search box, filter groups, select wrappers (`toolbar`, `search-box`, `filter-group`, `select-wrapper`)
+- **Icon Buttons**: Hover-enabled action buttons (`icon-btn`)
+- **Form Components**: Input, textarea, select with validation styles (`form-group`, `form-label`, `form-input`, `form-textarea`, `form-select`)
+- **Wizard/Stepper**: Multi-step progress indicator (`wizard`, `wizard-progress`, `wizard-step`, `wizard-step-circle`)
+
+### Layout & Styling
+- **CSS Custom Properties**: Complete design system with colors, shadows, transitions
+- **Responsive Grid**: Auto-fit grid for stat cards (`stats-row`)
+- **Fixed Sidebar**: 240px width, scrollable sidebar layout
+- **Main Content Area**: Properly offset from sidebar (margin-left: 240px)
+- **Focus Management**: Accessible focus states on all interactive elements
+- **Hidden Utility**: `.hidden` class for toggling visibility
+
+### Design Tokens Available
+- Primary colors: `--primary`, `--primary-light`, `--primary-dark`
+- Status colors: `--danger`, `--warning`, `--success`, `--info`
+- Background colors: `--bg-base`, `--bg-card`, `--sidebar-bg`
+- Text colors: `--text-primary`, `--text-secondary`
+- Border: `--border`
+- Shadows: `--shadow-sm`, `--shadow-md`, `--shadow-lg`
+- Transitions: `--transition`
+
+## MISSING_FEATURES:
+
+### Core Execution Engine
+- **Sync Job Parser**: Function to parse mapping configurations from localStorage
+- **Job Scheduler**: System to execute sync jobs based on schedules (immediate, scheduled, manual)
+- **Field Transformation Engine**: Implementation of formulas, lookups, custom functions
+- **Error Handling & Rollback**: Transaction-like capability to rollback failed syncs
+- **Validation Rule Engine**: Pre-sync validation with detailed error logging
+- **Conflict Resolution Logic**: Implementation of source wins, target wins, most recent, manual review strategies
+- **Sync Log Generator**: Record-level success/failure tracking with timestamps, duration, error details
+- **Batch Processor**: Chunking system for large datasets with configurable batch sizes
+- **Rate Limiter**: Throttling mechanism to prevent API overload
+
+### Data Storage Layer
+- **localStorage Schema for Sync Logs**: Structure for storing execution logs
+- **localStorage Schema for Sync Status**: Real-time job status tracking
+- **localStorage Schema for Mappings**: Configuration storage (may exist but not visible in provided code)
+- **Automatic Log Cleanup**: 30-day retention policy implementation
+- **Data Migration/Versioning**: Schema evolution handling
+
+### Monitoring Dashboard (SyncMonitorView)
+- **Live Status Widget**: Currently running jobs with progress bars
+- **Progress Bar Component**: Visual representation of sync progress (processed/total/failed)
+- **Sync History Table**: Sortable table with mapping name, start time, duration, status, records synced, errors
+- **Detail Modal Viewer**: Record-by-record results with expandable error messages
+- **Field-level Transformation Traces**: Debug view showing transformation steps
+- **Metrics Dashboard**: Total syncs today, success rate, average duration, total records synced
+- **Manual Trigger Button**: Per-mapping trigger with confirmation dialog
+- **Polling System**: 3-second interval status updates (WebSocket simulation)
+- **CSV Export**: Sync log export functionality
+- **Date Range Picker**: Filter component for date ranges
+- **Filter Controls**: Mapping name and status filters
+- **Real-time Counter Updates**: Live count increments during sync
+
+### UI Components Needed
+- **Loading Spinner**: Animated loading indicator
+- **Toast Notifications**: Success/error temporary alerts
+- **Empty State Components**: No sync history messages
+- **Progress Bar Widget**: Percentage-based progress indicator
+- **Confirmation Dialog**: Modal for destructive actions
+- **Expandable/Collapsible Rows**: For error message detail views
+- **Refresh Button**: Manual refresh for sync status
+- **Time Ago Display**: Relative time formatting (e.g., "2 minutes ago")
+
+### JavaScript Functions Required
+- `parseMappingConfig()` - Extract mapping configuration from storage
+- `executeSyncJob()` - Main sync execution orchestrator
+- `applyFieldTransformation()` - Transform field values based on rules
+- `validateRecord()` - Pre-sync validation
+- `detectConflict()` - Identify conflicting records
+- `resolveConflict()` - Apply resolution strategy
+- `logSyncResult()` - Write to sync log storage
+- `processBatch()` - Batch processing handler
+- `rateLimitCheck()` - Rate limiting verification
+- `pollSyncStatus()` - 3-second polling mechanism
+- `exportToCSV()` - Generate and download CSV
+- `filterSyncLogs()` - Apply filter criteria
+- `cleanupOldLogs()` - Remove logs older than 30 days
+- `calculateMetrics()` - Aggregate sync statistics
+- `showToast()` - Display toast notification
+- `updateProgressBar()` - Real-time progress update
+- `triggerManualSync()` - Manual sync initiation
+- `renderSyncHistory()` - Populate history table
+- `renderDetailModal()` - Show record-level details
+- `formatDuration()` - Human-readable duration display
+- `formatTimestamp()` - Consistent time formatting
+
+## CHANGES_NEEDED:
+
+### Sidebar Navigation
+- **Add "Sync Monitor" nav item**: New navigation link to SyncMonitorView
+- **Update active state logic**: Ensure proper highlighting when on monitoring page
+
+### Table Component
+- **Add expandable row capability**: Click to expand for error details
+- **Add sortable columns**: Sorting by start time, duration, status
+- **Add action column**: "View Details" button for each row
+
+### Modal System
+- **Large modal variant**: For detailed sync log viewer (wider than current 600px max-width)
+- **Confirmation dialog variant**: Smaller, centered confirmation modal
+- **Scrollable modal body**: Handle large error logs
+
+### Badge System
+- **Add running/in-progress badge**: New status badge variant (maybe animated)
+- **Add queued badge**: For scheduled but not yet running jobs
+
+### Form Components
+- **Date range picker**: Need dual date input or integrated picker
+- **Multi-select dropdown**: For filtering multiple mapping names
+
+## REUSE:
+
+### CSS Classes to Preserve
+- `.card`, `.card-header`, `.card-body` - For all dashboard widgets
+- `.stats-row` grid layout - For metrics cards display
+- `.stat-card`, `.stat-label`, `.stat-value` - For sync metrics
+- `.table-container`, `table`, `thead`, `tbody` - For sync history table
+- `.badge-*` variants - For status indicators (extend with new variants)
+- `.btn-primary`, `.btn-secondary`, `.btn-danger` - For all action buttons
+- `.modal-overlay`, `.modal`, `.modal-header` - For detail viewer and confirmations
+- `.toolbar`, `.search-box`, `.filter-group` - For filter controls
+- `.icon-btn` - For action buttons in table rows
+
+### Design Patterns to Follow
+- **CSS Custom Properties**: Continue using existing color variables
+- **BEM-like naming**: Maintain consistent naming convention (component-element-modifier)
+- **Shadow hierarchy**: Use `--shadow-sm`, `--shadow-md`, `--shadow-lg` appropriately
+- **Transition consistency**: Apply `var(--transition)` to all animated elements
+- **Focus states**: Include `outline: var(--focus-outline)` on all interactive elements
+- **Hover states**: Subtle background changes on hover (`rgba(255,255,255,.05)` pattern)
+
+### Layout Patterns
+- **Sidebar + Main Content**: Maintain existing 240px fixed sidebar layout
+- **Header structure**: Reuse `.header`, `.header-top`, `.header-title` pattern
+- **Grid-based stats**: Continue using `grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))`
+- **Card-based sections**: Group related functionality in cards
+
+### JavaScript Patterns to Establish
+- **localStorage naming convention**: Use consistent prefixing (e.g., `sync_logs_`, `sync_status_`, `sync_mappings_`)
+- **Event delegation**: Attach listeners to parent containers, not individual rows
+- **State management pattern**: Centralized state object for sync status
+- **Error handling**: Consistent try-catch with user-friendly error messages
+
+## RISKS:
+
+### Performance Risks
+1. **localStorage Size Limits**: Storing detailed record-level logs could exceed 5-10MB browser limit
+   - Mitigation: Implement aggressive 30-day cleanup, limit detail storage per record
+   
+2. **Polling Performance**: 3-second polling could cause performance issues with multiple tabs open
+   - Mitigation: Use page visibility API to pause polling when tab inactive
+   
+3. **Large Dataset Rendering**: Rendering thousands of sync history rows will freeze UI
+   - Mitigation: Implement pagination or virtual scrolling
+   
+4. **Batch Processing Blocking**: Synchronous batch processing could freeze browser
+   - Mitigation: Use `setTimeout` or Web Workers for async processing
+
+### Data Integrity Risks
+5. **Race Conditions**: Multiple sync jobs modifying same localStorage keys simultaneously
+   - Mitigation: Implement job queue with single-execution lock
+   
+6. **Partial Sync Failures**: If batch 3 of 5 fails, unclear what to rollback
+   - Mitigation: Store transaction ID, implement batch-level rollback, mark partial syncs clearly
+   
+7. **localStorage Corruption**: Concurrent writes could corrupt JSON
+   - Mitigation: Add data validation on read, implement fallback/recovery
+
+### User Experience Risks
+8. **Stale Data Display**: Polling might miss rapid status changes
+   - Mitigation: Add manual refresh button, increase polling frequency during active syncs
+   
+9. **Overwhelming Error Information**: Field-level traces could be huge and confusing
+   - Mitigation: Collapse by default, provide filters for error types
+   
+10. **Lost Sync Context**: No mapping config shown when viewing sync logs
+    - Mitigation: Store snapshot of mapping config with each sync log
+
+### Technical Debt Risks
+11. **No View Abstraction**: All code in single HTML file will become unmaintainable
+    - Mitigation: Consider component-based structure even within single file
+    
+12. **Hardcoded Batch Sizes**: No admin configuration for batch size/rate limits
+    - Mitigation: Store as user-configurable settings in localStorage
+    
+13. **No API Abstraction**: Direct localStorage access throughout code
+    - Mitigation: Create data access layer functions (getters/setters)
+
+## DATA_STRUCTURES:
+
+### Found in Code
+**None explicitly visible** in the provided HTML/CSS snippet. The code shows only UI framework without JavaScript implementation.
+
+### Required Data Structures
+
+#### localStorage Keys (Proposed)
+```javascript
+// Sync execution logs
+'sync_logs' // Array of sync execution records
+
+// Current sync status (for live monitoring)
+'sync_status_current' // Currently running jobs with progress
+
+// Mapping configurations (assumed to exist from previous task)
+'sync_mappings' // Array of configured mappings
+
+// Sync settings
+'sync_settings' // { batchSize, rateLimit, retentionDays }
+
+// User filters/preferences
+'sync_monitor_filters' // Saved filter state
+```
+
+#### Sync Log Record Structure (Proposed)
+```javascript
+{
+  id: "uuid",

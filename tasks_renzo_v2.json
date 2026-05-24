@@ -1,0 +1,13 @@
+[
+  {
+    "id": "renzo-test-001",
+    "title": "Add a visible version number to the Renzo footer",
+    "description": "Add a small footer to the Renzo app (index.html) that shows: 'Renzo v1.0 \u00e2\u20ac\u201d Built by Agent Pipeline'. Style it to match the existing dark sidebar color scheme. Place it at the very bottom of the sidebar, below the logout button. Keep it subtle \u00e2\u20ac\u201d small font, muted color. This is a minimal test task to verify the pipeline is working end to end.",
+    "priority": "low",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. No backend. Surgical edits only \u00e2\u20ac\u201d preserve all existing functionality.",
+    "completed_at": "2026-05-24T04:31:22.310005"
+  }
+]

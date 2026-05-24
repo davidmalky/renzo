@@ -1,0 +1,156 @@
+# TECHNICAL SPECIFICATION: RENZO PHASE 2
+
+## OVERVIEW
+
+Renzo Phase 2 transforms the existing contact management app into an intelligent outreach platform with dynamic priority scoring, trigger-based messaging, Gmail draft integration, batch outreach capabilities, CSV import, communication history tracking, and trainable AI instructions. The system maintains the single-file architecture with localStorage persistence while adding sophisticated contact intelligence, flexible data import, and integrated email workflow.
+
+## VIEWS
+
+- LoginView: Existing login screen with demo/password authentication, styled with warm design system
+- DashboardView: Enhanced stats showing top priority contacts (by score 0-100), overdue breakdown by priority level, total contacts, priority distribution chart (high/medium/low), recent activity timeline
+- ContactsView: Contact list with priority score badges (color-coded), sortable columns (name, company, priority, last contact), search filter, action buttons (Add Contact, Import CSV), click contact name to open detail panel
+- ContactFormModal: Enhanced form fields including existing (name, email, company, frequency, notes) plus new (contractExpiryDate, invoiceAmount, revenueSpendValue, relationshipScore 1-5 stars), weight configuration section for priority calculation
+- ContactDetailPanel: Full-screen slide-in panel with contact header, priority score display, priority breakdown visualization, Edit/Generate Message buttons, communication log timeline (date, trigger reason, message text, sent status)
+- QueueView: Queue list with enhanced items showing contact name/company, priority score badge, prominent trigger reason box (why reach out now), days overdue, generated message preview, actions (Generate Message, Mark Sent dropdown with "Log as Sent" and "Create Gmail Draft")
+- BatchOutreachView: Clean centered layout with natural language prompt textarea ("Describe who to reach out to and why..."), Submit button, progress indicator during generation ("Generating 3 of 12..."), results summary showing contacts matched and drafts created, link to Queue to review
+- SettingsView: Enhanced with sections: Company Info (existing fields), Priority Weights (sliders for recency, contract expiry, invoice, revenue, relationship with percentage display), Gmail Integration (email input, Connect Gmail button with instructions), My Outreach Rules (list of custom instructions with add/remove), API Key
+- CSVImportModal: File upload dropzone, column mapping interface (dropdowns to map CSV columns to Renzo fields), preview table (first 5 rows), validation messages, Import button, progress bar, results summary (imported count, skipped duplicates)
+
+## FUNCTIONS
+
+- calculatePriorityScore(contact, weights): Computes 0-100 score based on weighted factors: (1) recencyScore = days since last contact normalized to 0-100 using sigmoid, (2) contractScore = days until expiry normalized (closer = higher score), (3) invoiceScore = outstanding amount normalized against max in dataset, (4) revenueScore = revenue value normalized, (5) relationshipScore = user rating 1-5 converted to 0-100 scale. Returns weightedSum = (recencyScore × weights.recency + contractScore × weights.contract + invoiceScore × weights.invoice + revenueScore × weights.revenue + relationshipScore × weights.relationship) / 100. Handle missing fields gracefully (use 0 if field null).
+
+- getDefaultWeights(): Returns default priority weights object {recency: 40, contract: 25, invoice: 15, revenue: 10, relationship: 10}. Ensures total = 100.
+
+- loadWeights(): Retrieves weights from localStorage.priorityWeights or returns defaults. Validates total = 100, otherwise reset to defaults.
+
+- saveWeights(weights): Validates weights object (all values 0-100, total = 100), saves to localStorage.priorityWeights, triggers contact list re-sort and priority recalculation.
+
+- determineTriggerReason(contact): Analyzes contact data to return specific trigger string. Checks in order: (1) if contractExpiryDate within 90 days return "Contract expires in X days", (2) if invoiceAmount > 0 and lastContact > 30 days ago return "Invoice $X outstanding for Y days", (3) if revenueSpendValue in top 20% of all contacts and daysSince > frequency return "High-value account ($X) not contacted in Y days", (4) if daysSince >= frequency × 1.5 return "Significantly overdue (X days past frequency)", (5) default return "Regular check-in (Y days since last contact)". Format currency and dates nicely.
+
+- enhancedGenerateMessage(contact, trigger, customRules): Calls Anthropic API with enhanced system prompt. Prompt includes: user's company context (from settings), contact details (name, company, relationship score), specific trigger reason (injected as "Primary reason for this outreach: {trigger}"), custom rules array (each rule as bullet point), instruction to craft message that directly addresses trigger and feels personalized not templated. Uses claude-3-5-haiku-20241022 model. Returns {success: bool, message: string, reasoning: string explaining why trigger matters}. Stores API call in communication log.
+
+- loadCustomRules(): Retrieves array of instruction strings from localStorage.customRules or returns []. Each rule is plain text user instruction.
+
+- saveCustomRules(rulesArray): Validates array of strings, saves to localStorage.customRules.
+
+- addCustomRule(ruleText): Loads existing rules, appends new rule, saves updated array, refreshes UI rule list.
+
+- removeCustomRule(index): Loads rules, removes item at index, saves updated array, refreshes UI.
+
+- openGmailDraft(contact, message, subject): Constructs Gmail compose URL using mailto protocol: `https://mail.google.com/mail/?view=cm&fs=1&to={contact.email}&su={encodeURIComponent(subject)}&body={encodeURIComponent(message)}`. Opens in new window/tab. Returns true if window opened successfully.
+
+- generateSubjectLine(contact, trigger): Uses simple logic or quick API call to create subject. If trigger contains "contract" return "Following up on contract renewal", if "invoice" return "Re: Outstanding invoice", if "high-value" return "Checking in - {company}", default return "Following up - {company}".
+
+- executeBatchOutreach(promptText): Parses natural language prompt to extract intent. Makes API call to Claude with prompt: "Analyze this outreach request and return structured criteria: {promptText}. Return JSON with fields: daysUntilContractExpiry, minRevenue, maxDaysSinceContact, keywordInNotes." Parses response. Filters contacts matching criteria. For each match, calls determineTriggerReason and enhancedGenerateMessage. Adds all to queue with generated drafts. Returns {contactsMatched: number, draftsCreated: number, errors: []}.
+
+- parseCSV(fileContent): Splits content by newlines, parses CSV rows. Detects header row (first line). Identifies columns by matching common patterns: looks for "name|first|last", "company|organization|org", "email|e-mail", "phone|mobile|tel", "notes|comments". Returns {headers: [], rows: [], mappingSuggestions: {}}. Handles quoted fields and commas within quotes.
+
+- importContactsFromCSV(mappedData, columnMapping): Takes array of row objects and column mapping config. For each row, creates contact object mapping CSV columns to Renzo fields (name, email, company, notes, phone). Checks for duplicates (matching name + company). Validates required fields (name and either email or company). Generates IDs for new contacts. Saves all valid contacts. Returns {imported: number, skipped: number, errors: [{row: number, reason: string}]}.
+
+- loadCommunicationLog(contactId): Retrieves all communication history for contact from localStorage.commLogs_{contactId} or returns []. Each entry: {date: timestamp, trigger: string, message: string, reasoning: string, sent: bool, method: 'logged'|'gmail'}.
+
+- saveCommunicationLog(contactId, logEntry): Loads existing log, appends new entry with timestamp, saves back to localStorage.commLogs_{contactId}.
+
+- markAsSent(contactId, method): Updates contact lastContact to now. If method='gmail' adds communication log entry with sent=true, method='gmail'. If method='logged' adds entry with sent=true, method='logged'. Returns success bool.
+
+- openContactDetail(contactId): Loads contact data and communication log. Renders ContactDetailPanel with all information. Shows Edit button (opens ContactFormModal), Generate Message button (triggers enhanced generation with trigger), communication timeline sorted newest first.
+
+- closeContactDetail(): Hides detail panel, returns to contacts list view.
+
+- updateQueueList(): Recalculates all priority scores, determines triggers, sorts contacts by priority score descending, filters for contacts needing outreach (daysSince >= frequency OR lastContact null OR priority > 70), renders queue items with trigger reasons and priority badges.
+
+- enhancedSaveContact(contactData): Extends existing saveContact to include new fields (contractExpiryDate, invoiceAmount, revenueSpendValue, relationshipScore). Validates data types. Recalculates priority score before saving. Updates localStorage.contacts. Triggers queue refresh if contact is in queue.
+
+- renderPriorityBadge(score): Returns HTML for colored badge based on score: 0-33 (green, "Low Priority"), 34-66 (yellow, "Medium Priority"), 67-100 (red, "High Priority"). Shows numeric score.
+
+- renderRelationshipStars(score): Returns HTML for 1-5 star display based on relationshipScore. Filled stars for score value, empty stars for remainder.
+
+- showBatchProgress(current, total): Updates batch outreach progress UI with "Generating {current} of {total}..." and progress bar percentage.
+
+- exportContacts(): Bonus function - converts all contacts to CSV format and triggers download. Maps all fields including new ones.
+
+## DATA
+
+- localStorage.contacts: Array of contact objects {id, name, email, company, tier, frequency, lastContact, notes, contractExpiryDate (ISO string or null), invoiceAmount (number), revenueSpendValue (number), relationshipScore (1-5 integer), priorityScore (0-100, computed)}
+
+- localStorage.priorityWeights: Object {recency: number 0-100, contract: number 0-100, invoice: number 0-100, revenue: number 0-100, relationship: number 0-100}. Total must equal 100.
+
+- localStorage.customRules: Array of strings, each a user-defined instruction for AI message generation ["Always mention Q3 pricing", "Avoid Friday outreach", "Reference invoice numbers for finance contacts"]
+
+- localStorage.commLogs_{contactId}: Array of communication log entries [{date: timestamp, trigger: string, message: string, reasoning: string, sent: boolean, method: 'logged'|'gmail'}]. One key per contact.
+
+- localStorage.userSettings: Enhanced object {companyName, businessDescription, products, communicationStyle, openRouterApiKey (legacy), anthropicApiKey (new), gmailEmail (for display)}
+
+- localStorage.queueDrafts: Object keyed by contactId, stores pre-generated messages {contactId: {message: string, trigger: string, reasoning: string, generatedAt: timestamp}}. Persists drafts across sessions.
+
+- localStorage.currentUser: Existing user session {username, loggedIn: boolean, lastLogin: timestamp}
+
+- localStorage.onboardingComplete: Boolean flag for first-time setup
+
+## API
+
+- AnthropicMessagesAPI: 
+  - Endpoint: https://api.anthropic.com/v1/messages
+  - Method: POST
+  - Headers: {"x-api-key": userSettings.anthropicApiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true", "content-type": "application/json"}
+  - Payload for message generation: {model: "claude-3-5-haiku-20241022", max_tokens: 1024, messages: [{role: "user", content: promptWithContext}]}
+  - Response handling: Extract response.content[0].text, parse for message and reasoning if structured, handle errors (invalid API key, rate limits, network failure) with user-friendly messages
+  - Used by: enhancedGenerateMessage, executeBatchOutreach (for intent parsing)
+
+- GmailComposeURL:
+  - Not a true API call, uses mailto protocol and Gmail web URL structure
+  - Format: `https://mail.google.com/mail/?view=cm&fs=1&to={email}&su={subject}&body={body}`
+  - Opens in new window via window.open()
+  - No authentication required (uses user's existing Gmail session)
+  - Fallback if window blocked: show copyable mailto: link
+
+## DESIGN
+
+- Color Palette: Maintain existing warm palette - background #F7F4EF (off-white), primary green #2D6A4F (forest green), dark sidebar #1C1C1C, accent warm orange #E07A5F for highlights, text dark gray #2C2C2C
+- Priority Badge Colors: High (67-100) red #DC2626 background with white text, Medium (34-66) yellow #F59E0B background with dark text, Low (0-33) green #10B981 background with white text. Border radius 12px, padding 4px 8px, font size 11px bold
+- Typography: Inter font family for all text (import from Google Fonts), headings 18-24px weight 600, body 14px weight 400, labels 12px weight 500 uppercase tracking-wide
+- Layout: Sidebar width 240px fixed left, main content area with max-width 1200px centered, 24px padding, section cards with white background, 1px border #E5E5E5, 8px border radius, 16px padding
+- Contact Detail Panel: Slides in from right, full height, width 600px, white background, box-shadow -4px 0 16px rgba(0,0,0,0.1), close button top-right, scrollable content area
+- Queue Items: Each item in card layout, trigger reason box with light orange background (#FFF7ED), 12px padding, italic text, positioned above message preview
+- Batch Outreach Input: Centered card 600px width, large textarea 120px height, rounded corners, focus state with green border, submit button full width green with hover darken effect
+- CSV Import Modal: Centered overlay 800px width, white card with shadow, file dropzone dashed border 2px green on dragover, column mapping dropdowns styled consistently, preview table with alternating row colors (#F9FAFB)
+- Mobile Responsive: At <768px width, sidebar collapses to hamburger menu, contact detail panel becomes full screen overlay, form fields stack vertically, tables become scrollable cards
+- Relationship Stars: Gold color #FDB515 for filled stars, light gray #D1D5DB for empty, 16px size with 2px spacing
+- Priority Score Visualization: Horizontal bar chart showing factor contributions, each factor different color (recency blue, contract purple, invoice red, revenue green, relationship gold), percentages labeled
+
+## ERRORS
+
+- API Key Missing: Show alert "Please add your Anthropic API key in Settings to generate messages" with link to settings, disable generate buttons until key present
+- API Call Failure: Display error banner with retry button, specific messages for network errors ("Check your internet connection"), authentication errors ("Invalid API key - please update in Settings"), rate limits ("API rate limit reached - please try again in a few minutes")
+- Invalid CSV Format: Show error in import modal "Unable to parse CSV file. Please ensure it's a valid CSV format with headers." Highlight problematic rows in preview
+- Duplicate Contacts: During CSV import, show warning count "3 contacts skipped (duplicates detected)" with option to view list, do not import duplicates but show which were skipped
+- Missing Required Fields: Contact form validation - highlight fields with red border, show inline error "Name is required" or "At least one contact method (email or phone) required", disable submit until valid
+- Weight Validation: When adjusting priority weights, show live total percentage, if not 100% show error "Total must equal 100%" in red, disable save button, suggest auto-adjustment
+- Gmail Window Blocked: If window.open fails, show fallback modal "Pop-up blocked. Click here to open Gmail draft" with direct link and copy-to-clipboard option for email content
+- Empty Batch Results: If batch outreach prompt matches zero contacts, show message "No contacts match your criteria. Try adjusting your request." with example prompts
+- Communication Log Load Failure: If log data corrupted, show "Unable to load communication history" in detail panel, offer "Reset Log" button to clear corrupted data
+- Storage Quota Exceeded: Catch localStorage quota errors, show alert "Storage limit reached. Consider exporting and archiving old contacts.", offer export function
+- Invalid Date Formats: When parsing contract expiry dates from CSV or form, show error "Invalid date format. Please use YYYY-MM-DD or MM/DD/YYYY", provide format hint in placeholder text
+- Negative Numbers: Validate invoice amount and revenue fields are non-negative, show error "Amount must be positive" if negative value entered
+- Score Calculation Errors: If priority calculation fails due to invalid data, fallback to score of 50 (medium priority), log warning to console, continue operation gracefully
+
+## SECTIONS
+
+- Section1_CoreStructureAndAuth (lines 1-100): HTML structure with DOCTYPE, head (meta tags, title "Renzo - Smart Outreach Platform", Inter font import from Google Fonts), inline CSS reset and base styles (body, *, colors, fonts). LoginView HTML structure with form, logo, inputs for username/password, login button. Basic CSS for login container, card styling, input fields, button hover states. JavaScript initialization: DOMContentLoaded listener, check existing session and route to dashboard or show login, login() function with demo/password validation, localStorage currentUser management, logout() function, getCurrentUser() helper. Navigation sidebar HTML structure with logo, nav links (Dashboard, Contacts, Queue, Batch Outreach, Settings), active state styling.
+
+- Section2_DashboardViewAndStats (lines 101-200): Dashboard view HTML container with stats cards grid (4 cards: Total Contacts, High Priority Contacts, Overdue Count, Active Relationships). Recent activity section with timeline list. JavaScript for renderDashboard(): calculate stats from contacts array (total count, priority distribution by score ranges, overdue calculation with priority weights consideration, active count within frequency windows). calculatePriorityScore() function implementation: load weights, normalize each factor (recency using days since / max 365, contract using days until / 90, invoice using amount / max in dataset, revenue using value / max, relationship using score / 5), apply weights, return 0-100 score. determineTriggerReason() implementation with conditional logic checking contract expiry, invoice overdue, high-value status, overdue multiplier, default case. Priority distribution chart rendering using simple div-based bar chart with colored sections.
+
+- Section3_ContactsListAndPriorityDisplay (lines 201-300): Contacts view HTML with header, Add Contact and Import CSV buttons, search input, sort dropdown, contact list table (columns: Name, Company, Priority Score, Last Contact, Actions). JavaScript renderContactsList(): load all contacts, calculate priority scores, sort by selected column (default priority descending), apply search filter, render table rows. Each row shows contact name (clickable to open detail), company, renderPriorityBadge(score), formatted last contact date, action buttons (Edit, Delete, Generate Message). renderPriorityBadge() function: return HTML span with conditional classes and colors based on score ranges. Search filter implementation: filter contacts array by name/company/email matching query string case-insensitive. Delete confirmation modal and deleteContact() function updating localStorage. CSS for table styling, hover effects, priority badges, responsive table scroll on mobile.
+
+- Section4_ContactFormAndNewFields (lines 301-400): Contact form modal HTML (overlay + centered card). Form fields: name input, email input, company input, phone input, existing frequency input, notes textarea. New fields: Contract Expiry Date (date input with calendar picker), Invoice Amount (number input with $ prefix), Revenue/Spend Value (number input with $ prefix), Relationship Score (custom star rating component with 5 clickable stars). JavaScript showContactForm(contactId): if ID provided load existing contact data and populate fields, else clear form for new contact. Star rating component: render 5 star icons, click handler to set relationshipScore 1-5, visual feedback on hover. enhancedSaveContact() function: gather form data including new fields, validate required fields (name + email or company), validate number fields non-negative, validate relationship score 1-5, generate ID if new contact, call calculatePriorityScore with current weights, save to localStorage.contacts array, close modal, refresh contacts list. Form styling with consistent input design, labels, validation error states.
+
+- Section5_PriorityWeightsConfiguration (lines 401-500): Settings view section for Priority Weights configuration. HTML: explanatory text about how priority scoring works, five range sliders (Recency, Contract Expiry, Invoice Outstanding, Revenue/Spend, Relationship) each 0-100 with live percentage display, total percentage indicator, Reset to Defaults button, Save Weights button. JavaScript loadWeights(): retrieve from localStorage or return defaults {recency:40, contract:25, invoice:15, revenue:10, relationship:10}, validate total=100. renderWeightSliders(): create slider inputs with current values, add input event listeners to update percentage displays and calculate total in real-time. saveWeights(): validate total equals 100, if not show error and prevent save, save to localStorage.priorityWeights, recalculate all contact priority scores, refresh dashboard and contacts list. getDefaultWeights() returns default object. Auto-adjustment feature: if user clicks "Auto-adjust" button, normalize current slider values to total 100 proportionally. CSS for sliders with custom thumb styling (green circle), track background gradient showing fill.
+
+- Section6_ContactDetailPanelAndCommLog (lines 501-600): Contact detail panel overlay (slides in from right, 600px width, full height). HTML structure: header with contact name and company, close X button, priority score large display with breakdown visualization, Edit Contact and Generate Message buttons, Communication Log section with timeline. JavaScript openContactDetail(contactId): load contact and communication log, render panel with all data, show priority breakdown as horizontal stacked bar chart (each factor's contribution colored and labeled), render communication log timeline sorted newest first. Each log entry shows: date formatted, trigger reason in colored box, message text (truncated with expand option), reasoning text, sent status badge, method indicator (Gmail icon or checkmark). loadCommunicationLog(contactId) retrieves array from localStorage.commLogs_{contactId}. closeContactDetail() hides panel with slide-out animation. Priority breakdown visualization: calculate pixel widths for each weighted factor, render colored div segments with labels and percentages. Timeline entry HTML: card layout with left border accent, date on top-right, trigger in orange box, message in expandable text area. CSS for panel slide-in animation (transform translateX), timeline styling, breakdown chart.
+
+- Section7_EnhancedMessageGeneration (lines 601-700): Enhanced message generation with trigger awareness and custom rules. JavaScript enhancedGenerateMessage(contact, trigger, customRules): load settings (company info, API key), load custom rules array, construct system prompt including company context, contact details (name, company, relationship score), specific trigger reason ("Primary reason for outreach: {trigger}"), custom rules as bullet list, instruction to craft personalized message addressing trigger directly. Make POST to Anthropic API with claude-3-5-haiku-20241022 model, max_tokens 1024, messages array with user content. Show loading spinner during API call. Parse response extracting message text and reasoning. saveCommunicationLog(contactId, {date, trigger, message, reasoning, sent:false, method:null}). Display message in modal with trigger reason, reasoning box, message text, Copy and Mark Sent buttons. Error handling for API failures with specific error messages. generateSubjectLine(contact, trigger) helper: analyze trigger string for keywords (contract, invoice, high-value) and return appropriate subject line. Store generated draft in localStorage.queueDrafts for persistence.
+
+- Section8_QueueViewWithTriggers (lines 701-800): Queue view enhanced with trigger display and Gmail integration. HTML: queue header with count badge, filter dropdown (All, High Priority, Medium Priority, Low Priority), queue list container. JavaScript updateQueueList(): load all contacts, calculate priority scores and triggers for each, filter for contacts needing outreach (daysSince >= frequency OR lastContact null OR priorityScore > 70), sort by priority score descending, apply priority filter if selected, render queue items. Each queue item card: contact name and company header, priority badge, prominent trigger reason box (orange background, italic text), days overdue if applicable, message preview (load from queueDrafts or show "Generate message" placeholder), action buttons (Generate Message, Mark Sent dropdown). Mark Sent dropdown: two options "Log as Sent" and "Create Gmail Draft". markAsSent(contactId, method) function: if method='logged' update lastContact and add log entry, if method='gmail' call openGmailDraft then update lastContact and add log entry with method='gmail'. CSS for queue item cards, trigger box prominent styling, dropdown menu positioning. Empty state if queue empty: friendly message "All caught up! No contacts need outreach right now."
+
+- Section9_GmailDraft

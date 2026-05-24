@@ -1,0 +1,251 @@
+# RESEARCH REPORT: CONTACT FIELD MAPPING CONFIGURATION INTERFACE
+
+## EXISTING_FEATURES:
+
+### UI Components & Styling
+- `.modal` - Modal dialog system with overlay, content container, close button
+- `.modal-large` - Larger modal variant (max-width: 700px)
+- `.modal-content` - Modal content container with padding, border-radius, scroll
+- `.modal-close` - Close button with hover/focus states
+- `.modal-title` - Modal header title styling
+- `.btn` - Button base class with padding, border-radius, transitions
+- `.btn-primary` - Primary button (green #2D6A4F background)
+- `.btn-secondary` - Secondary button (gray background)
+- `.btn:focus` - Focus outline system (#40916C outline)
+- `.btn:disabled` - Disabled button states
+- `.form-group` - Not explicitly defined but referenced in task
+- `.hidden` - Display none utility class
+- `.visually-hidden` - Screen reader only content
+
+### Layout System
+- `.app-container` - Flex container for app layout
+- `.sidebar` - Fixed 240px width navigation sidebar
+- `.main-content` - Main content area with left margin for sidebar
+- `.section-header`, `.section-title`, `.section-subtitle` - Page header components
+- `.breadcrumb` - Breadcrumb navigation component
+
+### Tables & Data Display
+- `.log-table` - Full-width table with collapse, sticky headers
+- `.log-table thead` - Sticky table headers
+- `.log-table th` - Table header cells with uppercase styling
+- `.log-table td` - Table data cells with border-bottom
+- `.log-row` - Table row with hover states and expandable functionality
+- `.log-row.expanded` - Expanded row state
+- `.expand-icon` - Expandable row indicator with rotation animation
+- `.detail-row` - Expanded detail content row
+- `.detail-content` - Detail content container
+
+### Status & Badges
+- `.status-badge` - Badge component with variants
+- `.status-badge.success` - Green success badge
+- `.status-badge.failed` - Red failed badge
+- `.status-badge.conflict` - Yellow conflict badge
+- `.status-badge.in-progress` - Blue in-progress badge
+- `.status-dot` - Circular status indicator (8px)
+- `.status-dot.success`, `.warning`, `.error` - Status dot variants
+
+### Form Elements
+- `.checkbox-label` - Checkbox with label styling
+- `.filter-label` - Form label styling (font-weight: 600)
+- `.date-presets` - Vertical button group for date selection
+- `.date-preset` - Individual preset button with active state
+
+### Cards & Containers
+- `.stat-card` - White card with shadow and border-radius
+- `.dashboard-grid` - Responsive grid layout for cards
+- `.filter-panel` - Sticky sidebar panel (260px width)
+- `.log-container` - Flex container for filters + table
+- `.log-table-container` - Table wrapper with white background
+
+### Interactive Elements
+- `.toast-container` - Fixed position toast notification container
+- `.toast` - Toast notification with variants
+- `.progress-indicator` - Progress display container
+- `.progress-bar` - Progress bar with fill animation
+- `.progress-fill` - Animated progress fill with shimmer effect
+
+### Navigation
+- `.sidebar-nav` - Navigation container
+- `.nav-item` - Navigation item with hover/focus/active states
+- `.nav-item.active` - Active navigation state
+
+### Data Visualization
+- `.field-changes` - Grid layout for field change display
+- `.field-change` - Individual field change row (3-column grid)
+- `.field-name` - Field name display (font-weight: 600)
+- `.field-value` - Field value display
+- `.field-value.old` - Strikethrough for old values
+- `.field-value.new` - Green color for new values
+
+### Error Handling
+- `.error-summary` - Error summary card
+- `.error-summary-header` - Collapsible error header
+- `.error-list` - Grid of error items
+- `.error-item` - Individual error display with left border
+
+### Animations
+- `@keyframes shimmer` - Opacity pulse animation
+- `@keyframes slideIn` - Slide in from right animation
+
+## MISSING_FEATURES:
+
+### Database Layer
+- `field_mappings` table (needs creation with columns: id, salesforce_field, renzo_field, direction, enabled, transformation_rules, conflict_resolution, sort_order, created_at, updated_at)
+- Database CRUD operations for field mappings
+- Persistence layer for mapping configurations
+
+### API Integration
+- Salesforce field metadata API integration
+- Renzo contact schema API/endpoint
+- Field type retrieval from both systems
+- Sample data fetching for preview
+
+### Mapping Configuration Components
+- Mapping table view component
+- Add/Edit mapping modal with dropdowns
+- Field type validation logic
+- Transformation options UI (trim, format phone, defaults)
+- Drag-to-reorder functionality (no drag-drop library exists)
+- Toggle switches for enable/disable mappings
+- Sync direction selector (3-way: SF→Renzo, Renzo→SF, bidirectional)
+- Conflict resolution dropdown (4 options)
+- Real-time validation display
+- Preview section for sample data transformation
+- Reset to defaults functionality
+- Save confirmation modal with impact preview
+- Export/Import JSON functionality
+
+### Form Controls Not Present
+- Toggle switch component (referenced but not styled)
+- Multi-select dropdown component
+- Drag handle icons/styling
+- Reorderable list component
+- Radio button group styling
+- Select/dropdown custom styling
+
+### Validation System
+- Field type compatibility checking (text→text, date→date)
+- Required mapping validation
+- Real-time error display in mapping context
+- Incompatible type warnings
+
+### Data Transformation
+- Transformation rule engine
+- Preview data transformation logic
+- Phone number formatting
+- Whitespace trimming
+- Default value application
+
+## CHANGES_NEEDED:
+
+### Extend Existing Classes
+- `.modal` - Add mapping-specific modal variant (needs wider width for mapping table)
+- `.btn` - Add `.btn-icon` variant for icon-only buttons (drag handles, toggle)
+- `.log-table` - Reuse for mapping table but needs sortable column headers
+- `.status-badge` - Add `.status-badge.enabled`, `.status-badge.disabled` variants
+- `.checkbox-label` - Extend for toggle switch appearance
+
+### Enhance Form System
+- Add `.form-group` actual definition (label + input container)
+- Add `.form-control` for input/select styling
+- Add `.form-select` for dropdown styling
+- Add `.form-row` for horizontal form layouts
+
+### Table Enhancements
+- Add drag handle column to `.log-table` variant
+- Add sortable column header states
+- Add inline action buttons in table cells
+
+### Modal System
+- Add `.modal-xl` variant (wider than modal-large for mapping configuration)
+- Add `.modal-footer` for action buttons
+- Add `.modal-body` for scrollable content separation
+
+## REUSE:
+
+### Exact Reuse (No Modification)
+- `.modal` base structure and overlay
+- `.modal-close` button styling
+- `.modal-title` header
+- `.btn-primary`, `.btn-secondary` button styles
+- `.hidden` utility class
+- `.status-badge` system for mapping status
+- `.toast` notification system for save confirmations
+- `.section-header`, `.section-title`, `.section-subtitle` for page layout
+- Color palette: `#2D6A4F` (primary green), `#40916C` (focus), `#1A1A1A` (dark), `#F7F4EF` (background)
+- Focus outline system: `outline:2px solid #40916C;outline-offset:2px`
+- Box shadow: `box-shadow:0 1px 3px rgba(0,0,0,.1)`
+- Border radius: `border-radius:12px` for cards, `8px` for buttons
+
+### Style Patterns to Match
+- Font family: `'Inter',system-ui,sans-serif`
+- Transition timing: `.2s` for hover states, `.3s` for animations
+- Gap spacing: `8px`, `12px`, `16px`, `24px`, `32px`
+- Grid layouts with `display:grid;gap:16px`
+- Uppercase labels: `text-transform:uppercase;letter-spacing:.5px`
+- Color scheme for states:
+  - Success: `#2D6A4F`, `#D1FAE5` (bg), `#065F46` (text)
+  - Error: `#D32F2F`, `#FEE` (bg), `#991B1B` (text)
+  - Warning: `#F59E0B`, `#FEF3C7` (bg), `#92400E` (text)
+
+### Component Patterns to Follow
+- **Field change display pattern** (`.field-changes`, `.field-change`) - 3-column grid for showing field transformations
+- **Filter panel pattern** (`.filter-panel`) - Sticky sidebar for configuration options
+- **Expandable rows** (`.log-row.expanded`, `.expand-icon`) - For showing mapping details
+- **Error display pattern** (`.error-item`) - Left-border colored cards
+- **Progress indicator pattern** - For showing sync impact calculations
+
+### JavaScript Patterns (Inferred)
+- Class-based state management (`.active`, `.expanded`, `.hidden`)
+- Event delegation for table rows
+- Modal show/hide toggling
+- Toast notification queueing
+- Focus management for accessibility
+
+## RISKS:
+
+### Technical Conflicts
+1. **No drag-drop library** - Task requires drag-to-reorder but no existing drag-drop implementation or library (SortableJS, DragDropTouch, etc.) found in codebase
+2. **No form validation framework** - Real-time validation needs custom implementation
+3. **No state management** - Complex form state (mappings array, validation errors, preview data) needs management without framework
+4. **No API layer visible** - Cannot confirm Salesforce metadata API or Renzo schema API exists
+5. **Database schema unknown** - `field_mappings` table structure specified but no ORM or database layer visible in frontend code
+
+### Data Structure Conflicts
+6. **localStorage usage unclear** - No localStorage keys found in provided code; unclear if mappings should persist client-side or server-side
+7. **Data type enumeration** - No existing field type system; need to define supported types (text, date, number, email, phone, etc.)
+8. **Transformation rules format** - JSON structure for transformation_rules column undefined
+
+### UX/Accessibility Risks
+9. **Drag-drop accessibility** - Keyboard navigation for reordering not typically accessible without ARIA implementation
+10. **Real-time validation performance** - Validating on every keystroke with API calls could cause performance issues
+11. **Preview data fetching** - Real-time preview may require rate limiting or debouncing
+
+### Integration Risks
+12. **Salesforce API rate limits** - Field metadata fetching may hit API limits if done repeatedly
+13. **Bidirectional sync conflicts** - Conflict resolution logic not defined; risk of data loss
+14. **Migration impact** - "Show which contacts will be affected" requires contact counting/analysis system
+15. **JSON export schema** - Import validation needed to prevent corrupt configurations
+
+### Scope Creep Risks
+16. **Transformation options complexity** - "Trim whitespace, format phone, default values" could expand infinitely (case conversion, concatenation, splitting, regex, etc.)
+17. **Field metadata caching** - No caching strategy defined; repeated metadata fetches inefficient
+18. **Versioning** - No version control for mapping configurations; rollback capability undefined
+
+## DATA_STRUCTURES:
+
+### Found in Existing Code: NONE
+**No localStorage keys or data persistence patterns found in the provided HTML/CSS code.** The codebase appears to be purely presentational without JavaScript data handling visible.
+
+### Required New Data Structures:
+
+#### 1. field_mappings Table (Database)
+```javascript
+{
+  id: integer,
+  salesforce_field: string,  // e.g., "FirstName"
+  renzo_field: string,       // e.g., "first_name"
+  direction: enum,           // "sf_to_renzo" | "renzo_to_sf" | "bidirectional"
+  enabled: boolean,
+  transformation_rules: json, // { trim: true, formatPhone: true, defaultValue: "" }
+  conflict_resolution: enum,  // "salesforce_wins" | "renzo_wins" | "recent_wins" | "manual"

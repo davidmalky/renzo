@@ -1,0 +1,207 @@
+# TECHNICAL SPECIFICATION: Smart Priority Scoring for Renzo CRM
+
+## OVERVIEW
+Add intelligent priority scoring system to existing Renzo CRM single-file HTML/JS app. Three new date/number fields compute a 0-100 priority score based on contract expiry urgency, invoice amounts, and contact recency. Contacts auto-sort by priority, and AI prompts include the most urgent outreach trigger. All existing features remain unchanged.
+
+## VIEWS
+
+**Contact Form Modal (Enhanced)**:
+- Add three new form groups after existing phone field, before notes field
+- contractExpiry: date input, label "Contract Expiry", optional
+- invoiceAmount: number input, label "Outstanding Invoice $", min="0", step="0.01", optional
+- lastContactDate: date input, label "Last Contact Date", optional
+- All three fields styled with existing .form-group, .form-label, .form-input classes
+
+**Contact Row (Enhanced)**:
+- Insert priority score badge before contact name
+- Badge structure: `<span class="priority-score-badge priority-score-[tier]">[score]</span>`
+- Badge displays computed score (0-100)
+- Three tier classes: priority-score-high (80+), priority-score-medium (50-79), priority-score-low (<50)
+
+**AI Message Generation Modal (Enhanced)**:
+- In "Why this message" box (.trigger-box), replace generic text with computed outreach trigger
+- Display format: `<div class="trigger-reason">[computed trigger text]</div>`
+
+**Contacts Table**:
+- Default sort order changes from name ascending to priority score descending
+- Visual indicator: score badge provides visual priority cue
+
+## FUNCTIONS
+
+**computePriorityScore(contact)**:
+- Input: contact object with contractExpiry, invoiceAmount, lastContactDate fields
+- Step 1: Initialize score = 0
+- Step 2: Calculate days since lastContactDate: if field exists, daysSince = (Date.now() - new Date(lastContactDate)) / 86400000; score += Math.min(daysSince/90, 1) * 40
+- Step 3: Calculate contract expiry urgency: if contractExpiry exists, daysUntil = (new Date(contractExpiry) - Date.now()) / 86400000; if daysUntil < 90 and daysUntil >= 0, score += (1 - daysUntil/90) * 30; if daysUntil < 0, score += 30
+- Step 4: Calculate invoice score: if invoiceAmount exists and > 0, score += Math.min(invoiceAmount/10000, 1) * 30
+- Step 5: Return Math.round(score)
+
+**computeOutreachTrigger(contact)**:
+- Input: contact object with new fields
+- Step 1: Check contractExpiry first: if exists, calculate daysUntil = (new Date(contractExpiry) - Date.now()) / 86400000
+- Step 2: If daysUntil between 0-90, return `Contract expires in ${Math.ceil(daysUntil)} days`
+- Step 3: If daysUntil < 0, return `Contract expired ${Math.abs(Math.floor(daysUntil))} days ago`
+- Step 4: Check invoiceAmount: if > 0, return `Invoice $${invoiceAmount.toLocaleString()} outstanding`
+- Step 5: Check lastContactDate: if exists, daysSince = (Date.now() - new Date(lastContactDate)) / 86400000; if daysSince > 0, return `Not contacted in ${Math.floor(daysSince)} days`
+- Step 6: If no triggers found, return `Standard outreach`
+
+**renderContactRow(contact)** (Enhanced):
+- Existing function - add priority score computation at start
+- Step 1: Call computePriorityScore(contact) to get score
+- Step 2: Determine tier: score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low'
+- Step 3: Inject badge HTML before contact name: `<span class="priority-score-badge priority-score-${tier}">${score}</span>`
+- Step 4: Continue with existing row rendering logic
+
+**sortContacts(contactsArray)** (New):
+- Step 1: Return contactsArray.sort((a, b) => computePriorityScore(b) - computePriorityScore(a))
+- Called before rendering contacts table
+
+**saveContact(contactData)** (Enhanced):
+- Existing function - add new field handling
+- Step 1: Extract contractExpiry, invoiceAmount, lastContactDate from form
+- Step 2: Add to contactData object: contractExpiry (string or null), invoiceAmount (parseFloat or 0), lastContactDate (string or null)
+- Step 3: Continue existing save logic to localStorage
+
+**loadContactForm(contact)** (Enhanced):
+- Existing function - add new field population
+- Step 1: After loading existing fields, set contractExpiry input value to contact.contractExpiry || ''
+- Step 2: Set invoiceAmount input value to contact.invoiceAmount || ''
+- Step 3: Set lastContactDate input value to contact.lastContactDate || ''
+
+**generateAIMessage(contact)** (Enhanced):
+- Existing function - enhance prompt with trigger
+- Step 1: Call computeOutreachTrigger(contact) to get trigger text
+- Step 2: Append to system prompt: `Priority context: ${triggerText}. Consider this in your outreach message.`
+- Step 3: After message generated, update trigger-reason element innerHTML with triggerText
+- Step 4: Continue existing message display logic
+
+## DATA
+
+**contacts (localStorage array)**:
+- Enhanced contact object schema:
+  - Existing: id (string), name (string), email (string), company (string), phone (string), notes (string), priority (string)
+  - NEW: contractExpiry (string YYYY-MM-DD or null), invoiceAmount (number or 0), lastContactDate (string YYYY-MM-DD or null)
+  - Priority score computed on-the-fly, not stored
+
+**Contact object example**:
+```
+{
+  id: "1234567890",
+  name: "John Doe",
+  email: "john@example.com",
+  company: "Acme Inc",
+  phone: "555-0100",
+  notes: "Key decision maker",
+  priority: "high",
+  contractExpiry: "2024-06-15",
+  invoiceAmount: 5500,
+  lastContactDate: "2024-01-10"
+}
+```
+
+## API
+
+**Anthropic API Call (Enhanced)**:
+- Endpoint: https://api.anthropic.com/v1/messages (existing)
+- Method: POST (existing)
+- Headers: existing headers unchanged
+- Payload enhancement:
+  - In system message, add: `\n\nPriority Context: ${computeOutreachTrigger(contact)}. Tailor your message to address this specific urgency.`
+  - User message and other params unchanged
+- Response handling: existing logic unchanged
+- No new API calls added
+
+## DESIGN
+
+**Priority Score Badge**:
+- Display: inline-block, margin-right: 8px, vertical-align: middle
+- Padding: 4px 8px
+- Border-radius: 12px
+- Font-size: 12px, font-weight: 600
+- Colors:
+  - .priority-score-high: background #dc2626, color #ffffff
+  - .priority-score-medium: background #f59e0b, color #ffffff
+  - .priority-score-low: background #10b981, color #ffffff
+- Text: display numeric score only
+
+**Form Input Styling**:
+- Three new inputs use existing .form-input class
+- Date inputs: type="date", native browser styling
+- Number input: type="number", min="0", step="0.01"
+- All inputs: width 100%, consistent with existing form fields
+
+**Trigger Reason Display**:
+- Uses existing .trigger-reason class
+- Font-size: 14px, color: #374151
+- Display in existing trigger-box with existing styles
+
+**Table Sort Indicator**:
+- No new visual indicator needed
+- Priority badge color provides immediate visual sorting cue
+
+**Spacing**:
+- Priority badge: 8px margin-right from contact name
+- Form groups: 16px margin-bottom (existing pattern)
+
+## ERRORS
+
+**Invalid Date Input**:
+- If user enters invalid date format, browser validation handles it
+- If date field empty, treat as null in calculations
+- No score contribution from missing fields
+
+**Negative Invoice Amount**:
+- Number input has min="0" attribute to prevent entry
+- If somehow negative value stored, treat as 0 in computePriorityScore
+
+**Missing Field Data**:
+- All three new fields are optional
+- Functions check for existence before calculations
+- Missing fields contribute 0 to priority score
+
+**Date Calculation Errors**:
+- If Date constructor fails, wrap in try-catch
+- Return 0 for that component of score
+- Log error to console for debugging
+
+**API Prompt Too Long**:
+- Trigger text is concise (< 50 chars)
+- Unlikely to cause token issues
+- If API fails, existing error handling applies
+
+**localStorage Quota**:
+- Three new fields add minimal data (~30 bytes per contact)
+- Existing quota handling sufficient
+- No new error handling needed
+
+**Sort Performance**:
+- computePriorityScore called for each contact on sort
+- For typical contact lists (<1000), performance acceptable
+- No optimization needed in this iteration
+
+**Backwards Compatibility**:
+- Existing contacts without new fields still render
+- computePriorityScore returns 0 for contacts with no new data
+- No migration script needed
+
+## SCOPE_CHECK
+
+**Estimated Total Lines**: 420 lines
+
+Breakdown:
+- HTML form additions: 30 lines (3 form groups)
+- CSS for priority badge: 40 lines
+- computePriorityScore function: 25 lines
+- computeOutreachTrigger function: 30 lines
+- renderContactRow enhancement: 15 lines
+- sortContacts function: 5 lines
+- saveContact enhancement: 10 lines
+- loadContactForm enhancement: 10 lines
+- generateAIMessage enhancement: 20 lines
+- Error handling additions: 15 lines
+- Comments and documentation: 30 lines
+- Existing code unchanged: ~190 lines of modification context
+
+**SINGLE_TASK**: Proceed as one build
+
+This is well under the 650-line limit. The entire enhancement can be delivered in a single file modification. All additions are localized to specific functions and one form section. No architectural changes required. Existing localStorage schema extends naturally. No new external dependencies.

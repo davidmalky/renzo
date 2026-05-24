@@ -1,0 +1,156 @@
+# TECHNICAL SPECIFICATION: Real-time Sync Execution Engine with Live Monitoring Dashboard
+
+## OVERVIEW
+A comprehensive sync execution engine that processes mapping configurations from localStorage, executes data synchronization between systems with field-level transformations and validation, implements conflict resolution strategies, and provides real-time monitoring through a live dashboard. The system includes batch processing with rate limiting, detailed logging with record-level tracking, automatic log cleanup, and CSV export functionality. The monitoring dashboard displays live sync progress, historical sync data, detailed logs with transformation traces, and provides manual trigger controls with 3-second polling intervals to simulate real-time updates.
+
+## VIEWS
+
+- **SyncMonitorView**: Main monitoring dashboard displaying live sync status widget with progress bars and record counts, recent sync history table with filtering controls, sync metrics cards (total syncs today, success rate, average duration, total records synced), manual trigger buttons for each configured mapping, and date range/status/mapping name filters. Includes empty states for no sync history and loading states during data fetch.
+
+- **SyncDetailModal**: Modal dialog showing detailed record-by-record sync results for a specific sync job, including expandable rows for error messages, field-level transformation traces showing input/output values, conflict resolution details, validation failure reasons, and rollback information. Includes export to CSV button and close action.
+
+- **SyncTriggerModal**: Confirmation dialog for manual sync triggers displaying mapping name, source/target systems, estimated record count, last sync time, and warnings about potential conflicts or data overwrites. Includes confirm and cancel buttons.
+
+- **LiveSyncWidget**: Real-time status card showing currently running sync jobs with animated progress bars, current record being processed, elapsed time counter, processed/total/failed record counts, pause/cancel buttons, and refresh status every 3 seconds via polling.
+
+## FUNCTIONS
+
+- **initSyncEngine()**: Initialize the sync execution engine on page load, load all mapping configurations from localStorage, restore any interrupted sync jobs from localStorage, initialize the sync queue data structure, set up the polling interval for status updates (3 seconds), load sync history from localStorage, clean up logs older than 30 days, and register event listeners for manual triggers.
+
+- **loadMappings()**: Retrieve all mapping configurations from localStorage key 'syncMappings', parse JSON data, validate each mapping structure has required fields (id, name, source, target, fieldMappings, schedule), filter out invalid mappings, return array of valid mapping objects, handle parse errors gracefully.
+
+- **scheduleSyncJobs()**: Iterate through all loaded mappings, check schedule type (immediate, scheduled, manual), for scheduled mappings parse cron expression or interval, calculate next run time, check if current time matches schedule, add eligible jobs to sync queue, update lastScheduleCheck timestamp in localStorage.
+
+- **executeSyncJob(mappingId)**: Retrieve mapping configuration by mappingId, create sync log entry with unique logId, timestamp, status 'running', update localStorage with new log, validate source and target connections, retrieve source data using getSourceData(), apply filters and conditions, process records in batches using processBatch(), update progress in real-time, handle errors with rollback using rollbackSync(), finalize log with completion status, duration, record counts, store final log in localStorage, return sync result object.
+
+- **getSourceData(sourceConfig, mappingFilters)**: Based on sourceConfig.type (REST API, Database, CSV, JSON), construct appropriate data retrieval request, for REST API call fetchFromAPI() with auth headers, for Database call queryDatabase() with connection string, for CSV/JSON parse from localStorage or file, apply mappingFilters to filter records before processing, handle pagination if source supports it, return array of source records with metadata.
+
+- **processBatch(records, mapping, logId)**: Split records array into batches based on mapping.batchSize (default 100), for each batch iterate through records, apply field mappings using applyFieldMapping(), execute transformations using executeTransformations(), validate each record using validateRecord(), detect conflicts using detectConflicts(), resolve conflicts using resolveConflict(), prepare target payload, send to target using sendToTarget(), track success/failure per record, update batch progress in log, implement rate limiting delay between batches (mapping.rateLimitMs default 1000ms), collect all results, return batch result summary.
+
+- **applyFieldMapping(sourceRecord, fieldMappings)**: Create empty targetRecord object, iterate through fieldMappings array, for each mapping extract sourceField value from sourceRecord using dot notation for nested fields, check if transformation is defined, if yes call executeTransformations(), if no direct copy value to targetField, handle null/undefined values based on mapping.defaultValue, handle data type conversions (string to number, date parsing), return completed targetRecord object.
+
+- **executeTransformations(value, transformations)**: Initialize result as value, iterate through transformations array in order, for each transformation check type (formula, lookup, customFunction, concat, split, uppercase, lowercase, trim, replace, dateFormat, calculation), execute appropriate transformation function, pass result to next transformation, handle transformation errors with try-catch, log transformation trace for debugging, return final transformed value and trace array.
+
+- **executeFormula(value, formula)**: Parse formula string for variables and operators, replace variables with actual values, evaluate mathematical expressions using safe eval (Function constructor with restricted scope), handle common Excel-like functions (SUM, AVG, IF, ROUND, MAX, MIN), return calculated result, throw error for invalid formulas.
+
+- **executeLookup(value, lookupConfig)**: Retrieve lookup table from localStorage using lookupConfig.tableId, search for matching record where lookupConfig.keyField equals value, if found return lookupConfig.returnField value, if not found return lookupConfig.defaultValue or null, cache lookup results in memory for performance, return lookup result.
+
+- **validateRecord(record, validationRules)**: Initialize validationErrors array, iterate through validationRules, check rule.type (required, format, range, custom, uniqueness, length, pattern), execute validation check, if validation fails add error object with field, rule, message to validationErrors, for required check if field exists and not empty, for format validate email/phone/URL patterns, for range check numeric min/max, for pattern test regex, for uniqueness check against target system, return validationErrors array (empty if valid).
+
+- **detectConflicts(targetRecord, existingRecords, conflictDetectionConfig)**: Based on conflictDetectionConfig.uniqueFields array, search existingRecords for matches on unique field combinations, if match found create conflict object with conflictType, sourceRecord (targetRecord), targetRecord (existing), conflictingFields array, differences object, return conflict object or null if no conflict.
+
+- **resolveConflict(conflict, resolutionStrategy)**: Check resolutionStrategy type (sourceWins, targetWins, mostRecent, manual, merge), for sourceWins return conflict.sourceRecord, for targetWins return conflict.targetRecord and skip update, for mostRecent compare timestamps and return newer record, for merge combine non-conflicting fields prefer source for conflicts, for manual add to manualReviewQueue in localStorage return null to skip, log resolution decision, return resolved record or null.
+
+- **sendToTarget(record, targetConfig, operation)**: Based on targetConfig.type (REST API, Database, CSV, JSON), construct appropriate request, for REST API determine method (POST for create, PUT/PATCH for update), add auth headers from targetConfig.auth, set content-type to application/json, send request using fetch(), handle response status codes, for Database construct INSERT or UPDATE query, execute using queryDatabase(), for CSV/JSON update localStorage data, retry failed requests up to 3 times with exponential backoff, return success boolean and response data or error.
+
+- **rollbackSync(logId, successfulRecords)**: Retrieve sync log by logId, iterate through successfulRecords array in reverse order, for each record determine rollback operation (DELETE if created, UPDATE if modified), send rollback request to target system, track rollback success/failure, update log with rollback status and details, mark sync as 'rolled_back' status, return rollback summary.
+
+- **generateSyncLog(mappingId, records, results)**: Create log object with logId (UUID), mappingId, mappingName, timestamp (ISO string), duration (milliseconds), status (success/partial/failed), totalRecords count, processedRecords count, successRecords count, failedRecords count, skippedRecords count, recordDetails array with per-record status, errors, transformations, conflicts, errorSummary grouped by error type, return complete log object.
+
+- **storeSyncLog(log)**: Retrieve existing logs from localStorage key 'syncLogs', parse JSON array, add new log to beginning of array, enforce maximum 1000 logs limit by removing oldest, serialize to JSON, store in localStorage, handle quota exceeded error by removing old logs, dispatch storage event for cross-tab sync.
+
+- **cleanupOldLogs()**: Retrieve all logs from localStorage 'syncLogs', calculate cutoff date (current date minus 30 days), filter logs to keep only those newer than cutoff, store filtered array back to localStorage, return count of removed logs.
+
+- **renderSyncMonitorView()**: Clear main content area, render page header with title 'Sync Monitor' and refresh button, render live sync widget by calling renderLiveSyncWidget(), render metrics cards row by calling renderMetricsCards(), render toolbar with filters (date range picker, mapping select dropdown, status select dropdown, search box) by calling renderFilters(), render sync history table by calling renderSyncHistoryTable(), render manual trigger section by calling renderManualTriggers(), attach event listeners for filter changes, manual trigger clicks, view details clicks, export clicks, return rendered view container.
+
+- **renderLiveSyncWidget()**: Retrieve currently running syncs from syncQueue, if empty show 'No active syncs' message, for each running sync create widget card, display mapping name, source and target system names, animated progress bar with percentage, record counts (processed/total/failed), elapsed time formatted as MM:SS, pause and cancel icon buttons, update every 3 seconds via polling, return widget HTML elements.
+
+- **renderMetricsCards()**: Calculate metrics from sync logs, count total syncs today (filter by date), calculate success rate percentage, calculate average duration in seconds, sum total records synced, create four stat-card elements using existing CSS, display label and value with stat-change indicator (positive for success rate), append to stats-row container, return stats row element.
+
+- **renderFilters()**: Create toolbar container, add date range inputs (start date, end date) with form-group, create mapping filter select dropdown populated with all mapping names from localStorage, create status filter select with options (all, running, success, partial, failed, rolled_back), add search input for searching by mapping name or error text, attach change event listeners to apply filters and refresh table, return toolbar element.
+
+- **renderSyncHistoryTable()**: Retrieve sync logs from localStorage, apply active filters (date range, mapping, status, search), sort by timestamp descending, create table with columns (Mapping Name, Start Time, Duration, Status, Records Synced, Errors, Actions), populate tbody with filtered logs, format timestamps using formatDateTime(), format duration as human readable, display status badges using existing badge CSS classes, show record counts as 'success/total', display error count, add 'View Details' icon button in actions column, handle empty state with 'No sync history found' message, attach click listeners to view details buttons, return table container element.
+
+- **renderManualTriggers()**: Retrieve all mappings from localStorage, create section with header 'Manual Sync Triggers', for each mapping create card with mapping name, source/target info, last sync time, 'Trigger Sync' button with btn-primary, check if mapping already running and disable button, attach click listener to show confirmation modal, return manual triggers section element.
+
+- **showSyncDetailModal(logId)**: Retrieve sync log by logId from localStorage, create modal overlay, render modal header with mapping name and close button, render modal body with overview section (status, duration, record counts), create expandable table with record details, for each record in log.recordDetails create row showing record identifier, status badge, transformation trace button, error message (if failed), conflict details (if applicable), add expand/collapse functionality to show full transformation trace and field-level details, add 'Export to CSV' button in modal footer, attach event listener to export button calling exportLogToCSV(), attach close listeners, append modal to body, display modal by removing hidden class.
+
+- **showSyncTriggerModal(mappingId)**: Retrieve mapping by mappingId, create modal overlay, render modal header with 'Confirm Sync' title, render modal body showing mapping name, source and target system names, estimated record count from last sync or 'Unknown', last sync timestamp or 'Never', warning message about potential data overwrites, render modal footer with 'Cancel' button (btn-secondary) and 'Confirm Sync' button (btn-primary), attach cancel listener to close modal, attach confirm listener to call triggerManualSync() then close modal, append and display modal.
+
+- **triggerManualSync(mappingId)**: Validate mapping exists in localStorage, check if mapping already in sync queue, if not add to queue with status 'queued', immediately call executeSyncJob(mappingId) asynchronously, show toast notification 'Sync started for [mapping name]', refresh live sync widget to show new running job, return trigger success boolean.
+
+- **exportLogToCSV(logId)**: Retrieve sync log by logId, create CSV header row (Record ID, Status, Errors, Transformations, Conflicts), iterate through log.recordDetails, for each record create CSV row with quoted fields, handle commas and quotes in data by escaping, join rows with newline characters, create Blob with CSV content and MIME type 'text/csv', create temporary download link with blob URL, set download filename as 'sync-log-[mappingName]-[timestamp].csv', programmatically click link to trigger download, revoke blob URL, show success toast notification.
+
+- **startPolling()**: Set interval to run every 3000ms (3 seconds), in interval callback call updateLiveSyncStatus(), call refreshSyncHistory() if on sync monitor view, store intervalId in module variable for cleanup, return intervalId.
+
+- **stopPolling()**: Clear interval using stored intervalId, set intervalId to null.
+
+- **updateLiveSyncStatus()**: Retrieve current running syncs from syncQueue, for each running sync check if still active by looking for updated timestamp within last 10 seconds, if active update progress by recalculating processed records, elapsed time, update progress bar width and text in DOM, if completed remove from queue, show completion toast notification, refresh sync history table, if sync failed show error toast notification.
+
+- **refreshSyncHistory()**: Retrieve latest sync logs from localStorage, apply current active filters, re-render sync history table with new data without full page reload, update metrics cards with new calculations, animate changes with brief highlight effect.
+
+- **formatDateTime(isoString)**: Parse ISO date string, format as 'MMM DD, YYYY HH:MM AM/PM' using locale formatting, handle invalid dates by returning 'Invalid Date', return formatted string.
+
+- **formatDuration(milliseconds)**: Convert milliseconds to human readable format, if less than 1000ms return '[ms]ms', if less than 60000ms return '[s]s', if less than 3600000ms return '[m]m [s]s', otherwise return '[h]h [m]m', return formatted string.
+
+- **showToast(message, type)**: Create toast notification div with message text, add CSS class based on type (success, error, info, warning), position fixed at top-right of viewport, append to body, animate slide-in, auto-dismiss after 5 seconds with fade-out animation, remove from DOM after animation completes.
+
+- **applyFilters()**: Retrieve filter values from filter form inputs (dateStart, dateEnd, mappingFilter, statusFilter, searchText), validate date range, filter sync logs array using filter predicates, for date filter check if log.timestamp is within range, for mapping filter check if log.mappingId matches selected, for status filter check if log.status matches selected, for search filter check if mappingName or error messages contain search text (case insensitive), return filtered logs array.
+
+- **queryDatabase(connectionString, query, params)**: This is a placeholder for future database integration, for now throw error 'Database connections not yet supported', in real implementation would establish connection, prepare statement, bind params, execute query, fetch results, close connection, return results array.
+
+- **fetchFromAPI(url, method, headers, body)**: Create fetch request with method, headers object, body JSON stringified if present, set timeout of 30 seconds, execute fetch, check response.ok status, parse JSON response, handle network errors with retry logic (3 attempts, exponential backoff 1s, 2s, 4s), throw error with details if all retries fail, return response data object.
+
+- **generateUUID()**: Generate RFC4122 version 4 compliant UUID, use crypto.randomUUID() if available, fallback to Math.random() based generation, return UUID string.
+
+- **deepClone(obj)**: Create deep copy of object to avoid mutation, use JSON.parse(JSON.stringify()) for simple objects, handle Date objects specially, handle undefined and function values, return cloned object.
+
+- **safeEval(expression, context)**: Create safe evaluation environment for formulas, whitelist allowed functions (Math.*, Date, parseFloat, parseInt), create Function with context variables as parameters, execute function with context values, catch and handle errors, return evaluation result or throw safe error.
+
+## DATA
+
+- **syncMappings** (localStorage): Array of mapping configuration objects, each with id (string UUID), name (string), sourceSystem (object with type, connectionDetails), targetSystem (object), fieldMappings (array), schedule (object with type, expression), batchSize (number), rateLimitMs (number), validationRules (array), conflictResolution (string), isActive (boolean), lastModified (ISO timestamp), stored as JSON string.
+
+- **syncLogs** (localStorage): Array of sync execution log objects, each with logId (string UUID), mappingId (string), mappingName (string), startTime (ISO timestamp), endTime (ISO timestamp), duration (number milliseconds), status (string enum), totalRecords (number), processedRecords (number), successRecords (number), failedRecords (number), skippedRecords (number), recordDetails (array of objects with recordId, status, errors, transformationTrace, conflictDetails), errorSummary (object with grouped errors), rollbackInfo (object if rolled back), stored as JSON string, maximum 1000 entries.
+
+- **syncQueue** (memory): Array of currently running or queued sync jobs, each with mappingId, status (queued/running), startTime, processedRecords, totalRecords, currentBatch, errors (array), abortController, updated in real-time during execution, not persisted to localStorage, cleared on page refresh.
+
+- **lookupTables** (localStorage): Object with tableId keys, each value is array of lookup records, used for lookup transformations, preloaded at engine initialization, cached in memory for performance, stored as JSON string.
+
+- **manualReviewQueue** (localStorage): Array of conflict records requiring manual review, each with conflictId, mappingId, sourceRecord, targetRecord, conflictingFields, differences, detectedTime, resolution (pending/approved/rejected), reviewer, resolutionTime, stored as JSON string.
+
+- **syncFilters** (memory): Object storing current filter state with dateStart (string), dateEnd (string), mappingId (string or null), status (string or null), searchText (string), updated when filters change, used to filter sync history display, not persisted.
+
+- **pollingIntervalId** (memory): Number storing the setInterval ID for polling updates, used to start/stop polling, cleared on page navigation or component unmount.
+
+- **metricsCache** (memory): Object caching calculated metrics with totalSyncsToday (number), successRate (number), avgDuration (number), totalRecordsSynced (number), cacheTimestamp (timestamp), cache valid for 60 seconds to avoid recalculation on every render.
+
+## API
+
+- **REST_API_SOURCE**: For source systems configured as REST API, endpoint determined by sourceConfig.baseUrl + sourceConfig.endpoint, method GET with query parameters for pagination/filtering, authentication via sourceConfig.auth.type (bearer, basic, apiKey) added to headers, response expected as JSON array or paginated object with data array and total count, error responses handled with status codes 401 (unauthorized), 404 (not found), 429 (rate limited), 500 (server error), retry with exponential backoff on 429 and 500.
+
+- **REST_API_TARGET**: For target systems configured as REST API, POST endpoint for creating records (sourceConfig.createEndpoint), PUT/PATCH endpoint for updating records (sourceConfig.updateEndpoint), DELETE endpoint for rollback (sourceConfig.deleteEndpoint), request payload as JSON with record data mapped to target schema, authentication via targetConfig.auth headers, response expected with created/updated record ID and status, error responses 400 (validation failed), 409 (conflict), 422 (unprocessable), extract error messages from response body for logging.
+
+- **LOOKUP_TABLE_API**: Optional external lookup table API, GET endpoint at lookupConfig.apiUrl with query parameter for key value, response as JSON object with single record or null, cached responses in memory for 5 minutes, fallback to localStorage lookupTables if API unavailable, handle 404 as not found return default value.
+
+## DESIGN
+
+- **Colors**: Use existing CSS custom properties, --primary (#3b82f6) for trigger buttons and active states, --success (#10b981) for success status badges and positive metrics, --warning (#f59e0b) for partial success status, --danger (#ef4444) for error status and failed syncs, --text-primary (#1f2937) for main text, --text-secondary (#6b7280) for labels, --border-color (#e5e7eb) for table and card borders, --bg-secondary (#f9fafb) for table row hover.
+
+- **Typography**: Use --font-base (system font stack), 14px base font size, 16px for card titles and headers, 24px for page title, 12px for labels and small text, 32px for metric values, 500 font weight for semibold, 600 for bold, line-height 1.5 for body text.
+
+- **Layout**: Main content area with margin-left 240px to offset sidebar, max-width 1400px centered, padding 24px, stats-row grid with auto-fit columns min 240px, sync history table full width, live sync widget fixed at top with border-bottom, manual triggers section in two-column grid, modals centered overlay with max-width 800px, filters toolbar with flexbox layout space-between.
+
+- **Components**: Use stat-card for metrics with stat-label and stat-value, badge for status indicators with variants badge-success, badge-warning, badge-error, badge-active, table with table-container, thead, tbody styling, progress bars as divs with background gradient animated, modal-overlay with modal structure, btn-primary for trigger actions, btn-secondary for cancel, icon-btn for table actions, form inputs with form-group and form-label for filters.
+
+- **Animations**: Progress bar animated with CSS transition width 0.3s ease, pulse animation on live sync widget record counter, fade-in for toast notifications, slide-down for expandable rows, loading spinner rotation, hover transitions on buttons and table rows 0.2s ease.
+
+- **Spacing**: Card padding 16px, section margins 24px bottom, table cell padding 12px, modal padding 24px, button padding 8px 16px, small buttons padding 4px 8px, grid gap 16px, filter input margins 0 8px.
+
+- **Responsive**: Metrics cards stack on screens below 768px, table horizontal scroll on mobile, modal full width on mobile, reduce padding on small screens, hide less important columns on mobile (transformation trace, detailed timestamps).
+
+## ERRORS
+
+- **Mapping Not Found**: When executeSyncJob called with invalid mappingId, show error toast 'Mapping configuration not found', log error to console, do not create sync log entry, return null from function.
+
+- **Source Connection Failed**: When getSourceData fails to connect to source system, show error toast 'Failed to connect to source system: [system name]', create sync log with status 'failed', store error details, offer retry option in UI, do not proceed with sync.
+
+- **Source Data Retrieval Error**: When API returns error or data format unexpected, show error toast 'Error retrieving source data: [error message]', log full error stack, mark sync as failed, store partial results if any records retrieved.
+
+- **Transformation Error**: When executeTransformations throws error on specific field, log field name, transformation type, input value, error message, mark individual record as failed in recordDetails, continue processing other records, increment failedRecords count, display in sync detail modal.
+
+- **Validation Failed**: When validateRecord returns errors, mark record as skipped, log validation errors with field names and rule violations, increment skippedRecords count, do not send to target, display validation errors in detail modal with red badge.
+
+- **Conflict Detected No Resolution**: When detectConflicts finds conflict but resolutionStrategy is 'manual' and manual queue full, show warning toast 'Conflict detected, added to manual review queue', mark record as skipped, add to manualReviewQueue in localStorage, do not send to target.
+
+- **Target Send Failed**: When sendToTarget fails due to network error, validation error, or API error, retry up to 3 times, if all retries fail log error details, mark record as failed, store target system response in error log, increment failedRecords count, show aggregated error count in toast after sync compl

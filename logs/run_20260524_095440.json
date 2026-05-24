@@ -1,0 +1,142 @@
+{
+  "task": {
+    "id": "renzo-ux-001",
+    "title": "Add Activity view with filtering and full log",
+    "description": "Add a full Activity view to the app. (1) Add Activity nav item to sidebar between Batch Outreach and Integrations: <button class=\"nav-item\" data-view=\"activity\">Activity</button>. (2) Add view HTML: <div id=\"view-activity\" class=\"view hidden\"><div class=\"view-header\"><h1 class=\"view-title\">Activity</h1></div><div class=\"toolbar\"><input class=\"search-input\" id=\"actSearch\" placeholder=\"Search by name or company...\"><select class=\"filter-select\" id=\"actDateF\"><option value=\"week\">This Week</option><option value=\"today\">Today</option><option value=\"month\">This Month</option><option value=\"all\">All Time</option></select></div><div id=\"activityCount\" style=\"font-size:13px;color:var(--gray);margin-bottom:12px;\"></div><div id=\"actFullList\" class=\"card\"></div><div id=\"actPagination\" style=\"display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;\"></div></div>. (3) Add renderActivityView() function: reads ga(), filters by actSearch text and actDateF range, sorts reverse-chronological, paginates 20 per page. Shows each item identically to dashboard activity but with the contact name as a clickable green link opening openHistory(). Shows total count above list. Pagination shows Previous/Next buttons and page indicator. (4) Add case to showView(): if(name==='activity')renderActivityView(). (5) Add search and date filter event listeners for actSearch and actDateF. (6) On dashboard, add a 'View All \u2192' link below the activity list that calls showView('activity').",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 6076
+      },
+      "t": 33.3
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 83.1
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 101.7
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 173951
+      },
+      "t": 400.0
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "pass",
+        "score": 8,
+        "issues": [],
+        "feedback": ""
+      },
+      "t": 407.9
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Activity view HTML structure (view-activity section)",
+          "Activity toolbar with search input (actSearch) and date filter dropdown (actDateF)",
+          "Activity count display element",
+          "Activity list container (actFullList)",
+          "Activity pagination controls (actPagination)",
+          "Dashboard 'View All \u2192' link below activity feed",
+          "Activity navigation button in sidebar between Batch Outreach and Integrations",
+          "renderActivityView() function implementation",
+          "updateActivityPagination() function implementation",
+          "filterActivityByDate() function implementation",
+          "getContactByName() function implementation",
+          "Event listeners for activity search input",
+          "Event listeners for activity date filter dropdown",
+          "Event listener for 'View All' link on dashboard",
+          "Click handler for contact names in activity list to show contact history",
+          "Pagination state management (currentPage variable)",
+          "Pagination click handlers (previous/next/page numbers)",
+          "Activity view initialization in showView() function",
+          "Date filter logic (today/week/month/all)",
+          "Activity item rendering with formatted timestamps and type badges",
+          "Search filtering by contactName and company (case-insensitive)",
+          "Proper pluralization of activity count display"
+        ],
+        "note": "Code only shows first 5000 characters of HTML/CSS. Missing entire Activity view structure, all JavaScript functions for activity filtering/pagination, navigation enhancements, and dashboard link. No evidence of any activity view implementation in provided code snippet."
+      },
+      "t": 417.1
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 173951
+      },
+      "t": 560.8
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Mobile navigation is completely inaccessible - sidebar is hidden on mobile with no hamburger menu or alternative navigation method to access Dashboard, Clients, Policies, Claims, Analytics sections",
+          "Logout button touch target (min-height: 44px) in mobile header requires scrolling/interaction but no accessible tap area is visible for the actual logout action",
+          "Modal close buttons lack accessible labels/aria-labels - screen readers cannot identify close functionality",
+          "All interactive table rows marked 'clickable' have no keyboard accessibility (no tabindex, no enter/space handlers)",
+          "Form validation errors show visual styling but no aria-invalid or aria-describedby attributes for screen readers",
+          "Mobile contact cards rendering logic causes infinite loop - function renderContacts() has duplicate mobile check and calls itself recursively with renderMobileContacts() which doesn't exist",
+          "Email validation blocks saving contact entirely - should warn but allow save since email is not in CT_REQUIRED_FIELDS",
+          "saveContact() function is truncated mid-line - critical functionality is incomplete"
+        ]
+      },
+      "t": 586.9
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 173951
+      },
+      "t": 666.1
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Mobile navigation is completely inaccessible - sidebar is hidden on mobile but no hamburger menu or mobile nav implementation exists",
+          "Touch targets on mobile logout button (44px min-height) may be insufficient for other interactive elements - nav items, buttons in modals lack proper touch target sizing",
+          "Modal scrolling may fail on iOS - needs -webkit-overflow-scrolling: touch for .modal-box",
+          "Form inputs lack proper error announcements for screen readers - missing aria-invalid and aria-describedby attributes",
+          "Email validation blocks save but error state is not cleared when user corrects input (no input event listener to remove 'invalid' class)",
+          "Duplicate `const isMobile = window.innerWidth <= 768;` declarations in renderContacts() cause syntax error/confusion",
+          "saveContact() function is truncated mid-expression - incomplete code will cause runtime error",
+          "Settings gear icon displays as '\ufffdgear;' - character encoding issue breaks settings navigation visibility"
+        ]
+      },
+      "t": 697.4
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 698.4
+    }
+  ],
+  "cost": 0.339339
+}

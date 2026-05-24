@@ -1,0 +1,35 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a minimal version footer to the Renzo app sidebar displaying "Renzo v1.0 – Built by Agent Pipeline". The footer will be appended to the existing `.sidebar-footer` container, below the logout button, using the established dark sidebar color scheme with muted text styling. This is a single-file HTML/CSS modification requiring no JavaScript changes.
+
+## VIEWS
+- Sidebar Footer: Extend existing `.sidebar-footer` container to include a new version info element below the logout button. The version text should be visually separated with subtle spacing and use ultra-muted colors to remain unobtrusive.
+
+## FUNCTIONS
+No JavaScript functions required. This is a pure HTML/CSS addition.
+
+## DATA
+No data storage required. The version string "v1.0" is hardcoded in HTML.
+
+## API
+No API calls required.
+
+## DESIGN
+- **Container**: Add a new `<div class="sidebar-version">` as the last child of `.sidebar-footer`
+- **Spacing**: 12px top margin to separate from logout button
+- **Font**: DM Sans (inherits from body), 10px size
+- **Color**: `rgba(232,228,220,.3)` (more muted than existing `.sidebar-user` text)
+- **Text**: "Renzo v1.0 – Built by Agent Pipeline"
+- **Alignment**: Center-aligned text
+- **Letter spacing**: 0.3px for slight openness
+- **Line height**: 1.4 for comfortable reading at small size
+
+## ERRORS
+No error states to handle (static content only).
+
+## SCOPE_CHECK
+- Estimated total lines: ~5 HTML lines + ~8 CSS lines = 13 total modifications
+- SINGLE_TASK: This is a minimal addition under 650 lines, proceed as one build
+- File modified: `index.html` only
+- Changes: Add HTML div element in sidebar-footer section, add CSS rules in style block

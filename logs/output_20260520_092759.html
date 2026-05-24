@@ -1,0 +1,1094 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Mapping Configuration Builder</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --overlay: rgba(0,0,0,0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-bar {
+  margin-bottom: 24px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+
+.search-input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 0;
+  border-color: var(--primary);
+}
+
+.table-container {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: var(--bg-tertiary);
+}
+
+.table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.table td {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--text-tertiary);
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.toggle-slider:before {
+  content: '';
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--success);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  padding: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-state h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg-primary);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 0;
+  border-color: var(--primary);
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-error {
+  color: var(--error);
+  font-size: 13px;
+  margin-top: 4px;
+  display: none;
+}
+
+.form-group.error .form-error {
+  display: block;
+}
+
+.form-group.error .form-input,
+.form-group.error .form-select,
+.form-group.error .form-textarea {
+  border-color: var(--error);
+}
+
+.builder-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.metadata-section {
+  background: var(--bg-primary);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.mapping-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  min-height: 500px;
+}
+
+.field-panel {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.field-panel h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.field-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-item {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.field-item:hover {
+  border-color: var(--primary);
+  background: var(--bg-tertiary);
+}
+
+.field-item:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.field-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.field-name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.field-type {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mappings-container {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  min-height: 400px;
+}
+
+.mapping-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.mapping-field {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.mapping-arrow {
+  color: var(--text-tertiary);
+  font-weight: bold;
+}
+
+.transformation-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.validation-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  height: 100vh;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-lg);
+  transition: right 0.3s;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+}
+
+.validation-panel.open {
+  right: 0;
+}
+
+.validation-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+// Data management, auth, navigation, and utility functions
+let state = {
+  currentView: 'list',
+  mappings: [],
+  currentMapping: null,
+  draggedField: null,
+  validationResults: [],
+  schemaVersion: '1.0.0',
+  systems: [
+    { id: 'salesforce', name: 'Salesforce', icon: '☁️', fields: generateSampleFields('salesforce') },
+    { id: 'hubspot', name: 'HubSpot', icon: '🎯', fields: generateSampleFields('hubspot') },
+    { id: 'mysql', name: 'MySQL', icon: '🗄️', fields: generateSampleFields('mysql') },
+    { id: 'postgres', name: 'PostgreSQL', icon: '🐘', fields: generateSampleFields('postgres') },
+    { id: 'mongodb', name: 'MongoDB', icon: '🍃', fields: generateSampleFields('mongodb') }
+  ]
+};
+
+function initializeApp() {
+  loadMappings();
+  setupKeyboardShortcuts();
+  state.currentView = state.mappings.length > 0 ? 'list' : 'builder';
+  renderCurrentView();
+  announceToScreenReader('Application loaded. Use Tab to navigate.');
+}
+
+function loadMappings() {
+  try {
+    const stored = localStorage.getItem('dataMappings');
+    if (stored) {
+      const data = JSON.parse(stored);
+      if (data.version !== state.schemaVersion) {
+        state.mappings = migrateMappings(data.mappings, data.version);
+      } else {
+        state.mappings = data.mappings || [];
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load mappings:', e);
+    state.mappings = [];
+  }
+}
+
+function saveMappings() {
+  try {
+    const data = {
+      version: state.schemaVersion,
+      mappings: state.mappings,
+      lastModified: new Date().toISOString()
+    };
+    localStorage.setItem('dataMappings', JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.error('Failed to save mappings:', e);
+    showNotification('Failed to save mappings', 'error');
+    return false;
+  }
+}
+
+function migrateMappings(mappings, fromVersion) {
+  console.log(`Migrating from version ${fromVersion} to ${state.schemaVersion}`);
+  return mappings.map(m => ({
+    ...m,
+    version: state.schemaVersion,
+    schedule: m.schedule || { frequency: 'manual' }
+  }));
+}
+
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 's') {
+        e.preventDefault();
+        if (state.currentView === 'builder' && state.currentMapping) {
+          saveCurrentMapping();
+        }
+      }
+    }
+    if (e.key === 'Escape') {
+      closeAllModals();
+      if (state.currentView === 'builder') {
+        navigateToList();
+      }
+    }
+  });
+}
+
+function navigateToList() {
+  state.currentView = 'list';
+  state.currentMapping = null;
+  renderCurrentView();
+  announceToScreenReader('Navigated to mappings list');
+}
+
+function navigateToBuilder(mappingId = null) {
+  state.currentView = 'builder';
+  if (mappingId) {
+    state.currentMapping = state.mappings.find(m => m.id === mappingId);
+  } else {
+    state.currentMapping = createNewMapping();
+  }
+  renderCurrentView();
+  announceToScreenReader('Navigated to mapping builder');
+}
+
+function createNewMapping() {
+  return {
+    id: generateId(),
+    name: '',
+    description: '',
+    sourceSystem: null,
+    destinationSystem: null,
+    fieldMappings: [],
+    schedule: { frequency: 'manual' },
+    batchSize: 1000,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  };
+}
+
+function saveCurrentMapping() {
+  if (!validateMapping(state.currentMapping)) {
+    showNotification('Please fix validation errors before saving', 'error');
+    return false;
+  }
+  
+  state.currentMapping.lastModified = new Date().toISOString();
+  const existingIndex = state.mappings.findIndex(m => m.id === state.currentMapping.id);
+  
+  if (existingIndex >= 0) {
+    state.mappings[existingIndex] = state.currentMapping;
+  } else {
+    state.mappings.push(state.currentMapping);
+  }
+  
+  if (saveMappings()) {
+    showNotification('Mapping saved successfully', 'success');
+    navigateToList();
+    return true;
+  }
+  return false;
+}
+
+function deleteMapping(id) {
+  const mapping = state.mappings.find(m => m.id === id);
+  if (!mapping) return;
+  
+  showModal('deleteConfirm', { mappingName: mapping.name, mappingId: id });
+}
+
+function confirmDelete(id) {
+  state.mappings = state.mappings.filter(m => m.id !== id);
+  saveMappings();
+  closeAllModals();
+  showNotification('Mapping deleted', 'success');
+  renderCurrentView();
+  announceToScreenReader('Mapping deleted successfully');
+}
+
+function duplicateMapping(id) {
+  const original = state.mappings.find(m => m.id === id);
+  if (!original) return;
+  
+  const duplicate = {
+    ...JSON.parse(JSON.stringify(original)),
+    id: generateId(),
+    name: `${original.name} (Copy)`,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  };
+  
+  state.mappings.push(duplicate);
+  saveMappings();
+  showNotification('Mapping duplicated', 'success');
+  renderCurrentView();
+}
+
+function toggleMappingStatus(id) {
+  const mapping = state.mappings.find(m => m.id === id);
+  if (mapping) {
+    mapping.status = mapping.status === 'active' ? 'inactive' : 'active';
+    saveMappings();
+    renderCurrentView();
+    announceToScreenReader(`Mapping ${mapping.status === 'active' ? 'activated' : 'deactivated'}`);
+  }
+}
+
+function validateMapping(mapping) {
+  state.validationResults = [];
+  
+  if (!mapping.name || mapping.name.trim() === '') {
+    state.validationResults.push({
+      level: 'error',
+      field: 'name',
+      message: 'Mapping name is required'
+    });
+  }
+  
+  if (!mapping.sourceSystem) {
+    state.validationResults.push({
+      level: 'error',
+      field: 'sourceSystem',
+      message: 'Source system is required'
+    });
+  }
+  
+  if (!mapping.destinationSystem) {
+    state.validationResults.push({
+      level: 'error',
+      field: 'destinationSystem',
+      message: 'Destination system is required'
+    });
+  }
+  
+  if (mapping.fieldMappings.length === 0) {
+    state.validationResults.push({
+      level: 'warning',
+      field: 'fieldMappings',
+      message: 'No field mappings defined'
+    });
+  }
+  
+  return state.validationResults.filter(r => r.level === 'error').length === 0;
+}
+
+function generateSampleFields(systemId) {
+  const fields = {
+    salesforce: [
+      { name: 'Id', type: 'string', description: 'Unique identifier' },
+      { name: 'FirstName', type: 'string', description: 'First name' },
+      { name: 'LastName', type: 'string', description: 'Last name' },
+      { name: 'Email', type: 'email', description: 'Email address' },
+      { name: 'Phone', type: 'string', description: 'Phone number' },
+      { name: 'CreatedDate', type: 'datetime', description: 'Creation date' }
+    ],
+    hubspot: [
+      { name: 'vid', type: 'number', description: 'Visitor ID' },
+      { name: 'firstname', type: 'string', description: 'First name' },
+      { name: 'lastname', type: 'string', description: 'Last name' },
+      { name: 'email', type: 'email', description: 'Email address' },
+      { name: 'phone', type: 'string', description: 'Phone number' },
+      { name: 'createdate', type: 'timestamp', description: 'Creation timestamp' }
+    ]
+  };
+  return fields[systemId] || fields.salesforce;
+}
+
+function generateId() {
+  return `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+  notification.setAttribute('role', 'alert');
+  notification.setAttribute('aria-live', 'polite');
+  document.body.appendChild(notification);
+  setTimeout(() => notification.classList.add('show'), 10);
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+function announceToScreenReader(message) {
+  const announcer = document.getElementById('sr-announcer') || createAnnouncer();
+  announcer.textContent = message;
+}
+
+function createAnnouncer() {
+  const announcer = document.createElement('div');
+  announcer.id = 'sr-announcer';
+  announcer.setAttribute('aria-live', 'polite');
+  announcer.setAttribute('aria-atomic', 'true');
+  announcer.className = 'sr-only';
+  document.body.appendChild(announcer);
+  return announcer;
+}
+
+function exportMapping(id) {
+  const mapping = state.mappings.find(m => m.id === id);
+  if (mapping) {
+    showModal('export', { mapping });
+  }
+}
+
+function importMappings(jsonData) {
+  try {
+    const imported = JSON.parse(jsonData);
+    const mappings = Array.isArray(imported) ? imported : [imported];
+    
+    mappings.forEach(m => {
+      m.id = generateId();
+      m.createdAt = new Date().toISOString();
+      m.lastModified = new Date().toISOString();
+      state.mappings.push(m);
+    });
+    
+    saveMappings();
+    showNotification(`Imported ${mappings.length} mapping(s)`, 'success');
+    renderCurrentView();
+  } catch (e) {
+    showNotification('Invalid JSON format', 'error');
+  }
+}
+
+<!-- END:CoreJavaScript -->
+// Field mapping modal interactions
+function openFieldMappingModal(sourceField, destField = null) {
+  state.currentFieldMapping = {
+    source: sourceField,
+    destination: destField,
+    transformations: []
+  };
+  showModal('fieldMapping', { source: sourceField, destination: destField });
+}
+
+function addTransformation(type) {
+  const transformation = {
+    id: generateId(),
+    type: type,
+    config: getDefaultTransformConfig(type)
+  };
+  state.currentFieldMapping.transformations.push(transformation);
+  renderTransformationPipeline();
+  announceToScreenReader(`Added ${type} transformation`);
+}
+
+function removeTransformation(id) {
+  state.currentFieldMapping.transformations = state.currentFieldMapping.transformations.filter(t => t.id !== id);
+  renderTransformationPipeline();
+  announceToScreenReader('Transformation removed');
+}
+
+function updateTransformationConfig(id, config) {
+  const transform = state.currentFieldMapping.transformations.find(t => t.id === id);
+  if (transform) {
+    transform.config = { ...transform.config, ...config };
+    updateTransformPreview();
+  }
+}
+
+function getDefaultTransformConfig(type) {
+  const configs = {
+    uppercase: {},
+    lowercase: {},
+    trim: {},
+    dateFormat: { format: 'YYYY-MM-DD' },
+    concatenate: { separator: ' ', fields: [] },
+    split: { delimiter: ',', index: 0 },
+    lookup: { table: {}, defaultValue: '' },
+    conditional: { condition: '', trueValue: '', falseValue: '' },
+    customJS: { code: 'return value;' },
+    defaultValue: { value: '' }
+  };
+  return configs[type] || {};
+}
+
+function saveFieldMapping() {
+  if (!state.currentFieldMapping.destination) {
+    showNotification('Please select a destination field', 'error');
+    return;
+  }
+  
+  const mapping = {
+    id: generateId(),
+    source: state.currentFieldMapping.source,
+    destination: state.currentFieldMapping.destination,
+    transformations: state.currentFieldMapping.transformations
+  };
+  
+  state.currentMapping.fieldMappings.push(mapping);
+  closeModal();
+  renderMappingBuilder();
+  announceToScreenReader('Field mapping saved');
+}
+
+function renderTransformationPipeline() {
+  const container = document.getElementById('transformation-pipeline');
+  if (!container) return;
+  
+  container.innerHTML = state.currentFieldMapping.transformations.map((t, idx) => `
+    <div class="transformation-card" draggable="true" data-id="${t.id}" role="listitem" aria-label="${t.type} transformation">
+      <div class="transform-header">
+        <span class="drag-handle" aria-label="Drag to reorder">⋮⋮</span>
+        <strong>${t.type}</strong>
+        <button class="icon-btn" onclick="removeTransformation('${t.id}')" aria-label="Remove ${t.type} transformation">×</button>
+      </div>
+      <div class="transform-config">
+        ${renderTransformConfig(t)}
+      </div>
+      ${idx < state.currentFieldMapping.transformations.length - 1 ? '<div class="transform-arrow">↓</div>' : ''}
+    </div>
+  `).join('') + `
+    <button class="add-transform-btn" onclick="showTransformMenu()" aria-label="Add transformation">
+      + Add Transformation
+    </button>
+  `;
+  
+  attachTransformationDragListeners();
+  updateTransformPreview();
+}
+
+function renderTransformConfig(transform) {
+  const configs = {
+    dateFormat: `<input type="text" value="${transform.config.format}" onchange="updateTransformationConfig('${transform.id}', {format: this.value})" placeholder="YYYY-MM-DD" aria-label="Date format pattern">`,
+    concatenate: `<input type="text" value="${transform.config.separator}" onchange="updateTransformationConfig('${transform.id}', {separator: this.value})" placeholder="Separator" aria-label="Concatenation separator">`,
+    split: `<input type="text" value="${transform.config.delimiter}" onchange="updateTransformationConfig('${transform.id}', {delimiter: this.value})" placeholder="Delimiter" aria-label="Split delimiter">`,
+    defaultValue: `<input type="text" value="${transform.config.value}" onchange="updateTransformationConfig('${transform.id}', {value: this.value})" placeholder="Default value" aria-label="Default value">`,
+    customJS: `<textarea onchange="updateTransformationConfig('${transform.id}', {code: this.value})" placeholder="return value;" aria-label="Custom JavaScript code">${transform.config.code}</textarea>`
+  };
+  return configs[transform.type] || '';
+}
+
+function updateTransformPreview() {
+  const preview = document.getElementById('transform-preview');
+  if (!preview) return;
+  
+  const sampleValue = 'john.doe@example.com';
+  let result = sampleValue;
+  
+  try {
+    state.currentFieldMapping.transformations.forEach(t => {
+      result = applyTransformation(result, t);
+    });
+    preview.innerHTML = `<div class="preview-box"><strong>Input:</strong> ${sampleValue}</div><div class="preview-box"><strong>Output:</strong> ${result}</div>`;
+  } catch (e) {
+    preview.innerHTML = `<div class="preview-box error">Error: ${e.message}</div>`;
+  }
+}
+
+function applyTransformation(value, transform) {
+  switch (transform.type) {
+    case 'uppercase': return String(value).toUpperCase();
+    case 'lowercase': return String(value).toLowerCase();
+    case 'trim': return String(value).trim();
+    case 'dateFormat': return value;
+    case 'defaultValue': return value || transform.config.value;
+    default: return value;
+  }
+}
+
+function attachTransformationDragListeners() {
+  const cards = document.querySelectorAll('.transformation-card');
+  let draggedElement = null;
+  
+  cards.forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      draggedElement = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+    });
+    
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(card.parentElement, e.clientY);
+      if (afterElement == null) {
+        card.parentElement.appendChild(draggedElement);
+      } else {
+        card.parentElement.insertBefore(draggedElement, afterElement);
+      }
+    });
+    
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' && e.altKey) {
+        moveTransformationUp(card.dataset.id);
+      } else if (e.key === 'ArrowDown' && e.altKey) {
+        moveTransformationDown(card.dataset.id);
+      }
+    });
+  });
+}
+
+function moveTransformationUp(id) {
+  const idx = state.currentFieldMapping.transformations.findIndex(t => t.id === id);
+  if (idx > 0) {
+    [state.currentFieldMapping.transformations[idx], state.currentFieldMapping.transformations[idx - 1]] = 
+    [state.currentFieldMapping.transformations[idx - 1], state.currentFieldMapping.transformations[idx]];
+    renderTransformationPipeline();
+    announceToScreenReader('Transformation moved up');
+  }
+}
+
+function moveTransformationDown(id) {
+  const idx = state.currentFieldMapping.transformations.findIndex(t => t.id === id);
+  if (idx < state.currentFieldMapping.transformations.length - 1) {
+    [state.currentFieldMapping.transformations[idx], state.currentFieldMapping.transformations[idx + 1]] = 
+    [state.currentFieldMapping.transformations[idx + 1], state.currentFieldMapping.transformations[idx]];
+    renderTransformationPipeline();
+    announceToScreenReader('Transformation moved down');
+  }
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.transformation-card:not(.dragging)')];
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    if (state.currentView === 'builder') {
+      saveCurrentMapping();
+    }
+  } else if (e.key === 'Escape') {
+    if (state.modal.isOpen) {
+      closeModal();
+    } else if (state.currentView === 'builder') {
+      cancelMapping();
+    }
+  }
+});
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
+});
+</script>
+</body>
+</html>

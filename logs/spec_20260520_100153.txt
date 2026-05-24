@@ -1,0 +1,161 @@
+# TECHNICAL SPECIFICATION: Advanced Transformation Functions & Expression Builder
+
+## OVERVIEW
+
+Build a comprehensive transformation system with a function library panel, visual expression builder, and execution engine. The system enables users to create complex data transformations through drag-and-drop function composition, with live previews, type validation, and error handling. All transformations execute client-side with sandboxed JavaScript evaluation, supporting nested functions, templates, and real-time testing on sample data.
+
+## VIEWS
+
+- FunctionLibraryPanel: Left sidebar (300px width) with collapsible function categories (String, Date, Math, Conditional, Array, Lookup), search bar at top, scrollable function list with drag handles, documentation tooltips on hover
+- ExpressionEditorModal: Full-screen modal (800px width) with formula bar at top, visual function composer in center (nested block UI), parameter inputs below each block, live preview pane on right (400px), syntax highlighting, error indicators
+- FieldMappingRow: Enhanced mapping row with expression indicator badge, click-to-edit expression button, inline preview of transformation result, validation status icon
+- ExpressionTemplateLibrary: Grid view of saved expressions with template cards (name, description, preview), filter by category, import/export buttons, click to apply template
+- DebugPanel: Collapsible panel in Results tab showing step-by-step transformation execution, intermediate values, error stack traces, performance metrics per function
+- FunctionDocTooltip: Floating tooltip with function signature, parameter descriptions, return type, 2-3 usage examples, link to full documentation
+- ExpressionSyntaxDisplay: Readonly textarea showing plain text formula syntax with syntax highlighting (function names blue, strings green, operators purple, variables orange)
+
+## FUNCTIONS
+
+- initFunctionLibrary(): Load function definitions from FUNCTION_REGISTRY, render categories in sidebar, attach drag event listeners, setup search input with debounce (300ms), restore collapsed state from localStorage
+- searchFunctions(query): Filter FUNCTION_REGISTRY by name/description/category, highlight matching text, show/hide categories based on results, display "no results" message if empty
+- renderFunctionChip(functionDef): Create draggable chip element with function name, category badge, drag icon, attach dragstart event with function metadata in dataTransfer
+- onFunctionDragStart(event, functionDef): Set dataTransfer data with JSON.stringify(functionDef), set effectAllowed to 'copy', add dragging class to chip
+- onFieldDropZoneInit(fieldRow): Add drop zone overlay to field value input, attach dragover (prevent default, add hover class), drop (extract function, open expression builder with pre-filled function), dragleave (remove hover class) events
+- openExpressionBuilder(fieldMapping, initialFunction): Show expression editor modal, load current expression or start new, initialize visual composer with function blocks, setup live preview with sample data, focus first parameter input
+- renderFunctionBlock(functionDef, parentBlock, params): Create visual block with function name header, close button, parameter inputs (typed: string/number/date/boolean/field-reference), nested function slots, connect to expression tree
+- addNestedFunction(parentBlock, slotIndex, functionDef): Insert function block into parameter slot, update expression tree, validate parameter types, re-render preview
+- removeFunctionBlock(blockId): Find block in expression tree, remove from parent's parameters, update all dependent blocks, re-render composer and preview
+- updateParameter(blockId, paramIndex, value): Set parameter value in expression tree, run type validation, update preview if valid, show inline error if invalid
+- compileExpression(expressionTree): Traverse tree depth-first, generate JavaScript code string, wrap in try-catch, validate syntax, return compiled function or error
+- executeExpression(compiledFn, record): Run compiled function in sandboxed context with record data, catch errors with stack trace, return result or error object with details
+- evaluateWithSandbox(code, context): Create isolated VM context with whitelisted functions, no access to global/window/document, timeout after 5000ms, return result or throw SecurityError
+- validateParameterType(value, expectedType): Check if value matches type (string/number/date/boolean/array/object), attempt coercion if possible, return {valid: boolean, coerced: any, error: string}
+- showLivePreview(expressionTree, sampleData): Take first 5 records from sample data, execute expression on each, render results table with before/after columns, highlight errors in red
+- saveExpression(): Validate expression completeness, extract metadata (name, description, function tree), save to EXPRESSION_TEMPLATES in workspace, close modal, show success toast
+- applyExpressionToField(fieldMapping, expressionTree): Set field's transformation property to compiled expression, update UI to show expression badge, re-run validation on all records
+- loadExpressionTemplate(templateId): Retrieve template from EXPRESSION_TEMPLATES, open expression builder with pre-filled function blocks, allow parameter customization
+- exportExpressionLibrary(): Serialize all EXPRESSION_TEMPLATES to JSON, trigger download with filename workspace-expressions-{date}.json
+- importExpressionLibrary(file): Parse JSON file, validate schema, merge with existing templates (prompt on conflicts), refresh template library view
+- showFunctionDocumentation(functionDef): Render tooltip with signature, description, parameter table (name/type/required/default), return type, 3 examples with input/output
+- highlightSyntax(code): Parse expression string, tokenize into function names/strings/numbers/operators/variables, wrap each token in span with appropriate class for CSS styling
+- validateExpression(expressionTree): Check all required parameters filled, verify type compatibility between nested functions, ensure no circular references, return validation result with specific errors
+- debugTransformation(record, expressionTree): Execute expression step-by-step, capture intermediate values after each function, log execution time per function, return debug trace object
+- showDebugPanel(recordIndex): Expand debug section in Results tab, show transformation steps for selected record, display intermediate values, highlight error points in red
+- onExpressionChange(): Debounce 500ms, re-compile expression, update live preview, mark Results tab as stale, show "re-run test" indicator
+- bulkTransformRecords(records, fieldMappings): For each record, apply all field transformations in parallel, collect errors per field, return transformed records array with error annotations
+- registerCustomFunction(name, fn, metadata): Validate function signature, add to CUSTOM_FUNCTIONS registry, make available in function library, persist to workspace settings
+- cloneExpression(expressionTree): Deep copy tree structure, generate new IDs for all blocks, return independent copy for editing
+- formatExpressionSyntax(expressionTree): Convert tree to human-readable string formula (e.g., CONCAT(TRIM(field1), " - ", FORMAT_DATE(field2, "YYYY-MM-DD"))), handle nested functions recursively
+- autocompleteParameters(input, context): Show dropdown with field names from source schema, previously used values, type-appropriate suggestions based on parameter type
+- coerceValue(value, targetType): Convert string to number/date/boolean as needed, handle null/undefined/empty string cases, return coerced value or null if impossible
+
+## DATA
+
+- FUNCTION_REGISTRY: Array of function definitions {id: string, name: string, category: "string"|"date"|"math"|"conditional"|"array"|"lookup", description: string, parameters: [{name: string, type: string, required: boolean, default: any}], returnType: string, implementation: function, examples: [{input: any, output: any}]}
+- EXPRESSION_TEMPLATES: Object map {templateId: {name: string, description: string, category: string, expressionTree: object, createdAt: timestamp, updatedAt: timestamp}}
+- ACTIVE_EXPRESSION: Current expression tree {rootFunction: {functionId: string, parameters: [value|nestedFunction]}, metadata: {fieldName: string, mappingId: string}}
+- COMPILED_EXPRESSIONS: Cache map {expressionHash: compiled function} to avoid re-compilation
+- SAMPLE_DATA: Array of 10 records from source data for live preview
+- TRANSFORMATION_RESULTS: Map {recordId: {originalValue: any, transformedValue: any, error: string|null, executionTime: number}}
+- DEBUG_TRACES: Map {recordId: [{step: number, functionName: string, input: any, output: any, duration: ms}]}
+- CUSTOM_FUNCTIONS: User-defined functions {name: implementation} stored in workspace
+- DRAGGING_STATE: {isDragging: boolean, functionDef: object|null}
+- VALIDATION_ERRORS: Array of {blockId: string, paramIndex: number, error: string}
+- EXPRESSION_HISTORY: Stack of previous expression states for undo/redo (max 20)
+- FUNCTION_SEARCH_INDEX: Pre-built search index for fast function lookup {term: [functionIds]}
+
+## API
+
+- No external API calls for core functionality (all client-side)
+- CustomFunctionExecutor: Sandboxed JavaScript evaluation endpoint (future enhancement) - POST /api/execute-custom with {code: string, context: object}, returns {result: any, logs: string[], errors: string[]}
+- LookupTableAPI: GET /api/lookup-tables/{tableId}/query?key={value} for LOOKUP functions, returns {value: any, found: boolean}
+- ExternalAPILookup: Proxied requests through POST /api/proxy with {url: string, method: string, headers: object, body: any}, returns response with rate limiting
+
+## DESIGN
+
+- Colors: Function categories use distinct badge colors - String (#3b82f6 blue), Date (#10b981 green), Math (#8b5cf6 purple), Conditional (#f59e0b amber), Array (#ec4899 pink), Lookup (#06b6d4 cyan)
+- Fonts: Function names in 'SF Mono', 'Monaco', 'Consolas' monospace at 13px, UI text in system font stack
+- Layout: Function library panel fixed left 300px width, main content area with field mappings, expression modal overlays at z-index 1000
+- Function chips: Rounded-full px-3 py-1.5 with category color background at 20% opacity, darker border, drag handle icon on left
+- Expression blocks: Nested boxes with 2px left border in function category color, 12px padding, 8px margin between blocks, collapse/expand animation 200ms
+- Parameter inputs: Full-width with type-specific styling - text inputs white bg, number inputs with stepper, date with picker icon, boolean as toggle, field-reference with dropdown
+- Live preview: Split pane with before/after columns, monospace font for data values, green checkmark for success, red X for errors, yellow warning for coercion
+- Syntax highlighting: Function names #3b82f6, strings #10b981, numbers #f59e0b, operators #8b5cf6, variables #ec4899, comments #6b7280
+- Tooltips: White background, shadow-lg, 8px border-radius, max-width 400px, appear on 300ms delay
+- Debug panel: Collapsible with chevron icon, light gray background, step-by-step list with connecting lines, execution time badges
+- Expression syntax display: Readonly textarea with 400px height, monospace font, scrollable, copy button in top-right corner
+- Template cards: 200px x 150px grid items, white background, hover lift effect, category badge top-right, apply button on hover
+
+## ERRORS
+
+- InvalidFunctionError: Function not found in registry, show "Unknown function: {name}" in red badge
+- ParameterTypeMismatch: Parameter value doesn't match expected type, show inline error "Expected {type}, got {actualType}" with retry button
+- RequiredParameterMissing: Required parameter not filled, highlight input border in red, show "This field is required" below input
+- CircularReferenceError: Expression references itself, show modal alert "Circular reference detected in expression", prevent save
+- CompilationError: JavaScript syntax error in generated code, show "Expression compilation failed: {error}" with debug info
+- ExecutionTimeout: Function took >5000ms, show "Transformation timed out" with cancel button
+- SandboxViolation: Attempted access to restricted API, show "Security violation: {details}" and reject execution
+- TypeCoercionFailed: Cannot convert value to target type, show "Cannot convert '{value}' to {type}" with original value displayed
+- ExpressionTreeInvalid: Corrupted expression structure, show "Invalid expression data" and offer to reset
+- TemplateNotFound: Template ID doesn't exist, show "Template no longer exists" toast
+- ImportFormatError: JSON file doesn't match schema, show "Invalid expression library file" with schema validation details
+- DuplicateTemplateName: Template name already exists, prompt "Replace existing template '{name}'?" with replace/rename options
+- CustomFunctionError: User JavaScript threw exception, show error message with stack trace in debug panel
+- LookupTableError: External lookup failed, show "Lookup failed: {reason}" and use fallback value if configured
+- BulkTransformationError: Some records failed, show "{n} of {total} records failed" with view errors button
+- UndoStackEmpty: No previous state to restore, disable undo button
+- InvalidFieldReference: Referenced field doesn't exist in schema, show "Field '{name}' not found" with field picker
+
+## SECTIONS
+
+- FunctionRegistrySetup: Initialize FUNCTION_REGISTRY with ~50 built-in functions organized by category, define function metadata (name, description, parameters with types/defaults, return type, implementation), create search index, register event listeners for drag operations, setup category collapse state persistence (~100 lines)
+
+- FunctionLibraryPanel: Render left sidebar with category headers (String/Date/Math/Conditional/Array/Lookup), collapsible sections with chevron icons, function chips with drag handles and category badges, search input with live filtering, tooltip initialization on hover with 300ms delay, scroll container with fixed positioning (~120 lines)
+
+- FieldMappingRowEnhancement: Extend existing field mapping rows with expression indicator badge (shows "fx" icon when expression applied), click handler to open expression builder, inline preview of transformation on first sample record, drag-drop zone overlay for function chips, validation status icon (green check/red X/yellow warning) (~90 lines)
+
+- ExpressionEditorModal: Create modal overlay with 800px centered container, formula bar at top showing plain-text syntax, visual function composer area with nested block rendering, live preview pane on right split-screen, save/cancel/clear buttons, close on ESC key, prevent body scroll when open (~150 lines)
+
+- FunctionBlockRenderer: Recursive component rendering function blocks as nested boxes, function name header with category color, close button, parameter inputs (text/number/date/boolean/field-reference), nested function slots with "+" add button, drag handles for reordering, collapse/expand for long parameter lists, connect blocks visually with lines (~130 lines)
+
+- ParameterInputComponents: Type-specific input rendering - text input with autocomplete, number input with stepper controls, date input with calendar picker, boolean toggle switch, field-reference dropdown with source schema fields, array builder for multi-value params, validation indicators, change event handlers to update expression tree (~110 lines)
+
+- ExpressionTreeManager: Core data structure for expression tree (nested objects), addFunction(parent, slot, functionDef), removeFunction(blockId), updateParameter(blockId, paramIndex, value), cloneTree(tree), validateTree(tree), serialization to JSON, deserialization with validation, undo/redo stack management (~100 lines)
+
+- ExpressionCompiler: Traverse expression tree depth-first, generate JavaScript code string for each function, handle nested function calls, wrap in try-catch blocks, validate syntax before returning, cache compiled functions by hash, support for custom functions, inject context variables (~90 lines)
+
+- SandboxExecutor: Create isolated execution context with whitelisted functions (Math, String methods, Date, Array methods), block access to global/window/document/eval, timeout enforcement (5000ms), error catching with stack traces, performance monitoring, return result object with status/value/error/duration (~100 lines)
+
+- LivePreviewEngine: Take first 5 sample records, execute expression on each in parallel, render results table with before/after columns, highlight differences, show errors with red background, display execution time per record, auto-update on expression change (debounced 500ms), loading spinner during execution (~110 lines)
+
+- BuiltInFunctions: Implementation of 50+ transformation functions - String: concat, substring, trim, replace, regexMatch, regexReplace, toUpperCase, toLowerCase, split, join - Date: formatDate, parseDate, addDays, subtractDays, convertTimezone, getYear, getMonth, getDay - Math: round, floor, ceil, abs, sum, average, min, max - Conditional: ifThenElse, switchCase, coalesce, isNull, isNotNull - Array: map, filter, reduce, length, indexOf, slice - Lookup: tableLookup, apiLookup (~200 lines)
+
+- TypeValidationSystem: validateParameterType(value, expectedType) for each supported type (string/number/date/boolean/array/object/field-reference), coerceValue(value, targetType) with conversion rules, type inference from parameter values, compatibility checking between nested functions, error message generation for type mismatches (~80 lines)
+
+- ExpressionTemplateManager: Load templates from localStorage/workspace, renderTemplateLibrary with grid of cards, saveTemplate(name, description, tree), deleteTemplate(id), applyTemplate(id, targetField), filterTemplates(category), exportToJSON(), importFromJSON(file), duplicate detection and resolution (~100 lines)
+
+- SyntaxHighlighter: Parse expression string into tokens (functions/strings/numbers/operators/variables/parentheses), wrap each token in span with class, support for nested function highlighting, handle escaped characters in strings, line numbering, copy-to-clipboard functionality (~70 lines)
+
+- FunctionDocumentation: Tooltip rendering with function signature, description text, parameter table (name/type/required/default), return type, 3 usage examples with input/output, positioning logic to stay within viewport, show/hide with fade animation, link to full documentation modal (~90 lines)
+
+- DebugPanelView: Collapsible section in Results tab, step-by-step execution trace for selected record, intermediate values after each function, execution time per step, visual timeline, error highlighting with stack traces, expand/collapse all steps, export debug log as JSON (~100 lines)
+
+- TransformationExecutor: bulkTransformRecords(records, fieldMappings) main execution loop, parallel execution with Promise.all, error collection per record/field, progress indicator for large datasets, partial success handling, performance metrics (records/second), result caching (~80 lines)
+
+- ErrorHandlingSystem: Centralized error catching for all transformation failures, error classification (InvalidFunction/TypeMismatch/Timeout/Sandbox/etc), user-friendly error messages, error recovery suggestions, error logging for debugging, toast notifications for user actions (~90 lines)
+
+- AutocompleteEngine: Field name suggestions from source schema, recently used values, type-appropriate constants (true/false for boolean, common date formats, etc), fuzzy matching for search, keyboard navigation (up/down/enter), position dropdown below input (~80 lines)
+
+- DragDropManager: Handle function chip drag start, set dataTransfer with function metadata, visual feedback during drag (ghost image, drop zone highlighting), drop handling on field inputs, invalid drop rejection, touch device support (~70 lines)
+
+- CustomFunctionRegistry: Allow users to define JavaScript functions, syntax validation before registration, function signature parsing, add to FUNCTION_REGISTRY with "custom" category, persistence to workspace, edit/delete custom functions, security warnings about arbitrary code execution (~90 lines)
+
+- ExpressionHistoryManager: Undo/redo stack (max 20 states), saveState() on every expression change, undo() restores previous state, redo() moves forward, clear history on save, keyboard shortcuts (Ctrl+Z, Ctrl+Shift+Z), stack visualization (~60 lines)
+
+- IntegrationWithMappingView: Hook into existing field mapping save flow, serialize expressions with mappings, restore expressions on load, update Results tab when expressions change, validation integration, export/import mappings with expressions (~80 lines)
+
+- PerformanceOptimizations: Expression compilation caching by hash, memoization of frequently used transformations, virtual scrolling for large function lists, debounced preview updates, lazy loading of function documentation, worker threads for bulk transformations (future) (~70 lines)
+
+- AccessibilityFeatures: Keyboard navigation for function library (arrow keys, Enter to select), ARIA labels for all interactive elements, focus management in modal, screen reader announcements for expression changes, high contrast mode support (~60 lines)
+
+- TestingHelpers: Mock sample data generator, expression tree factories for unit tests, validation test cases for each function, error scenario simulators, performance benchmarks (~80 lines)

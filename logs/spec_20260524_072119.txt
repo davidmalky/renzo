@@ -1,0 +1,152 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+
+Enhance contact form validation with visual field-level error indicators, email format validation, tier-based frequency auto-population, and character counters for textareas. All changes target the existing contact form, adding red border styling to invalid fields, focus-to-clear behavior, email regex validation, tier-to-frequency mapping, and real-time character count displays with 500-character limits.
+
+## VIEWS
+
+- **ContactForm (#contactForm)**: Existing form gains visual validation states
+  - Required fields (ctName, ctEmail, ctPhone, ctTier, ctFreq) receive red borders on validation failure
+  - ctEmail displays format-specific error message when invalid email entered
+  - ctTier dropdown triggers auto-population of ctFreq when changed
+  - ctHist and ctNotes textareas display character counters below (N / 500 characters)
+
+- **Error Indicators**: 
+  - Red borders on invalid fields: `border-color:var(--red)`
+  - Character counter divs: small gray text below textareas (12px, color:var(--gray))
+  - Toast warning on character truncation
+
+## FUNCTIONS
+
+- **applyFieldError(fieldId)**: 
+  1. Get element by fieldId
+  2. Set style.borderColor = 'var(--red)'
+  3. If not already listening, add focusin event listener that removes red border (sets borderColor to '')
+
+- **clearFieldError(fieldElement)**:
+  1. Set fieldElement.style.borderColor = ''
+  2. Used by focusin listeners to clear error state when user clicks field
+
+- **validateEmail(email)**:
+  1. Test email against regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  2. Return true if valid, false otherwise
+
+- **saveContact() [MODIFIED]**:
+  1. Existing validation runs first (check required fields)
+  2. If validation fails:
+     - Show ctErr div with error message (existing behavior)
+     - Loop through required field IDs ['ctName','ctEmail','ctPhone','ctTier','ctFreq']
+     - For each missing field, call applyFieldError(fieldId)
+  3. NEW: Email format validation:
+     - If data.email exists and !validateEmail(data.email):
+       - Show error on ctEmail parent: create/display error text 'Enter a valid email address'
+       - Call applyFieldError('ctEmail')
+       - Return early
+  4. NEW: Truncate history and notes to 500 characters:
+     - If data.history.length > 500: data.history = data.history.substring(0,500); show toast warning
+     - If data.notes.length > 500: data.notes = data.notes.substring(0,500); show toast warning
+  5. Continue with existing save logic
+
+- **updateCharCounter(textareaId, counterId)**:
+  1. Get textarea element by textareaId
+  2. Get current value length
+  3. Get counter element by counterId
+  4. Set counter innerHTML to `${length} / 500 characters`
+  5. If length > 500, set counter color to var(--red), else var(--gray)
+
+- **initTierFrequencySync()**:
+  1. Get ctTier element
+  2. Add change event listener
+  3. On change:
+     - Get ctFreq element
+     - If ctFreq.value is empty:
+       - Define defaults: {A:14, B:30, C:60}
+       - Set ctFreq.value = defaults[ctTier.value] || ''
+
+- **initCharCounters()**:
+  1. For ctHist textarea:
+     - Create counter div with id 'ctHistCounter'
+     - Style: font-size:12px, color:var(--gray), margin-top:4px
+     - Insert after ctHist
+     - Add input event listener calling updateCharCounter('ctHist','ctHistCounter')
+     - Call updateCharCounter once to initialize
+  2. Repeat for ctNotes textarea with id 'ctNotesCounter'
+
+- **initValidationListeners()**:
+  1. Get all required field elements: ['ctName','ctEmail','ctPhone','ctTier','ctFreq']
+  2. For each field:
+     - Add focusin listener that calls clearFieldError(this)
+
+## DATA
+
+- **requiredFields**: ['ctName','ctEmail','ctPhone','ctTier','ctFreq'] - array of field IDs to validate
+- **tierFrequencyDefaults**: {A:14, B:30, C:60} - mapping of tier values to default frequency days
+- **maxCharLength**: 500 - character limit for history and notes fields
+- **emailRegex**: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ - pattern for email validation
+
+## API
+
+No external API calls. All changes are client-side DOM manipulation and validation logic.
+
+## DESIGN
+
+- **Error Border**: 
+  - Invalid fields: `border-color:var(--red) !important`
+  - Normal state: `border-color:var(--gray-light)`
+  - Focus state: `border-color:var(--green)`
+
+- **Character Counters**:
+  - Font: 12px, color:var(--gray)
+  - When over 500 chars: color:var(--red)
+  - Position: margin-top:4px below textarea
+  - Format: "N / 500 characters"
+
+- **Email Error Message**:
+  - Style: `.error-text` class (color:var(--red), font-size:12px, margin-top:4px)
+  - Position: below ctEmail field
+
+- **Toast Warning**:
+  - Use existing toast system
+  - Message: "Text truncated to 500 characters" (shown when history or notes exceed limit)
+
+## ERRORS
+
+- **Missing Required Fields**:
+  - Show ctErr div with message (existing)
+  - Apply red border to each empty required field
+  - Clear red border on field focus
+
+- **Invalid Email Format**:
+  - Display error text "Enter a valid email address" below ctEmail
+  - Apply red border to ctEmail
+  - Prevent form submission
+
+- **Character Limit Exceeded**:
+  - Counter turns red when typing beyond 500 characters
+  - On save: truncate to 500 characters
+  - Show toast warning: "Text truncated to 500 characters"
+
+- **Auto-populate Frequency**:
+  - Only populate if ctFreq is empty (don't override existing values)
+  - Handle unknown tier values gracefully (set to empty string)
+
+## SCOPE_CHECK
+
+- Estimated total lines: 180
+- SINGLE_TASK: proceed as one build
+
+**Breakdown:**
+- applyFieldError function: 15 lines
+- clearFieldError function: 5 lines
+- validateEmail function: 5 lines
+- saveContact modifications: 40 lines (email validation, field error loops, truncation logic)
+- updateCharCounter function: 15 lines
+- initTierFrequencySync function: 15 lines
+- initCharCounters function: 35 lines (two textarea setups with DOM creation)
+- initValidationListeners function: 12 lines
+- Initialization calls (DOMContentLoaded): 8 lines
+- CSS additions for counter styling: 20 lines
+- Error message element creation in saveContact: 15 lines
+
+Total implementation fits well under 650 lines. All changes isolated to contact form validation logic. No file splits needed.

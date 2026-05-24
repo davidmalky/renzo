@@ -1,0 +1,190 @@
+{
+  "task": {
+    "id": "renzo-quick-005",
+    "title": "Fix batch outreach JSON parsing to be robust",
+    "description": "In the batch outreach function (runBatch), there are two places using fragile JSON parsing with charCodeAt(0)===96 check. Replace both with robust parsing. For the filter step response: let txt=filterData.content[0].text.trim(); txt=txt.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```\\s*$/,'').trim(); const jsonMatch=txt.match(/\\{[\\s\\S]*\\}/); if(!jsonMatch) throw new Error('No JSON in filter response'); const filterResult=JSON.parse(jsonMatch[0]); For each per-contact generation step: let txt=data.content[0].text.trim(); txt=txt.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```\\s*$/,'').trim(); const jsonMatch=txt.match(/\\{[\\s\\S]*\\}/); if(!jsonMatch){failed++;log('Batch: no JSON for '+c.name);continue;} const parsed=JSON.parse(jsonMatch[0]); Also in the catch block for per-contact generation, log which contact failed: console.warn('Batch generation failed for '+c.name+':',e.message);",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 9124
+      },
+      "t": 53.9
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 79.6
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 98.5
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 139434
+      },
+      "t": 188.4
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "File is severely truncated mid-declaration (CSS ends at '.priority-badge { border-radius:var(--radius-') causing broken styling and likely missing all JavaScript code including the batch outreach JSON parsing logic that the task requires",
+          "No JavaScript code is present in the provided chunk to evaluate whether batch outreach JSON parsing is robust - only HTML structure and incomplete CSS visible",
+          "Multiple critical functional elements have no implementations: CSV import/export, bulk email sending, contact filtering, search - suggesting the JS portion is completely missing from this truncated file"
+        ],
+        "feedback": "The HTML file is critically incomplete - it cuts off mid-CSS declaration and contains no JavaScript code whatsoever. For the task 'Fix batch outreach JSON parsing to be robust', you need to: 1) Include the complete file with all JavaScript code, 2) Show the actual JSON parsing implementation for batch outreach results (likely in a function that handles API responses or data import), 3) Add proper error handling with try-catch blocks around JSON.parse() calls, 4) Validate JSON structure before parsing, 5) Provide user-friendly error messages when parsing fails. Currently, the file appears to be only ~30% complete with just HTML structure and broken CSS. Regenerate the FULL file including all JavaScript code sections."
+      },
+      "t": 324.8
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 139127
+      },
+      "t": 433.9
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSS definition for '.priority-badge' is incomplete/truncated - the style block ends abruptly without closing the rule, which will cause CSS parsing errors",
+          "Code chunk is truncated mid-line at '...border-radius:var(--radius-' \u2014 incomplete CSS and potentially incomplete HTML/JS below, likely causing parsing or rendering errors",
+          "Email setup banner has unclosed HTML tag - missing closing tag for the banner div element, which will break the DOM structure"
+        ],
+        "feedback": ""
+      },
+      "t": 559.2
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 139009
+      },
+      "t": 670.3
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS is severely truncated mid-declaration (.priority-badge{display:inline-block;) causing broken styling and parser errors",
+          "HTML structure is incomplete with multiple unclosed divs (#emailSetupBanner, #view-queue, #obPage1) breaking rendering",
+          "JavaScript computePriority function is truncated mid-expression ('else if(invoice>0') causing syntax errors"
+        ],
+        "feedback": "CRITICAL: The file is corrupted/truncated at multiple points. 1) CSS ends abruptly at line 187 with incomplete border-radius property - complete all CSS rules and add closing </style> tag. 2) HTML has unclosed divs throughout - properly close #obPage1, #emailSetupBanner, and all parent containers. 3) JavaScript computePriority function at line 175 is incomplete ('else if(invoice>0' with no closing logic) - complete the function logic and add closing braces. 4) The QuickBooks integration card HTML is cut off mid-sentence. Re-export or re-save the complete file ensuring all code blocks are fully written. The batch outreach JSON parsing task cannot be evaluated until the file structure is intact."
+      },
+      "t": 776.0
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 139569
+      },
+      "t": 895.4
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Multiple CSS and HTML truncations causing broken rendering - CSS truncated mid-declaration (.priority-badge, border-radius), HTML truncated in input elements, email banner, and modal structures",
+          "No actual JSON parsing code visible for batch outreach - task requires fixing JSON parsing robustness but only HTML/CSS markup is present in most chunks, cannot verify if fix is implemented",
+          "Broken JSON parsing in readWebsite() function - regex `/\\{[\\s\\S]*\\}/` incorrectly matches multiple/nested JSON objects causing parse failures, needs proper brace matching logic"
+        ],
+        "feedback": "CRITICAL: 1) The file is severely truncated in multiple places - CSS declarations cut off mid-property, HTML tags incomplete, JavaScript functions missing closing braces. This will cause complete page failure. Ensure full file is included. 2) TASK NOT COMPLETED: You were asked to fix batch outreach JSON parsing, but the readWebsite() function still has the broken regex pattern that will fail with nested/multiple JSON objects. Replace `txt.match(/\\{[\\s\\S]*\\}/)[0]` with proper brace-counting logic to extract only the first complete JSON object. 3) Add try-catch around all JSON.parse() calls with sanitized error messages. 4) Fix inline style typo: 'justify-content:justify' should be 'justify-content:center'. Generate complete, non-truncated code."
+      },
+      "t": 1019.1
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "extractJSON function implementation",
+          "Robust JSON parsing in runBatch filter step",
+          "Robust JSON parsing in runBatch per-contact generation loop",
+          "Enhanced error logging for contact-specific failures"
+        ],
+        "note": "The code provided is truncated at 5000 characters and shows only HTML/CSS. The actual runBatch function and JSON parsing logic are not visible in the provided code snippet. Need to see the JavaScript portion containing the runBatch function to implement the spec requirements."
+      },
+      "t": 1033.5
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 141328
+      },
+      "t": 1204.2
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 3,
+        "blocking_issues": [
+          "No accessible labels for navigation icons - screen readers cannot identify nav items (nav-icon appears decorative only, nav-item text may not be sufficient)",
+          "Modal close buttons use '\u00d7' character without aria-label - screen reader users cannot identify close function",
+          "No keyboard trap management for modals - users may tab outside modal to underlying content",
+          "No focus management when opening/closing modals - keyboard users lose context",
+          "Clickable table rows (tr.clickable) have no keyboard accessibility - cannot be activated with Enter/Space",
+          "Search input and filter select have no associated labels - screen readers cannot identify their purpose",
+          "Color is sole indicator for priority/tier badges and stat values - fails WCAG for color-blind users"
+        ]
+      },
+      "t": 1234.2
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 143379
+      },
+      "t": 1430.4
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No keyboard accessibility for modals - missing focus trap and escape key handler creates accessibility barrier for keyboard users",
+          "Modal close buttons lack aria-label - screen readers cannot identify their purpose",
+          "Navigation items use buttons but lack proper ARIA roles/states - active state not announced to screen readers",
+          "Form inputs lack associated error announcements - users with screen readers won't hear validation errors",
+          "Tables lack proper semantic markup - no <thead>/<tbody> structure mentioned, unclear if implemented",
+          "AI Guide modal lacks mobile responsiveness - fixed positioning at bottom:90px;right:28px with width:340px will overflow on small screens (<375px width)",
+          "Guide floating button (bottom:28px;right:28px) may overlap or obscure critical UI elements on mobile, no safe area padding for notched devices",
+          "Guide modal max-height:480px may exceed viewport height on small mobile devices in landscape mode, cutting off content with no scroll recovery"
+        ]
+      },
+      "t": 1458.7
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1459.6
+    }
+  ],
+  "cost": 1.051974
+}

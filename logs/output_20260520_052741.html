@@ -1,0 +1,689 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://login.salesforce.com https://test.salesforce.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
+<title>Renzo - Smart Relationship Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#F7F4EF;color:#1A1A1A;line-height:1.5}
+.hidden{display:none!important}
+.app-container{display:flex;min-height:100vh}
+.sidebar{width:240px;background:#1A1A1A;color:#F7F4EF;display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:fixed;height:100vh;overflow-y:auto}
+.sidebar-logo{font-size:24px;font-weight:700;color:#2D6A4F;padding:0 24px;margin-bottom:32px}
+.sidebar-nav{flex:1}
+.nav-item{padding:12px 24px;cursor:pointer;transition:background .2s;display:flex;align-items:center;gap:8px}
+.nav-item:hover{background:rgba(255,255,255,.05)}
+.nav-item.active{background:#2D6A4F;border-left:3px solid #40916C}
+.sidebar-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,.1);margin-top:auto}
+.user-name{font-size:14px;margin-bottom:8px;font-weight:500}
+.logout-btn{background:transparent;border:1px solid #F7F4EF;color:#F7F4EF;padding:8px 16px;border-radius:8px;cursor:pointer;width:100%;font-size:14px;transition:background .2s}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+.main-content{flex:1;overflow-y:auto;padding:32px;margin-left:240px;max-width:calc(100% - 240px)}
+.view{display:none}
+.view.active{display:block}
+.section-header{margin-bottom:24px}
+.section-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.section-subtitle{font-size:14px;color:#666}
+.integrations-section{margin-top:32px}
+.integration-card{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:20px}
+.integration-icon{width:48px;height:48px;background:#2D6A4F;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+.integration-info{flex:1}
+.integration-name{font-size:18px;font-weight:600;margin-bottom:4px}
+.integration-status{display:flex;align-items:center;gap:6px;font-size:14px;color:#666}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.connected{background:#40916C}
+.status-dot.disconnected{background:#999}
+.status-dot.warning{background:#F59E0B}
+.status-dot.error{background:#EF4444}
+.integration-actions{display:flex;gap:12px}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.btn-primary{background:#2D6A4F;color:#fff}
+.btn-primary:hover{background:#40916C}
+.btn-secondary{background:#E5E7EB;color:#1A1A1A}
+.btn-secondary:hover{background:#D1D5DB}
+.btn-danger{background:#EF4444;color:#fff}
+.btn-danger:hover{background:#DC2626}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:16px;padding:32px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-large{max-width:900px}
+.modal-header{margin-bottom:24px}
+.modal-title{font-size:20px;font-weight:700;margin-bottom:8px}
+.modal-subtitle{font-size:14px;color:#666}
+.modal-body{margin-bottom:24px}
+.modal-footer{display:flex;gap:12px;justify-content:flex-end}
+.sync-dashboard{background:#fff;border-radius:12px;padding:24px;margin-top:24px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.dashboard-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#F9FAFB;border-radius:8px;padding:16px}
+.stat-label{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:700;color:#2D6A4F}
+.stat-delta{font-size:14px;color:#40916C;margin-top:4px}
+.sync-actions{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+.progress-bar{width:100%;height:8px;background:#E5E7EB;border-radius:4px;overflow:hidden;margin-top:16px}
+.progress-fill{height:100%;background:#2D6A4F;transition:width .3s}
+.field-mapping-container{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start}
+.field-column{background:#F9FAFB;border-radius:8px;padding:16px}
+.field-column-title{font-size:14px;font-weight:600;margin-bottom:12px;color:#666}
+.field-item{background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:12px;margin-bottom:8px;cursor:move}
+.field-item:hover{border-color:#2D6A4F}
+.field-name{font-size:14px;font-weight:500;margin-bottom:2px}
+.field-type{font-size:12px;color:#999}
+.mapping-arrow{display:flex;align-items:center;justify-content:center;color:#999;font-size:20px;padding-top:40px}
+.conflict-resolution{margin-top:16px;padding-top:16px;border-top:1px solid #E5E7EB}
+.conflict-title{font-size:14px;font-weight:600;margin-bottom:12px}
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-option{display:flex;align-items:center;gap:8px}
+.radio-option input{cursor:pointer}
+.radio-option label{cursor:pointer;font-size:14px}
+.log-table{width:100%;border-collapse:collapse}
+.log-table th{background:#F9FAFB;padding:12px;text-align:left;font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB}
+.log-table td{padding:12px;border-bottom:1px solid #E5E7EB;font-size:14px}
+.log-table tr:hover{background:#F9FAFB}
+.status-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:500}
+.status-badge.success{background:#D1FAE5;color:#065F46}
+.status-badge.error{background:#FEE2E2;color:#991B1B}
+.status-badge.warning{background:#FEF3C7;color:#92400E}
+.conflict-card{background:#FFF9ED;border:1px solid #F59E0B;border-radius:8px;padding:16px;margin-bottom:12px}
+.conflict-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.conflict-field{font-weight:600;font-size:16px}
+.conflict-comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.conflict-value{background:#fff;border-radius:6px;padding:12px}
+.conflict-value-label{font-size:12px;color:#666;margin-bottom:4px}
+.conflict-value-content{font-size:14px;font-weight:500}
+.conflict-timestamp{font-size:12px;color:#999;margin-top:4px}
+.spinner{border:3px solid #E5E7EB;border-top:3px solid #2D6A4F;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.success-icon,.error-icon{width:64px;height:64px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px}
+.success-icon{background:#D1FAE5;color:#065F46}
+.error-icon{background:#FEE2E2;color:#991B1B}
+.expandable-row{cursor:pointer}
+.row-details{background:#F9FAFB;display:none}
+.row-details.expanded{display:table-row}
+.filter-controls{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.filter-controls input,.filter-controls select{padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;font-size:14px}
+.tooltip{position:relative;display:inline-block}
+.tooltip:hover::after{content:attr(data-tooltip);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1A1A1A;color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;white-space:nowrap;margin-bottom:8px;z-index:100}
+</style>
+</head>
+<body>
+<div class="app-container">
+<nav class="sidebar">
+<div class="sidebar-logo">Renzo</div>
+<div class="sidebar-nav">
+<div class="nav-item" data-view="contacts">Contacts</div>
+<div class="nav-item" data-view="insights">Insights</div>
+<div class="nav-item active" data-view="settings">Settings</div>
+</div>
+<div class="sidebar-footer">
+<div class="user-name">User Account</div>
+<button class="logout-btn">Logout</button>
+</div>
+</nav>
+<main class="main-content">
+<div id="settings-view" class="view active">
+<div class="section-header">
+<h1 class="section-title">Settings</h1>
+<p class="section-subtitle">Manage your integrations and preferences</p>
+</div>
+<div class="integrations-section">
+<h2 class="section-title">Connected Systems</h2>
+<div class="integration-card">
+<div class="integration-icon">SF</div>
+<div class="integration-info">
+<div class="integration-name">Salesforce</div>
+<div class="integration-status">
+<span class="status-dot disconnected"></span>
+<span>Not Connected</span>
+</div>
+</div>
+<div class="integration-actions">
+<button class="btn btn-primary" id="connect-salesforce-btn">Connect to Salesforce</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<div class="modal-overlay" id="salesforce-connect-modal">
+<div class="modal">
+<div class="modal-header">
+<h2 class="modal-title">Connect to Salesforce</h2>
+<p class="modal-subtitle">Authorize Renzo to access your Salesforce data</p>
+</div>
+<div class="modal-body">
+<p style="margin-bottom:16px">You'll be redirected to Salesforce to authorize this connection. Make sure you have admin permissions.</p>
+<div id="connect-status"></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" id="cancel-connect-btn">Cancel</button>
+<button class="btn btn-primary" id="authorize-salesforce-btn">Authorize Renzo</button>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="sync-config-modal">
+<div class="modal modal-large">
+<div class="modal-header">
+<h2 class="modal-title">Sync Configuration</h2>
+<p class="modal-subtitle">Map Salesforce fields to Renzo contact fields</p>
+</div>
+<div class="modal-body">
+<div class="field-mapping-container">
+<div class="field-column">
+<div class="field-column-title">Salesforce Fields</div>
+<div id="salesforce-fields"></div>
+</div>
+<div class="mapping-arrow">→</div>
+<div class="field-column">
+<div class="field-column-title">Renzo Contact Fields</div>
+<div id="renzo-fields"></div>
+</div>
+</div>
+<div class="conflict-resolution">
+<h3 class="conflict-title">Conflict Resolution Strategy</h3>
+<div class="radio-group" id="conflict-strategy"></div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" id="reset-mapping-btn">Reset to Defaults</button>
+<button class="btn btn-primary" id="save-mapping-btn">Save Mapping</button>
+</div>
+</div>
+</div
+<!-- CONTINUE:CoreJavaScript -->
+<script>
+const DB_NAME = 'RenzoCRM';
+const DB_VERSION = 1;
+let db = null;
+
+async function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db);
+    };
+    request.onupgradeneeded = (event) => {
+      const database = event.target.result;
+      if (!database.objectStoreNames.contains('contacts')) {
+        database.createObjectStore('contacts', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!database.objectStoreNames.contains('integrations')) {
+        const integrationStore = database.createObjectStore('integrations', { keyPath: 'name' });
+        integrationStore.createIndex('status', 'status', { unique: false });
+      }
+      if (!database.objectStoreNames.contains('syncLogs')) {
+        const logStore = database.createObjectStore('syncLogs', { keyPath: 'id', autoIncrement: true });
+        logStore.createIndex('timestamp', 'timestamp', { unique: false });
+        logStore.createIndex('status', 'status', { unique: false });
+      }
+      if (!database.objectStoreNames.contains('fieldMappings')) {
+        database.createObjectStore('fieldMappings', { keyPath: 'integration' });
+      }
+    };
+  });
+}
+
+async function getFromStore(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function putToStore(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.put(data);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getAllFromStore(storeName) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function deleteFromStore(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.delete(key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function openOAuthPopup(url) {
+  const width = 600;
+  const height = 700;
+  const left = window.screen.width / 2 - width / 2;
+  const top = window.screen.height / 2 - height / 2;
+  return window.open(url, 'oauth', `width=${width},height=${height},left=${left},top=${top}`);
+}
+
+async function waitForOAuthCallback(popup, timeout = 300000) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      if (popup && !popup.closed) popup.close();
+      reject(new Error('OAuth timeout'));
+    }, timeout);
+
+    const checkPopup = setInterval(() => {
+      if (!popup || popup.closed) {
+        clearInterval(checkPopup);
+        clearTimeout(timeoutId);
+        reject(new Error('OAuth popup closed'));
+      }
+    }, 500);
+
+    window.addEventListener('message', function handler(event) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'oauth-success') {
+        clearInterval(checkPopup);
+        clearTimeout(timeoutId);
+        if (popup && !popup.closed) popup.close();
+        window.removeEventListener('message', handler);
+        resolve(event.data.tokens);
+      } else if (event.data.type === 'oauth-error') {
+        clearInterval(checkPopup);
+        clearTimeout(timeoutId);
+        if (popup && !popup.closed) popup.close();
+        window.removeEventListener('message', handler);
+        reject(new Error(event.data.error));
+      }
+    });
+  });
+}
+
+async function encryptToken(token) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(await getEncryptionKey()),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+  const key = await window.crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: encoder.encode('renzo-salt'), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return { encrypted: Array.from(new Uint8Array(encrypted)), iv: Array.from(iv) };
+}
+
+async function decryptToken(encryptedData) {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(await getEncryptionKey()),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+  const key = await window.crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: encoder.encode('renzo-salt'), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(encryptedData.iv) },
+    key,
+    new Uint8Array(encryptedData.encrypted)
+  );
+  return decoder.decode(decrypted);
+}
+
+async function getEncryptionKey() {
+  let key = localStorage.getItem('renzo_ek');
+  if (!key) {
+    key = Array.from(window.crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    localStorage.setItem('renzo_ek', key);
+  }
+  return key;
+}
+
+function showModal(modalId) {
+  document.getElementById(modalId).classList.add('active');
+}
+
+function hideModal(modalId) {
+  document.getElementById(modalId).classList.remove('active');
+}
+
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:16px 24px;background:#2E7D32;color:#fff;border-radius:8px;z-index:10000;animation:slideIn 0.3s ease';
+  if (type === 'error') toast.style.background = '#C62828';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+async function logSync(operation, recordsAffected, status, duration, details = {}) {
+  const log = {
+    timestamp: Date.now(),
+    operation,
+    recordsAffected,
+    status,
+    duration,
+    details,
+    user: 'Current User'
+  };
+  await putToStore('syncLogs', log);
+}
+
+function formatRelativeTime(timestamp) {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+</script>
+<!-- END:CoreJavaScript -->
+<script>
+// Salesforce OAuth Configuration
+const SF_CONFIG = {
+  clientId: '', // Set via settings
+  redirectUri: `${window.location.origin}/oauth-callback.html`,
+  authUrl: 'https://login.salesforce.com/services/oauth2/authorize',
+  tokenUrl: 'https://login.salesforce.com/services/oauth2/token',
+  scope: 'api refresh_token'
+};
+
+// Initialize Salesforce Integration
+async function initSalesforce() {
+  const connection = await getFromStore('sfConnection', 'active');
+  updateConnectionUI(connection);
+  if (connection?.accessToken) {
+    loadSyncStats();
+    loadSyncLogs();
+  }
+}
+
+// Connect to Salesforce
+async function connectSalesforce() {
+  const clientId = prompt('Enter your Salesforce Connected App Client ID:');
+  if (!clientId) return;
+  
+  SF_CONFIG.clientId = clientId;
+  const authUrl = `${SF_CONFIG.authUrl}?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(SF_CONFIG.redirectUri)}&scope=${SF_CONFIG.scope}`;
+  
+  const popup = window.open(authUrl, 'Salesforce Auth', 'width=600,height=700');
+  const pollTimer = setInterval(() => {
+    try {
+      if (popup.closed) {
+        clearInterval(pollTimer);
+        showToast('Authorization cancelled', 'error');
+      }
+    } catch (e) {}
+  }, 500);
+  
+  window.addEventListener('message', async (event) => {
+    if (event.data.type === 'sf_auth_success') {
+      clearInterval(pollTimer);
+      popup.close();
+      await exchangeCodeForToken(event.data.code, clientId);
+    }
+  }, { once: true });
+}
+
+async function exchangeCodeForToken(code, clientId) {
+  showModal('sf-connect-modal');
+  document.getElementById('sf-connect-status').innerHTML = '<div class="loading-spinner"></div><p>Exchanging authorization code...</p>';
+  
+  try {
+    const clientSecret = prompt('Enter your Salesforce Connected App Client Secret:');
+    if (!clientSecret) throw new Error('Client secret required');
+    
+    const response = await fetch(SF_CONFIG.tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: SF_CONFIG.redirectUri
+      })
+    });
+    
+    if (!response.ok) throw new Error('Token exchange failed');
+    const tokens = await response.json();
+    
+    const encryptedAccess = await encryptToken(new TextEncoder().encode(tokens.access_token));
+    const encryptedRefresh = await encryptToken(new TextEncoder().encode(tokens.refresh_token));
+    
+    const connection = {
+      id: 'active',
+      accessToken: encryptedAccess,
+      refreshToken: encryptedRefresh,
+      instanceUrl: tokens.instance_url,
+      connectedAt: Date.now(),
+      lastSync: null,
+      status: 'connected'
+    };
+    
+    await putToStore('sfConnection', connection);
+    document.getElementById('sf-connect-status').innerHTML = '<div class="success-icon">✓</div><p>Connection Successful!</p>';
+    setTimeout(() => {
+      hideModal('sf-connect-modal');
+      updateConnectionUI(connection);
+      loadSyncStats();
+    }, 2000);
+    showToast('Salesforce connected successfully');
+  } catch (error) {
+    document.getElementById('sf-connect-status').innerHTML = `<div class="error-icon">✕</div><p>${error.message}</p><button onclick="connectSalesforce()" class="btn-primary">Retry</button>`;
+    showToast('Connection failed: ' + error.message, 'error');
+  }
+}
+
+async function disconnectSalesforce() {
+  if (!confirm('Disconnect Salesforce? Sync mappings will be preserved.')) return;
+  await deleteFromStore('sfConnection', 'active');
+  updateConnectionUI(null);
+  showToast('Salesforce disconnected');
+}
+
+function updateConnectionUI(connection) {
+  const statusDot = document.querySelector('.status-dot');
+  const statusText = document.querySelector('.status-text');
+  const connectBtn = document.getElementById('connect-sf-btn');
+  const disconnectBtn = document.getElementById('disconnect-sf-btn');
+  const configBtn = document.getElementById('config-sync-btn');
+  const syncBtn = document.getElementById('sync-now-btn');
+  
+  if (connection) {
+    statusDot.className = 'status-dot connected';
+    statusText.textContent = 'Connected';
+    connectBtn.style.display = 'none';
+    disconnectBtn.style.display = 'inline-block';
+    configBtn.style.display = 'inline-block';
+    syncBtn.style.display = 'inline-block';
+  } else {
+    statusDot.className = 'status-dot';
+    statusText.textContent = 'Not Connected';
+    connectBtn.style.display = 'inline-block';
+    disconnectBtn.style.display = 'none';
+    configBtn.style.display = 'none';
+    syncBtn.style.display = 'none';
+  }
+}
+
+async function openSyncConfig() {
+  const mapping = await getFromStore('sfMapping', 'default') || {
+    id: 'default',
+    fields: {
+      'Contact.Email': { renzoField: 'email', strategy: 'salesforce' },
+      'Contact.FirstName': { renzoField: 'firstName', strategy: 'salesforce' },
+      'Contact.LastName': { renzoField: 'lastName', strategy: 'salesforce' },
+      'Contact.Phone': { renzoField: 'phone', strategy: 'salesforce' },
+      'Account.Name': { renzoField: 'company', strategy: 'salesforce' }
+    }
+  };
+  
+  renderFieldMappings(mapping);
+  showModal('sync-config-modal');
+}
+
+function renderFieldMappings(mapping) {
+  const container = document.getElementById('field-mappings');
+  container.innerHTML = Object.entries(mapping.fields).map(([sfField, config]) => `
+    <div class="mapping-row">
+      <div class="sf-field">${sfField}</div>
+      <div class="arrow">→</div>
+      <select class="renzo-field-select" data-sf-field="${sfField}">
+        <option value="">Select field...</option>
+        <option value="email" ${config.renzoField === 'email' ? 'selected' : ''}>Email</option>
+        <option value="firstName" ${config.renzoField === 'firstName' ? 'selected' : ''}>First Name</option>
+        <option value="lastName" ${config.renzoField === 'lastName' ? 'selected' : ''}>Last Name</option>
+        <option value="phone" ${config.renzoField === 'phone' ? 'selected' : ''}>Phone</option>
+        <option value="company" ${config.renzoField === 'company' ? 'selected' : ''}>Company</option>
+      </select>
+      <select class="strategy-select" data-sf-field="${sfField}">
+        <option value="salesforce" ${config.strategy === 'salesforce' ? 'selected' : ''}>Salesforce Wins</option>
+        <option value="renzo" ${config.strategy === 'renzo' ? 'selected' : ''}>Renzo Wins</option>
+        <option value="manual" ${config.strategy === 'manual' ? 'selected' : ''}>Manual Review</option>
+      </select>
+    </div>
+  `).join('');
+}
+
+async function saveSyncConfig() {
+  const rows = document.querySelectorAll('.mapping-row');
+  const fields = {};
+  
+  rows.forEach(row => {
+    const sfField = row.querySelector('.renzo-field-select').dataset.sfField;
+    const renzoField = row.querySelector('.renzo-field-select').value;
+    const strategy = row.querySelector('.strategy-select').value;
+    if (renzoField) fields[sfField] = { renzoField, strategy };
+  });
+  
+  await putToStore('sfMapping', { id: 'default', fields });
+  hideModal('sync-config-modal');
+  showToast('Sync configuration saved');
+}
+
+async function syncNow() {
+  const btn = document.getElementById('sync-now-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner"></div> Syncing...';
+  
+  const startTime = Date.now();
+  try {
+    const connection = await getFromStore('sfConnection', 'active');
+    const accessToken = await decryptToken(connection.accessToken);
+    const mapping = await getFromStore('sfMapping', 'default');
+    
+    const response = await fetch(`${connection.instanceUrl}/services/data/v57.0/query?q=SELECT+Id,Email,FirstName,LastName,Phone,Account.Name+FROM+Contact+WHERE+LastModifiedDate>LAST_N_DAYS:7`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    
+    if (!response.ok) throw new Error('Salesforce API error');
+    const data = await response.json();
+    
+    let newContacts = 0, updatedContacts = 0;
+    for (const record of data.records) {
+      const contact = {
+        email: record.Email,
+        firstName: record.FirstName,
+        lastName: record.LastName,
+        phone: record.Phone,
+        company: record.Account?.Name,
+        sfId: record.Id,
+        lastSynced: Date.now()
+      };
+      
+      const existing = await getFromStore('contacts', contact.email);
+      if (existing) {
+        await putToStore('contacts', { ...existing, ...contact });
+        updatedContacts++;
+      } else {
+        await putToStore('contacts', contact);
+        newContacts++;
+      }
+    }
+    
+    connection.lastSync = Date.now();
+    await putToStore('sfConnection', connection);
+    
+    const duration = Date.now() - startTime;
+    await logSync('Full Sync', newContacts + updatedContacts, 'success', duration, { newContacts, updatedContacts });
+    
+    loadSyncStats();
+    showToast(`Sync complete: ${newContacts} new, ${updatedContacts} updated`);
+  } catch (error) {
+    await logSync('Full Sync', 0, 'error', Date.now() - startTime, { error: error.message });
+    showToast('Sync failed: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Sync Now';
+  }
+}
+
+async function loadSyncStats() {
+  const connection = await getFromStore('sfConnection', 'active');
+  if (!connection?.lastSync) return;
+  
+  document.getElementById('last-sync-time').textContent = formatRelativeTime(connection.lastSync);
+  const logs = await getAllFromStore('syncLogs');
+  const lastLog = logs.sort((a, b) => b.timestamp - a.timestamp)[0];
+  if (lastLog?.details) {
+    document.getElementById('total-synced').textContent = lastLog.details.newContacts + lastLog.details.updatedContacts;
+  }
+}
+
+async function loadSyncLogs() {
+  const logs = await getAllFromStore('syncLogs');
+  const tbody = document.getElementById('sync-log-tbody');
+  tbody.innerHTML = logs.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50).map(log => `
+    <tr>
+      <td>${new Date(log.timestamp).toLocaleString()}</td>
+      <td>${log.operation}</td>
+      <td>${log.recordsAffected}</td>
+      <td><span class="status-badge status-${log.status}">${log.status}</span></td>
+      <td>${log.duration}ms</td>
+    </tr>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', initSalesforce);
+</script>
+</body>
+</html>

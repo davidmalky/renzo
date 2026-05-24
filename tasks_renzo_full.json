@@ -1,0 +1,145 @@
+[
+  {
+    "id": "renzo-quick-001",
+    "title": "Fix Annual Spend field missing from contact form",
+    "description": "The contact form (ctModal) is missing the annualSpend field which is used throughout priority scoring and AI generation. Add: (1) In the form-row containing ctInvoice, add a second input: <div class=\"field\"><label>Annual Spend / Contract Value ($)</label><input type=\"number\" id=\"ctAnnual\" min=\"0\"></div>. (2) In saveContact(), add: annualSpend:parseFloat(document.getElementById('ctAnnual').value)||0. (3) In openEditContact(id), add: document.getElementById('ctAnnual').value=c.annualSpend||''. (4) In clearCtForm(), add ctAnnual to the array of fields reset to empty string. That is the complete fix \u2014 surgical, no other changes.",
+    "priority": "high",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only \u2014 preserve all existing functionality.",
+    "completed_at": "2026-05-24T06:01:18.154263"
+  },
+  {
+    "id": "renzo-quick-002",
+    "title": "Fix contact search to include email, title, notes, products fields",
+    "description": "In renderContacts(), the search filter currently only checks c.name and c.company. Change the filter condition from: if(q&&!c.name.toLowerCase().includes(q)&&!c.company.toLowerCase().includes(q)) return false; to: if(q){const ql=q.toLowerCase();if(!c.name.toLowerCase().includes(ql)&&!c.company.toLowerCase().includes(ql)&&!(c.email||'').toLowerCase().includes(ql)&&!(c.title||'').toLowerCase().includes(ql)&&!(c.notes||'').toLowerCase().includes(ql)&&!(c.products||'').toLowerCase().includes(ql))return false;} Also add a sort dropdown to the contacts toolbar: <select class=\"filter-select\" id=\"ctSortF\"><option value=\"priority\">Priority</option><option value=\"lastContact\">Last Contact</option><option value=\"company\">Company A-Z</option><option value=\"name\">Name A-Z</option><option value=\"spend\">Annual Spend</option></select>. Wire it: in renderContacts() after filtering, sort based on ctSortF value \u2014 priority uses existing computePriority, lastContact sorts ascending by c.lastContact date string, company and name sort alphabetically, spend sorts descending by c.annualSpend. Add event listener: document.getElementById('ctSortF').addEventListener('change',renderContacts);",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T06:10:21.449021"
+  },
+  {
+    "id": "renzo-quick-003",
+    "title": "Fix bulk send to use Gmail/Outlook web compose instead of mailto",
+    "description": "In bulkSendAll(), replace the mailto link construction with openEmailCompose(). Current broken code builds: let mailto='mailto:'+toEmail+'?subject=...'. Replace with: const emails=gEmails(); const fromEmail=(sel&&sel.value!==''&&emails[parseInt(sel.value)])?emails[parseInt(sel.value)].addr:''; openEmailCompose(toAddr,subject,body,fromEmail); Also change the stagger interval from 800ms to 1000ms. Remove the window.confirm() after bulk send \u2014 replace with a toast: toast(opened+' email drafts opened','success'); Do not show a confirm dialog at all. These are the only changes needed in bulkSendAll().",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T06:26:33.074034"
+  },
+  {
+    "id": "renzo-quick-004",
+    "title": "Fix activity logging when Prepare Email Draft is clicked",
+    "description": "In sendEmail(qid), after calling openEmailCompose() and before returning, write an activity record. Current sendEmail() calls markSentSilent(qid) and renderQueue() \u2014 keep that. Additionally ensure the activity record includes reason and trigger from the queue item. The markSentSilent function already writes to activity \u2014 verify it includes item.reason in the record. If not, update markSentSilent to include reason: s(K.activity,[...ga(),{id:uid(),cId:item.cId,cName:item.cName,co:item.co,msg:item.msg,trigger:item.trigger,reason:item.reason||'',ts:new Date().toISOString()}]); Also remove the standalone Mark Sent button from queue item cards \u2014 keep only Send Email Draft, Refine, Save Draft, and Remove buttons. Mark Sent should only appear in the contact history modal.",
+    "priority": "high",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T06:55:20.513851"
+  },
+  {
+    "id": "renzo-quick-005",
+    "title": "Fix batch outreach JSON parsing to be robust",
+    "description": "In the batch outreach function (runBatch), there are two places using fragile JSON parsing with charCodeAt(0)===96 check. Replace both with robust parsing. For the filter step response: let txt=filterData.content[0].text.trim(); txt=txt.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```\\s*$/,'').trim(); const jsonMatch=txt.match(/\\{[\\s\\S]*\\}/); if(!jsonMatch) throw new Error('No JSON in filter response'); const filterResult=JSON.parse(jsonMatch[0]); For each per-contact generation step: let txt=data.content[0].text.trim(); txt=txt.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```\\s*$/,'').trim(); const jsonMatch=txt.match(/\\{[\\s\\S]*\\}/); if(!jsonMatch){failed++;log('Batch: no JSON for '+c.name);continue;} const parsed=JSON.parse(jsonMatch[0]); Also in the catch block for per-contact generation, log which contact failed: console.warn('Batch generation failed for '+c.name+':',e.message);",
+    "priority": "high",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T07:19:45.141937"
+  },
+  {
+    "id": "renzo-quick-006",
+    "title": "Fix contact form validation UX and auto-populate frequency from tier",
+    "description": "Four specific fixes to the contact form: (1) When saveContact() validation fails, instead of just showing ctErr div, also add style border-color:var(--red) to each missing required field's input/select element. Add a focusin listener to each required field that removes the red border when user clicks it. (2) Add email format validation in saveContact(): if(data.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email)){show error on ctEmail: 'Enter a valid email address';return;} (3) Wire the Tier dropdown to auto-populate Frequency: document.getElementById('ctTier').addEventListener('change',function(){const freqEl=document.getElementById('ctFreq');if(!freqEl.value){const defaults={A:14,B:30,C:60};freqEl.value=defaults[this.value]||'';};}); (4) Add character counters below History and Notes textareas. After each textarea, add a small div showing character count. Wire input events: ctHist and ctNotes textareas get oninput handlers that update a counter div showing 'N / 500 characters' in 12px gray text. In saveContact(), truncate history and notes to 500 chars and show a warning toast if truncation occurs.",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T07:44:54.123394"
+  },
+  {
+    "id": "renzo-quick-007",
+    "title": "Add localStorage quota protection and storage usage indicator",
+    "description": "Three changes: (1) Wrap the s() function body in a try/catch: function s(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(e.name==='QuotaExceededError'){showStorageWarning();}}} Add function showStorageWarning(){if(document.getElementById('storageWarn'))return;const el=document.createElement('div');el.id='storageWarn';el.style.cssText='position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;padding:10px;font-size:13px;z-index:9999;';el.innerHTML='Storage nearly full. <a href=\"#\" onclick=\"exportContacts();return false;\" style=\"color:#fff;text-decoration:underline;\">Export your data</a> to free space.';document.body.prepend(el);} (2) In the Settings view, add a storage usage line above the Save button: <div id=\"storageUsage\" style=\"font-size:12px;color:var(--gray);margin-bottom:16px;\"></div>. Populate it in loadSettings(): const keys=Object.keys(localStorage).filter(k=>k.startsWith('renzo'));const used=keys.reduce((t,k)=>t+(localStorage.getItem(k)||'').length,0);document.getElementById('storageUsage').textContent='Storage: '+(used/1024).toFixed(1)+' KB used'; (3) In the contacts table, if contacts.length > 50, add simple pagination: show only contacts slice [page*50,(page+1)*50], add Previous/Next buttons below the table, and a count 'Showing X-Y of Z contacts'. Add a page state variable and wire the buttons.",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T08:15:50.937719"
+  },
+  {
+    "id": "renzo-quick-008",
+    "title": "Replace profile switcher browser prompt with custom modal",
+    "description": "Replace the window.prompt() call in switchProfile() with a custom modal. (1) Add modal HTML before closing body tag: <div id=\"newProfileModal\" class=\"modal-overlay hidden\"><div class=\"modal-box modal-sm\"><div class=\"modal-header\"><h2 class=\"modal-title\">Create a New Profile</h2><button class=\"modal-close\" id=\"newProfileClose\">x</button></div><p style=\"color:var(--gray);font-size:14px;margin-bottom:16px;\">Use profiles for different outreach contexts \u2014 e.g. Vendors vs Customers \u2014 each with its own contacts and settings.</p><div class=\"field\"><label>Profile Name</label><input type=\"text\" id=\"newProfileName\" placeholder=\"e.g. Vendors, Customers, Collections\"></div><div id=\"newProfileErr\" class=\"error-text hidden\">Enter a unique profile name.</div><div style=\"display:flex;gap:10px;justify-content:flex-end;margin-top:16px;\"><button class=\"btn btn-ghost\" id=\"newProfileCancel\">Cancel</button><button class=\"btn btn-primary\" id=\"newProfileCreate\">Create Profile</button></div></div></div> (2) In switchProfile(name): when name is empty string (new profile), instead of calling prompt(), show the modal: document.getElementById('newProfileModal').classList.remove('hidden');document.getElementById('newProfileName').value='';document.getElementById('newProfileName').focus(); (3) Wire newProfileCreate button: read newProfileName value, validate not empty and not in existing profiles, call setProfile(val), add to profiles list, save, close modal, call renderProfileSelector(), showView('dashboard'), updateQueueBadge(), toast. (4) Wire close/cancel buttons. (5) Add updateQueueBadge() call at the end of switchProfile() after showView('dashboard').",
+    "priority": "low",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T08:35:42.774513"
+  },
+  {
+    "id": "renzo-quick-009",
+    "title": "Add AbortSignal timeouts and consistent error handling to all AI fetch calls",
+    "description": "Add 30-second timeouts and consistent error handling to every fetch call in the app. For each fetch call, add signal:AbortSignal.timeout(30000) to the options object. There are approximately 8 fetch calls: generateMsg, refineDraft, refineQueueMsg, sendGuideMsg, readWebsite (in settings), the batch filter call, the batch per-contact call, and the sReadWebsite listener. For each one: (1) Add signal:AbortSignal.timeout(30000). (2) In the catch block, distinguish timeout: if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out \u2014 try again','error');}else{toast('Error: '+e.message,'error');} (3) Ensure the triggering button is re-enabled in both success and error paths (check each catch block). (4) In generateMsg(), ensure aiLoading is always hidden when aiErr is shown \u2014 add document.getElementById('aiLoading').classList.add('hidden') at the start of the catch block if not already there. These are all surgical additions to existing code \u2014 do not restructure any function logic.",
+    "priority": "high",
+    "status": "running",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  {
+    "id": "renzo-quick-010",
+    "title": "Add AI-generated subject lines to queue messages",
+    "description": "Update the AI message generation to also produce a subject line. (1) In generateMsg(), change the JSON return format in the prompt from {reason:...,message:...} to {reason:...,subject:...,message:...}. The subject should be 5-8 words, human and specific, no 'Following up' cliches unless genuinely appropriate. (2) After parsing the response, store parsed.subject in a variable. (3) When adding to queue via addToQueue(), include subject:parsed.subject||'' in the queue item object. (4) When adding to drafts via saveDraft(), include subject:parsed.subject||'' in the draft item. (5) In renderQueue(), display the subject above the message preview: add a div showing the subject in 13px italic gray text if item.subject exists. (6) In sendEmail(qid), use item.subject if it exists, otherwise fall back to the current generated string. (7) In bulkSendAll(), same \u2014 use item.subject if available. (8) In refineDraft() and refineQueueMsg(), after rewriting the message, make a second small API call to regenerate the subject: call claude-haiku with prompt 'Given this email body, write a subject line (5-8 words, no cliches): [message]' and update the subject field.",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "retry_count": 1,
+    "last_attempted": "2026-05-24T08:53:07.985470",
+    "completed_at": "2026-05-24T09:05:43.589322"
+  },
+  {
+    "id": "renzo-mobile-001",
+    "title": "Full mobile responsive layout rework",
+    "description": "Replace the single mobile media query with a comprehensive mobile layout. At max-width 768px: (1) Sidebar becomes a fixed bottom nav bar: #appView{flex-direction:column} .sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:56px;flex-direction:row;z-index:500;padding:0;} nav{display:flex;flex-direction:row;padding:0;} .nav-item{flex:1;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px;font-size:10px;border-left:none;border-top:3px solid transparent;} .nav-item.active{border-top-color:var(--green-mid);border-left:none;} Add emoji icons before each nav item text: Dashboard=\ud83c\udfe0, Contacts=\ud83d\udc65, Queue=\ud83d\udce4, Drafts=\ud83d\udcdd, Batch=\u26a1, Integrations=\ud83d\udd17, Activity=\ud83d\udcca, Settings=\u2699. Each nav item shows icon on top, label below. Hide .sidebar-logo and .sidebar-footer on mobile. (2) Add a fixed top header on mobile: create div id=mobileHeader style=position:fixed;top:0;left:0;right:0;height:52px;background:var(--sidebar);display:flex;align-items:center;padding:0 16px;justify-content:space-between;z-index:500 showing Renzo logo left, sidebar-user text center, logout button right as icon. Show mobileHeader only on mobile, hide on desktop. (3) Main content: .main{padding-top:52px;padding-bottom:64px} .view{padding:16px} (4) Contacts table on mobile: hide the table, show cards instead. In renderContacts() detect window.innerWidth<=768 and render card layout instead of table rows. Each card: background white, border-radius 12px, padding 16px, margin-bottom 10px, showing name+priority badge, company, tier badge, status badge, and Message button. (5) Modals on mobile: .modal-overlay{align-items:flex-end;} .modal-box{border-radius:20px 20px 0 0;max-height:90vh;margin:0;width:100%;} (6) Stat grid: 2 columns on mobile. (7) All touch targets minimum 44px height.",
+    "priority": "high",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Mobile must work as a first-class experience.",
+    "completed_at": "2026-05-24T09:42:57.448437"
+  },
+  {
+    "id": "renzo-ux-001",
+    "title": "Add Activity view with filtering and full log",
+    "description": "Add a full Activity view to the app. (1) Add Activity nav item to sidebar between Batch Outreach and Integrations: <button class=\"nav-item\" data-view=\"activity\">Activity</button>. (2) Add view HTML: <div id=\"view-activity\" class=\"view hidden\"><div class=\"view-header\"><h1 class=\"view-title\">Activity</h1></div><div class=\"toolbar\"><input class=\"search-input\" id=\"actSearch\" placeholder=\"Search by name or company...\"><select class=\"filter-select\" id=\"actDateF\"><option value=\"week\">This Week</option><option value=\"today\">Today</option><option value=\"month\">This Month</option><option value=\"all\">All Time</option></select></div><div id=\"activityCount\" style=\"font-size:13px;color:var(--gray);margin-bottom:12px;\"></div><div id=\"actFullList\" class=\"card\"></div><div id=\"actPagination\" style=\"display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;\"></div></div>. (3) Add renderActivityView() function: reads ga(), filters by actSearch text and actDateF range, sorts reverse-chronological, paginates 20 per page. Shows each item identically to dashboard activity but with the contact name as a clickable green link opening openHistory(). Shows total count above list. Pagination shows Previous/Next buttons and page indicator. (4) Add case to showView(): if(name==='activity')renderActivityView(). (5) Add search and date filter event listeners for actSearch and actDateF. (6) On dashboard, add a 'View All \u2192' link below the activity list that calls showView('activity').",
+    "priority": "medium",
+    "status": "done",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only.",
+    "completed_at": "2026-05-24T09:54:40.873258"
+  },
+  {
+    "id": "renzo-ux-002",
+    "title": "Integrations page visual rework \u2014 live vs coming soon sections",
+    "description": "Rework the integrations page to clearly separate live features from roadmap features. (1) Add section headers: before the CSV card, add <div class=\"section-title\" style=\"color:var(--green-mid);\">\u25cf Live Now</div>. Before the Salesforce card, add <div class=\"section-title\" style=\"color:var(--gray);\">\u25cf Coming Soon</div>. (2) Add status badges to card headers: CSV card gets a green badge <span style=\"background:var(--green-pale);color:var(--green-mid);font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;\">Live</span>. Email card gets same green Live badge. Salesforce, HubSpot, QuickBooks cards get a gray <span style=\"background:var(--gray-pale);color:var(--gray);font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;\">Coming Soon</span> badge. (3) Replace the 'View Setup Guide' buttons on Coming Soon cards with 'Join Waitlist' buttons. Clicking opens a small inline form below the button showing an email input and Submit button. On submit, just store the email and integration name in localStorage under key 'renzo_waitlist' as an array of {email,integration,ts} objects, and show 'Thanks \u2014 we'll email you when it's ready' inline. (4) Add a new card for 'Renzo API' in the Coming Soon section: title 'Renzo API', description 'Connect any system directly via REST API. Ideal for custom CRMs, internal tools, and automation workflows.' with a Coming Soon badge and no buttons.",
+    "priority": "low",
+    "status": "running",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  }
+]

@@ -1,0 +1,139 @@
+# TECHNICAL SPECIFICATION: SALESFORCE CONNECTOR
+
+## OVERVIEW
+
+This specification defines a comprehensive Salesforce integration module that establishes Renzo's first external system connector, implementing OAuth 2.0 authentication, bidirectional data mapping, intelligent sync operations, and conflict resolution. The system follows a modular architecture pattern that will serve as the blueprint for future integrations (Gmail, HubSpot, etc.), providing secure token management, field-level mapping configuration, and detailed sync logging. All Salesforce data will be encrypted before storage, with sync operations preserving data lineage through stored record IDs.
+
+## VIEWS
+
+- **Settings View (Enhanced)**: Extended existing settings view with new "Connected Systems" section at bottom, displaying integration cards for each connector (initially Salesforce only) with connection status badges, last sync timestamp, and quick action buttons.
+
+- **Salesforce Connection Modal**: Full-screen modal overlay triggered by "Connect to Salesforce" button, containing OAuth flow iframe or redirect handling, connection status spinner, success/error messaging, and "Cancel" option.
+
+- **Field Mapping Configuration Modal**: Large modal (800px width) with two-column layout showing Salesforce fields on left and Renzo fields on right, drag-and-drop or dropdown mapping interface, field type indicators (text, date, number, currency), preview of sample data, conflict resolution strategy dropdowns per field (Salesforce Wins/Renzo Wins/Manual Review), and Save/Cancel buttons.
+
+- **Sync Dashboard Modal**: Modal (700px width) displaying sync operation overview with statistics cards (total synced, new contacts, updated contacts, errors), last sync timestamp with relative time, "Sync Now" button with loading state, sync log table with pagination, and filter options for log entries.
+
+- **Sync Status Toast**: Non-blocking toast notification appearing top-right showing real-time sync progress (X of Y contacts synced), success confirmation with contact count, or error summary with "View Details" link to sync dashboard.
+
+- **Conflict Review Modal**: Appears when manual review conflicts detected, shows side-by-side comparison of conflicting field values (Salesforce value vs. Renzo value), "Keep Salesforce" / "Keep Renzo" / "Merge" radio buttons per field, "Apply to All Similar" checkbox, and Resolve/Skip buttons.
+
+## FUNCTIONS
+
+- **initSalesforceIntegration()**: Entry point called on app initialization; checks localStorage for existing Salesforce connection data (key: `salesforceConnection`); if found, validates token expiry and triggers silent token refresh if needed; updates UI to show connected state; returns boolean connection status.
+
+- **renderConnectedSystems()**: Called when settings view loads; creates HTML for "Connected Systems" section; iterates through available integrations (currently only Salesforce); generates integration card with logo, name, connection status badge (green "Connected" / gray "Not Connected"), last sync info, "Configure" and "Disconnect" buttons; appends to settings view before existing sections.
+
+- **showSalesforceConnectionModal()**: Creates modal overlay with connection interface; generates Salesforce OAuth URL with client_id, redirect_uri, response_type=code, scope (api refresh_token); determines if popup or redirect flow based on browser capabilities; opens popup window (600x700) or redirects to Salesforce authorization page; sets up message listener for OAuth callback; shows loading spinner with "Connecting to Salesforce..." message.
+
+- **handleSalesforceOAuthCallback(code)**: Receives authorization code from OAuth redirect; makes POST request to `/api/salesforce/token` backend endpoint with code, client_id, client_secret, redirect_uri; receives access_token, refresh_token, instance_url, token_type; encrypts tokens using encryptToken() before storage; creates connection object with tokens, instance_url, connected_at timestamp, user_id; stores in localStorage as `salesforceConnection`; triggers initial sync with fetchSalesforceData(); closes modal and shows success toast.
+
+- **encryptToken(token)**: Takes plaintext token string; generates encryption key from user session + salt (stored in `encryptionSalt` localStorage key, created on first use); uses Web Crypto API SubtleCrypto.encrypt with AES-GCM algorithm; converts encrypted buffer to base64 string; returns encrypted token string; throws error if Web Crypto API unavailable.
+
+- **decryptToken(encryptedToken)**: Reverses encryption process; retrieves encryption salt from localStorage; uses SubtleCrypto.decrypt with AES-GCM; converts base64 to buffer; decrypts to plaintext token; returns token string; throws error and triggers re-authentication if decryption fails.
+
+- **refreshSalesforceToken()**: Called when access token expired (detected by 401 responses); retrieves encrypted refresh token from localStorage; decrypts using decryptToken(); makes POST to `/api/salesforce/token` with grant_type=refresh_token; receives new access_token and refresh_token; encrypts and updates localStorage; returns new access token; if refresh fails, clears connection and shows re-authentication modal.
+
+- **disconnectSalesforce()**: Triggered by "Disconnect" button; shows confirmation modal "Disconnect Salesforce? Existing synced contacts will remain but updates will stop"; on confirm, makes POST to `/api/salesforce/revoke` with token to revoke OAuth; clears `salesforceConnection` from localStorage; clears `salesforceFieldMappings` and `salesforceSyncLog`; updates UI to show disconnected state; shows success toast.
+
+- **showFieldMappingModal()**: Opens field mapping configuration interface; loads existing mappings from localStorage (`salesforceFieldMappings`) or creates defaults; makes API call to `/api/salesforce/describe/Account,Contact` to fetch available Salesforce fields with types and labels; renders two-column layout with Salesforce fields (sortable list) and Renzo fields (fixed list); populates dropdowns for mapping; loads conflict resolution strategies per field from localStorage; creates "Test Mapping" button that fetches 5 sample records to preview; adds Save button that validates mappings and stores to localStorage.
+
+- **getDefaultFieldMappings()**: Returns default mapping object used for initial setup; maps Account.Name → company, Contact.Email → email, Contact.Phone → phone, Contact.FirstName + Contact.LastName → name, Contact.Title → title, Account.AnnualRevenue → revenue, Contract.EndDate → contractExpiry, Account.LastActivityDate → lastContactDate; includes conflict resolution strategy defaults (all set to "Salesforce Wins"); includes bidirectional flag per field (all false initially for one-way sync); returns mapping configuration object.
+
+- **saveFieldMappings(mappings)**: Validates mapping configuration object; checks for duplicate mappings to same Renzo field; ensures required fields (email) are mapped; validates field type compatibility (text→text, date→date, number→number, currency→number); stores validated mappings to localStorage key `salesforceFieldMappings`; updates last_modified timestamp; closes modal; shows success toast "Field mappings saved"; triggers warning toast if sync pending "Sync again to apply new mappings".
+
+- **syncSalesforceNow()**: Main sync orchestration function triggered by "Sync Now" button; disables button and shows loading spinner; retrieves connection and mappings from localStorage; calls fetchSalesforceAccounts() and fetchSalesforceContacts() in parallel; passes results to processSalesforceData(); updates sync log; updates UI with results; re-enables button; shows completion toast with statistics; handles errors with detailed error logging.
+
+- **fetchSalesforceAccounts()**: Makes authenticated GET request to `{instance_url}/services/data/v58.0/query?q=SELECT Id,Name,AnnualRevenue,LastActivityDate,OwnerId FROM Account WHERE LastModifiedDate > {lastSyncDate}` using decrypted access token; handles pagination with nextRecordsUrl if more than 2000 records; accumulates all records in array; retries once on 401 with token refresh; throws error on failure; returns array of Account objects.
+
+- **fetchSalesforceContacts()**: Makes authenticated GET request to `{instance_url}/services/data/v58.0/query?q=SELECT Id,FirstName,LastName,Email,Phone,Title,AccountId,OwnerId,LastModifiedDate FROM Contact WHERE LastModifiedDate > {lastSyncDate} AND Email != null`; handles pagination; filters out contacts without email (required field); returns array of Contact objects with Account relationship data.
+
+- **processSalesforceData(accounts, contacts)**: Core data transformation and merge logic; creates lookup map of Account Id → Account data; iterates through contacts array; for each contact, looks up related Account data; applies field mappings from configuration to transform Salesforce fields → Renzo fields; creates standardized contact object; calls mergeOrCreateContact() for each transformed contact; collects statistics (new, updated, skipped, errors); returns sync result object.
+
+- **mergeOrCreateContact(salesforceContact, mappings)**: Checks if contact exists in Renzo by email (primary key); if not found, calls addContact() with transformed data and adds salesforceId, salesforceAccountId, syncedAt timestamp to contact object; if found, calls detectConflicts() to compare field values; applies conflict resolution strategy per field; if strategy is "Manual Review", adds to conflicts queue; if "Salesforce Wins" or "Renzo Wins", applies winner's value; calls updateContact() with merged data; increments appropriate counter (created/updated/conflict); returns operation result.
+
+- **detectConflicts(renzoContact, salesforceContact, mappings)**: Compares field values between Renzo and Salesforce contact; ignores fields where values are identical; for each differing field, checks LastModifiedDate timestamps; if Salesforce data is newer and values differ, marks as conflict; creates conflict object with field name, renzoValue, salesforceValue, salesforceModifiedDate, renzoModifiedDate; returns array of conflict objects; returns empty array if no conflicts.
+
+- **applyConflictResolution(contact, conflicts, mappings)**: Iterates through conflicts array; for each conflict, retrieves resolution strategy from mappings; if "Salesforce Wins", sets contact.field = salesforceValue; if "Renzo Wins", keeps contact.field unchanged; if "Manual Review", adds conflict to `pendingConflicts` queue in localStorage and skips auto-resolution; updates contact.lastModifiedDate to maintain audit trail; returns resolved contact object and count of unresolved conflicts.
+
+- **showConflictReviewModal(conflicts)**: Displays modal for manual conflict resolution; retrieves conflicts from `pendingConflicts` localStorage; groups by contact for easier review; renders side-by-side comparison table with Renzo value (left), Salesforce value (right), field metadata (last modified dates); provides radio button selection per field; includes "Apply to All Future Conflicts" checkbox per field to update mapping strategy; processes resolution on "Resolve" button click; updates contacts with selected values; removes from pending queue; updates mapping strategies if "Apply to All" checked.
+
+- **resolveConflictBatch(resolutions)**: Batch processes manual conflict resolutions; receives array of resolution objects with contactId, field, selectedValue, applyToAll flag; updates each affected contact in localStorage; if applyToAll, updates field mapping configuration for that field; logs resolution to sync log; removes resolved conflicts from pending queue; returns count of resolved conflicts; triggers contact list re-render to show updated data.
+
+- **updateSyncLog(operation, results)**: Creates sync log entry object with sync_id (UUID), timestamp, operation_type (manual/auto), contacts_fetched, contacts_created, contacts_updated, contacts_skipped, errors array, duration_ms, triggered_by (user_id); retrieves existing log from localStorage `salesforceSyncLog`; prepends new entry to log array; limits log to 100 most recent entries; stores back to localStorage; triggers UI update if sync dashboard open.
+
+- **renderSyncDashboard()**: Opens sync dashboard modal; retrieves sync log from localStorage; calculates summary statistics from most recent sync; renders statistics cards with icons (total synced, new, updated, errors); displays last sync timestamp with relative time formatting ("2 hours ago"); renders sync log table with columns: Date, Type, Records, Status, Duration, Actions; implements pagination (10 per page); adds filter dropdown for status (all/success/errors); includes "Sync Now" button at top; adds "Export Log" button for CSV download.
+
+- **renderSyncLogTable(logs, page)**: Generates HTML table rows from log entries; formats timestamp to local datetime; displays operation type badge (manual=blue, auto=green); shows records count as "X new, Y updated"; displays status badge (success=green, warning=yellow, error=red); formats duration in seconds; adds "View Details" link per entry; implements pagination controls at bottom; highlights errors with exclamation icon; returns HTML string for insertion into modal.
+
+- **showSyncLogDetails(syncId)**: Opens detailed view modal for specific sync operation; retrieves log entry by syncId from localStorage; displays full sync details including start/end time, triggered by user, settings used (field mappings snapshot); shows list of contacts created with names and emails; shows list of contacts updated with changed fields; shows error details if any with Salesforce error codes and messages; includes "Retry Failed" button if errors present; adds "Download Details" button for JSON export.
+
+- **retrySyncWithErrors(syncId)**: Retrieves failed operations from sync log; extracts contact IDs or email addresses that failed; attempts to re-fetch those specific records from Salesforce; applies same mapping and merge logic; updates original sync log entry with retry results; shows toast notification with retry outcome; useful for handling temporary API failures or rate limits.
+
+- **validateSalesforceConnection()**: Utility function called before sync operations; checks if `salesforceConnection` exists in localStorage; validates access token not expired (checks issued_at + expires_in); makes lightweight API call to `/services/data/v58.0/` to verify token works; if validation fails, attempts token refresh; if refresh fails, shows re-authentication modal; returns boolean valid status; called by all Salesforce API interaction functions.
+
+- **getSalesforceConnectionStatus()**: Returns detailed connection status object for UI display; checks localStorage for connection data; calculates token expiry status; retrieves last sync timestamp from sync log; calculates sync health score based on recent sync success rate; returns object with connected (boolean), lastSync (timestamp), health (0-100), instance_url, connected_as (Salesforce username); used by Connected Systems section to render status badge.
+
+- **formatSalesforceData(rawData, objectType)**: Transforms raw Salesforce API response to normalized format; handles nested relationship queries (Account.Name from Contact.Account); converts Salesforce field names to camelCase for JavaScript; parses date fields to ISO format; handles null values appropriately; flattens nested objects where needed; returns normalized data array; called by fetch functions before processing.
+
+- **handleSalesforceApiError(error, context)**: Centralized error handling for Salesforce API failures; parses Salesforce error response format; extracts error code, message, and fields affected; maps common error codes to user-friendly messages (INVALID_SESSION_ID → "Please reconnect", API_LIMIT_EXCEEDED → "Salesforce API limit reached, retry in X hours"); logs error to console and sync log; shows appropriate toast notification; triggers re-authentication flow if session invalid; returns formatted error object.
+
+- **scheduleSyncCheck()**: Sets up interval timer to check if auto-sync should run; retrieves sync schedule configuration from settings (stored in `salesforceAutoSync`); calculates next sync time based on schedule (hourly, daily, weekly options); if current time past next sync and no sync running, triggers syncSalesforceNow(); respects Salesforce API rate limits by tracking request count; stores last auto-sync timestamp; can be enabled/disabled in settings.
+
+- **exportSyncLog(format)**: Generates export of sync log in specified format (CSV or JSON); retrieves full sync log from localStorage; if CSV, converts to comma-separated format with headers; if JSON, stringifies with pretty printing; creates Blob and triggers browser download; includes all sync metadata and results; useful for auditing and troubleshooting; called by "Export Log" button in sync dashboard.
+
+- **testFieldMapping()**: Validation utility for field mapping configuration; fetches 5 sample Salesforce records; applies current mapping configuration; displays preview of transformed data in modal table; highlights any mapping errors or type mismatches; allows users to verify mappings before saving; shows warnings for unmapped required fields; called by "Test Mapping" button in field mapping modal.
+
+- **updateContactWithSalesforceId(contactId, salesforceId, salesforceAccountId)**: Helper function to add Salesforce metadata to Renzo contact; retrieves contact by ID from localStorage; adds salesforceId, salesforceAccountId, salesforceSyncedAt timestamp to contact object; stores updated contact back to localStorage; maintains referential integrity for future two-way sync; returns updated contact object.
+
+- **getSalesforceRecordUrl(recordId, instanceUrl)**: Generates clickable Salesforce record URL; constructs URL as `{instanceUrl}/{recordId}`; returns full URL string; used in UI to provide "View in Salesforce" links; validates recordId format (18-character Salesforce ID); called when rendering contact details with Salesforce sync metadata.
+
+- **calculateSyncHealth(logs)**: Analyzes recent sync log entries to determine integration health; retrieves last 10 sync operations; calculates success rate percentage; checks for increasing error trends; detects API limit issues; returns health score 0-100 and status message; used to display health indicator on Connected Systems card; triggers warning notifications if health below 70%.
+
+- **clearSalesforceData()**: Utility function to clean Salesforce metadata from contacts; iterates through all contacts in localStorage; removes salesforceId, salesforceAccountId, salesforceSyncedAt fields; does NOT delete contacts themselves; called optionally during disconnect flow if user wants to clear sync metadata; shows confirmation dialog before executing; useful for testing or complete reset.
+
+## DATA
+
+- **salesforceConnection** (localStorage): Object containing `{access_token: encrypted_string, refresh_token: encrypted_string, instance_url: string, token_type: "Bearer", issued_at: timestamp, expires_in: 7200, connected_at: timestamp, user_id: string, salesforce_user_id: string, salesforce_username: string}` - stores encrypted OAuth tokens and connection metadata; encrypted tokens use AES-GCM with key derived from user session.
+
+- **encryptionSalt** (localStorage): String containing randomly generated salt for token encryption; created on first Salesforce connection; 32-character hexadecimal string; never changes for a user session; used to derive encryption key with Web Crypto API.
+
+- **salesforceFieldMappings** (localStorage): Object mapping Salesforce fields to Renzo fields: `{mappings: [{salesforceField: string, salesforceObject: "Account"|"Contact", renzoField: string, conflictResolution: "Salesforce Wins"|"Renzo Wins"|"Manual Review", bidirectional: boolean, fieldType: string}], last_modified: timestamp, created_by: user_id}` - defines complete field mapping configuration.
+
+- **salesforceSyncLog** (localStorage): Array of sync operation records: `[{sync_id: uuid, timestamp: ISO_string, operation_type: "manual"|"auto"|"retry", contacts_fetched: number, contacts_created: number, contacts_updated: number, contacts_skipped: number, conflicts_detected: number, conflicts_resolved: number, errors: [{code: string, message: string, contact_email: string}], duration_ms: number, triggered_by: user_id, settings_snapshot: object}]` - maintains history of all sync operations, limited to 100 entries.
+
+- **pendingConflicts** (localStorage): Array of unresolved conflicts awaiting manual review: `[{conflict_id: uuid, contact_id: string, contact_email: string, field: string, renzoValue: any, salesforceValue: any, salesforceModifiedDate: ISO_string, renzoModifiedDate: ISO_string, detected_at: timestamp}]` - queue of conflicts requiring user resolution.
+
+- **salesforceAutoSync** (localStorage): Object containing auto-sync configuration: `{enabled: boolean, frequency: "hourly"|"daily"|"weekly", last_auto_sync: timestamp, next_sync_scheduled: timestamp, sync_on_app_start: boolean, notify_on_complete: boolean}` - controls automated sync behavior.
+
+- **userSettings** (extended): Existing settings object extended with `{salesforce: {notifications_enabled: boolean, sync_in_background: boolean, conflict_notification: "toast"|"modal"|"none", api_timeout_seconds: 30}}` - Salesforce-specific user preferences added to existing settings structure.
+
+- **contacts** (localStorage, extended): Existing contact array with Salesforce metadata added to each contact object: `{...existing_fields, salesforceId: string|null, salesforceAccountId: string|null, salesforceSyncedAt: ISO_string|null, salesforceOwnerId: string|null, lastModifiedDate: ISO_string}` - maintains link between Renzo and Salesforce records.
+
+- **salesforceApiRequestCount** (sessionStorage): Object tracking API usage for rate limiting: `{count: number, reset_at: timestamp, limit: 15000}` - tracks requests per 24-hour period; uses sessionStorage to reset on browser close.
+
+- **integrationsList** (in-memory constant): Array defining available integrations for Connected Systems UI: `[{id: "salesforce", name: "Salesforce", logo_url: string, description: string, status: function, configure: function, connect: function, disconnect: function}]` - expandable array for future integrations (Gmail, HubSpot).
+
+## API
+
+- **OAuth Authorization** (External): `GET https://login.salesforce.com/services/oauth2/authorize` with params `{client_id, redirect_uri, response_type: "code", scope: "api refresh_token"}` - initiates Salesforce OAuth flow; redirects to Salesforce login; user authorizes app; redirects back with authorization code.
+
+- **Token Exchange** (Backend Proxy): `POST /api/salesforce/token` with payload `{code, client_id, client_secret, redirect_uri, grant_type: "authorization_code"}` - exchanges authorization code for tokens; backend endpoint proxies request to Salesforce to hide client_secret; returns `{access_token, refresh_token, instance_url, token_type, expires_in}`.
+
+- **Token Refresh** (Backend Proxy): `POST /api/salesforce/token` with payload `{refresh_token, client_id, client_secret, grant_type: "refresh_token"}` - obtains new access token using refresh token; backend proxy to Salesforce; returns new `{access_token, refresh_token}`.
+
+- **Token Revocation** (Backend Proxy): `POST /api/salesforce/revoke` with payload `{token}` - revokes OAuth token on disconnect; backend proxies to Salesforce revoke endpoint; returns 200 on success.
+
+- **Query Accounts**: `GET {instance_url}/services/data/v58.0/query` with param `q=SELECT Id,Name,AnnualRevenue,LastActivityDate,OwnerId FROM Account WHERE LastModifiedDate > {lastSyncDate}` and header `Authorization: Bearer {access_token}` - fetches Account records; handles pagination via nextRecordsUrl in response; returns `{done: boolean, totalSize: number, records: []}`.
+
+- **Query Contacts**: `GET {instance_url}/services/data/v58.0/query` with param `q=SELECT Id,FirstName,LastName,Email,Phone,Title,AccountId,Account.Name,Account.AnnualRevenue,OwnerId,LastModifiedDate FROM Contact WHERE LastModifiedDate > {lastSyncDate} AND Email != null` and header `Authorization: Bearer {access_token}` - fetches Contact records with Account relationship; filters null emails; returns same structure as Accounts.
+
+- **Describe Objects**: `GET {instance_url}/services/data/v58.0/sobjects/Account/describe` and `GET {instance_url}/services/data/v58.0/sobjects/Contact/describe` with header `Authorization: Bearer {access_token}` - retrieves field metadata for mapping UI; returns `{fields: [{name, label, type, length, updateable, referenceTo}]}` - used to populate field mapping dropdown options.
+
+- **API Version Check**: `GET {instance_url}/services/data/v58.0/` with header `Authorization: Bearer {access_token}` - lightweight endpoint to validate token; returns Salesforce version info; used by validateSalesforceConnection(); fast response for health checks.
+
+- **Batch Query** (future): `POST {instance_url}/services/data/v58.0/jobs/query` - Salesforce Bulk API 2.0 for large dataset sync; creates async query job; polls for completion; retrieves results in CSV; implements for syncs over 2000 records to avoid REST API limits.
+
+## DESIGN
+
+- **Color Palette Extensions**: Salesforce brand blue `#00A1E0` for Salesforce-specific UI elements; connection status green `#04844B` for "Connected" badges; warning amber `#FFB75D` for conflict indicators; error red `#EA001E` for sync failures; neutral gray `#F3F

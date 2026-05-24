@@ -1,0 +1,230 @@
+# RESEARCH REPORT: Data Mapping Configuration Builder
+
+## EXISTING_FEATURES:
+
+### UI Components & Layout:
+- **Sidebar navigation** with nav-link system, active state management
+- **Modal system** (modal-overlay, modal, modal-header, modal-body, modal-footer) with active state toggling
+- **Card components** (card, card-header, card-title, card-body) for content organization
+- **Button system** (btn, btn-primary, btn-icon, btn-close) with hover/focus states
+- **Table components** (table-container, th, td) with responsive overflow
+- **Header layout** (header, header-title, header-actions) with action buttons
+- **Empty state component** (empty-state, empty-state-icon, empty-state-title, empty-state-message)
+
+### Form & Input Elements:
+- **Filter toolbar** (filter-toolbar, filter-group, filter-label, filter-input) with search/filter functionality
+- **Input styling** with focus states and validation states
+
+### Visual Feedback:
+- **Status badges** (status-badge, status-running, status-success, status-error, status-warning)
+- **Progress bars** (progress-bar-container, progress-bar) with animated transitions
+- **Metric cards** (metric-card, metric-label, metric-value, metric-trend) for statistics display
+
+### Layout Systems:
+- **Grid layouts** (metrics-grid, content-grid) with responsive breakpoints
+- **Flexbox patterns** throughout for alignment and spacing
+- **Responsive design** with mobile breakpoints (@media queries for 1024px, 768px)
+
+### Styling Infrastructure:
+- **CSS variables** for theming (--primary, --success, --warning, --error, colors, shadows)
+- **Consistent spacing** and typography system
+- **Shadow system** (--shadow-sm, --shadow-md, --shadow-lg)
+- **Transition animations** on interactive elements
+
+### General Patterns:
+- **Box-sizing reset** and normalized styles
+- **Focus-visible states** for accessibility
+- **Hover states** on interactive elements
+
+## MISSING_FEATURES:
+
+### Core Mapping Functionality:
+- **Mapping list view component** with saved mappings display
+- **Active/inactive status toggle** for mappings
+- **Drag-and-drop system** for field mapping
+- **Side-by-side panel layout** for source/destination field visualization
+- **Field relationship selectors** (1-to-1, 1-to-many, many-to-1)
+- **Transformation rule builder UI** with operation type selection
+- **Transformation operation library**: uppercase, lowercase, trim, date/time conversion, concatenation, split, lookup tables, conditional logic (if-then-else), custom JavaScript expressions, default values
+- **Data type validation** and compatibility checking system
+- **Field preview component** showing sample data and transformed output
+- **Mapping validation engine** checking required fields, circular dependencies, invalid transformations
+- **Visual connection lines** between source and destination fields
+
+### Data Management:
+- **localStorage integration** for mappings persistence
+- **Mapping data structure**: {id, name, description, sourceSystem, destinationSystem, fieldMappings: [{sourceField, destField, transformations: []}], schedule, batchSize, isActive, createdAt, updatedAt}
+- **Schema versioning** for localStorage data
+- **CRUD operations**: Create, Read, Update, Delete mappings
+- **Duplicate mapping function**
+- **Import/export JSON** functionality
+- **Data migration/upgrade** logic for schema versions
+
+### UI Components Needed:
+- **Field search/filter** within the mapper view
+- **Field type indicators** (text, number, date, boolean, etc.)
+- **Transformation rule editor panel** with multi-step transformations
+- **Lookup table editor** for value mapping
+- **Conditional logic builder** (if-then-else UI)
+- **JavaScript expression editor** with syntax highlighting (optional)
+- **Schedule configuration UI** (frequency picker, time selector)
+- **Batch size input** field
+- **Metadata form** (name, description, system selectors)
+- **Last modified date display** and sorting
+- **Field count display** in list view
+- **Delete confirmation modal**
+- **Data type warning indicators**
+- **Required field indicators**
+
+### Interaction Features:
+- **Field selection mechanism** (click or drag to map)
+- **Remove mapping** button for individual field mappings
+- **Add transformation** button within field mapping
+- **Reorder transformations** (drag to reorder pipeline)
+- **Collapse/expand** field mapping details
+- **Clear all mappings** function
+- **Auto-suggest field matches** based on name similarity
+
+## CHANGES_NEEDED:
+
+### Modal System Enhancement:
+- **Expand modal sizing** - Current max-width: 800px may need larger option (1200px+) for side-by-side mapper view
+- **Add full-screen modal option** for complex mapping builder
+
+### Table Component Enhancement:
+- **Add sortable column headers** for mapping list (last modified, name, field count)
+- **Add action column** with edit/delete/duplicate icons
+- **Add toggle switch** component for active/inactive status in table rows
+
+### Form Input Expansion:
+- **Add select/dropdown component** for system selection, transformation type, data type
+- **Add textarea component** for description, JavaScript expressions
+- **Add number input** with validation for batch size
+- **Add time/frequency picker** for schedule configuration
+- **Add toggle switch component** for boolean states
+
+### Card Component:
+- **Add collapsible card variant** for transformation rule sections
+- **Add card with icon** variant for field type display
+
+### Navigation:
+- **Add new nav-link** for "Mappings" or "Field Mapper" section
+
+## REUSE:
+
+### Direct Reuse (No Modification):
+- **CSS variable system** - Use existing color palette, shadows, spacing
+- **Modal framework** - `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer` classes
+- **Button system** - `.btn`, `.btn-primary`, `.btn-icon` for all actions
+- **Card structure** - `.card`, `.card-header`, `.card-title`, `.card-body` for mapping list items
+- **Status badges** - Reuse `.status-badge`, `.status-success`, `.status-error`, `.status-warning` for validation warnings
+- **Empty state** - Use when no mappings exist
+- **Filter toolbar** - Reuse for search/filter in field mapper
+- **Table structure** - Use for mapping list view
+
+### Patterns to Follow:
+- **Naming conventions** - Continue kebab-case for CSS classes
+- **Spacing system** - Use existing padding/margin values (4px, 8px, 12px, 16px, 20px, 24px, 32px)
+- **Border radius** - Maintain consistency (4px inputs, 6px buttons/toolbar, 8px cards, 12px modals)
+- **Font sizing** - Reuse established scale (11px labels, 12px meta, 13px secondary, 14px body, 18px card-title, 20px modal-title, 28px header-title)
+- **Transition timing** - Use `transition: all 0.2s` or `0.3s` for consistency
+- **Focus states** - Apply existing `:focus-visible` pattern with 2px outline
+- **Hover effects** - Maintain existing background color transitions
+
+### Style Inheritance:
+- **Grid systems** - Follow `.metrics-grid`, `.content-grid` pattern for new layouts
+- **Flexbox alignment** - Use established gap, align-items, justify-content patterns
+- **Border styling** - Use `var(--border)` consistently
+- **Box shadows** - Apply existing shadow variables
+
+## RISKS:
+
+### Technical Complexity:
+- **Drag-and-drop implementation** - May require external library (vanilla JS DnD is complex) or significant custom code; could conflict with modal scrolling
+- **Circular dependency detection** - Requires graph traversal algorithm; potential performance issue with large mapping sets
+- **JavaScript expression evaluation** - Security risk with `eval()`; need sandboxed execution (Function constructor with limited scope or external library)
+- **Real-time transformation preview** - May cause performance issues with large datasets; need debouncing and sample data limiting
+
+### Data Management:
+- **localStorage size limits** - Mappings with many fields/transformations could exceed 5-10MB limit; need size monitoring and warnings
+- **Schema migration** - Need robust version checking and upgrade paths to prevent data loss
+- **Data corruption** - Need try-catch around all localStorage operations with fallback behavior
+- **Concurrent editing** - Multiple browser tabs could cause data conflicts; need conflict detection/resolution
+
+### UI/UX Challenges:
+- **Side-by-side field lists** - Long field lists (100+ fields) will be difficult to navigate; need virtualization or pagination
+- **Transformation pipeline complexity** - Multiple chained transformations hard to visualize; need clear visual hierarchy
+- **Modal real estate** - Large mapping configurations may not fit well in modal; might need dedicated full-page view
+- **Mobile responsiveness** - Drag-and-drop and side-by-side panels don't work well on mobile; need alternative interaction pattern
+
+### Validation & Error Handling:
+- **Data type compatibility** - Complex validation logic needed (e.g., can date be coerced to string? Can number array map to single string?)
+- **Transformation compatibility** - Some transformations only work with specific data types; need comprehensive validation matrix
+- **Required field validation** - Need to check destination system requirements without having full destination schema
+- **Lookup table validation** - Need to validate all source values have corresponding lookup entries
+
+### Performance:
+- **Large field lists rendering** - 500+ fields in source/destination could cause lag; need virtual scrolling
+- **Real-time search/filter** - Searching through large field lists may lag; need debouncing
+- **Transformation execution** - Complex transformation chains on large sample datasets could freeze UI; need web workers
+
+### Browser Compatibility:
+- **localStorage availability** - May be disabled in private browsing; need detection and user messaging
+- **Drag events** - Touch device compatibility for drag-and-drop needs separate implementation
+
+## DATA_STRUCTURES:
+
+### Existing localStorage Keys:
+*[Note: No localStorage implementation found in provided code - this is net new implementation]*
+
+### Required Data Structure:
+
+```javascript
+// Primary storage key: 'dataMappings' or 'syncEngine_mappings'
+
+{
+  "version": "1.0.0",  // Schema version for migration
+  "mappings": [
+    {
+      "id": "uuid-string",  // Unique identifier
+      "name": "string",  // User-defined mapping name
+      "description": "string",  // Optional description
+      "sourceSystem": "string",  // Source system identifier
+      "destinationSystem": "string",  // Destination system identifier
+      "fieldMappings": [
+        {
+          "id": "uuid-string",  // Unique field mapping ID
+          "sourceField": {
+            "name": "string",
+            "type": "string|number|date|boolean|array|object",
+            "path": "string"  // JSON path for nested fields
+          },
+          "destField": {
+            "name": "string",
+            "type": "string|number|date|boolean|array|object",
+            "path": "string",
+            "required": boolean
+          },
+          "relationshipType": "1-to-1|1-to-many|many-to-1",
+          "transformations": [
+            {
+              "id": "uuid-string",
+              "type": "uppercase|lowercase|trim|concat|split|dateFormat|lookup|conditional|javascript|default",
+              "order": number,  // Execution order in pipeline
+              "config": {
+                // Transformation-specific configuration
+                // For concat: { fields: ["field1", "field2"], separator: " " }
+                // For dateFormat: { inputFormat: "YYYY-MM-DD", outputFormat: "MM/DD/YYYY" }
+                // For lookup: { table: [{from: "value1", to: "value2"}], defaultValue: "unknown" }
+                // For conditional: { conditions: [{if: "expression", then: "value", else: "other"}] }
+                // For javascript: { expression: "return value.toUpperCase()" }
+                // For default: { value: "default value" }
+              }
+            }
+          ]
+        }
+      ],
+      "schedule": {
+        "frequency": "manual|realtime|interval",  // Sync frequency
+        "interval": number,  // Minutes between syncs (if frequency=interval)
+        "time": "string"  // HH:MM format (

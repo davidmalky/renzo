@@ -1,0 +1,232 @@
+{
+  "task": {
+    "id": "renzo-p2-003",
+    "title": "Add batch outreach and trainable instructions to Renzo",
+    "description": "ADD two features to existing Renzo. Surgical edits only:\n\n1. BATCH OUTREACH NAV: Add 'Batch Outreach' button to sidebar nav (data-view='batch'). Add a batch view div (id='view-batch') with: a textarea for natural language prompt, a Generate Batch button, a progress indicator div, results list. Add JS function executeBatchOutreach(query): filters contacts by keywords in query (contract/expiry->contractExpiry field, invoice->invoiceAmount, contacted->lastContactDate), generates AI message for each match using existing generateAiMessage(), adds to queue, shows progress.\n\n2. TRAINABLE RULES in Settings: Add a 'My Outreach Rules' section to the existing settings view with: textarea for new rule, Add Rule button, list of rules with delete buttons. Store rules in localStorage key 'renzo_rules'. Modify AI prompt generation to append rules: 'Additional instructions: [rule1]. [rule2].' Add JS functions: addOutreachRule(), deleteOutreachRule(), loadRules(), renderRules().",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach tool. Surgical edits only \u00e2\u20ac\u201d add batch outreach and trainable rules without touching existing features."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 8936
+      },
+      "t": 50.9
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 117.9
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 165.1
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 1
+      },
+      "t": 200.0
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 248.4
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 1
+      },
+      "t": 300.5
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 350.1
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 32352
+      },
+      "t": 388.7
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Duplicate function definitions: handleCSVFile, parseCSV, and showCSVPreview are each defined twice with incompatible implementations. The second definitions will silently overwrite the first, breaking CSV import functionality.",
+          "Truncated/incomplete code: CSS rules are incomplete (missing closing braces), code ends mid-function ('event.target.fi', 'renderRules' cuts off at '<div s'), and createCSVPreviewModal HTML string is incomplete. This will cause syntax errors and broken features.",
+          "CSV parsing will fail on real-world data: Using simple split(',') breaks on quoted fields with commas (e.g., 'Company, Inc.' will split incorrectly). Missing null/undefined checks will cause runtime errors."
+        ],
+        "feedback": "CRITICAL FIXES REQUIRED:\n\n1. **Remove duplicate functions** - You have handleCSVFile(), parseCSV(), and showCSVPreview() defined twice each. Delete the first definitions and keep only the second (more complete) versions.\n\n2. **Complete the truncated code** - The file ends abruptly mid-function. Finish the renderRules() function, complete the createCSVPreviewModal() HTML string with proper closing tags, and fix the incomplete CSS rules (add missing closing braces for '.batch-matches-preview h' and complete the media query).\n\n3. **Fix CSV parsing** - Replace the naive split(',') with proper CSV parsing that handles quoted fields: `line.match(/(?:^|,)(\"(?:[^\"]|\"\")*\"|[^,]*)/g).map(field => field.replace(/^,/, '').replace(/^\"|\"$/g, '').replace(/\"\"/g, '\"'))`\n\n4. **Add null checks** - In parseCSV(), check if text is null/undefined before processing.\n\n5. **Define missing functions** - Add detectField() and generateAiMessage() functions that are called but never defined.\n\nThe app cannot function with duplicate function definitions overwriting each other and truncated code causing syntax errors."
+      },
+      "t": 434.1
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 31299
+      },
+      "t": 473.3
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Code is severely truncated in multiple places causing JS syntax errors: handleCSVFile defined twice (incomplete at end), createCSVPreviewModal innerHTML truncated mid-string, deleteOutreachRule onclick truncated at 'onclick=\"d', CSS rules incomplete",
+          "generateAiMessage(contact) is called in executeBatchOutreach() but never defined anywhere - will throw ReferenceError and break batch outreach feature completely",
+          "detectField() function called in second showCSVPreview() but never defined - will cause JS error during CSV column mapping"
+        ],
+        "feedback": "CRITICAL: The code file is incomplete/truncated. Fix these blocking issues: 1) Define the missing generateAiMessage(contact) function that's required for batch outreach to work, 2) Define the missing detectField() function for CSV mapping, 3) Complete the truncated functions - deleteOutreachRule needs full onclick handler, createCSVPreviewModal needs complete innerHTML with closing tags, handleCSVFile second definition is cut off at 'event.target.fi'. 4) Remove duplicate function definitions (handleCSVFile, parseCSV, showCSVPreview appear twice). The truncation suggests the file was cut off during copy/paste - retrieve the complete file and ensure all functions are fully defined."
+      },
+      "t": 514.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 32475
+      },
+      "t": 553.2
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS truncated mid-rule - ends at '.batch-matches-preview h' without closing brace or </style> tag, will cause parsing errors",
+          "Duplicate function definitions (handleCSVFile, parseCSV, showCSVPreview) - second definitions override first, with showCSVPreview truncated mid-implementation causing broken CSV import",
+          "HTML structure broken - </body></html> appears before script section, and createCSVPreviewModal truncated at '</div' missing closing tags, breaking modal functionality"
+        ],
+        "feedback": "File is severely truncated causing multiple breaking issues: 1) Complete the CSS - add closing brace for '.batch-matches-preview h3' rule and </style> tag. 2) Remove duplicate function definitions - keep only one version of handleCSVFile, parseCSV, and showCSVPreview. 3) Fix HTML structure - move </body></html> to end of file after all scripts. 4) Complete createCSVPreviewModal function - finish the truncated HTML template with proper closing tags. 5) Complete batchResults.innerHTML assignment - finish the HTML template string. 6) Add missing detectField() function referenced in showCSVPreview line 177. The file appears to be a partial/corrupted upload - re-export the complete HTML file."
+      },
+      "t": 599.5
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 25715
+      },
+      "t": 674.0
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CRITICAL: Multiple duplicate function definitions (handleCSVFile, parseCSV, showCSVPreview) where second definitions override first, breaking CSV import functionality",
+          "CRITICAL: Truncated/incomplete code - second handleCSVFile cuts off mid-statement, CSS media query incomplete, HTML structure malformed with closing tags before script closes",
+          "CRITICAL: XSS vulnerability in confirmCSVImport using innerHTML with unsanitized CSV user data, plus inline JSON.stringify in onclick will break with quotes in data"
+        ],
+        "feedback": "The file has severe structural problems preventing it from working: (1) Remove ALL duplicate function definitions - you have handleCSVFile, parseCSV, and showCSVPreview defined 2x each, causing the CSV import to fail. Keep only ONE version of each. (2) Fix truncated code at end of file - the second handleCSVFile is cut off mid-line ('event.target.fi'), CSS media query ends incomplete ('max'), and HTML structure is broken (</body></html> appears before </script>). Ensure proper closing tags. (3) Fix XSS in confirmCSVImport: use textContent instead of innerHTML for CSV data display, and don't use inline JSON.stringify in onclick - create proper event listener instead. (4) Verify all referenced functions exist (detectField, renderView, saveState) and state object is initialized. The app cannot function with duplicate functions overriding each other and truncated code."
+      },
+      "t": 715.8
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Sidebar navigation 'Batch Outreach' button with data-view='batch'",
+          "view-batch div with all required elements (batchPromptInput, generateBatchBtn, batchProgress, batchResults)",
+          "view-settings enhancement with 'My Outreach Rules' section (newRuleInput, addRuleBtn, rulesList)",
+          "executeBatchOutreach(query) function with NLP parsing and contact filtering logic",
+          "generateAIMessage(contact, query, rules) function with OpenAI API integration",
+          "loadTrainableRules() function to retrieve rules from localStorage",
+          "saveTrainableRules(rules) function to persist rules",
+          "addTrainableRule(ruleText) function with validation",
+          "deleteTrainableRule(index) function",
+          "renderRulesList() function for DOM updates",
+          "Event listeners for batch outreach workflow",
+          "Event listeners for trainable rules management",
+          "Integration of trainable rules into existing AI message generation",
+          "localStorage keys 'renzo_trainable_rules' and 'renzo_outreach_queue'",
+          "Progress tracking UI updates during batch processing",
+          "Error handling for API failures and invalid queries",
+          "All HTML structure for new views and UI components"
+        ],
+        "note": "The provided code only contains CSS styling definitions. No HTML structure, JavaScript functions, or feature implementations from the specification are present in the code sample. The code appears to be only the stylesheet portion of the application, showing classes for contact cards, modals, alerts, and outreach queue items (which suggests UI preparation), but none of the actual functional requirements including the batch outreach system, trainable rules system, API integration, or event handling logic have been implemented."
+      },
+      "t": 727.0
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 32298
+      },
+      "t": 762.5
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Modal display property conflict: `.modal` has `display: none` but `.modal.active` sets `display: flex`. This will cause opacity transition to not work properly since display changes can't be transitioned. Use `visibility: hidden` instead or remove opacity transition.",
+          "Mobile insights-grid declaration is incomplete: `grid-` line is cut off at line 768, causing CSS to break on mobile devices.",
+          "Search input background SVG is not URL-encoded properly: Single quotes in stroke color `%234b5563` may break in some browsers. Should be properly escaped.",
+          "Modal accessibility critical issues: No focus trap, no keyboard navigation support (ESC key), no aria-labels or role attributes for screen readers.",
+          "Color contrast likely fails WCAG AA: `.contact-card-subtitle` and `.contact-card-meta` use `--text-secondary` which needs verification against white background for 4.5:1 ratio.",
+          "Interactive cards without keyboard support: `.contact-card` has `cursor: pointer` but no visual focus state or keyboard handler indication.",
+          "Loading spinner lacks accessibility: No aria-live region or screen reader text to announce loading state.",
+          "Duplicate function definitions: handleCSVFile and parseCSV are defined twice, causing conflicts"
+        ]
+      },
+      "t": 816.4
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 39581
+      },
+      "t": 861.5
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete CSS rule at line 768 - `.header-actions` width property cuts off mid-declaration (likely missing 'flex-start' or similar)",
+          "Modal uses `visibility` + `opacity` but should handle focus trapping for keyboard navigation - no indication of aria-modal or role attributes being styled",
+          "Interactive elements (.contact-card) use only hover states without focus-visible states - keyboard users cannot see focus",
+          "Color contrast may fail WCAG AA: --text-secondary on white backgrounds, --gold on --gold-light, alert text colors need verification",
+          "Search input background SVG uses hardcoded color (#4b5563) that won't respect high contrast modes or theme changes",
+          "Loading spinner animation has no prefers-reduced-motion alternative - accessibility violation",
+          "Modal animation has no prefers-reduced-motion query - could trigger vestibular issues",
+          "CSV parsing doesn't handle quoted commas properly - will break on 'Company, Inc' or names with commas"
+        ]
+      },
+      "t": 917.0
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 932.5
+    }
+  ],
+  "cost": 1.065732
+}

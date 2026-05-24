@@ -1,0 +1,202 @@
+# RESEARCH REPORT: Full Mobile Responsive Layout Rework
+
+## EXISTING_FEATURES:
+
+### Layout & Structure
+- Desktop sidebar navigation (`.sidebar`) with fixed width 230px
+- Logo section (`.sidebar-logo`) with Renzo branding
+- Navigation items (`.nav-item`) with active states, icons, and badges
+- Sidebar footer (`.sidebar-footer`) with user info and logout
+- Main content area (`.main`) with flexible layout
+- View container (`.view`) with padding 32px 36px
+- View header (`.view-header`) with title and actions
+
+### Components
+- **Stats Grid**: `.stats-grid` with auto-fit columns, minmax(150px, 1fr)
+- **Stat Cards**: `.stat-card` with hover effects
+- **Table System**: `.table-wrap`, `table`, `th`, `td` with styling
+- **Cards**: `.card` component with border-radius and shadow
+- **Buttons**: Multiple button variants (`.btn-primary`, `.btn-ghost`, `.btn-danger`, `.btn-sm`, `.btn-xs`)
+- **Form Fields**: `.field`, `.form-row` (2-column grid), input/select/textarea styling
+- **Modals**: Appears to exist based on task mentioning `.modal-overlay` and `.modal-box`
+- **Login View**: `#loginView` with centered card layout
+
+### Navigation Items (from code)
+- Navigation structure exists with `.nav-item`, `.nav-icon`, `.nav-badge`
+- Active state styling with left border and background
+- Badge system for notifications (`.nav-badge`)
+
+### Data & Rendering
+- `renderContacts()` function mentioned in task (must exist)
+- Table row rendering system
+- Clickable row functionality (`tbody tr.clickable`)
+- Empty state handling (`.empty-state`)
+
+### Styling System
+- CSS custom properties (variables) for colors, shadows, radius
+- Color palette: bg, white, dark, green variants, amber, red, gray variants
+- Sidebar color scheme (--sidebar, --sidebar-text, --sidebar-active)
+- Shadow system (--shadow, --shadow-lg, --shadow-card)
+- Border radius system (--radius, --radius-sm, --radius-xs)
+- Transitions on interactive elements
+
+## MISSING_FEATURES:
+
+1. **Mobile Media Query**: No @media (max-width: 768px) exists in current CSS
+2. **Mobile Header**: No `#mobileHeader` element or styling
+3. **Bottom Navigation Bar**: Mobile bottom nav transformation not implemented
+4. **Emoji Icons**: No emoji icons (🏠, 👥, 📤, 📝, ⚡, 🔗, 📊, ⚙) in navigation markup
+5. **Mobile Card Layout for Contacts**: No card-based rendering alternative in `renderContacts()`
+6. **Window Width Detection**: No `window.innerWidth <= 768` check in JavaScript
+7. **Mobile Contact Cards**: Card component specifically for mobile contact display
+8. **Mobile Modal Styling**: Bottom sheet style modals (.modal-overlay align-items: flex-end)
+9. **Mobile-specific Padding**: padding-top: 52px, padding-bottom: 64px on .main
+10. **2-Column Stats Grid**: Mobile-specific stats grid override
+11. **Touch Target Optimization**: 44px minimum height enforcement
+12. **Fixed Positioning**: z-index: 500 for header/nav, position: fixed for mobile elements
+
+## CHANGES_NEEDED:
+
+### CSS Modifications
+1. **#appView**: Add `flex-direction: column` at mobile breakpoint
+2. **.sidebar**: Transform to fixed bottom nav (position: fixed, bottom: 0, height: 56px, flex-direction: row, z-index: 500)
+3. **nav**: Change to `flex-direction: row` on mobile
+4. **.nav-item**: Complete restructure (flex: 1, flex-direction: column, align-items: center, font-size: 10px, border changes)
+5. **.nav-item.active**: Border change from left to top (border-top: 3px solid)
+6. **.sidebar-logo, .sidebar-footer**: Hide on mobile with `display: none`
+7. **.main**: Add mobile padding (padding-top: 52px, padding-bottom: 64px)
+8. **.view**: Reduce padding to 16px on mobile
+9. **.stats-grid**: Override to 2 columns (grid-template-columns: repeat(2, 1fr))
+10. **.modal-overlay**: Change align-items to flex-end
+11. **.modal-box**: Bottom sheet style (border-radius: 20px 20px 0 0, max-height: 90vh, margin: 0, width: 100%)
+12. **.table-wrap**: Hide on mobile for contacts view
+
+### HTML/DOM Modifications
+1. **Create mobileHeader**: New div element with logo, user text, logout icon
+2. **Add Emoji Icons**: Insert emoji characters before nav item text in markup
+3. **Navigation Structure**: Ensure proper icon + label vertical layout per nav item
+
+### JavaScript Modifications
+1. **renderContacts()**: Add conditional rendering logic
+   - Check `window.innerWidth <= 768`
+   - Branch to card layout renderer vs table renderer
+2. **Mobile Contact Card Renderer**: New function to create card-based layout
+   - Each card: name, priority badge, company, tier badge, status badge, message button
+   - Styling: white background, border-radius 12px, padding 16px, margin-bottom 10px
+3. **Resize Listener**: May need to re-render on window resize to switch between layouts
+4. **Mobile Header Population**: Inject user info into mobile header dynamically
+
+## REUSE:
+
+### CSS Variables & Patterns to Preserve
+- All CSS custom properties (`:root` variables)
+- Color system (--green, --amber, --red, --gray variants)
+- Shadow system (--shadow, --shadow-lg, --shadow-card)
+- Border radius system (--radius, --radius-sm, --radius-xs)
+- Transition timing (.12s, .13s, .15s patterns)
+
+### Component Styles to Reuse
+- `.btn` system entirely (btn-primary, btn-ghost, btn-danger, btn-sm, btn-xs)
+- `.card` base styling for mobile contact cards
+- `.nav-badge` styling for badges in mobile nav
+- `.stat-card` structure (adapt for 2-column grid)
+- Badge/tag patterns for priority, tier, status displays
+- `.field` styling if forms appear in modals
+
+### Existing JavaScript Patterns
+- Table row click handling pattern (`tbody tr.clickable`)
+- Badge creation/styling logic
+- Status indicator logic
+- Empty state handling pattern
+- Modal trigger mechanisms
+
+### Design Tokens to Maintain
+- Font family: 'DM Sans' and 'DM Serif Display'
+- Font sizes: 10-14px for UI, larger for headings
+- Font weights: 400, 500, 600, 700
+- Letter spacing patterns
+- Line height: 1.5 base
+
+## RISKS:
+
+### Technical Conflicts
+1. **Fixed Positioning Overlap**: Mobile header (top: 0) + bottom nav (bottom: 0) + main content scrolling could cause z-index conflicts
+2. **Content Visibility**: .main padding-top/bottom must account for exact header/nav heights (52px + 64px = 116px total lost viewport)
+3. **Navigation State Management**: Active nav item border change (left→top) requires ensuring JavaScript doesn't break when applying `.active` class
+4. **Table to Card Switch**: If `renderContacts()` is called frequently, performance could degrade on resize events
+5. **Modal Z-Index**: Modals must appear above bottom nav (z-index > 500)
+
+### Layout Issues
+1. **Viewport Height on Mobile**: 100vh issues on iOS Safari (address bar causes reflow)
+2. **Bottom Nav Safe Area**: Need to account for iOS home indicator (safe-area-inset-bottom)
+3. **Scrolling**: Ensure .main scrolls properly with fixed header/footer
+4. **Touch Targets**: All interactive elements need 44px+ hit area verification
+5. **Horizontal Overflow**: Bottom nav with 8 items at flex:1 might cause text truncation
+
+### Data & Rendering Risks
+1. **Contacts Rendering Logic**: Must preserve existing filter/sort/pagination if present
+2. **Card Data Mapping**: Need exact field names (name, priority, company, tier, status) from data structure
+3. **Button Actions**: Message button in cards must hook into existing message/draft system
+4. **State Persistence**: Active view must persist across layout changes
+5. **Real-time Updates**: If contacts update live, card rendering must handle updates
+
+### Responsive Breakpoint Issues
+1. **768px Breakpoint**: Common tablet width - may need to test iPad portrait/landscape
+2. **Orientation Changes**: Need to handle landscape mobile (short height)
+3. **Font Scaling**: 10px font in bottom nav may be too small on some devices
+4. **Icon Size**: Need to verify emoji rendering across platforms (iOS vs Android)
+
+## DATA_STRUCTURES:
+
+### Expected from Existing Code (Not Visible in Provided CSS)
+Based on task requirements and component patterns, these likely exist:
+
+1. **Contacts Data Format**:
+```javascript
+{
+  id: number/string,
+  name: string,
+  company: string,
+  priority: string/number, // for badge rendering
+  tier: string, // for tier badge
+  status: string, // for status badge
+  // other fields...
+}
+```
+
+2. **User Session**:
+```javascript
+{
+  username: string, // for sidebar-user display
+  email: string // possible
+}
+```
+
+3. **Navigation State**:
+- Active view identifier (string: 'dashboard', 'contacts', 'queue', etc.)
+- Badge counts for Queue (`.nav-badge` visible in CSS)
+
+4. **LocalStorage Keys** (Speculative - not found in CSS):
+- May include: `renzo_session`, `renzo_user`, `renzo_contacts`, `renzo_drafts`, `renzo_settings`
+- Need to verify in full application code
+
+### DOM Selectors Referenced
+- `#loginView`, `#appView` - main view containers
+- `.sidebar`, `.sidebar-logo`, `.sidebar-footer`, `.sidebar-user`, `.sidebar-logout`
+- `.main`, `.view`, `.view-header`, `.view-title`, `.view-actions`
+- `.nav-item`, `.nav-icon`, `.nav-badge`
+- `.stats-grid`, `.stat-card`, `.stat-label`, `.stat-value`
+- `.table-wrap`, `table`, `tbody tr.clickable`
+- `.modal-overlay`, `.modal-box` (from task description)
+- `.toolbar`, `.search-input` (truncated in provided code)
+
+### Functions to Locate
+- `renderContacts()` - PRIMARY TARGET for modification
+- Modal open/close functions
+- Navigation view switching function
+- Logout handler
+- Badge update functions
+
+---
+
+**RECOMMENDATION**: Request the full JavaScript code to identify exact data structures, localStorage keys, and the complete `renderContacts()` implementation before proceeding with mobile card layout.

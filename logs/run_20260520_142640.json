@@ -1,0 +1,214 @@
+{
+  "task": {
+    "id": "renzo-p2-001",
+    "title": "Add smart priority scoring to Renzo contacts",
+    "description": "Enhance the existing Renzo single-file HTML/JS app by adding smart priority scoring to contacts. Keep ALL existing functionality working exactly as-is. ADD ONLY these changes:\n\n1. Add 3 new fields to the contact form: contractExpiry (date input, label 'Contract Expiry'), invoiceAmount (number input, label 'Outstanding Invoice $'), lastContactDate (date input, label 'Last Contact Date')\n\n2. Add computePriorityScore(contact) function that returns 0-100:\n- Days since lastContactDate: score += min(daysSince/90, 1) * 40\n- Contract expiry urgency: if expiry within 90 days, score += (1 - daysUntil/90) * 30; if expired, score += 30\n- Invoice amount: score += min(invoiceAmount/10000, 1) * 30\n- Return Math.round(score)\n\n3. Add computeOutreachTrigger(contact) function that returns the most urgent reason as a string:\n- Check contract expiry first: 'Contract expires in X days' or 'Contract expired X days ago'\n- Then invoice: 'Invoice $X,XXX outstanding'\n- Then last contact: 'Not contacted in X days'\n- Return the most urgent one\n\n4. Show priority score badge on each contact row in the contacts table (colored: 80+ red, 50-79 amber, below 50 green)\n\n5. Sort contacts table by priority score descending by default\n\n6. In the AI message generation, include the trigger reason in the prompt and display it in the 'Why this message' info box\n\nThe existing app has: login (admin/renzo2024), contacts CRUD with localStorage, AI message generation calling Anthropic API, outreach queue, drafts, settings. Preserve all of this exactly. Only add the above.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Renzo is a frontend-only AI outreach tool. Single HTML file. localStorage. No backend. Add smart priority scoring to contacts so reps know who to reach out to first."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 6373
+      },
+      "t": 37.5
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 91.8
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 141.1
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 1
+      },
+      "t": 200.6
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 247.3
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 1
+      },
+      "t": 301.6
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 351.7
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 9932
+      },
+      "t": 393.0
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "HTML is severely truncated - stats-grid div opened but never closed, body/html tags missing, making the page completely broken and non-functional",
+          "CSS is incomplete with truncated rule at line 462 (.trigger-box h4), which will cause styling errors and broken visual presentation",
+          "No JavaScript code present in chunk despite priority scoring requiring logic - cannot function without the scoring algorithm, event handlers, and data processing code"
+        ],
+        "feedback": "The file is critically incomplete and will not render or function. You must provide the COMPLETE file including: 1) Closing tags for all opened HTML elements (stats-grid div, body, html), 2) Complete CSS rules without truncation (finish the .trigger-box h4 rule and any others cut off), 3) The entire JavaScript implementation for priority scoring logic including calculation functions, UI updates, and event handlers. This appears to be only ~40% of the actual file. Please regenerate with the full complete code or clearly provide chunk 2/2 if this is a multi-part delivery."
+      },
+      "t": 411.8
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 10107
+      },
+      "t": 454.3
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "JavaScript is completely missing - no priority scoring logic, contact management, search, or any interactive functionality implemented",
+          "HTML is truncated mid-structure - modal form incomplete (cuts off after 'Add Contact' heading), missing form fields, close buttons, and closing tags",
+          "CSS is cut off at line 486 - media query incomplete with 'flex-direction: col' instead of 'column', breaking mobile layout"
+        ],
+        "feedback": "Critical failure: The file is severely truncated with missing code sections. (1) Complete the CSS media query: change 'flex-direction: col' to 'column' on line 486 and close the media query block. (2) Complete the HTML modal structure with all form inputs (name, email, phone, company, last contact date, notes), close button, and proper closing tags. (3) Most importantly, add the ENTIRE JavaScript implementation including: priority scoring functions (calculatePriorityScore based on last contact days, interaction frequency), contact CRUD operations, search/filter logic, modal open/close handlers, stats calculation, localStorage persistence, and contact list rendering with priority badges. The core feature (smart priority scoring) is completely absent - you need scoring algorithm, display badges, and sort contacts by priority."
+      },
+      "t": 476.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 10358
+      },
+      "t": 518.2
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "HTML file is severely truncated mid-attribute (ends with 'id=\"ad' in button element) - file is incomplete and will not render or function",
+          "All JavaScript implementation is missing including the core smart priority scoring feature that was requested in the task",
+          "Critical closing tags missing (</form>, </div>, </body>, </html>) making the HTML structurally broken and unparseable by browsers"
+        ],
+        "feedback": "The file appears to be cut off during generation or copying. You must provide the COMPLETE HTML file including: 1) All closing tags for opened elements (form, divs, body, html), 2) The entire <script> section with JavaScript that implements smart priority scoring logic, contact list rendering, CRUD operations, and event handlers, 3) Complete attribute values (the button ends mid-attribute 'id=\"ad'). Without these, the app is completely non-functional. Please regenerate the full file from start to finish without truncation."
+      },
+      "t": 536.5
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 10083
+      },
+      "t": 579.9
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 1,
+        "issues": [
+          "CSS is truncated mid-declaration - missing closing brace for .toast class and all remaining styles, breaking entire layout",
+          "HTML structure is incomplete - modal has opening div but no form fields, buttons, or closing tags",
+          "Zero JavaScript implementation - no priority scoring algorithm, no contact CRUD operations, no event handlers for add/search/export buttons"
+        ],
+        "feedback": "Critical failures preventing any functionality: 1) Complete the CSS by closing .toast class and adding all remaining style rules. 2) Finish the modal HTML with proper form fields (name, email, phone, company, priority inputs) and action buttons. 3) Implement ALL JavaScript: contact storage (localStorage), priority scoring algorithm (calculate score based on contact attributes), render contacts function, event handlers for add/edit/delete/search/export, and modal open/close logic. The 'smart priority scoring' feature requires an actual scoring algorithm (e.g., weighted factors like recent interaction, relationship strength) - this is completely missing. Without these fixes, the app is non-functional."
+      },
+      "t": 599.9
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "computePriorityScore function implementation",
+          "Priority score computation in saveContact function",
+          "Default sort by priority score descending in renderContacts",
+          "Priority score badge display in contact row HTML",
+          "Three new form fields (contractExpiry, invoiceAmount, lastContactDate) in contact form modal",
+          "Computed outreach trigger display in AI message generation modal",
+          "getOutreachTrigger function to compute trigger text based on priority factors",
+          "Priority score persistence in localStorage",
+          "Score recalculation on contact list render"
+        ],
+        "note": "The code shows CSS styling for priority score badges (.priority-score-badge, .priority-score-high/medium/low classes) which indicates awareness of the feature, but the actual implementation is missing. No JavaScript functions for computing priority scores, no form fields for the three new data inputs, no logic to sort by priority, and no trigger text generation for AI modals. The code only includes the visual styling foundation but lacks all functional requirements."
+      },
+      "t": 606.6
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 9777
+      },
+      "t": 648.1
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 3,
+        "blocking_issues": [
+          "HTML structure is incomplete - closing </style> tag missing, <body> content missing entirely, prematurely ends with incomplete CSS rule at line 598",
+          "No form validation implementation - .form-error styling exists but no JavaScript validation logic provided",
+          "Missing ARIA labels on interactive elements (buttons, form inputs) - only basic focus styles present but no aria-label, aria-describedby for screen readers",
+          "Search functionality has visual elements but no accessible label or aria-label on .search-input",
+          "Modal lacks proper ARIA attributes (role='dialog', aria-modal='true', aria-labelledby) and focus trap implementation",
+          "Priority badges use color alone to convey meaning - no text alternatives or patterns for colorblind users",
+          "No keyboard navigation implementation for modal close (ESC key) or contact list interactions"
+        ]
+      },
+      "t": 662.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 9836
+      },
+      "t": 704.7
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": true,
+        "ux_score": 10,
+        "blocking_issues": []
+      },
+      "t": 722.4
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 723.9
+    }
+  ],
+  "cost": 0.8457839999999998
+}

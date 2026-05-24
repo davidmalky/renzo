@@ -1,0 +1,1447 @@
+--priority-high));
+}
+
+.priority-score-medium {
+  background: linear-gradient(135deg, var(--priority-medium), var(--gold));
+}
+
+.priority-score-low {
+  background: linear-gradient(135deg, var(--priority-low), #10b981);
+}
+
+.contact-list {
+  display: grid;
+  gap: 16px;
+}
+
+.contact-card {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.contact-card:hover {
+  border-color: var(--forest-green);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.contact-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.contact-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--forest-green);
+  margin-bottom: 4px;
+}
+
+.contact-card-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.contact-card-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.contact-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal {
+  display: flex;
+  visibility: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.modal.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 2px solid var(--cream);
+}
+
+.modal-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--forest-green);
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--cream);
+  color: var(--forest-green);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 24px;
+  border-top: 2px solid var(--cream);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-secondary);
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-state-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state-text {
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.alert {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.alert-error {
+  background: var(--error-light);
+  color: var(--error);
+  border-left: 4px solid var(--error);
+}
+
+.alert-success {
+  background: var(--success-light);
+  color: var(--success);
+  border-left: 4px solid var(--success);
+}
+
+.alert-warning {
+  background: var(--warning-light);
+  color: var(--warning);
+  border-left: 4px solid var(--warning);
+}
+
+.alert-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.outreach-queue-item {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.outreach-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.outreach-queue-contact {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--forest-green);
+  margin-bottom: 4px;
+}
+
+.outreach-queue-date {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.outreach-queue-message {
+  background: var(--cream);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.outreach-queue-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.status-sent {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.status-failed {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.insight-card {
+  background: linear-gradient(135deg, var(--forest-green), var(--forest-green-hover));
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.insight-card-value {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.insight-card-label {
+  font-size: 14px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.insight-card-secondary {
+  background: white;
+  color: var(--forest-green);
+  border: 2px solid var(--forest-green);
+}
+
+.insights-recommendations {
+  background: var(--gold-light);
+  border-left: 4px solid var(--gold);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.insights-recommendations h3 {
+  color: var(--forest-green);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.insights-recommendations ul {
+  list-style: none;
+  padding: 0;
+}
+
+.insights-recommendations li {
+  padding: 8px 0;
+  padding-left: 24px;
+  position: relative;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.insights-recommendations li:before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.search-bar {
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  padding-left: 44px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%234b5563" stroke-width="2"%3E%3Ccircle cx="11" cy="11" r="8"/%3E%3Cpath d="m21 21-4.35-4.35"/%3E%3C/svg%3E');
+  background-repeat: no-repeat;
+  background-position: 14px center;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--forest-green);
+  outline: none;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select:focus {
+  border-color: var(--forest-green);
+  outline: none;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--cream-dark);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--forest-green);
+  transition: width 0.3s ease;
+}
+
+.api-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.api-status-connected {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.api-status-disconnected {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.api-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.batch-matches-preview {
+  background: var(--forest-green-light);
+  border: 2px solid var(--forest-green);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.batch-matches-preview h3 {
+  color: var(--forest-green);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.batch-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.batch-match-item {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-match-name {
+  font-weight: 600;
+  color: var(--forest-green);
+}
+
+.batch-match-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.progress-indicator {
+  background: var(--gold-light);
+  border-left: 4px solid var(--gold);
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.results-summary {
+  background: var(--success-light);
+  border-left: 4px solid var(--success);
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.rules-list {
+  list-style: none;
+  padding: 0;
+}
+
+.rule-item {
+  background: var(--cream);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.rule-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.rule-delete-btn {
+  background: none;
+  border: none;
+  color: var(--error);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rule-delete-btn:hover {
+  background: var(--error-light);
+}
+
+.rules-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-card-actions {
+    flex-direction: column;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    margin: 0;
+    max
+</body>
+</html>
+<script>
+
+function handleCSVFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    if (rows && rows.length > 0) {
+      showCSVPreview(rows);
+    } else {
+      showToast('No valid data found in CSV', 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    rows.push(row);
+  }
+  
+  return rows;
+}
+
+function showCSVPreview(rows) {
+  const headers = Object.keys(rows[0]);
+  const previewRows = rows.slice(0, 5);
+  
+  let html = `
+    <div class="modal active" id="csvPreviewModal">
+      <div class="modal-content csv-preview-modal">
+        <div class="modal-header">
+          <h2>Preview CSV Import</h2>
+          <button class="modal-close" onclick="closeCSVPreview()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 16px; color: var(--text-secondary);">Found ${rows.length} rows. Preview of first ${previewRows.length}:</p>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Map Columns:</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+              ${headers.map(header => `
+                <div>
+                  <label style="font-size: 12px; color: var(--text-secondary);">${header}</label>
+                  <select class="filter-select" style="width: 100%;" data-csv-header="${header}">
+                    <option value="">Skip</option>
+                    <option value="name" ${header.includes('name') ? 'selected' : ''}>Name</option>
+                    <option value="company" ${header.includes('company') || header.includes('organization') ? 'selected' : ''}>Company</option>
+                    <option value="email" ${header.includes('email') || header.includes('mail') ? 'selected' : ''}>Email</option>
+                    <option value="phone" ${header.includes('phone') || header.includes('tel') ? 'selected' : ''}>Phone</option>
+                  </select>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <table class="csv-preview-table">
+            <thead>
+              <tr>
+                ${headers.map(h => `<th>${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${previewRows.map(row => `
+                <tr>
+                  ${headers.map(h => `<td>${row[h]}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeCSVPreview()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmCSVImport(${JSON.stringify(rows).replace(/"/g, '&quot;')})">Import ${rows.length} Contacts</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeCSVPreview() {
+  const modal = document.getElementById('csvPreviewModal');
+  if (modal) modal.remove();
+}
+
+function confirmCSVImport(rows) {
+  const mappingSelects = document.querySelectorAll('[data-csv-header]');
+  const mapping = {};
+  mappingSelects.forEach(select => {
+    const csvHeader = select.getAttribute('data-csv-header');
+    const fieldName = select.value;
+    if (fieldName) {
+      mapping[csvHeader] = fieldName;
+    }
+  });
+  
+  let imported = 0;
+  let skipped = 0;
+  
+  rows.forEach(row => {
+    const contact = {
+      id: Date.now() + Math.random(),
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      lastContact: null,
+      priority: 'medium'
+    };
+    
+    Object.keys(mapping).forEach(csvHeader => {
+      const fieldName = mapping[csvHeader];
+      contact[fieldName] = row[csvHeader] || '';
+    });
+    
+    if (!contact.name && !contact.company) {
+      skipped++;
+      return;
+    }
+    
+    if (!state.contacts) state.contacts = [];
+    state.contacts.push(contact);
+    imported++;
+  });
+  
+  saveState();
+  closeCSVPreview();
+  renderView();
+  showToast(`Imported ${imported} contacts${skipped > 0 ? `, skipped ${skipped}` : ''}`, 'success');
+}
+
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type}`;
+  toast.style.position = 'fixed';
+  toast.style.top = '20px';
+  toast.style.right = '20px';
+  toast.style.zIndex = '10000';
+  toast.style.minWidth = '300px';
+  toast.innerHTML = `
+    <span class="alert-icon">${type === 'success' ? '✓' : '⚠'}</span>
+    <div class="alert-content">${message}</div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+
+function handleCSVFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    if (rows.length > 0) {
+      showCSVPreview(rows);
+    } else {
+      showToast('No valid data found in CSV', 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    rows.push(row);
+  }
+  
+  return rows;
+}
+
+function showCSVPreview(rows) {
+  const headers = Object.keys(rows[0]);
+  const previewRows = rows.slice(0, 5);
+  
+  const fieldOptions = ['name', 'company', 'email', 'phone', 'ignore'];
+  const detectMapping = {};
+  
+  headers.forEach(header => {
+    const lower = header.toLowerCase();
+    if (lower.includes('name')) detectMapping[header] = 'name';
+    else if (lower.includes('company')) detectMapping[header] = 'company';
+    else if (lower.includes('email') || lower.includes('mail')) detectMapping[header] = 'email';
+    else if (lower.includes('phone') || lower.includes('tel')) detectMapping[header] = 'phone';
+    else detectMapping[header] = 'ignore';
+  });
+  
+  let html = `
+    <div class="modal active" id="csvPreviewModal">
+      <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+          <h2>CSV Import Preview</h2>
+          <button class="modal-close" onclick="closeCSVPreview()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 16px; color: var(--text-secondary);">Showing first ${previewRows.length} of ${rows.length} rows. Map columns to fields:</p>
+          <div style="overflow-x: auto;">
+            <table class="csv-preview-table">
+              <thead>
+                <tr>
+                  ${headers.map(h => `<th>${h}</th>`).join('')}
+                </tr>
+                <tr>
+                  ${headers.map(h => `
+                    <th>
+                      <select class="csv-mapping-select" data-header="${h}">
+                        ${fieldOptions.map(opt => 
+                          `<option value="${opt}" ${detectMapping[h] === opt ? 'selected' : ''}>${opt}</option>`
+                        ).join('')}
+                      </select>
+                    </th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRows.map(row => `
+                  <tr>
+                    ${headers.map(h => `<td>${row[h]}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeCSVPreview()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmCSVImport(${JSON.stringify(rows).replace(/"/g, '&quot;')})">Import ${rows.length} Contacts</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeCSVPreview() {
+  const modal = document.getElementById('csvPreviewModal');
+  if (modal) modal.remove();
+}
+
+function confirmCSVImport(rows) {
+  const selects = document.querySelectorAll('.csv-mapping-select');
+  const mapping = {};
+  selects.forEach(select => {
+    mapping[select.dataset.header] = select.value;
+  });
+  
+  let imported = 0;
+  let skipped = 0;
+  
+  rows.forEach(row => {
+    const contact = {};
+    let hasNameOrCompany = false;
+    
+    Object.keys(mapping).forEach(header => {
+      const field = mapping[header];
+      if (field !== 'ignore' && row[header]) {
+        contact[field] = row[header];
+        if (field === 'name' || field === 'company') hasNameOrCompany = true;
+      }
+    });
+    
+    if (!hasNameOrCompany || (!contact.name && !contact.company)) {
+      skipped++;
+      return;
+    }
+    
+    contact.id = Date.now() + Math.random();
+    contact.addedDate = new Date().toISOString();
+    contact.lastContact = null;
+    contact.notes = '';
+    contact.tags = [];
+    
+    const contacts = JSON.parse(localStorage.getItem('renzo_contacts') || '[]');
+    contacts.push(contact);
+    localStorage.setItem('renzo_contacts', JSON.stringify(contacts));
+    imported++;
+  });
+  
+  closeCSVPreview();
+  showToast(`Imported ${imported} contacts${skipped > 0 ? `, skipped ${skipped}` : ''}`, 'success');
+  loadContacts();
+}
+
+
+
+function handleCSVFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    if (rows.length === 0) {
+      showToast('CSV file is empty or invalid', 'error');
+      return;
+    }
+    showCSVPreview(rows);
+  };
+  reader.onerror = function() {
+    showToast('Failed to read CSV file', 'error');
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    rows.push(row);
+  }
+  
+  return rows;
+}
+
+function showCSVPreview(rows) {
+  const headers = Object.keys(rows[0]);
+  const previewRows = rows.slice(0, 5);
+  
+  const modal = document.getElementById('csvPreviewModal') || createCSVPreviewModal();
+  const tbody = modal.querySelector('.csv-preview-table tbody');
+  const mappingRow = modal.querySelector('.csv-mapping-row');
+  
+  mappingRow.innerHTML = '<td style="font-weight: 600;">Map to:</td>' + headers.map(header => {
+    const detectedField = detectField(header);
+    return `<td><select class="csv-mapping-select" data-header="${header}">
+      <option value="">Skip</option>
+      <option value="name" ${detectedField === 'name' ? 'selected' : ''}>Name</option>
+      <option value="company" ${detectedField === 'company' ? 'selected' : ''}>Company</option>
+      <option value="email" ${detectedField === 'email' ? 'selected' : ''}>Email</option>
+      <option value="phone" ${detectedField === 'phone' ? 'selected' : ''}>Phone</option>
+    </select></td>`;
+  }).join('');
+  
+  tbody.innerHTML = previewRows.map(row => 
+    '<tr><td style="background: var(--cream); font-weight: 600;">Sample</td>' + 
+    headers.map(h => `<td>${row[h]}</td>`).join('') + 
+    '</tr>'
+  ).join('');
+  
+  modal.querySelector('[data-csv-rows]').dataset.csvRows = JSON.stringify(rows);
+  modal.classList.add('active');
+}
+
+function createCSVPreviewModal() {
+  const modal = document.createElement('div');
+  modal.id = 'csvPreviewModal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content csv-preview-modal">
+      <div class="modal-header">
+        <h2>CSV Import Preview</h2>
+        <button class="modal-close" onclick="closeCSVPreview()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; color: var(--text-secondary);">Showing first 5 rows. Map columns to contact fields:</p>
+        <div style="overflow-x: auto;">
+          <table class="csv-preview-table">
+            <thead>
+              <tr class="csv-mapping-row"></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCSVPreview()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmCSVImport()" data-csv-rows>Import Contacts</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function detectField(header) {
+  const lower = header.toLowerCase();
+  if (lower.includes('name') || lower.includes('contact')) return 'name';
+  if (lower.includes('company') || lower.includes('organization')) return 'company';
+  if (lower.includes('email') || lower.includes('mail')) return 'email';
+  if (lower.includes('phone') || lower.includes('mobile') || lower.includes('tel')) return 'phone';
+  return '';
+}
+
+function closeCSVPreview() {
+  const modal = document.getElementById('csvPreviewModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function confirmCSVImport() {
+  const modal = document.getElementById('csvPreviewModal');
+  const rows = JSON.parse(modal.querySelector('[data-csv-rows]').dataset.csvRows);
+  
+  const mapping = {};
+  modal.querySelectorAll('.csv-mapping-select').forEach(select => {
+    const header = select.dataset.header;
+    const field = select.value;
+    if (field) mapping[header] = field;
+  });
+  
+  let imported = 0;
+  let skipped = 0;
+  const contacts = JSON.parse(localStorage.getItem('renzo_contacts') || '[]');
+  
+  rows.forEach(row => {
+    const contact = {};
+    Object.keys(mapping).forEach(header => {
+      const field = mapping[header];
+      contact[field] = row[header];
+    });
+    
+    if (!contact.name && !contact.company) {
+      skipped++;
+      return;
+    }
+    
+    contact.id = Date.now() + Math.random();
+    contact.name = contact.name || 'Unknown';
+    contact.company = contact.company || '';
+    contact.email = contact.email || '';
+    contact.phone = contact.phone || '';
+    contact.created = new Date().toISOString();
+    contact.lastContact = null;
+    contact.tags = [];
+    contact.notes = '';
+    contact.priority = 1;
+    
+    contacts.push(contact);
+    imported++;
+  });
+  
+  localStorage.setItem('renzo_contacts', JSON.stringify(contacts));
+  closeCSVPreview();
+  showToast(`Imported ${imported} contacts${skipped > 0 ? `, skipped ${skipped}` : ''}`, 'success');
+  loadContacts();
+}
+
+
+function executeBatchOutreach(query) {
+  const queryLower = query.toLowerCase();
+  const contacts = JSON.parse(localStorage.getItem('renzo_contacts') || '[]');
+  
+  let filtered = contacts.filter(contact => {
+    if (queryLower.includes('contract') || queryLower.includes('expiry') || queryLower.includes('expiring')) {
+      if (contact.contractExpiry) {
+        const expiry = new Date(contact.contractExpiry);
+        const now = new Date();
+        const monthsUntil = (expiry - now) / (1000 * 60 * 60 * 24 * 30);
+        if (queryLower.includes('next month') && monthsUntil > 0 && monthsUntil <= 2) return true;
+        if (queryLower.includes('expiring') && monthsUntil > 0 && monthsUntil <= 3) return true;
+      }
+    }
+    if (queryLower.includes('invoice') || queryLower.includes('amount')) {
+      if (contact.invoiceAmount && contact.invoiceAmount > 0) return true;
+    }
+    if (queryLower.includes('contacted') || queryLower.includes('recent')) {
+      if (contact.lastContactDate) {
+        const lastContact = new Date(contact.lastContactDate);
+        const now = new Date();
+        const daysAgo = (now - lastContact) / (1000 * 60 * 60 * 24);
+        if (queryLower.includes('not contacted') && daysAgo > 30) return true;
+        if (queryLower.includes('recent') && daysAgo <= 30) return true;
+      }
+    }
+    return false;
+  });
+
+  const progressDiv = document.getElementById('batchProgress');
+  const progressFill = document.getElementById('batchProgressFill');
+  const progressText = document.getElementById('batchProgressText');
+  const resultsDiv = document.getElementById('batchResults');
+  
+  progressDiv.style.display = 'block';
+  resultsDiv.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    showToast('No contacts match your query', 'warning');
+    progressDiv.style.display = 'none';
+    return;
+  }
+  
+  let processed = 0;
+  filtered.forEach((contact, index) => {
+    setTimeout(() => {
+      const message = generateAiMessage(contact);
+      const queueItem = {
+        id: Date.now() + index,
+        contactId: contact.id,
+        contactName: contact.name,
+        message: message,
+        date: new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      const queue = JSON.parse(localStorage.getItem('renzo_queue') || '[]');
+      queue.push(queueItem);
+      localStorage.setItem('renzo_queue', JSON.stringify(queue));
+      
+      processed++;
+      const percent = (processed / filtered.length) * 100;
+      progressFill.style.width = percent + '%';
+      progressText.textContent = `Processed ${processed} of ${filtered.length} contacts`;
+      
+      const itemHtml = `
+        <div class="outreach-queue-item">
+          <div class="outreach-queue-header">
+            <div>
+              <div class="outreach-queue-contact">${contact.name}</div>
+              <div class="outreach-queue-date">${contact.email || ''}</div>
+            </div>
+            <span class="status-badge status-pending">Queued</span>
+          </div>
+          <div class="outreach-queue-message">${message}</div>
+        </div>
+      `;
+      resultsDiv.insertAdjacentHTML('beforeend', itemHtml);
+      
+      if (processed === filtered.length) {
+        showToast(`Added ${filtered.length} messages to queue`, 'success');
+        setTimeout(() => {
+          progressDiv.style.display = 'none';
+        }, 2000);
+      }
+    }, index * 100);
+  });
+}
+
+function generateAiMessage(contact) {
+  const rules = loadRules();
+  let rulesText = '';
+  if (rules.length > 0) {
+    rulesText = ' Additional instructions: ' + rules.map((r, i) => `${r}`).join('. ') + '.';
+  }
+  
+  const templates = [
+    `Hi ${contact.name}, I wanted to reach out regarding ${contact.company || 'your account'}. ${contact.contractExpiry ? 'I noticed your contract status and thought we should connect.' : 'Let\'s discuss how we can continue our partnership.'}${rulesText}`,
+    `Hello ${contact.name}, Hope you're doing well! I'm checking in about ${contact.company || 'our collaboration'}. ${contact.invoiceAmount ? 'I see we have some financial items to discuss.' : 'Would love to catch up soon.'}${rulesText}`,
+    `Hi ${contact.name}, It's been a while! I wanted to reconnect regarding ${contact.company || 'your needs'}. ${contact.lastContactDate ? 'Let\'s schedule a time to chat.' : 'Hope we can connect soon.'}${rulesText}`
+  ];
+  
+  return templates[Math.floor(Math.random() * templates.length)];
+}
+
+function addOutreachRule() {
+  const input = document.getElementById('newRuleInput');
+  const ruleText = input.value.trim();
+  
+  if (!ruleText) {
+    showToast('Please enter a rule', 'warning');
+    return;
+  }
+  
+  const rules = loadRules();
+  rules.push(ruleText);
+  localStorage.setItem('renzo_rules', JSON.stringify(rules));
+  
+  input.value = '';
+  renderRules();
+  showToast('Rule added successfully', 'success');
+}
+
+function deleteOutreachRule(index) {
+  const rules = loadRules();
+  rules.splice(index, 1);
+  localStorage.setItem('renzo_rules', JSON.stringify(rules));
+  renderRules();
+  showToast('Rule deleted', 'success');
+}
+
+function loadRules() {
+  return JSON.parse(localStorage.getItem('renzo_rules') || '[]');
+}
+
+function renderRules() {
+  const rulesList = document.getElementById('rulesList');
+  const rules = loadRules();
+  
+  if (rules.length === 0) {
+    rulesList.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No custom rules yet. Add your first rule above.</p>';
+    return;
+  }
+  
+  rulesList.innerHTML = rules.map((rule, index) => `
+    <div style="background: var(--cream); border: 2px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 14px; color: var(--text-primary);">${rule}</span>
+      <button onclick="deleteOutreachRule(${index})" class="btn btn-danger btn-sm" style="padding: 4px 12px; font-size: 12px;">Delete</button>
+    </div>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const existingHandler = document.getElementById('generateBatchBtn');
+  if (existingHandler) {
+    existingHandler.addEventListener('click', function() {
+      const query = document.getElementById('batchQuery').value.trim();
+      if (!query) {
+        showToast('Please enter a query', 'warning');
+        return;
+      }
+      executeBatchOutreach(query);
+    });
+  }
+  
+  const addRuleBtnHandler = document.getElementById('addRuleBtn');
+  if (addRuleBtnHandler) {
+    addRuleBtnHandler.addEventListener('click', addOutreachRule);
+  }
+  
+  renderRules();
+});
+
+
+
+function executeBatchOutreach() {
+  const query = document.getElementById('batchPrompt').value.toLowerCase();
+  if (!query.trim()) {
+    showToast('Please enter a search query', 'error');
+    return;
+  }
+
+  const contacts = JSON.parse(localStorage.getItem('renzo_contacts') || '[]');
+  
+  // Filter contacts based on query keywords
+  let matches = contacts.filter(contact => {
+    if (query.includes('contract') || query.includes('expiry') || query.includes('expiring')) {
+      if (contact.contractExpiry) {
+        const months = monthsUntil(contact.contractExpiry);
+        if (query.includes('next 3 months') || query.includes('3 months')) return months <= 3 && months >= 0;
+        if (query.includes('next 6 months') || query.includes('6 months')) return months <= 6 && months >= 0;
+        if (query.includes('expired')) return months < 0;
+        return months <= 6 && months >= 0; // default
+      }
+    }
+    if (query.includes('invoice') || query.includes('high value')) {
+      if (contact.invoiceAmount) {
+        const amount = parseFloat(contact.invoiceAmount);
+        if (query.includes('over') || query.includes('above')) {
+          const match = query.match(/(\d+)/);
+          if (match) return amount > parseFloat(match[1]);
+        }
+        return amount > 10000; // default high value
+      }
+    }
+    if (query.includes('not contacted') || query.includes('no contact')) {
+      if (!contact.lastContactDate) return true;
+      const days = daysAgo(contact.lastContactDate);
+      if (query.includes('90 days') || query.includes('3 months')) return days > 90;
+      if (query.includes('180 days') || query.includes('6 months')) return days > 180;
+      return days > 60;
+    }
+    return false;
+  });
+
+  if (matches.length === 0) {
+    showToast('No contacts match your criteria', 'warning');
+    document.getElementById('batchResults').innerHTML = '<p style="color: var(--text-secondary);">No matches found. Try adjusting your query.</p>';
+    return;
+  }
+
+  // Show progress
+  document.getElementById('batchProgress').style.display = 'block';
+  document.getElementById('batchResults').innerHTML = '';
+  
+  let processed = 0;
+  const queue = JSON.parse(localStorage.getItem('renzo_queue') || '[]');
+  
+  matches.forEach((contact, index) => {
+    setTimeout(() => {
+      const message = generateAiMessage(contact);
+      queue.push({
+        id: Date.now() + index,
+        contactId: contact.id,
+        contactName: contact.name,
+        contactEmail: contact.email,
+        message: message,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      
+      processed++;
+      const progress = (processed / matches.length) * 100;
+      document.getElementById('batchProgressBar').style.width = progress + '%';
+      document.getElementById('batchProgressText').textContent = `Processing ${processed} of ${matches.length}...`;
+      
+      if (processed === matches.length) {
+        localStorage.setItem('renzo_queue', JSON.stringify(queue));
+        showToast(`Added ${matches.length} messages to outreach queue`, 'success');
+        document.getElementById('batchProgressText').textContent = `Complete! ${matches.length} messages added to queue.`;
+        document.getElementById('batchResults').innerHTML = `<div class="alert alert-success"><span class="alert-icon">✓</span><div class="alert-content"><div class="alert-title">Batch Generated</div>Successfully created ${matches.length} outreach messages. Check the Outreach Queue.</div></div>`;
+      }
+    }, index * 100);
+  });
+}
+
+function monthsUntil(dateStr) {
+  if (!dateStr) return 999;
+  const target = new Date(dateStr);
+  const now = new Date();
+  return (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+}
+
+function daysAgo(dateStr) {
+  if (!dateStr) return 999;
+  const past = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now - past) / (1000 * 60 * 60 * 24));
+}
+
+function percent(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function generateAiMessage(contact) {
+  const rules = loadRules();
+  let rulesText = '';
+  if (rules.length > 0) {
+    rulesText = '\n\nAdditional instructions: ' + rules.map((r, i) => `${i + 1}. ${r}`).join(' ');
+  }
+  
+  // Simple template-based generation (in real app, this would call AI API)
+  let message = `Hi ${contact.name},\n\n`;
+  
+  if (contact.contractExpiry) {
+    const months = monthsUntil(contact.contractExpiry);
+    if (months < 3 && months >= 0) {
+      message += `I noticed your contract is coming up for renewal in ${months} month(s). I'd love to discuss how we can continue supporting ${contact.company || 'your business'}.`;
+    } else if (months < 0) {
+      message += `Your contract has expired. Let's reconnect to discuss renewal options and any new needs you might have.`;
+    }
+  } else if (contact.invoiceAmount && parseFloat(contact.invoiceAmount) > 10000) {
+    message += `As one of our valued high-tier clients, I wanted to personally reach out to ensure you're getting the most value from our services.`;
+  } else if (!contact.lastContactDate || daysAgo(contact.lastContactDate) > 60) {
+    message += `It's been a while since we last connected. I wanted to check in and see how things are going with ${contact.company || 'your business'}.`;
+  } else {
+    message += `I wanted to reach out and see if there's anything we can help you with.`;
+  }
+  
+  message += `\n\nLooking forward to hearing from you.\n\nBest regards`;
+  
+  if (rulesText) {
+    message += rulesText;
+  }
+  
+  return message;
+}
+
+function addOutreachRule() {
+  const ruleInput = document.getElementById('newRule');
+  const rule = ruleInput.value.trim();
+  
+  if (!rule) {
+    showToast('Please enter a rule', 'error');
+    return;
+  }
+  
+  const rules = loadRules();
+  rules.push(rule);
+  localStorage.setItem('renzo_rules', JSON.stringify(rules));
+  
+  ruleInput.value = '';
+  renderRules();
+  showToast('Rule added successfully', 'success');
+}
+
+function deleteOutreachRule(index) {
+  const rules = loadRules();
+  rules.splice(index, 1);
+  localStorage.setItem('renzo_rules', JSON.stringify(rules));
+  renderRules();
+  showToast('Rule deleted', 'success');
+}
+
+function loadRules() {
+  return JSON.parse(localStorage.getItem('renzo_rules') || '[]');
+}
+
+function renderRules() {
+  const rules = loadRules();
+  const container = document.getElementById('rulesList');
+  
+  if (rules.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No rules added yet.</p>';
+    return;
+  }
+  
+  container.innerHTML = rules.map((rule, index) => `
+    <div style="background: var(--cream); padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 14px;">${rule}</span>
+      <button onclick="deleteOutreachRule(${index})" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Delete</button>
+    </div>
+  `).join('');
+}
+
+// Initialize rules display when settings view is shown
+const originalShowView = showView;
+showView = function(viewName) {
+  originalShowView(viewName);
+  if (viewName === 'settings') {
+    renderRules();
+  }
+};
+</script>
+</body>
+</html>

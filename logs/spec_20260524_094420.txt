@@ -1,0 +1,187 @@
+# TECHNICAL SPECIFICATION: Activity View with Filtering and Full Log
+
+## OVERVIEW
+Add a comprehensive Activity view that displays all contact interactions with search, date filtering, and pagination. The view shows the complete activity log from localStorage with 20 items per page, allowing users to search by name/company, filter by date range (today, this week, this month, all time), and click contact names to view their full history. Includes navigation link in sidebar and "View All" link from dashboard.
+
+## VIEWS
+
+### Sidebar Navigation Enhancement
+- Add Activity button between Batch Outreach and Integrations nav items
+- Button: `<button class="nav-item" data-view="activity">Activity</button>`
+- Must follow existing nav-item styling and data-view pattern
+
+### Activity View (view-activity)
+- Full-page view with header "Activity"
+- Toolbar with search input (actSearch) and date filter dropdown (actDateF)
+- Activity count display showing filtered total above list
+- Activity list container (actFullList) as .card
+- Pagination controls (actPagination) centered below list
+- Structure: header, toolbar, count, list, pagination
+
+### Dashboard Enhancement
+- Add "View All →" link below existing activity feed
+- Link styled as inline text link in green
+- Positioned at bottom of activity section
+- Calls showView('activity') on click
+
+## FUNCTIONS
+
+### renderActivityView()
+1. Get full activity array from ga()
+2. Read search term from actSearch.value (lowercase, trimmed)
+3. Read date filter from actDateF.value
+4. Filter activity:
+   - If search not empty: filter where contactName or company includes search term (case-insensitive)
+   - Apply date filter based on actDateF value (today/week/month/all)
+5. Sort filtered results reverse chronologically by timestamp
+6. Calculate pagination: currentPage (default 1), itemsPerPage=20, totalPages
+7. Slice array for current page (start = (currentPage-1)*20, end = start+20)
+8. Update activityCount innerHTML with "X activities" or "X activity"
+9. Render items in actFullList:
+   - For each item: create HTML identical to dashboard activity items
+   - Contact name is clickable green link calling openHistory() with contact lookup
+   - Include company, interaction type, timestamp with timeAgo()
+10. Render pagination controls with Previous/Next buttons and page indicator
+11. If no results: show "No activity found" message
+
+### updateActivityPagination(filteredActivities, currentPage)
+1. Calculate totalPages from filteredActivities.length / 20 (ceil)
+2. Build pagination HTML with Previous button, page indicator, Next button
+3. Previous disabled if currentPage === 1
+4. Next disabled if currentPage === totalPages
+5. Show "Page X of Y"
+6. Attach click handlers for Previous (currentPage--) and Next (currentPage++)
+7. Handlers call renderActivityView() after updating page
+
+### filterActivityByDate(activity, filterValue)
+1. Get current date/time
+2. If filterValue === 'all': return activity unchanged
+3. If filterValue === 'today': filter where timestamp is same calendar day
+4. If filterValue === 'week': filter where timestamp within last 7 days
+5. If filterValue === 'month': filter where timestamp within last 30 days
+6. Return filtered array
+
+### getContactByName(name)
+1. Get contacts array from gc()
+2. Find contact where contact.name === name (case-sensitive match)
+3. Return contact object or null
+
+### Enhanced showView(name)
+- Add case for 'activity': call renderActivityView()
+- Ensure existing cases remain unchanged
+- Maintain active nav state logic
+
+### Event Listeners Setup (in init/DOMContentLoaded)
+- actSearch input: on 'input' event, reset currentPage to 1, call renderActivityView()
+- actDateF select: on 'change' event, reset currentPage to 1, call renderActivityView()
+- Activity nav button: existing showView handler picks up data-view="activity"
+- Dashboard "View All" link: on 'click' event, call showView('activity')
+
+## DATA
+
+### Activity State
+- currentActivityPage: number (1-based, stored in closure or global)
+- ITEMS_PER_PAGE: constant = 20
+
+### Activity Item Structure (from ga())
+```
+{
+  contactName: string,
+  company: string,
+  type: 'email_sent' | 'email_opened' | 'link_clicked' | 'reply_received',
+  timestamp: ISO date string
+}
+```
+
+### Date Filter Values
+- 'today': last 24 hours (same calendar day)
+- 'week': last 7 days
+- 'month': last 30 days
+- 'all': no date filtering
+
+## API
+
+No external API calls required. All data from localStorage via existing ga(), gc() functions.
+
+## DESIGN
+
+### Activity View Layout
+- View padding: matches existing views (24px standard)
+- Toolbar: display flex, gap 12px, margin-bottom 16px
+- Search input width: 300px min
+- Filter select: 150px width
+- Activity count: font-size 13px, color var(--gray), margin-bottom 12px
+
+### Activity List Items
+- Use existing dashboard activity item styling
+- Contact name link: color var(--green), cursor pointer, text-decoration none, hover underline
+- Item spacing: 12px gap between items (margin-bottom)
+- Card padding: 16px
+- Empty state: text-align center, color var(--gray), padding 40px
+
+### Pagination Controls
+- Container: display flex, gap 10px, align-items center, justify-content center, margin-top 16px
+- Buttons: padding 6px 12px, border 1px solid var(--border), border-radius 4px, background white, cursor pointer
+- Disabled state: opacity 0.5, cursor not-allowed
+- Page indicator: font-size 13px, color var(--gray)
+
+### Dashboard "View All" Link
+- Display: inline-block, margin-top 12px
+- Color: var(--green)
+- Font-size: 13px
+- Cursor: pointer
+- Hover: text-decoration underline
+
+### Interaction Type Display
+- Use existing badge styling from dashboard
+- Types map to readable labels: "Email Sent", "Email Opened", "Link Clicked", "Reply Received"
+- Badge colors: use existing var(--green-light), var(--blue-light) backgrounds
+
+## ERRORS
+
+### No Activity Data
+- If ga() returns empty array: show "No activity yet" message in actFullList
+- Message: centered, gray text, 40px padding
+
+### Search No Results
+- If filtered array empty after search: show "No activities match your search" in actFullList
+- Keep count showing "0 activities"
+
+### Contact Not Found for History
+- In contact name click handler: if getContactByName() returns null, show alert "Contact not found"
+- Prevent openHistory() call with invalid data
+
+### Invalid Date Filter
+- Default to 'week' if actDateF.value not recognized
+- Gracefully handle missing timestamp in activity items (skip item)
+
+### Pagination Edge Cases
+- If totalPages = 0: hide pagination controls entirely
+- If currentPage > totalPages after filter: reset currentPage to 1, re-render
+- Disable buttons appropriately (Previous on page 1, Next on last page)
+
+### localStorage Failures
+- If ga() throws error: catch and show "Unable to load activity data" message
+- If gc() fails in getContactByName(): catch and return null
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+**SINGLE_TASK: Proceed as one build**
+
+This implementation is well under the 650-line limit:
+- HTML additions: ~30 lines (nav button, view structure, dashboard link)
+- renderActivityView(): ~80 lines (filtering, pagination logic, rendering)
+- updateActivityPagination(): ~40 lines
+- filterActivityByDate(): ~35 lines
+- getContactByName(): ~8 lines
+- showView() enhancement: ~3 lines
+- Event listeners: ~15 lines
+- Helper rendering functions: ~50 lines
+- Contact name click handler: ~15 lines
+- Error handling inline: ~20 lines
+- CSS additions: ~80 lines (activity view specific styles)
+- Utility functions (timeAgo already exists): ~0 lines
+
+Total includes comprehensive error handling, pagination logic, filtering, and all UI interactions. Single file modification to main app file. No splitting required.

@@ -1,0 +1,221 @@
+# TECHNICAL SPECIFICATION: ADVANCED TRANSFORMATION FUNCTIONS & EXPRESSION BUILDER
+
+## OVERVIEW
+
+This system provides a comprehensive no-code transformation layer for data mapping workflows. Users discover functions via a categorized left sidebar, compose complex expressions through a visual builder modal with nested function blocks, and validate transformations with live preview. The expression engine evaluates formulas at runtime with type safety, error handling, and performance optimization for bulk operations.
+
+## VIEWS
+
+- **FunctionLibraryPanel**: Left sidebar (280px width) with collapsible category sections (String, Date, Math, Conditional, Array, Lookup). Each category displays function chips with icon, name, and parameter count. Search bar at top filters across all categories. Drag handle appears on hover for drag-and-drop to mapping fields.
+
+- **ExpressionBuilderModal**: Large modal (900px width, 600px height) with three zones: top formula bar showing expression syntax with syntax highlighting, middle function composer area with nested block visualization (similar to Scratch blocks), bottom preview pane split into input sample and output result. Close/save buttons in header.
+
+- **FunctionBlock**: Visual representation of a single function with rounded rectangle container, function name header, parameter slots as input fields or dropdowns, nested block indicators for complex expressions. Color-coded by category. Delete icon on hover.
+
+- **MappingFieldRow**: Enhanced existing mapping row with expression indicator badge showing function count. Click field value opens ExpressionBuilderModal. Shows abbreviated expression preview (e.g., "CONCAT(3 functions)") when expression exists.
+
+- **ExpressionTemplateLibrary**: Modal listing saved expressions in table format with columns: name, category, expression preview, usage count, actions (apply/edit/delete). Search and category filter at top. "New Template" button in header.
+
+- **ValidationPanel**: Enhanced results tab showing transformation steps in expandable accordion per record. Each step shows function name, input values, output value, execution time. Error states highlighted in red with specific error message.
+
+- **FunctionDocumentationTooltip**: Hover tooltip (300px width) displaying function signature, description, parameter details with types, return type, and 2-3 usage examples with input/output.
+
+## FUNCTIONS
+
+- **initializeFunctionLibrary()**: Load function definitions from FUNCTION_REGISTRY constant. Group by category. Render category sections with collapsible headers. Attach search listener to filter functions. Setup drag handlers for function chips. Return library state object.
+
+- **renderFunctionCategory(category, functions)**: Create category section with header, icon, and function count badge. Sort functions alphabetically. Render each function as chip with draggable attribute. Attach click handler to open documentation. Attach drag start handler with function metadata. Append to library panel container.
+
+- **searchFunctions(query)**: Filter FUNCTION_REGISTRY by name, category, or keyword match. Update visibility of category sections (hide if no matches). Highlight matching text in function names. Show result count in search bar. Return filtered function list.
+
+- **openExpressionBuilder(fieldId, currentExpression)**: Create modal overlay. Initialize ExpressionBuilderModal view. Load current expression into parser. Render function blocks from parsed expression tree. Setup formula bar with syntax highlighting. Load sample data for preview. Attach save handler passing fieldId. Show modal with fade animation.
+
+- **parseExpression(expressionString)**: Tokenize expression string into function calls, operators, literals, and field references. Build abstract syntax tree (AST) with nested function nodes. Validate syntax and matching parentheses. Return AST or throw ParseError with line/column information.
+
+- **renderFunctionComposer(ast, containerElement)**: Traverse AST depth-first. For each function node, create FunctionBlock component. Render parameters as input slots (text inputs, dropdowns, or nested blocks). Setup drag-and-drop for reordering and nesting. Attach parameter change handlers. Enable block deletion. Append to container.
+
+- **addFunctionBlock(functionName, parentBlock, insertIndex)**: Get function definition from FUNCTION_REGISTRY. Create new FunctionBlock with empty parameters. If parentBlock exists, nest inside parameter slot at insertIndex. Otherwise append to root composer area. Update AST. Regenerate formula bar text. Trigger preview update. Return block element.
+
+- **updateFormulaBar(ast)**: Traverse AST and generate expression string with proper nesting and parentheses. Apply syntax highlighting (functions in blue, strings in green, numbers in orange, operators in gray). Update formula bar content. Setup click handler to jump to function block. Show character count.
+
+- **validateFunctionParameters(functionName, paramValues)**: Get function definition including parameter schemas. For each parameter, check type (string, number, date, boolean, array, any). Validate required parameters are present. Check min/max constraints for numbers. Validate regex patterns for strings. Return validation result object with errors array.
+
+- **executeLivePreview(ast, sampleData)**: Get first 3 records from current mapping sample data. For each record, call evaluateExpression with AST and record context. Render input and output side-by-side in preview pane. Show execution time. Highlight errors in red. Update preview pane content. Handle async functions with loading state.
+
+- **evaluateExpression(ast, dataContext)**: Recursively evaluate AST nodes. For literal nodes, return value. For field reference nodes, lookup value in dataContext. For function nodes, recursively evaluate parameters first, then call executeFunction. Handle nested function results as parameters. Return final computed value or throw ExecutionError.
+
+- **executeFunction(functionName, params)**: Lookup function implementation in FUNCTION_EXECUTORS map. Validate parameter types match definition. Call function executor with params array. Handle synchronous and async functions (return Promise for async). Catch errors and wrap in FunctionExecutionError with function name and param values. Return result.
+
+- **registerBuiltInFunctions()**: Define all built-in function executors and add to FUNCTION_EXECUTORS map. Categories: STRING_FUNCTIONS (concat, substring, trim, replace, regexMatch, regexReplace, upper, lower, capitalize), DATE_FUNCTIONS (formatDate, parseDate, addDays, subtractDays, diffDays, convertTimezone), MATH_FUNCTIONS (round, floor, ceil, abs, sum, average, min, max), CONDITIONAL_FUNCTIONS (ifThenElse, switchCase, coalesce, isNull, isEmpty), ARRAY_FUNCTIONS (map, filter, join, split, length, indexOf, slice), LOOKUP_FUNCTIONS (lookupTable, lookupAPI, lookupCache). Return executor map.
+
+- **STRING_concat(...values)**: Coerce all parameters to strings. Join with no separator. Return concatenated string. Handle null/undefined as empty string.
+
+- **STRING_substring(text, startIndex, endIndex)**: Convert text to string. Validate startIndex and endIndex are numbers. Use JavaScript substring method. Handle negative indices from end. Return substring or empty string if indices invalid.
+
+- **STRING_replace(text, searchValue, replaceValue)**: Convert all params to strings. Use JavaScript replace method for first occurrence. Return modified string. Handle special regex characters by escaping.
+
+- **STRING_regexMatch(text, pattern, flags)**: Create RegExp object with pattern and flags. Execute test() method. Return boolean match result. Catch regex syntax errors and return false.
+
+- **DATE_formatDate(dateValue, formatString)**: Parse dateValue to Date object (handle ISO strings, timestamps, Date objects). Apply formatString pattern (YYYY, MM, DD, HH, mm, ss tokens). Replace tokens with zero-padded values. Return formatted string or throw error if invalid date.
+
+- **DATE_parseDate(dateString, formatString)**: Parse dateString according to formatString pattern. Extract year, month, day components. Create Date object. Validate parsed date is valid. Return Date object or throw ParseError.
+
+- **DATE_addDays(dateValue, daysToAdd)**: Parse dateValue to Date. Validate daysToAdd is number. Create new Date and add days using setDate. Return new Date object. Handle month/year rollovers automatically.
+
+- **MATH_round(value, decimals)**: Coerce value to number. Default decimals to 0. Multiply by 10^decimals, round, divide back. Return rounded number. Handle NaN and Infinity.
+
+- **CONDITIONAL_ifThenElse(condition, thenValue, elseValue)**: Evaluate condition as boolean (truthy/falsy). If true, return thenValue. If false, return elseValue. Handle null/undefined as false.
+
+- **CONDITIONAL_switchCase(value, ...cases)**: Expect cases as alternating case/result pairs with final default. Compare value to each case with strict equality. Return matching result. Return default if no match. Throw error if odd number of case parameters.
+
+- **CONDITIONAL_coalesce(...values)**: Iterate through values array. Return first non-null, non-undefined value. Return null if all values are null/undefined.
+
+- **ARRAY_join(array, separator)**: Validate array is Array type. Convert each element to string. Join with separator string (default comma). Return joined string. Handle empty array as empty string.
+
+- **ARRAY_split(text, delimiter)**: Convert text to string. Split by delimiter string. Return array of strings. Handle empty delimiter (split each character). Handle delimiter not found (return single-element array).
+
+- **LOOKUP_lookupTable(lookupTableId, keyField, keyValue, returnField)**: Load lookup table data from workspace lookup tables. Filter rows where keyField equals keyValue. Return returnField value from matched row. Return null if no match. Cache lookup table data in memory.
+
+- **LOOKUP_lookupAPI(url, method, params, jsonPath)**: Make HTTP request to url with method and params. Parse JSON response. Extract value at jsonPath using dot notation. Cache results for 5 minutes with params as cache key. Return extracted value or null. Handle request errors gracefully.
+
+- **saveExpression(fieldId, ast)**: Serialize AST to expression string. Store in mappingData[fieldId].expression. Update MappingFieldRow UI with expression preview. Clear any previous validation errors. Trigger validation re-run. Close ExpressionBuilderModal. Show success toast.
+
+- **openTemplateLibrary()**: Create ExpressionTemplateLibrary modal. Load saved templates from workspace settings. Render template table with search and filters. Attach click handlers for apply, edit, delete actions. Show modal with fade animation.
+
+- **saveExpressionTemplate(name, category, ast)**: Prompt for template name and category. Validate name is unique. Serialize AST to expression string. Create template object with metadata (id, name, category, expression, createdAt, usageCount). Save to workspace templates array. Update template library UI. Show success message.
+
+- **applyExpressionTemplate(templateId, fieldId)**: Load template by ID from workspace templates. Parse expression string to AST. Call saveExpression with fieldId and AST. Increment template usageCount. Close template library. Show field with applied expression.
+
+- **validateAllExpressions(mappingData)**: Iterate through all fields with expressions. For each, parse expression and validate syntax. Check all referenced fields exist in source schema. Validate function names exist in registry. Check parameter types match definitions. Return validation results array with field IDs and error messages.
+
+- **executeBulkTransformation(mappingData, records)**: For each record, create execution context. For each field with expression, evaluate expression with record context. Store result in output record. Collect any execution errors with record ID and field ID. Return transformed records array and errors array. Log performance metrics (total time, records per second).
+
+- **debugTransformationSteps(expression, record)**: Parse expression to AST. Traverse AST with step tracking. For each function execution, log function name, input params, output value, execution time. Build steps array with tree structure. Return steps for display in ValidationPanel accordion.
+
+- **setupDragAndDrop()**: Initialize drag source on function chips in library panel. Set dragData to include function name and metadata. Initialize drop targets on function composer parameter slots and root area. Handle drop event by calling addFunctionBlock with dropped function. Show drop indicators during drag. Remove indicators on drop or drag end.
+
+- **exportExpressionLibrary()**: Collect all workspace templates. Serialize to JSON with metadata (exportDate, workspaceId, version). Create downloadable JSON file. Trigger browser download. Show success message with template count.
+
+- **importExpressionLibrary(jsonFile)**: Read and parse JSON file. Validate schema version. Iterate through templates. Check for name conflicts (prompt for rename or skip). Add templates to workspace. Refresh template library UI. Show import summary (added count, skipped count, errors).
+
+- **setupExpressionAutocomplete(inputElement, context)**: Attach keyup listener to input element. On typing, detect if in field reference mode (after $ or within brackets). Show autocomplete dropdown with available source fields. Filter by typed text. Handle arrow keys for selection. Insert selected field on Enter or click. Show function suggestions after typing function name prefix.
+
+- **highlightSyntaxErrors(expressionString)**: Parse expression and catch syntax errors. Extract error position (line, column). Add error indicator in formula bar at error position. Show error tooltip on hover with message. Highlight problematic token in red. Disable save button while errors exist.
+
+- **optimizeExpressionExecution(ast)**: Detect constant subexpressions (no field references). Pre-evaluate constant expressions and replace in AST with literal values. Identify repeated subexpressions and cache results. Detect expensive functions (API lookups) and batch when possible. Return optimized AST with execution plan.
+
+- **sandboxCustomFunction(jsCode)**: Create isolated execution context (Web Worker or iframe). Inject jsCode with parameter validation wrapper. Test function with sample inputs. Validate return types. Store validated function in CUSTOM_FUNCTION_REGISTRY. Return function ID for use in expressions. Handle execution timeouts (5 second limit).
+
+## DATA
+
+- **FUNCTION_REGISTRY**: Array of function definition objects. Each object contains: name (string), category (string, one of STRING, DATE, MATH, CONDITIONAL, ARRAY, LOOKUP), description (string), parameters (array of {name, type, required, defaultValue, description}), returnType (string), examples (array of {input, output, explanation}), keywords (array of strings for search). Loaded at initialization, immutable at runtime.
+
+- **FUNCTION_EXECUTORS**: Map of function name to executor function. Keys are function names (e.g., "concat", "formatDate"). Values are JavaScript functions that implement the transformation logic. Registered at startup. Can be extended with custom functions.
+
+- **expressionBuilderState**: Object tracking current expression builder session: {fieldId: string, originalExpression: string, currentAST: object, isDirty: boolean, sampleData: array, previewResults: array, validationErrors: array}. Reset when modal opens/closes.
+
+- **functionLibraryState**: Object for library panel: {categories: array, expandedCategories: Set, searchQuery: string, filteredFunctions: array, draggedFunction: object|null}. Persists across sessions in sessionStorage.
+
+- **mappingFieldExpressions**: Object within main mappingData structure. Key is field ID, value is: {expression: string, ast: object, lastValidated: timestamp, isValid: boolean, validationErrors: array}. Saved to workspace configuration.
+
+- **expressionTemplates**: Array of saved templates in workspace settings: [{id: string, name: string, category: string, expression: string, ast: object, createdAt: timestamp, createdBy: string, usageCount: number, tags: array}]. Persisted to backend.
+
+- **lookupTableCache**: Map of lookupTableId to loaded data: {tableId: {data: array, loadedAt: timestamp, expiresAt: timestamp}}. In-memory cache, cleared on page reload. Expires after 10 minutes.
+
+- **apiLookupCache**: Map of cache key (hash of url+params) to response: {key: {data: any, cachedAt: timestamp, expiresAt: timestamp}}. In-memory cache. Expires after 5 minutes. Max 100 entries (LRU eviction).
+
+- **validationResults**: Object mapping fieldId to validation result: {fieldId: {isValid: boolean, errors: array of {type: string, message: string, position: object}, warnings: array, lastChecked: timestamp}}. Updated on expression change or manual validation.
+
+- **transformationDebugLog**: Array of execution steps for debugging: [{recordId: string, fieldId: string, steps: array of {functionName: string, inputs: array, output: any, executionTime: number, error: string|null}}]. Cleared before each test run. Max 1000 entries.
+
+- **customFunctions**: Map of custom function ID to function metadata: {id: {name: string, jsCode: string, parameters: array, returnType: string, sandboxUrl: string, isActive: boolean, createdBy: string}}. Saved to workspace settings.
+
+## API
+
+- **GET /api/workspaces/:workspaceId/lookup-tables**: Fetch all lookup tables for workspace. No payload. Response: {lookupTables: array of {id, name, columns, data, updatedAt}}. On success, populate lookupTableCache. On error, show toast notification.
+
+- **POST /api/workspaces/:workspaceId/expression-templates**: Save new expression template. Payload: {name: string, category: string, expression: string, tags: array}. Response: {template: {id, name, category, expression, createdAt}}. On success, add to expressionTemplates array and update UI. On error (duplicate name), show error modal.
+
+- **GET /api/workspaces/:workspaceId/expression-templates**: Fetch all saved templates. No payload. Response: {templates: array}. On success, populate expressionTemplates. On error, show error toast and use empty array.
+
+- **DELETE /api/workspaces/:workspaceId/expression-templates/:templateId**: Delete template. No payload. Response: {success: boolean}. On success, remove from expressionTemplates array and refresh UI. On error, show error toast.
+
+- **PUT /api/workspaces/:workspaceId/mappings/:mappingId/expressions**: Save all field expressions for mapping. Payload: {fieldExpressions: object mapping fieldId to {expression, ast}}. Response: {success: boolean, validationErrors: array}. On success, show success toast. On error, show validation errors in panel.
+
+- **POST /api/workspaces/:workspaceId/custom-functions**: Register custom function. Payload: {name: string, jsCode: string, parameters: array, returnType: string}. Response: {function: {id, sandboxUrl}}. On success, add to customFunctions map. On error, show validation errors in modal.
+
+- **POST /api/external-lookup**: Proxy for external API lookups (CORS bypass). Payload: {url: string, method: string, headers: object, params: object, body: any}. Response: {data: any, statusCode: number}. On success, return data. On error, return null and log error. Add to apiLookupCache on success.
+
+- **GET /api/workspaces/:workspaceId/field-mappings/:mappingId/validate**: Validate all expressions in mapping. No payload. Response: {isValid: boolean, fieldErrors: array of {fieldId, errors: array}}. On success, update validationResults. On error, show generic error toast.
+
+## DESIGN
+
+**Colors**:
+- Function library panel background: #f8f9fa (light gray)
+- Function category header: #e9ecef with #495057 text
+- Function chip background: #ffffff with 1px solid #dee2e6 border, hover: #e7f3ff
+- Function chip by category: String (#3b82f6 accent), Date (#8b5cf6 accent), Math (#10b981 accent), Conditional (#f59e0b accent), Array (#ec4899 accent), Lookup (#6366f1 accent)
+- Expression builder modal background: #ffffff
+- Formula bar background: #f1f5f9 with #1e293b text, monospace font
+- Function block colors match category colors with 10% opacity background
+- Parameter input border: #cbd5e1, focus: #3b82f6 with 2px outline
+- Preview pane background: #fafafa with #333333 text
+- Error highlight: #fee2e2 background, #dc2626 text and border
+- Success highlight: #dcfce7 background, #16a34a text
+- Syntax highlighting: functions #3b82f6, strings #10b981, numbers #f59e0b, operators #64748b
+
+**Fonts**:
+- Function library: 14px "Inter", sans-serif for function names, 12px for descriptions
+- Formula bar: 13px "JetBrains Mono", monospace
+- Function blocks: 13px "Inter", sans-serif for function names, 12px for parameters
+- Modal headers: 18px "Inter", 600 weight
+- Tooltips: 12px "Inter", sans-serif
+
+**Layout**:
+- Function library panel: Fixed left sidebar, 280px width, full height, 12px padding, overflow-y scroll
+- Category sections: 8px margin bottom, collapsible with chevron icon
+- Function chips: 100% width, 8px padding, 4px border radius, 4px margin bottom
+- Expression builder modal: Centered, 900px width, 600px height, 24px padding, 8px border radius
+- Formula bar: 100% width, 40px height, 8px padding, 4px border radius, top of modal
+- Function composer: 100% width, 320px height, 16px margin top, overflow scroll, 8px padding
+- Function blocks: Inline-block, auto width, 8px padding, 6px border radius, 8px margin right/bottom
+- Parameter slots: 120px width for text inputs, auto for dropdowns, 4px margin right
+- Preview pane: 100% width, 180px height, 16px margin top, split 50/50 for input/output
+- Template library modal: 700px width, 500px height, table layout with fixed header
+
+**Interaction Rules**:
+- Function chips draggable with cursor change to grab, drop indicator shows in composer
+- Function blocks rearrangeable via drag, nested blocks indented 16px
+- Formula bar click jumps to corresponding function block with highlight animation (300ms yellow flash)
+- Parameter inputs show autocomplete after 2 characters typed, 150ms debounce
+- Live preview updates 500ms after parameter change (debounced)
+- Hover on function chip shows documentation tooltip after 400ms delay
+- Category sections toggle on header click with 200ms expand/collapse animation
+- Search filters with 200ms debounce, highlights matches in yellow
+- Delete function block requires confirmation only if has nested functions
+- Save expression button disabled until validation passes, shows loading spinner during save
+- Template list sortable by name, category, usage count with click on column header
+
+## ERRORS
+
+- **ParseError**: Expression syntax error. Show in formula bar at error position with red underline. Tooltip displays: "Syntax error at position {column}: {message}". Disable save button. Suggest correction if possible (e.g., "Missing closing parenthesis").
+
+- **FunctionNotFoundError**: Referenced function doesn't exist. Highlight function name in formula bar in red. Tooltip: "Function '{name}' not found. Did you mean '{suggestion}'?". Show available functions in tooltip.
+
+- **ParameterValidationError**: Invalid parameter type or value. Highlight parameter input in red with 2px border. Show inline error message below input: "{paramName} must be a {expectedType}". Disable save until corrected.
+
+- **FieldReferenceError**: Referenced field doesn't exist in source schema. Highlight field reference in formula bar orange. Tooltip: "Field '{fieldName}' not found in source data". List available fields in tooltip.
+
+- **ExecutionError**: Runtime error during expression evaluation. Show in validation panel for affected record in red row. Display: "Error in {fieldName}: {errorMessage}". Click row to expand and show full stack trace and input values.
+
+- **CircularReferenceError**: Field expression references itself directly or indirectly. Show modal alert: "Circular reference detected: {fieldPath}". Highlight involved fields in mapping grid with orange border. Prevent save until resolved.
+
+- **TypeCoercionError**: Cannot convert value to required type. Show in preview pane for sample data: "Cannot convert '{value}' to {targetType}". Suggest using explicit conversion function (e.g., "Use NUMBER() to convert string to number").
+
+- **LookupTableNotFoundError**: Referenced lookup table doesn't exist. Show inline error in parameter input: "Lookup table '{tableId}' not found". Provide button to create new lookup table or select existing.
+
+- **APILookupTimeoutError**: External API request timed out. Show in validation panel: "Lookup API request timed out after 30s". Offer retry button. Log full request details for debugging.
+
+- **CustomFunctionSandboxError**: Custom function execution failed in sandbox. Show modal with error details: "Custom function '{name}' failed: {error}". Display line number in jsCode where error occurred. Offer edit button.
+
+- **NestedFunctionDepthError**: Expression exceeds maximum nesting depth (10 levels). Show modal alert: "Expression too complex. Maximum nesting depth is 10 levels. Consider breaking into multiple fields."

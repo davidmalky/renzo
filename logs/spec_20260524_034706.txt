@@ -1,0 +1,41 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a version footer displaying "Renzo v1.0 – Built by Agent Pipeline" to the bottom of the sidebar in index.html. The footer will appear below the logout button in the existing .sidebar-footer section, using the established dark sidebar color scheme with muted text styling to maintain visual hierarchy.
+
+## VIEWS
+- Sidebar Footer: Add a new version display element (.sidebar-version) within the existing .sidebar-footer container, positioned after the .sidebar-logout button. Contains version text and attribution.
+
+## FUNCTIONS
+No JavaScript functions required. This is a static HTML/CSS addition.
+
+## DATA
+No dynamic data storage needed. Static text: "Renzo v1.0 – Built by Agent Pipeline"
+
+## API
+No API calls required.
+
+## DESIGN
+- Color: Use rgba(232,228,220,.3) for muted text (slightly more transparent than sidebar-user)
+- Font: 'DM Sans', 10px size, 400 weight
+- Text transform: none (mixed case for readability)
+- Letter spacing: 0.3px for subtle refinement
+- Padding: 12px 22px (top padding creates space above version text)
+- Margin: 8px 0 0 0 (small top margin to separate from logout button)
+- Text alignment: center
+- Line height: 1.4
+- Border: optional subtle top border using rgba(255,255,255,.05) for separation
+
+## ERRORS
+- No error states to handle (static content)
+- Fallback: If font fails to load, system sans-serif will apply
+- Layout: Ensure version text wraps gracefully on narrow screens (already handled by sidebar width constraints)
+
+## SCOPE_CHECK
+- Estimated total lines: ~15 lines (HTML: 3 lines, CSS: 12 lines)
+- SINGLE_TASK: This is well under 650 lines and should be completed in one build
+
+**Implementation details:**
+- Add div.sidebar-version inside .sidebar-footer after button.sidebar-logout
+- CSS rule for .sidebar-version with all styling properties
+- No JavaScript, no new dependencies, minimal DOM changes

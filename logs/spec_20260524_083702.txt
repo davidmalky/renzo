@@ -1,0 +1,131 @@
+# TECHNICAL SPECIFICATION: AbortSignal Timeouts & Error Handling
+
+## OVERVIEW
+Add 30-second timeout protection and consistent error handling to all 8 fetch calls in the application. Each fetch will use AbortSignal.timeout(30000), distinguish timeout errors from other errors with specific toast messages, and guarantee UI cleanup (button re-enable, hide loading states) in all code paths. This is a surgical patch—no function restructuring.
+
+## VIEWS
+- No new views. Existing toast notification system and error display elements (aiLoading, aiErr) remain unchanged.
+
+## FUNCTIONS
+
+### 1. generateMsg() modifications
+- Locate existing fetch call to AI endpoint
+- Add `signal: AbortSignal.timeout(30000)` to fetch options object
+- In catch block, add as FIRST line: `document.getElementById('aiLoading').classList.add('hidden');`
+- After hiding aiLoading, add timeout check: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable exists in catch block; add if missing
+- Ensure aiErr element display logic runs after error handling
+
+### 2. refineDraft() modifications
+- Locate existing fetch call
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify triggering button is re-enabled in catch block
+- Add button re-enable if missing
+
+### 3. refineQueueMsg() modifications
+- Locate existing fetch call
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable in catch block
+- Add if missing
+
+### 4. sendGuideMsg() modifications
+- Locate existing fetch call
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable in catch block
+- Add if missing
+
+### 5. readWebsite() (settings) modifications
+- Locate existing fetch call in settings context
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable in catch block
+- Add if missing
+
+### 6. Batch filter call modifications
+- Locate batch filtering fetch call
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable in catch block
+- Add if missing
+
+### 7. Batch per-contact call modifications
+- Locate individual contact batch processing fetch
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify button re-enable in catch block
+- Add if missing
+
+### 8. sReadWebsite listener modifications
+- Locate service worker or background listener fetch call
+- Add `signal: AbortSignal.timeout(30000)` to fetch options
+- In catch block: `if(e.name==='TimeoutError'||e.name==='AbortError'){toast('Request timed out — try again','error');}else{toast('Error: '+e.message,'error');}`
+- Verify any UI state cleanup in catch block
+- Add if missing
+
+## DATA
+- No new data structures. Existing error objects (e.name, e.message) used for discrimination.
+- No persistence changes. This is runtime error handling only.
+
+## API
+- No API contract changes. All endpoints remain the same.
+- Fetch options enhanced with `signal` property:
+  ```
+  fetch(url, {
+    ...existingOptions,
+    signal: AbortSignal.timeout(30000)
+  })
+  ```
+- Timeout behavior: After 30 seconds, fetch aborts and throws error with e.name='TimeoutError' or e.name='AbortError'
+
+## DESIGN
+- No visual design changes. Existing toast and error display styles remain.
+- Toast error message for timeout: "Request timed out — try again"
+- Toast error message for other errors: "Error: [exception message]"
+- No layout or color changes required.
+
+## ERRORS
+
+### Timeout Errors (TimeoutError, AbortError)
+- Trigger: Fetch exceeds 30 seconds
+- Handling: Show toast "Request timed out — try again" with type 'error'
+- UI cleanup: Re-enable button, hide loading states (aiLoading if in generateMsg)
+- User action: User can retry operation
+
+### Network/Server Errors
+- Trigger: Connection failure, 4xx/5xx responses, or other exceptions
+- Handling: Show toast "Error: [e.message]" with type 'error'
+- UI cleanup: Re-enable button, hide loading states
+- User action: User sees specific error and can retry
+
+### Missing Button Re-enable
+- Check each catch block for button re-enable logic
+- If missing, add appropriate button element enable statement
+- Pattern: `buttonElement.disabled = false;` or equivalent
+
+### Missing aiLoading Hide in generateMsg
+- Check if aiLoading.classList.add('hidden') exists in catch block
+- If missing, add as FIRST line in catch block
+- Ensures error message (aiErr) is visible when loading spinner hidden
+
+## SCOPE_CHECK
+- Estimated total lines: **120 lines** (8 functions × ~15 lines of additions each)
+  - Each function: 1 line signal addition + 1-3 lines timeout check + 0-2 lines button re-enable verification/addition + 1 line for generateMsg aiLoading hide
+  - Surgical insertions into existing code, not full rewrites
+
+- **SINGLE_TASK**: Proceed as one build
+  - Under 650 lines
+  - All changes are localized catch block enhancements
+  - No architectural changes or new features
+  - Simple pattern repeated 8 times across different functions
+
+### Implementation Order
+1. Scan codebase to locate all 8 fetch calls
+2. For each fetch, apply three-step pattern:
+   - Add signal parameter
+   - Add timeout discrimination in catch
+   - Verify/add button re-enable
+3. Special case: generateMsg gets aiLoading hide in catch
+4. Test each endpoint with artificial delay to verify timeout behavior

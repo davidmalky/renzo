@@ -1,0 +1,112 @@
+# TECHNICAL SPECIFICATION: RENZO BATCH OUTREACH & TRAINABLE RULES
+
+## OVERVIEW
+Add two surgical features to existing Renzo application: (1) Batch Outreach view for natural language contact filtering and bulk AI message generation, (2) Trainable Outreach Rules in Settings for customizable AI prompt instructions. Both features integrate with existing navigation, storage, and AI message generation systems.
+
+## VIEWS
+
+- **Batch Outreach View** (`#view-batch`): Container for batch processing interface with prompt input, action button, progress indicator, and results list. Follows existing view pattern with `.view` class.
+
+- **Settings View Extension** (`#view-settings`): Add new section "My Outreach Rules" with rule input textarea, add button, and dynamic rules list. Integrates into existing settings layout.
+
+## FUNCTIONS
+
+- **executeBatchOutreach(query)**:
+  1. Parse query string for keywords: "contract", "expiry", "invoice", "contacted"
+  2. Fetch all contacts from localStorage key `renzo_contacts`
+  3. Filter contacts: if query contains "contract" OR "expiry", check `contractExpiry` field exists; if "invoice", check `invoiceAmount` > 0; if "contacted", check `lastContactDate` within 30 days
+  4. Show progress indicator, set total count
+  5. Loop through filtered contacts: call `generateAiMessage(contact)`, add result to queue in localStorage `renzo_queue`
+  6. Update progress bar fill percentage after each iteration
+  7. Render results list with contact names and preview of generated message
+  8. Hide progress indicator, show success alert with count
+
+- **addOutreachRule()**:
+  1. Get value from rule textarea (`#rule-input`)
+  2. Validate non-empty, trim whitespace
+  3. Load existing rules from localStorage `renzo_rules` (parse JSON array, default to [])
+  4. Push new rule to array with unique ID and timestamp
+  5. Save updated array to localStorage
+  6. Clear textarea
+  7. Call `renderRules()`
+
+- **deleteOutreachRule(ruleId)**:
+  1. Load rules array from localStorage `renzo_rules`
+  2. Filter out rule matching ruleId
+  3. Save filtered array back to localStorage
+  4. Call `renderRules()`
+
+- **loadRules()**:
+  1. Retrieve from localStorage `renzo_rules`
+  2. Parse JSON, return array (default empty array if null)
+
+- **renderRules()**:
+  1. Call `loadRules()` to get current rules
+  2. Target rules list container (`#rules-list`)
+  3. Clear existing HTML
+  4. Loop through rules: create div with rule text and delete button (data-rule-id attribute)
+  5. Attach click handler to delete buttons calling `deleteOutreachRule()`
+  6. If empty, show empty state message
+
+- **Modified: generateAiMessage(contact)**:
+  1. Load rules with `loadRules()`
+  2. Build rules string: "Additional instructions: [rule1]. [rule2]. [rule3]."
+  3. Append rules string to existing AI prompt template
+  4. Proceed with existing AI API call logic
+  5. Return generated message
+
+## DATA
+
+- **renzo_rules**: Array of rule objects stored in localStorage
+  - Format: `[{id: "uuid", text: "rule text", timestamp: 1234567890}, ...]`
+  
+- **renzo_contacts**: Existing contact array (assumed structure)
+  - Fields used: `contractExpiry` (date string), `invoiceAmount` (number), `lastContactDate` (date string), `name`, `id`
+
+- **renzo_queue**: Existing outreach queue array
+  - Add items with format: `{contactId, contactName, message, status: "pending", timestamp}`
+
+## API
+
+- **No new API calls**: Uses existing `generateAiMessage()` which handles AI API internally
+- **Storage operations**: All localStorage read/write operations are synchronous
+
+## DESIGN
+
+- **Batch View** (`#view-batch`):
+  - Padding: 32px
+  - Textarea: min-height 120px, border-radius 8px, border #e1e4e8, padding 16px, font-family inherit, font-size 14px
+  - Generate button: Use existing `.btn.btn-primary` classes, margin-top 16px
+  - Progress container: margin-top 24px, initially hidden (display: none)
+  - Progress bar: Use existing `.progress-bar` structure, height 8px
+  - Results list: margin-top 24px, each result item has padding 16px, border-bottom 1px solid #e1e4e8, font-size 14px
+
+- **Settings Rules Section**:
+  - Section heading: font-size 18px, font-weight 600, margin-bottom 16px, color #1f2937
+  - Rule input textarea: Same styling as batch textarea, min-height 80px
+  - Add Rule button: Use `.btn.btn-secondary`, margin-top 12px
+  - Rules list container: margin-top 20px
+  - Rule item: display flex, justify-content space-between, align-items center, padding 12px, background #f9fafb, border-radius 6px, margin-bottom 8px
+  - Rule text: font-size 14px, color #374151, flex 1
+  - Delete button: Use `.btn.btn-sm`, background #ef4444, color white, padding 6px 12px
+
+## ERRORS
+
+- **Empty query error**: Show `.alert-error` if batch query textarea is empty when Generate clicked: "Please enter a search query"
+
+- **No matches error**: Show `.alert-warning` if filter returns 0 contacts: "No contacts match your query"
+
+- **AI generation failure**: Wrap `generateAiMessage()` in try/catch, if fails skip contact and log error, continue loop, show warning alert at end: "X contacts failed to generate messages"
+
+- **Empty rule error**: Show `.alert-error` if rule textarea empty on Add: "Please enter a rule"
+
+- **localStorage quota exceeded**: Wrap localStorage writes in try/catch, show `.alert-error`: "Storage limit reached. Please delete old data."
+
+## SCOPE_CHECK
+
+**Estimated total lines**: 420 lines
+- HTML additions (batch view + settings section): ~80 lines
+- CSS for new elements: ~120 lines  
+- JavaScript functions (6 functions + modifications): ~220 lines
+
+**SINGLE_TASK**: Proceed as one build. All changes are surgical additions to existing file structure. No architectural changes required. Fits comfortably under 650-line limit.

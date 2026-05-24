@@ -1,0 +1,238 @@
+{
+  "task": {
+    "id": "auto-1779285527",
+    "title": "Advanced Transformation Functions & Expression Builder",
+    "description": "Build a comprehensive transformation function library and visual expression builder to enable complex data transformations without coding. Features include:\n\n1. **Function Library Panel** (left sidebar in mapping view):\n   - Categorized function groups: String (concat, substring, trim, replace, regex), Date (format, parse, add/subtract, timezone), Math (round, floor, ceil, sum, average), Conditional (if-then-else, switch-case, coalesce), Array (map, filter, join, split), and Lookup (reference tables, external APIs)\n   - Search/filter functions with live preview\n   - Drag-and-drop function chips to field mappings\n   - Function documentation tooltips with examples\n\n2. **Visual Expression Builder** (inline in field mapping rows):\n   - Click field value to open expression editor modal\n   - Formula bar showing current expression syntax\n   - Visual function composer with nested function blocks\n   - Parameter inputs with type validation and autocomplete\n   - Live preview pane showing transformation result on sample data\n   - Syntax highlighting and error indicators\n   - Support for combining multiple functions (e.g., CONCAT(TRIM(sourceField), ' - ', FORMAT_DATE(dateField, 'YYYY-MM-DD')))\n\n3. **Function Execution Engine**:\n   - Runtime evaluator for complex expressions\n   - Type coercion and validation\n   - Error handling with specific failure messages per function\n   - Performance optimization for bulk transformations\n   - Support for custom JavaScript functions with sandboxing\n\n4. **Expression Templates**:\n   - Saved expression library per workspace\n   - Common patterns (full name from first/last, address concatenation, date standardization)\n   - Template variables for reusable logic\n   - Import/export expression library\n\n5. **Testing Integration**:\n   - Auto-update Results tab when expressions change\n   - Show transformation steps for each record in debug mode\n   - Highlight which function caused errors in validation panel",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "Users can currently map fields but cannot transform data during the mapping process. This is the core value proposition of a mapping tool \u2014 enabling data shape changes, format conversions, and business logic application. Without transformation functions, users are limited to 1:1 field copying, which is insufficient for real-world integration scenarios. This feature unlocks the full potential of the mapping engine and differentiates the product from simple field mappers. It directly builds on the real-time testing capability by giving users powerful transformations to test."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 10642
+      },
+      "t": 61.9
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 185.7
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 237.2
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 377.4
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 423.4
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 545.9
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 588.9
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 33366
+      },
+      "t": 724.9
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "XSS vulnerability: REPLACE function uses search parameter directly in RegExp constructor without escaping, allowing ReDoS attacks. Must sanitize/escape special regex characters before new RegExp(search, 'g')",
+          "Division by zero: DIVIDE function doesn't check if denominator is zero, will return Infinity/NaN. Add explicit check: if (b === 0) return null or throw error",
+          "Missing accessibility: function-chip, category-header lack ARIA roles (role='button'), aria-expanded, aria-labelledby. Modal missing aria-modal='true' and focus trap for keyboard navigation"
+        ],
+        "feedback": "Critical security fixes required: 1) In REPLACE function, escape regex special chars: search.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') before RegExp. 2) Add zero-check in DIVIDE: if (Math.abs(b) < Number.EPSILON) return null. 3) Add ARIA attributes: <div class='function-chip' role='button' tabindex='0' aria-label='...'>, <button class='category-header' aria-expanded='false'>, <div class='modal-overlay' role='dialog' aria-modal='true' aria-labelledby='modalTitle'>. 4) Implement keyboard handlers for Enter/Space on draggable chips. 5) Add focus trap in modal (focus first/last focusable element). 6) Validate function inputs: check for null/undefined before operations. 7) Fix CSS typo line 498: '::before' not '::bef'. 8) Add prototype pollution check in LOOKUP: if (!obj.hasOwnProperty(key)) return null. Address security issues immediately before deployment."
+      },
+      "t": 779.6
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 29891
+      },
+      "t": 900.6
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "CRITICAL SECURITY: REPLACE function vulnerable to ReDoS attacks - user-controlled regex patterns passed to new RegExp() without validation or timeout protection can cause denial of service",
+          "CRITICAL SECURITY: LOOKUP function prototype pollution vulnerability - doesn't block '__proto__', 'constructor', 'prototype' keys allowing potential object injection attacks",
+          "CRITICAL SECURITY: No Content Security Policy meta tags and no visible input sanitization strategy for user-generated expressions in formula-bar, creating XSS attack surface"
+        ],
+        "feedback": "SECURITY FIXES REQUIRED: (1) For REPLACE function: implement regex pattern validation, use try-catch around new RegExp(), add execution timeout, and consider allowlisting safe patterns instead of escaping. (2) For LOOKUP: add explicit checks: `if(['__proto__','constructor','prototype'].includes(key)) return null;` before hasOwnProperty check. (3) Add CSP meta tag: `<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'\">`. (4) Sanitize all user inputs before display using DOMPurify or similar. (5) Add input validation for all function parameters with type checking and range limits. (6) Complete the truncated _evaluateExpression implementation. ACCESSIBILITY: Add lang attribute to html tag, ARIA labels to interactive elements, and implement keyboard trap management for function panel. CSS: Close .function-block-header style block. Add viewport meta with user-scalable=no for production."
+      },
+      "t": 951.8
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 32256
+      },
+      "t": 1097.3
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSP policy blocks 'unsafe-inline' styles but extensive inline styles are used throughout - either remove 'unsafe-inline' or move styles to external stylesheet",
+          "Missing closing for .modal-footer rule (line ends with 'ga' - appears truncated)",
+          "No focus trap implementation for modals - keyboard users can tab out of modal to background content"
+        ],
+        "feedback": ""
+      },
+      "t": 1162.7
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 31850
+      },
+      "t": 1327.0
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security: Missing input sanitization and XSS protection when rendering user-provided function parameters - evaluateExpression function could enable arbitrary code execution if not properly sandboxed",
+          "Critical Accessibility: Modal and function library panel lack proper ARIA attributes (role='dialog', aria-modal='true', aria-labelledby, aria-hidden state management) and no focus trap implementation for keyboard users",
+          "Critical HTML/CSS: Incomplete CSS block (ends mid-declaration 'display: inline') causing potential page rendering failure - no closing style tag present"
+        ],
+        "feedback": "1. IMMEDIATE FIX - Complete the CSS block by adding closing brace and </style> tag. 2. SECURITY - Implement strict input validation/sanitization for all user inputs (param-input fields, formula-input) and ensure evaluateExpression uses a safe sandboxed evaluation method, never eval(). Add Content-Security-Policy meta tag. 3. ACCESSIBILITY - Add proper ARIA attributes: modal needs role='dialog' aria-modal='true' aria-labelledby, function panel needs aria-hidden toggling, implement focus trap for both, add aria-labels to icon-only buttons, add aria-live regions for draggable chips feedback. 4. Add keyboard handlers (Escape key) to close modal/panel. 5. Connect form labels properly with 'for' attributes and implement validation error messaging structure. 6. Fix layout shift by replacing body margin manipulation with transform-based panel sliding."
+      },
+      "t": 1385.3
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "ExpressionBuilderModal - Full-screen modal with formula bar, visual function composer, parameter inputs with autocomplete, and live preview pane",
+          "FunctionBlockComponent - Visual representation of functions in expression composer with parameter slots and nested function capability",
+          "ExpressionTemplateLibrary - Modal view for saved expression templates with CRUD operations and import/export",
+          "DebugModePanel - Expandable section showing step-by-step transformation execution with function call hierarchy",
+          "ValidationErrorDetail - Enhanced error display with specific function failure information and suggested fixes",
+          "initTransformationEngine() - Core initialization function",
+          "Runtime execution engine for transformations",
+          "Function library with all transformation functions (string, math, date, array, conditional, custom)",
+          "Drag-and-drop function composition system",
+          "Live preview capabilities showing transformation results on sample data",
+          "Expression template save/load functionality",
+          "Testing integration framework",
+          "Autocomplete for parameter inputs",
+          "Nested function support in visual composer",
+          "Step-by-step debug execution view"
+        ],
+        "note": "Code only implements the FunctionLibraryPanel UI shell and basic styling. Missing: ExpressionBuilderModal (core feature), runtime execution engine, all transformation functions, drag-and-drop composition, live preview, template management, debug panel, validation details, and most critical functionality. Only ~15% of spec requirements are present."
+      },
+      "t": 1392.9
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 30314
+      },
+      "t": 1549.6
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Incomplete JavaScript code - the 'now' function description and subsequent code are cut off, breaking functionality",
+          "Missing critical form controls - no visible way for users to create or edit mappings without the modal",
+          "No visible UI rendered - the HTML body is completely empty, no main interface elements present",
+          "Missing aria-labels on icon buttons, making them inaccessible to screen readers",
+          "Modal traps focus but no visible focus management implementation for keyboard navigation",
+          "No error boundaries or fallback UI if JavaScript fails to load",
+          "No error handling for malformed JSON in drag-and-drop data transfer - will crash on parse failure",
+          "Memory leak: Event listeners in setupEventListeners() not cleaned up, duplicate listeners added on re-initialization"
+        ]
+      },
+      "t": 1604.6
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 30726
+      },
+      "t": 1757.8
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No <label> elements associated with form inputs - breaks screen reader accessibility and click targets",
+          "Modal does not trap focus - keyboard users can tab outside modal to background content",
+          "No skip navigation link - keyboard users must tab through entire function panel",
+          "CSS uses fixed positioning without accounting for content reflow on small screens - function panel forces horizontal scroll on mobile",
+          "Body overflow hidden on modal/panel open prevents scrolling but doesn't preserve scroll position",
+          "Inputs lack proper ARIA labels and error state announcements for screen readers",
+          "No visible focus indicators meet WCAG 2.1 contrast requirements (current focus styles too subtle)",
+          "Draggable function chips have no keyboard alternative - completely inaccessible to non-mouse users"
+        ]
+      },
+      "t": 1813.6
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1829.4
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Data Quality & Validation Rules Engine"
+      },
+      "t": 1844.9
+    }
+  ],
+  "cost": 1.8905340000000004
+}

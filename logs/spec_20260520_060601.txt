@@ -1,0 +1,227 @@
+# TECHNICAL SPECIFICATION: CONTACT FIELD MAPPING CONFIGURATION INTERFACE
+
+## OVERVIEW
+
+A comprehensive admin interface for configuring bidirectional field mappings between Salesforce and Renzo contact records. The system provides visual mapping configuration with drag-to-reorder priority, field type validation, transformation rules, conflict resolution strategies, and real-time preview capabilities. All mappings are persisted in a dedicated database table and can be exported/imported as JSON for backup and migration purposes.
+
+## VIEWS
+
+- **MappingListView**: Primary view displaying all configured field mappings in a sortable table with columns for Salesforce field, Renzo field, sync direction, data types, enabled status, conflict resolution, and action buttons. Includes header with "Add Mapping" button, search/filter controls, and bulk action options.
+
+- **AddEditMappingModal**: Large modal dialog for creating new or editing existing field mappings. Contains two-column layout with source/destination field dropdowns, data type indicators, sync direction selector (three buttons: SF→Renzo, Renzo→SF, Bidirectional), conflict resolution dropdown, transformation options section with checkboxes and inputs, and real-time validation messages.
+
+- **PreviewSection**: Embedded panel within AddEditMappingModal showing side-by-side comparison of sample source data and transformed destination data. Displays 3-5 example records with original values, applied transformations highlighted, and final output.
+
+- **ConfirmationModal**: Standard confirmation dialog shown before saving configuration changes. Displays summary of changes (X mappings added, Y modified, Z disabled), estimated number of contacts affected, and warning messages for breaking changes.
+
+- **ExportImportModal**: Modal with tabbed interface for exporting current configuration to downloadable JSON file or importing configuration from uploaded JSON. Includes validation preview showing conflicts before import commit.
+
+- **ResetDefaultsModal**: Warning dialog confirming reset to system default mappings with clear messaging about data loss and affected mappings count.
+
+## FUNCTIONS
+
+- **initializeMappingInterface()**: Entry point that loads existing mappings from database, fetches Salesforce field metadata via API, retrieves Renzo contact schema, renders MappingListView, attaches all event listeners, and initializes drag-and-drop library.
+
+- **loadExistingMappings()**: Fetches all field mappings from `/api/field-mappings` endpoint ordered by sort_order, transforms database rows into UI data structure, populates mapping table, and stores in memory for reference.
+
+- **fetchSalesforceFields()**: Calls Salesforce metadata API `/services/data/v57.0/sobjects/Contact/describe` to retrieve all available fields with types, labels, and constraints. Caches response in sessionStorage with 1-hour expiration.
+
+- **fetchRenzoContactSchema()**: Retrieves Renzo contact field schema from `/api/contact-schema` endpoint containing field names, types, labels, required status, and validation rules. Caches in sessionStorage.
+
+- **renderMappingTable(mappings)**: Clears existing table body, iterates through mappings array, generates table row HTML for each mapping with status badge, type indicators, direction icon, toggle switch, and action buttons. Attaches row-specific event handlers.
+
+- **openAddMappingModal()**: Displays AddEditMappingModal in create mode, populates Salesforce field dropdown with fetched fields grouped by type, populates Renzo field dropdown with available fields excluding already-mapped ones, sets default values (enabled=true, direction=SF→Renzo, conflict=SF wins), and focuses first dropdown.
+
+- **openEditMappingModal(mappingId)**: Retrieves mapping data by ID, displays AddEditMappingModal in edit mode, pre-populates all form fields with existing values, disables field dropdowns to prevent changing source/destination, enables transformation and direction editing, and loads preview with current configuration.
+
+- **validateFieldTypeCompatibility(sfType, renzoType)**: Compares source and destination field types using compatibility matrix, returns validation object with `isValid` boolean and `message` string. Compatible pairs: text↔text, number↔number, date↔date/datetime, boolean↔boolean, email→text, phone→text, picklist→text.
+
+- **handleFieldSelection(sourceField, destinationType)**: Triggered when source field is selected in modal, determines field data type, filters destination field dropdown to show only compatible types, displays type indicator badges, shows/hides relevant transformation options based on type (phone formatting for phone fields, date formatting for date fields).
+
+- **renderTransformationOptions(fieldType)**: Dynamically generates transformation option checkboxes and inputs based on selected field type. Text fields show trim whitespace, uppercase, lowercase, default value. Phone fields show format option with pattern selector. Date fields show format string input. Number fields show rounding options.
+
+- **updatePreviewSection()**: Fetches 5 sample contact records from Salesforce API, applies currently configured transformation rules to each field value, renders side-by-side comparison table with original value in left column and transformed value in right column with differences highlighted in yellow.
+
+- **saveMapping(mappingData)**: Validates all required fields, checks for duplicate mappings, sends POST/PUT request to `/api/field-mappings` with mapping configuration, handles success by closing modal and refreshing table, handles errors by displaying validation messages inline.
+
+- **toggleMappingEnabled(mappingId, enabled)**: Sends PATCH request to `/api/field-mappings/${mappingId}` with `{enabled: boolean}`, updates toggle switch state, updates row styling to show disabled state (gray text, reduced opacity), and shows success toast notification.
+
+- **deleteMapping(mappingId)**: Displays confirmation dialog with mapping details, sends DELETE request to `/api/field-mappings/${mappingId}` on confirmation, removes row from table with fade-out animation, reorders remaining mappings, and shows success notification.
+
+- **initializeDragAndDrop()**: Attaches Sortable.js library to mapping table body, configures drag handle selector (`.drag-handle` icon), enables animation on drop, listens for `onEnd` event, calculates new sort_order values for all affected rows, and sends batch update to `/api/field-mappings/reorder` endpoint.
+
+- **handleDragEnd(event)**: Triggered when drag operation completes, extracts old and new index positions, reorders mappings array in memory, recalculates sort_order values (increments of 10 for flexibility), batches all changed sort_order values, sends to backend, and shows notification on success.
+
+- **updateSortOrder(mappingId, newOrder)**: Updates sort_order value for specific mapping in database, returns promise resolving to updated mapping object, handles conflicts by reloading full mapping list if sort collision detected.
+
+- **validateMappingConfiguration(config)**: Comprehensive validation function checking required fields (salesforce_field, renzo_field, direction), field type compatibility, transformation rule syntax, conflict resolution value validity, and sync direction logical consistency. Returns array of error objects with field references.
+
+- **showValidationErrors(errors)**: Displays validation error messages inline next to relevant form fields, adds `.error` class to form-group elements, scrolls to first error, and sets focus to first invalid field.
+
+- **clearValidationErrors()**: Removes all `.error` classes from form elements, clears error message text nodes, and resets form validation state.
+
+- **openConfirmationModal(changes)**: Displays modal summarizing pending changes, fetches count of affected contacts from `/api/contacts/count` endpoint, calculates mapping change impact (added, modified, deleted counts), renders warning messages for critical changes (bidirectional mappings, conflict resolution changes), and waits for user confirmation.
+
+- **applyConfigurationChanges(mappings)**: Iterates through modified mappings array, sends individual save requests for each change, tracks success/failure for each operation, displays progress indicator, shows final summary with success count and any failures, and refreshes mapping list on completion.
+
+- **resetToDefaults()**: Displays ResetDefaultsModal with warning message, fetches default mapping configuration from `/api/field-mappings/defaults` endpoint on confirmation, deletes all existing custom mappings, creates new mappings from defaults, reloads interface, and shows success notification.
+
+- **exportConfiguration()**: Retrieves all current field mappings, serializes to JSON format with metadata (export_date, version, environment), triggers browser download with filename `renzo-field-mappings-YYYY-MM-DD.json`, and shows success notification.
+
+- **openImportModal()**: Displays ExportImportModal with file upload input, accepts .json files only, parses uploaded file content, validates JSON structure against expected schema, displays preview table showing mappings to be imported, highlights conflicts with existing mappings, and enables/disables import button based on validation.
+
+- **importConfiguration(jsonData)**: Validates imported JSON structure, checks mapping compatibility with current Salesforce/Renzo fields, creates backup of existing configuration, deletes existing mappings if replace mode selected, inserts new mappings from import with new IDs, handles partial import failures by rolling back transaction, and displays summary report.
+
+- **handleImportConflicts(conflicts)**: Displays conflict resolution interface for each conflicting mapping, offers options (keep existing, use imported, merge), applies user selections, and proceeds with import of non-conflicting mappings.
+
+- **searchMappings(query)**: Filters mapping list by search term matching Salesforce field name, Renzo field name, or field labels, updates table display to show only matching rows, highlights search terms in results, and shows "no results" message if empty.
+
+- **filterByDirection(direction)**: Filters mapping table by sync direction (SF→Renzo, Renzo→SF, Bidirectional, or All), updates filter button active states, persists filter selection in sessionStorage, and updates row visibility.
+
+- **filterByStatus(enabled)**: Filters mapping table by enabled status (All, Enabled, Disabled), updates filter button states, and toggles row visibility accordingly.
+
+- **testMapping(mappingId)**: Fetches single sample contact record, applies mapping transformation rules, displays before/after values in popup, executes actual field update operation in test mode (no commit), validates result, and shows success/failure message with details.
+
+- **bulkEnableDisable(mappingIds, enabled)**: Accepts array of mapping IDs and boolean enabled state, sends batch PATCH request to `/api/field-mappings/bulk-update`, updates all affected toggle switches, refreshes table rows, and shows summary notification.
+
+- **duplicateMapping(mappingId)**: Loads existing mapping data, opens AddEditMappingModal pre-populated with copied values, appends "(Copy)" to internal reference, clears ID to create new record, and allows user to modify before saving.
+
+- **showMappingHistory(mappingId)**: Fetches change history from `/api/field-mappings/${mappingId}/history` endpoint, displays modal with timeline of changes showing timestamp, user, fields modified, old values, and new values.
+
+- **validateConflictResolution(direction, resolution)**: Checks logical consistency of conflict resolution strategy with sync direction, warns if "Salesforce wins" is set for Renzo→SF direction, suggests appropriate defaults, and returns validation status.
+
+- **handleApiError(error, context)**: Centralized error handler that parses API error responses, displays user-friendly error messages in toasts or inline, logs detailed errors to console for debugging, and provides recovery suggestions for common errors.
+
+## DATA
+
+- **fieldMappings**: Array of mapping objects loaded from database, each containing {id, salesforce_field, salesforce_field_label, salesforce_field_type, renzo_field, renzo_field_label, renzo_field_type, direction, enabled, transformation_rules, conflict_resolution, sort_order, created_at, updated_at}
+
+- **salesforceFields**: Array of Salesforce field metadata objects with structure {name, label, type, length, required, picklistValues, referenceTo}, grouped by type categories (Standard, Custom, System)
+
+- **renzoContactSchema**: Array of Renzo contact field definitions with structure {name, label, type, required, validation_rules, default_value}, organized by field categories
+
+- **transformationRules**: Object storing active transformation rules for current mapping edit session {trim: boolean, uppercase: boolean, lowercase: boolean, phone_format: string, date_format: string, default_value: string, round_decimals: number}
+
+- **validationErrors**: Array of error objects for current form state, each containing {field: string, message: string, severity: 'error'|'warning'}
+
+- **previewData**: Array of sample records with original and transformed values {record_id, original_value, transformed_value, field_name}, limited to 5 records
+
+- **pendingChanges**: Object tracking unsaved modifications {added: [], modified: [], deleted: []}, used for confirmation modal display
+
+- **importedConfig**: Parsed JSON object from uploaded configuration file with structure {version: string, exported_at: string, mappings: [], metadata: {}}
+
+- **fieldTypeCompatibilityMatrix**: Static object defining valid type conversions {text: ['text', 'textarea', 'email', 'phone', 'url'], number: ['number', 'currency', 'percent'], date: ['date', 'datetime'], boolean: ['boolean', 'checkbox']}
+
+- **defaultConflictResolutions**: Array of conflict resolution options [{value: 'salesforce_wins', label: 'Salesforce Wins'}, {value: 'renzo_wins', label: 'Renzo Wins'}, {value: 'most_recent_wins', label: 'Most Recent Wins'}, {value: 'manual_review', label: 'Manual Review Required'}]
+
+- **syncDirectionOptions**: Array of direction options [{value: 'sf_to_renzo', label: 'Salesforce → Renzo', icon: '→'}, {value: 'renzo_to_sf', label: 'Renzo → Salesforce', icon: '←'}, {value: 'bidirectional', label: 'Bidirectional', icon: '↔'}]
+
+- **currentSort**: Object tracking current table sort state {column: 'sort_order', direction: 'asc'}
+
+- **activeFilters**: Object storing active filter states {search: '', direction: 'all', status: 'all'}
+
+- **sessionCache**: Object holding cached API responses with timestamps {salesforceFields: {data: [], timestamp: number}, renzoSchema: {data: [], timestamp: number}}
+
+## API
+
+- **GET /api/field-mappings**: Retrieves all field mappings ordered by sort_order. Query params: ?include_disabled=true. Response: {success: true, mappings: [...], count: number}. Error handling: 401 shows login prompt, 500 shows generic error toast.
+
+- **GET /api/field-mappings/:id**: Fetches single mapping by ID with full details including history summary. Response: {success: true, mapping: {...}, history_count: number}. Error handling: 404 shows "Mapping not found", 401 requires authentication.
+
+- **POST /api/field-mappings**: Creates new field mapping. Payload: {salesforce_field, renzo_field, direction, enabled, transformation_rules, conflict_resolution}. Response: {success: true, mapping: {...}, id: number}. Validation errors return 400 with {success: false, errors: [{field, message}]}.
+
+- **PUT /api/field-mappings/:id**: Updates existing mapping. Payload: same as POST excluding field names if locked. Response: {success: true, mapping: {...}}. Returns 409 if conflict with existing mapping detected.
+
+- **PATCH /api/field-mappings/:id**: Partial update for specific fields like enabled status or sort_order. Payload: {enabled: boolean} or {sort_order: number}. Response: {success: true, mapping: {...}}.
+
+- **DELETE /api/field-mappings/:id**: Soft deletes mapping by setting deleted_at timestamp. Response: {success: true, message: "Mapping deleted"}. Returns 409 if mapping is referenced by active sync jobs.
+
+- **POST /api/field-mappings/reorder**: Batch updates sort_order for multiple mappings. Payload: {mappings: [{id, sort_order}, ...]}.  Response: {success: true, updated_count: number}. Handles conflicts by returning current state.
+
+- **POST /api/field-mappings/bulk-update**: Updates multiple mappings simultaneously. Payload: {mapping_ids: [], updates: {enabled: boolean}}. Response: {success: true, updated_count: number, failed: []}. Partial success returns 207 status.
+
+- **GET /api/field-mappings/defaults**: Retrieves system default mapping configuration. Response: {success: true, mappings: [...], version: string}. No query params needed.
+
+- **GET /api/field-mappings/:id/history**: Fetches change history for specific mapping. Query params: ?limit=50&offset=0. Response: {success: true, history: [{timestamp, user, changes: {...}}], total: number}.
+
+- **POST /api/field-mappings/test**: Tests mapping transformation on sample data without persisting. Payload: {mapping_id: number, sample_data: {...}}. Response: {success: true, original: {...}, transformed: {...}, validation: {...}}.
+
+- **GET /api/salesforce/fields**: Proxies Salesforce metadata API to retrieve Contact object fields. Response: {success: true, fields: [...], object: 'Contact'}. Caches for 1 hour. Returns 503 if Salesforce unavailable.
+
+- **GET /api/contact-schema**: Returns Renzo contact field schema. Response: {success: true, schema: [...], version: string}. Static response cached indefinitely.
+
+- **GET /api/contacts/count**: Returns count of contacts that will be affected by mapping changes. Query params: ?mapping_ids=1,2,3. Response: {success: true, count: number, estimated: boolean}.
+
+- **POST /api/field-mappings/import**: Imports configuration from JSON payload. Payload: {config: {...}, mode: 'replace'|'merge'}. Response: {success: true, imported_count: number, skipped: [], errors: []}. Validates before importing.
+
+- **GET /api/field-mappings/export**: Returns current configuration as downloadable JSON. Query params: ?include_disabled=false. Response: JSON file download with Content-Disposition header.
+
+- **POST /api/field-mappings/validate**: Validates mapping configuration without saving. Payload: {salesforce_field, renzo_field, direction, transformation_rules}. Response: {valid: boolean, errors: [], warnings: []}.
+
+## DESIGN
+
+- **Primary Color Palette**: Green theme matching existing system - #2D6A4F for primary actions, #40916C for focus states and accents, #52B788 for hover states, #95D5B2 for disabled/inactive states
+
+- **Status Colors**: Success #2D6A4F with light background #D8F3DC, Warning #FBBF24 with light background #FEF3C7, Error #DC2626 with light background #FEE2E2, Info #3B82F6 with light background #DBEAFE
+
+- **Typography**: System font stack (-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif), table headers uppercase 11px font-weight 600 letter-spacing 0.5px color #6B7280, body text 14px color #1F2937, labels 13px font-weight 500 color #374151
+
+- **Mapping Table Layout**: Full-width table with sticky header, minimum column widths (Salesforce Field: 200px, Renzo Field: 200px, Direction: 120px, Type: 80px, Conflict: 150px, Actions: 120px), zebra striping with #F9FAFB on even rows, 12px vertical padding in cells
+
+- **Modal Dimensions**: AddEditMappingModal uses .modal-large (700px width), PreviewSection 50% width within modal two-column layout, ExportImportModal standard modal (500px), ConfirmationModal small (400px)
+
+- **Direction Icons**: Custom SVG icons for sync direction - rightward arrow for SF→Renzo (→), leftward arrow for Renzo→SF (←), bidirectional arrows for sync (↔), displayed at 16px size with currentColor fill
+
+- **Toggle Switches**: Custom toggle component 44px width × 24px height, circular handle 20px diameter with 2px offset, transition all 0.2s ease, enabled state green background #2D6A4F, disabled state gray #D1D5DB
+
+- **Drag Handle**: Six-dot vertical grip icon at 16px size, color #9CA3AF, appears on row hover, cursor: grab when not dragging, cursor: grabbing during drag, visible indicator of draggable rows
+
+- **Type Badges**: Small pill-shaped badges showing field types, 6px vertical padding × 10px horizontal padding, 11px uppercase font, border-radius 12px, color-coded (text: #3B82F6, number: #8B5CF6, date: #EC4899, boolean: #10B981)
+
+- **Transformation Options Section**: Nested within modal, light gray background #F9FAFB, 12px padding, border-radius 6px, checkboxes with labels in vertical stack 8px gap between items
+
+- **Preview Panel**: Side-by-side comparison table within modal, left column original values in neutral gray #6B7280, right column transformed values in primary color #2D6A4F, differences highlighted with yellow background #FEF3C7
+
+- **Action Buttons**: Icon-only buttons in Actions column at 32px × 32px size, border-radius 4px, hover background #F3F4F6, icons at 16px size (edit: pencil, delete: trash, test: play, duplicate: copy)
+
+- **Filter Bar**: Horizontal button group with segmented control appearance, each segment 100px width, active state with primary background and white text, inactive with gray background #F3F4F6 and dark text
+
+- **Search Input**: 300px width, 36px height, border-radius 6px, border #D1D5DB, focus border #40916C with 0 0 0 3px rgba(64, 145, 108, 0.1) shadow, magnifying glass icon positioned absolute left 12px
+
+- **Spacing System**: Base unit 8px, section spacing 24px, element spacing 16px, tight spacing 8px, form group margin-bottom 20px, modal padding 24px
+
+- **Animations**: Row hover scale 1.01 with 0.2s ease transition, drag row 0.3s ease animation, modal fade-in 0.2s ease, toast slide-in-right 0.3s ease, toggle switch 0.2s ease transition
+
+- **Responsive Behavior**: Table horizontal scroll below 1024px width, modal full-screen on mobile with 16px padding, filter bar stacks vertically below 768px, action buttons show labels on mobile
+
+## ERRORS
+
+- **Network Error**: Display toast notification "Unable to connect to server. Please check your connection." with retry button, persist error state for 5 seconds before auto-retry
+
+- **401 Unauthorized**: Redirect to login page with return URL parameter, show session expired message "Your session has expired. Please log in again."
+
+- **403 Forbidden**: Display modal "You don't have permission to modify field mappings. Please contact your administrator." with close button only
+
+- **404 Mapping Not Found**: Show inline error in table "This mapping no longer exists" and remove row with fade-out animation after 2 seconds
+
+- **400 Validation Error**: Display validation messages inline next to relevant form fields with red error text and icon, prevent form submission, scroll to first error
+
+- **409 Duplicate Mapping**: Show modal "A mapping already exists for this field combination. Please edit the existing mapping or choose different fields." with option to view existing mapping
+
+- **Field Type Mismatch**: Highlight incompatible field dropdowns with red border, show error message "Cannot map {{sfType}} to {{renzoType}}. Please select compatible field types." below dropdown
+
+- **Missing Required Mapping**: On save attempt, show error banner at top of modal "Please complete all required fields: Salesforce Field, Renzo Field, Sync Direction" with red background
+
+- **Salesforce API Unavailable**: Display warning banner "Cannot connect to Salesforce. Field list may be incomplete. Please try again later." with yellow background, disable Add Mapping button
+
+- **Transformation Syntax Error**: Show error next to transformation rule input "Invalid transformation rule syntax. Example: trim|lowercase" with info icon linking to documentation
+
+- **Import Validation Failed**: In import modal, display table of validation errors with columns: Line, Field, Error Message, and highlight conflicts in red, disable Import button until resolved
+
+- **Export Failed**: Show error toast "Failed to export configuration. Please try again or contact support." with download icon crossed out
+
+- **Concurrent Modification**: On save, if mapping was modified by another user, show conflict modal "This mapping was changed by {{user}} at {{time}}. Your changes:" with diff view and options to overwrite or cancel
+
+- **Bulk Operation Partial Failure**: Display summary modal "Updated 15 of 20 mappings. Failed mappings: [list with reasons]" with option to retry failed items or continue
+
+- **Delete Protected Mapping**: Show warning modal "Cannot delete this mapping because it is currently in use

@@ -1,0 +1,428 @@
+# TECHNICAL SPECIFICATION: Full Mobile Responsive Layout Rework
+
+## OVERVIEW
+Transform the desktop-only sidebar navigation into a responsive mobile layout with bottom navigation bar, top header, and mobile-optimized components. At 768px breakpoint, sidebar becomes fixed bottom nav with emoji icons, add fixed top header, convert contacts table to card layout, and adjust modal behavior. All changes implemented via CSS and minimal JS modifications to existing render functions.
+
+## VIEWS
+- **Desktop Layout**: Unchanged - sidebar left, main content right
+- **Mobile Layout (≤768px)**: Fixed bottom nav bar (56px height), fixed top header (52px height), main content with adjusted padding
+- **mobileHeader**: New fixed top bar showing logo, user info, logout icon (only visible on mobile)
+- **Bottom Nav Bar**: Transformed sidebar with 8 horizontal nav items, emoji icons above labels
+- **Contacts Card View**: Alternative to table for mobile, card-based list with badges and actions
+- **Mobile Modals**: Bottom sheet style with rounded top corners
+
+## FUNCTIONS
+- **renderContacts() [MODIFY]**: 
+  1. Check `window.innerWidth <= 768`
+  2. If true, call `renderContactsCards()` instead of table rendering
+  3. If false, proceed with existing table rendering logic
+  4. Preserve all existing filtering/sorting logic
+
+- **renderContactsCards() [NEW]**:
+  1. Create container div with class `.contacts-cards-mobile`
+  2. For each contact, create card div with class `.contact-card-mobile`
+  3. Build card HTML: name + priority badge in header, company text, tier badge, status badge, message button
+  4. Append cards to container
+  5. Return container HTML or insert into DOM (match existing pattern)
+  6. Add click handler for message button
+
+- **createMobileHeader() [NEW]**:
+  1. Check if `#mobileHeader` already exists, return if so
+  2. Create div with id `mobileHeader`
+  3. Insert Renzo logo (clone from `.sidebar-logo` or use text)
+  4. Insert user display name from `.sidebar-user` text content
+  5. Insert logout button as icon (🚪 or use existing logout handler)
+  6. Insert as first child of `body`
+  7. Called on DOMContentLoaded
+
+- **initMobileLayout() [NEW]**:
+  1. Call `createMobileHeader()`
+  2. Add window resize listener
+  3. On resize, check width and re-render contacts if crossing 768px threshold
+  4. Debounce resize handler (250ms)
+
+## DATA
+- **No new data storage required** - all data remains in existing structures
+- **State tracking**: Consider adding `currentBreakpoint` variable ('mobile' | 'desktop') to optimize resize handling
+- **Format**: String variable updated on resize
+
+## API
+- **No API changes required** - all modifications are client-side rendering and CSS
+
+## DESIGN
+
+### Mobile Header (≤768px only)
+```
+#mobileHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--sidebar);
+  color: var(--sidebar-text);
+  display: none; /* shown only on mobile */
+  align-items: center;
+  padding: 0 16px;
+  justify-content: space-between;
+  z-index: 500;
+  box-shadow: var(--shadow);
+}
+
+#mobileHeader .logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--green-mid);
+}
+
+#mobileHeader .user-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#mobileHeader .logout-btn {
+  background: transparent;
+  border: none;
+  color: var(--sidebar-text);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+### Bottom Navigation Bar (≤768px)
+```
+@media (max-width: 768px) {
+  #appView {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 56px;
+    flex-direction: row;
+    z-index: 500;
+    padding: 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  }
+
+  .sidebar-logo,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .sidebar nav {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    padding: 0;
+    gap: 0;
+  }
+
+  .sidebar .nav-item {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 2px;
+    font-size: 10px;
+    border-left: none;
+    border-top: 3px solid transparent;
+    border-bottom: none;
+    min-height: 56px;
+    gap: 2px;
+  }
+
+  .sidebar .nav-item.active {
+    border-top-color: var(--green-mid);
+    border-left: none;
+    background: rgba(var(--green-mid-rgb), 0.1);
+  }
+
+  .sidebar .nav-item .nav-icon {
+    font-size: 20px;
+    margin: 0;
+    width: auto;
+  }
+
+  .sidebar .nav-item::before {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  .sidebar .nav-item[data-view="dashboard"]::before { content: "🏠"; }
+  .sidebar .nav-item[data-view="contacts"]::before { content: "👥"; }
+  .sidebar .nav-item[data-view="queue"]::before { content: "📤"; }
+  .sidebar .nav-item[data-view="drafts"]::before { content: "📝"; }
+  .sidebar .nav-item[data-view="batch"]::before { content: "⚡"; }
+  .sidebar .nav-item[data-view="integrations"]::before { content: "🔗"; }
+  .sidebar .nav-item[data-view="activity"]::before { content: "📊"; }
+  .sidebar .nav-item[data-view="settings"]::before { content: "⚙"; }
+
+  .sidebar .nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    transform: translateX(10px);
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+  }
+
+  #mobileHeader {
+    display: flex;
+  }
+}
+```
+
+### Main Content Adjustments (≤768px)
+```
+@media (max-width: 768px) {
+  .main {
+    padding-top: 52px;
+    padding-bottom: 64px;
+    width: 100%;
+  }
+
+  .view {
+    padding: 16px;
+  }
+
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .view-header .actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-header .actions button {
+    flex: 1;
+  }
+}
+```
+
+### Contact Cards Mobile (≤768px)
+```
+.contacts-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-card-mobile {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.contact-card-mobile .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.contact-card-mobile .card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.contact-card-mobile .card-company {
+  font-size: 14px;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+
+.contact-card-mobile .card-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.contact-card-mobile .card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.contact-card-mobile .card-actions button {
+  flex: 1;
+  min-height: 44px;
+}
+```
+
+### Stats Grid (≤768px)
+```
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px 12px;
+  }
+
+  .stat-card .label {
+    font-size: 11px;
+  }
+
+  .stat-card .value {
+    font-size: 22px;
+  }
+}
+```
+
+### Modals (≤768px)
+```
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .modal-header {
+    padding: 20px 16px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: calc(90vh - 140px);
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    padding: 16px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+```
+
+### Form Adjustments (≤768px)
+```
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .field label {
+    font-size: 13px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom */
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 100px;
+  }
+}
+```
+
+### Table Hiding (≤768px)
+```
+@media (max-width: 768px) {
+  .table-wrap,
+  table {
+    display: none;
+  }
+
+  .contacts-cards-mobile {
+    display: flex;
+  }
+}
+```
+
+### Touch Targets
+```
+@media (max-width: 768px) {
+  button,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger,
+  a.clickable,
+  .nav-item {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn-sm {
+    min-height: 40px;
+    padding: 8px 16px;
+  }
+
+  .btn-xs {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+}
+```
+
+### Badge Adjustments (≤768px)
+```
+@media (max-width: 768px) {
+  .badge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+```
+
+## ERRORS
+- **Resize thrashing**: Debounce window resize listener to prevent excessive re-renders
+- **Missing elements**: Check for existence of `.sidebar-user` and `.sidebar-logo` before cloning content
+- **Empty contacts**: Handle zero contacts in card view with empty state message
+- **Nav item mismatch**: Verify all 8 nav items have `data-view` attributes matching emoji mapping
+- **CSS variable undefined**: Ensure `--green-mid-rgb` is defined or fall back to rgba conversion
+- **Modal not found**: Check if modal classes exist before applying mobile styles
+- **Touch target too small**: Audit all interactive elements to meet 44px minimum
+- **Breakpoint flicker**: Add `transition: none` during resize to prevent animation artifacts
+- **Badge overflow**: Handle long badge text with `overflow: hidden` and `text-overflow: ellipsis`
+- **Z-index conflicts**: Ensure mobile header (500) and bottom nav (500) don't conflict with modals (typically 1000+)
+
+## SCOPE_CHECK
+- **Estimated total lines**: 480 lines
+  - CSS media queries: ~320 lines
+  - JavaScript functions: ~120 lines (createMobileHeader: 30, renderContactsCards: 60, initMobileLayout: 30)
+  - HTML template strings: ~40 lines
+- **SINGLE_TASK**: Proceed as one build
+- **Complexity**: Medium - mostly CSS with minimal JS logic additions
+- **File modifications**: 1 CSS file, 1 JS file
+- **New functions**: 3 small functions, all under 60 lines each
+- **Testing surface**: 8 nav items, 1 header, 1 card renderer, 5 component responsive adjustments

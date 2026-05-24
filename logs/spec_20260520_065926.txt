@@ -1,0 +1,178 @@
+# TECHNICAL SPECIFICATION: Field Mapping Configuration UI
+
+## OVERVIEW
+A comprehensive field mapping management system enabling non-technical users to configure, test, and maintain bidirectional data synchronization between Salesforce and Renzo systems. The interface provides visual mapping tools, real-time validation, transformation builders, and conflict resolution strategies without requiring code changes. Built as a new section within the existing sync dashboard using established component patterns and styling system.
+
+## VIEWS
+
+### MappingListView
+Main management interface at `/sync/mappings` route displaying all field mappings in a searchable, filterable data table. Uses existing `.card` and `.table` components with custom mapping-specific columns. Header contains search bar, filter dropdowns (direction, status, system), and "Create New Mapping" button. Bulk action toolbar appears when rows selected via checkboxes. Empty state shows onboarding message with quick-start guide. Footer includes pagination controls and row count display.
+
+### MappingEditorModal
+Full-screen modal (`.modal.modal-large`) for creating and editing individual field mappings. Three-column layout: left column for source field selection, center column for transformation configuration, right column for destination field and settings. Header shows "Create Mapping" or "Edit Mapping: {name}" title with close button. Body contains tabbed interface: "Basic Settings", "Transformation", "Advanced Options". Footer has "Cancel", "Test Mapping", and "Save Mapping" buttons with loading states.
+
+### TransformationBuilderPanel
+Nested component within MappingEditorModal that dynamically renders based on transformation_type selection. Contains specialized interfaces: DateFormatBuilder (format string input with token buttons and live preview), TextTransformBuilder (operation selector with parameter inputs), PicklistMapperBuilder (two-column table with add/remove row controls), FormulaBuilder (expression textarea with field token picker and function reference), CustomFunctionBuilder (Monaco editor with JavaScript syntax highlighting and test console).
+
+### ValidationPanel
+Right-side panel in MappingEditorModal showing real-time validation results. Displays color-coded validation items: green checkmarks for passed validations, red X icons for errors, yellow warnings for concerns. Each item expandable to show detailed messages and resolution suggestions. Includes "Validation Status" summary badge at top (Valid, Warnings, Invalid). Auto-updates on field change with debouncing. Collapsible to maximize editor space.
+
+### ImportExportModal
+Compact modal for backup/migration operations. Two tabs: "Export" (mapping selection tree with "Export Selected" and "Export All" buttons, format selector for JSON/CSV) and "Import" (file upload dropzone, preview table of detected mappings, conflict resolution strategy selector, "Import" button). Shows progress bar during import with success/error summary upon completion.
+
+### TestMappingModal
+Modal displaying transformation test results. Top section shows input/output preview with sample data selector dropdown. Middle section displays transformation steps with intermediate values. Bottom section shows validation results and warnings. "Use Different Sample" button to test various data scenarios. "Copy Output" and "Save Test Case" actions available.
+
+## FUNCTIONS
+
+### initializeMappingListView()
+Entry point for MappingListView rendering. Fetches mapping list via getMappings(). Sets up event listeners on search input (debounced 300ms), filter dropdowns, bulk action buttons, create button. Initializes sortable table headers. Calls renderMappingTable() with fetched data. Stores current filters and sort state in viewState object. Handles browser back/forward navigation to restore view state. Shows loading skeleton during initial fetch.
+
+### renderMappingTable(mappings, container)
+Generates table HTML from mappings array. Clears container, creates table header with sortable columns (source field, destination field, direction, transformation, status, last modified). Iterates mappings array, creating row for each with: checkbox cell, data cells with appropriate formatting/badges, actions cell with edit/delete icon buttons. Applies zebra striping, attaches row click handlers for selection. If mappings empty, shows empty state SVG and message. Updates bulk action toolbar visibility based on selection count.
+
+### openMappingEditor(mappingId = null)
+Opens MappingEditorModal for create (null mappingId) or edit (existing mappingId). If editing, fetches mapping details via getMapping(mappingId) and populates form fields. Initializes field dropdowns via populateFieldDropdowns(). Sets up tab navigation between Basic/Transformation/Advanced panels. Attaches change listeners to all form inputs for validation triggering. Shows loading spinner during data fetch. Stores original mapping state for change detection. Returns Promise resolving to saved mapping or null if cancelled.
+
+### populateFieldDropdowns(sourceSystem, destinationSystem)
+Fetches field schemas from both systems via Promise.all([getSalesforceFields(), getRenzoFields()]). Transforms schemas into dropdown options with grouping by object/entity. Creates optgroup elements for each object type. Formats options with field label, API name, and data type icon. Implements type-ahead search within dropdowns. Caches schema data in sessionStorage with 1-hour TTL. Handles API errors gracefully with retry mechanism. Updates dropdown loading states during fetch.
+
+### validateMapping(mappingData)
+Comprehensive validation function returning validation result object with errors and warnings arrays. Checks: sourceField and destinationField exist in schemas, dataTypeCompatibility() returns true, transformation syntax valid via validateTransformation(), no circular dependencies via detectCircularDependencies(), required fields populated. Each check adds to errors/warnings with specific message and resolutionSuggestion. Returns isValid boolean, errors array, warnings array. Executes synchronously for real-time UI updates.
+
+### dataTypeCompatibility(sourceType, destinationType, transformation)
+Determines if source and destination data types are compatible, considering transformation. Uses compatibility matrix: string compatible with text/varchar, number with decimal/integer, date with datetime/timestamp, boolean with checkbox. If transformation specified, checks if transformation bridges incompatibility (e.g., date_format makes date→string valid). Returns object with compatible boolean and reason string. Handles complex types like picklist and reference fields.
+
+### validateTransformation(transformationType, config)
+Type-specific validation dispatcher. Routes to: validateDateFormat(config), validateTextTransform(config), validatePicklistMapping(config), validateFormula(config), or validateCustomFunction(config) based on transformationType. Each validator checks required config properties, syntax correctness, referenced fields existence. Returns errors array with field-specific messages. Implements regex pattern validation for format strings. Executes formula parsing for syntax errors.
+
+### validateFormula(formulaConfig)
+Parses formula expression string using formulaParser library. Checks for: balanced parentheses, valid function names against ALLOWED_FUNCTIONS whitelist, correct argument counts, field token format {FieldName}, no SQL injection patterns. Extracts field references and validates existence via schema cache. Returns errors array with line/column information for syntax errors. Builds dependency graph for circular reference detection.
+
+### detectCircularDependencies(mappingData, allMappings)
+Builds directed graph from all bidirectional mappings. Performs depth-first search starting from current mapping to detect cycles. Returns isCircular boolean and circularPath array showing dependency chain. Considers field-level dependencies, not just object-level. Handles self-referential mappings as special case. Used to prevent infinite sync loops. Result cached per save operation.
+
+### testMapping(mappingId, sampleData)
+Executes mapping transformation with provided sample data. Calls POST /api/mappings/{id}/test with sampleData payload. Returns Promise resolving to object with: transformedValue, intermediateSteps array, validationResults, executionTime. Handles transformation errors gracefully, returning error details. Logs test execution for debugging. Sample data can be actual field values or mock data from test data generator.
+
+### executeTransformation(value, transformationType, config)
+Core transformation execution engine. Routes to type-specific transformers: transformDate(value, config), transformText(value, config), transformPicklist(value, config), evaluateFormula(value, config), executeCustomFunction(value, config). Handles null/undefined values according to config.nullHandling strategy. Catches transformation errors and wraps in TransformationError with context. Returns transformed value or error object.
+
+### transformDate(value, config)
+Parses source date using config.sourceDateFormat (moment.js format string). Validates parsed date. Converts to config.destinationDateFormat. Handles timezone conversion if config.timezoneConversion specified (source→UTC→destination). Returns formatted string or null if parsing fails. Supports relative dates (e.g., "today-7days"). Validates format strings before execution.
+
+### transformPicklist(value, config)
+Looks up value in config.valueMapping object (sourceValue→destinationValue pairs). If mapping found, returns mapped value. If not found and config.unmappedStrategy is "default", returns config.defaultValue. If "error", throws TransformationError. If "preserve", returns original value. Handles case sensitivity per config.caseSensitive flag. Supports regex pattern matching for dynamic mappings.
+
+### evaluateFormula(contextData, formulaString, config)
+Creates isolated execution context with contextData fields as variables. Parses formulaString into abstract syntax tree. Evaluates AST with ALLOWED_FUNCTIONS library (IF, CONCAT, SUBSTR, ROUND, DATE_ADD, etc.). Prevents code injection via sandboxing. Returns calculated result. Supports field references via {FieldName} syntax replaced with contextData values before evaluation. Handles type coercion automatically.
+
+### executeCustomFunction(value, config)
+Retrieves function code from config.functionCode (stored JavaScript). Creates isolated VM context with value as input and helper libraries (lodash, moment). Executes function with timeout limit (5 seconds). Captures return value. Logs execution errors with stack trace. Implements memory limits to prevent DoS. Returns result or error object. Function must be pure (no external side effects).
+
+### saveMappingConfiguration(mappingData)
+Validates mappingData via validateMapping(). If invalid, shows validation errors and returns early. Determines if create or update based on mappingData.id. Calls appropriate API: POST /api/mappings or PUT /api/mappings/{id}. Shows loading state on save button. On success, displays toast notification, closes modal, refreshes mapping list. On API error, shows error message with retry option. Logs save operation to audit trail. Returns Promise resolving to saved mapping object.
+
+### deleteMappings(mappingIds)
+Shows confirmation modal with mapping count and warning about sync impact. If confirmed, calls DELETE /api/mappings with mappingIds array payload. Shows progress bar for bulk deletes. On success, removes rows from table with fadeOut animation, displays success toast. On partial failure, shows which mappings failed with reasons. Refreshes mapping list after completion. Prevents deletion of system-critical mappings.
+
+### bulkUpdateStatus(mappingIds, newStatus)
+Updates is_active status for multiple mappings via PUT /api/mappings/bulk-status with mappingIds and status payload. Shows loading overlay. Updates table badges in-place without full refresh. Displays success/failure count in toast. Validates that deactivating won't break dependencies. Returns Promise resolving when complete. Implements optimistic UI updates with rollback on error.
+
+### exportMappings(mappingIds, format)
+Fetches full mapping details for mappingIds via GET /api/mappings?ids=. Transforms to export format (JSON or CSV per format param). For JSON: pretty-prints with 2-space indent, includes schema version. For CSV: flattens nested objects, uses pipe delimiter for arrays. Creates Blob from formatted data. Triggers browser download with filename "renzo-mappings-{timestamp}.{ext}". Returns Promise resolving when download initiated.
+
+### importMappings(fileData, conflictStrategy)
+Parses uploaded file (JSON or CSV detection via content sniffing). Validates schema version compatibility. Detects conflicts with existing mappings via unique key comparison (source_field + destination_field + direction). Applies conflictStrategy: "skip" existing, "overwrite" with new, "create_new" with modified names, "prompt" user for each. Shows preview table of mappings to import. On confirmation, batch creates/updates via POST /api/mappings/bulk with mappings array. Returns import summary with success/failure counts.
+
+### searchMappings(query, filters, sort)
+Filters mappings array based on query string (matches source_field, destination_field, description) and filter criteria (direction, status, system, transformation_type). Applies case-insensitive search with substring matching. Implements debouncing to prevent excessive filtering. Sorts results based on sort.field and sort.direction. Updates URL query params to enable bookmarking filtered views. Returns filtered and sorted mappings array. Highlights matching text in results.
+
+### getSalesforceFields()
+Fetches Salesforce field schema via GET /api/fields/salesforce. Returns Promise resolving to array of objects: {objectName, fieldName, label, dataType, isRequired, picklistValues}. Implements 1-hour cache in sessionStorage under key "sf_schema_{timestamp}". Handles authentication errors by triggering re-auth flow. Groups fields by Salesforce object (Account, Contact, Opportunity, Custom Objects). Includes field relationships for reference fields.
+
+### getRenzoFields()
+Fetches Renzo database schema via GET /api/fields/renzo. Returns Promise resolving to array of objects: {tableName, columnName, label, dataType, isNullable, constraints}. Caches in sessionStorage similar to getSalesforceFields(). Includes metadata about custom fields and standard fields. Marks system fields as non-mappable. Returns both database column names and user-friendly labels. Includes field-level permissions.
+
+### handleFieldSelection(sourceFieldId, destinationFieldId)
+Triggered when user selects fields in dropdowns. Fetches full field metadata for both fields. Checks data type compatibility via dataTypeCompatibility(). If incompatible, shows warning and suggests compatible transformations. Auto-populates transformation dropdown with recommended options. Updates ValidationPanel with preliminary checks. Enables/disables transformation selector based on compatibility. Stores field metadata in editorState for later reference.
+
+### renderTransformationBuilder(transformationType, config, container)
+Dynamic UI generator for transformation configuration. Clears container. Based on transformationType, renders: DateFormatBuilder with format input and preview, TextTransformBuilder with operation selector, PicklistMapperBuilder with value mapping table, FormulaBuilder with expression editor, CustomFunctionBuilder with code editor. Pre-populates fields from config object. Attaches change listeners to trigger validation. Returns reference to builder component for value extraction.
+
+### renderDateFormatBuilder(config, container)
+Creates two-column layout: source format input (left), destination format input (right). Below each, shows format token reference (YYYY, MM, DD, HH, mm, ss). Includes timezone selector dropdowns. Bottom section shows live preview with sample date transforming in real-time as user types. Validates format strings on blur. Highlights invalid tokens in red. Provides common format presets as quick-select buttons.
+
+### renderPicklistMapperBuilder(config, container)
+Generates editable table with columns: Source Value, Destination Value, Actions (delete row). "Add Mapping" button appends new row. Fetches picklist values for source field and populates source column as dropdown. Destination column is free text input. Includes "Unmapped Value Strategy" section below table with radio buttons (Use Default, Preserve Original, Throw Error) and default value input. Validates for duplicate mappings.
+
+### renderFormulaBuilder(config, container)
+Top section: large textarea for formula expression with syntax highlighting (simple regex-based). Right panel: field token picker (click to insert {FieldName}), function reference accordion with descriptions and examples. Bottom section: formula validator showing parsed structure and errors. "Test Formula" button opens inline test panel with sample data inputs. Implements auto-complete for field names and functions as user types.
+
+### renderCustomFunctionBuilder(config, container)
+Embeds Monaco editor (JavaScript mode) in main area. Left sidebar: function template selector (common patterns like data cleansing, conditional logic). Right sidebar: available helper libraries documentation (moment.js, lodash). Bottom panel: test console with input JSON editor, "Run Test" button, output display. Shows execution time and error stack traces. Validates JavaScript syntax on change with debouncing. Includes code snippets library.
+
+### initializeSortableTable(tableElement)
+Attaches click handlers to table header cells with `.sortable` class. Toggles sort direction on repeated clicks (none→asc→desc→none). Updates header cell with arrow icon indicating current sort. Calls sortTableData() with column key and direction. Stores sort state in URL query params. Handles multi-column sorting with Shift+Click (not in v1). Animates row reordering with smooth transitions.
+
+### sortTableData(columnKey, direction)
+Sorts current mappings array based on columnKey and direction. Handles different data types: strings (case-insensitive localeCompare), dates (timestamp comparison), numbers (numeric subtraction). Null values sorted to end regardless of direction. Re-renders table with sorted data via renderMappingTable(). Updates pagination if active. Returns sorted array for chaining.
+
+### handleBulkSelection(selectAll)
+If selectAll true, checks all visible row checkboxes and adds mapping IDs to selectedMappings Set. If false, unchecks all and clears Set. Updates bulk action toolbar with selection count. Enables/disables bulk action buttons based on selection. Persists selection across pagination (stores IDs, not indices). Updates "Select All" checkbox state (checked, unchecked, indeterminate).
+
+### showValidationErrors(errors, container)
+Renders validation error list in container. Each error displayed with: severity icon (red X), field label, error message, expandable resolution suggestion. Groups errors by category (Field Selection, Data Type, Transformation, Dependencies). Scrolls to first error. Highlights related form fields with error state. Provides "Fix" button for auto-fixable errors (e.g., suggest compatible transformation). Updates count badge on validation tab.
+
+### generateSampleData(fieldType)
+Creates realistic sample data for testing based on fieldType. String: "Sample Text Value", Email: "test@example.com", Phone: "(555) 123-4567", Date: today's date, DateTime: current timestamp, Number: random integer, Picklist: first picklist value, Boolean: true. Returns object with value and metadata. Used by test mapping functionality. Supports custom sample data via user input override.
+
+### debounce(func, delay)
+Utility function wrapping func to execute only after delay milliseconds of inactivity. Returns wrapped function that cancels previous timeout and sets new one on each call. Used for search input and validation triggering to prevent excessive executions. Maintains function context (this) and arguments. Includes immediate option to execute on leading edge.
+
+### formatTimestamp(timestamp, format)
+Converts timestamp (ISO string or Unix) to formatted string. Uses format parameter (default: "MMM D, YYYY h:mm A") via moment.js. Handles null/invalid timestamps gracefully with "—" placeholder. Supports relative formatting ("2 hours ago") via format="relative". Used throughout UI for displaying last_modified timestamps. Respects user's timezone from profile settings.
+
+### showToast(message, type, duration)
+Displays temporary notification toast at top-right of screen. Type determines styling: "success" (green), "error" (red), "warning" (yellow), "info" (blue). Duration in milliseconds (default 3000). Auto-dismisses after duration. Includes close button. Multiple toasts stack vertically. Implements slide-in animation. Queues if multiple shown simultaneously. Allows HTML content for links.
+
+### makeApiRequest(endpoint, method, payload, options)
+Centralized API request handler. Builds full URL from endpoint. Sets headers including auth token from localStorage. Stringifies payload for POST/PUT. Handles fetch() with timeout (default 30s). Parses JSON response. Checks for error status codes and throws ApiError. Implements retry logic for 5xx errors (3 attempts, exponential backoff). Handles 401 by triggering auth refresh. Returns Promise resolving to response data. Logs requests in debug mode.
+
+### handleApiError(error, context)
+Global error handler for API failures. Displays user-friendly error message via showToast(). Logs full error details to console and error tracking service. For auth errors, redirects to login. For validation errors, shows field-specific messages. For network errors, offers retry button. Includes context string for debugging (e.g., "creating mapping"). Prevents duplicate error displays. Returns boolean indicating if error was handled.
+
+## DATA
+
+### viewState
+Object storing current view configuration. Properties: currentPage (number, pagination), pageSize (number, rows per page, default 25), sortColumn (string, current sort field), sortDirection (string, "asc"/"desc"/null), searchQuery (string, current search text), filters (object with keys: direction, status, system, transformationType), selectedMappings (Set of mapping IDs), bulkActionMode (boolean, whether bulk toolbar visible). Persisted to sessionStorage on change. Restored on page load.
+
+### mappingsCache
+Array of mapping objects from API. Each object structure: {id, source_system, source_field, source_field_label, destination_system, destination_field, destination_field_label, direction, transformation_type, transformation_config, conflict_resolution, is_active, created_at, updated_at, created_by, last_sync_at, sync_count, error_count}. Refreshed on view mount and after mutations. Used as source for rendering and filtering. Invalidated on external changes via polling.
+
+### editorState
+Object tracking current mapping being edited. Properties: mappingId (number or null), originalData (object, for change detection), currentData (object, in-progress changes), validationResult (object from validateMapping()), isDirty (boolean, whether unsaved changes exist), selectedSourceField (object, field metadata), selectedDestinationField (object, field metadata), transformationBuilder (component reference). Cleared on modal close. Used to prevent data loss on accidental close.
+
+### schemaCache
+Object with two properties: salesforce (array of field objects from getSalesforceFields()), renzo (array of field objects from getRenzoFields()). Each cached with timestamp. Structure: {data, timestamp, expiresAt}. Checked before API calls; if not expired, used directly. Cleared manually via "Refresh Schema" button or on 401 errors. Stored in sessionStorage as JSON strings under keys "schema_sf" and "schema_renzo".
+
+### validationRules
+Static configuration object defining validation logic. Properties: compatibilityMatrix (object mapping source types to compatible destination types), requiredFields (array of field names that must be populated), transformationSchemas (object mapping transformation types to JSON schemas for config validation), reservedFieldNames (array of field names that cannot be mapped), maxFormulaLength (number, character limit), allowedFunctions (array of whitelisted formula functions). Loaded on app initialization.
+
+### transformationTemplates
+Array of pre-built transformation configurations for common scenarios. Each object: {id, name, description, transformationType, configTemplate, applicableSourceTypes, applicableDestTypes}. Examples: "Date to ISO String", "Phone Number Normalization", "Full Name Concatenation", "Picklist Value Standardization". Displayed in transformation builder as quick-start options. User can select template and customize. Stored in frontend code, not database.
+
+### testResults
+Object storing most recent test execution results. Properties: mappingId (number), sampleInput (any, original value), transformedOutput (any, result value), intermediateSteps (array of {stepName, value, timestamp}), executionTime (number, milliseconds), validationWarnings (array), error (object or null). Displayed in TestMappingModal. Persisted in component state, not globally. Used for iterative testing during mapping creation.
+
+### importPreview
+Object created during import process. Properties: fileName (string), fileSize (number), detectedFormat (string, "json"/"csv"), totalMappings (number), newMappings (array of mapping objects), conflictingMappings (array of {existing, imported, conflicts}), invalidMappings (array with validation errors). Used to populate preview table before final import. Cleared on modal close or successful import.
+
+### auditLog
+Array of audit trail entries for mapping changes. Each entry: {timestamp, userId, userName, action (create/update/delete/test/activate/deactivate), mappingId, mappingName, changes (object with before/after values), ipAddress}. Fetched via GET /api/mappings/audit-log for admin users. Displayed in dedicated audit view (not in v1). Used for compliance and debugging. Stored server-side with 90-day retention.
+
+### conflictStrategies
+Static array of conflict resolution options. Each object: {value, label, description, icon}. Options: {value: "source_wins", label: "Source Wins", description: "Always use source system value", icon: "←"}, {value: "destination_wins", label: "Destination Wins", description: "Always use destination system value", icon: "→"}, {value: "most_recent", label: "Most Recent", description: "Use value with latest modification time", icon: "🕐"}, {value: "manual_review", label: "Manual Review", description: "Flag conflict for user decision", icon: "⚠"}, {value: "custom_logic", label: "Custom Logic", description: "Apply custom function to resolve", icon: "⚙"}. Displayed as radio group in editor.
+
+### formConstants
+Object with UI-related constants. Properties: DEBOUNCE_DELAY (300ms), API_TIMEOUT (30000ms), CACHE_DURATION (3600000ms, 1 hour),

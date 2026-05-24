@@ -1,0 +1,242 @@
+# TECHNICAL SPECIFICATION: AI-Generated Subject Lines
+
+## OVERVIEW
+
+Update the AI message generation system to produce and store subject lines alongside messages. Modify the Claude API prompt to return a three-field JSON object including subject lines (5-8 words, human-specific). Store subjects in queue and draft items, display them in the queue UI, use them when sending emails, and regenerate them during message refinement operations.
+
+## VIEWS
+
+**Queue Table Enhancement:**
+- Add subject line display row above message preview in each queue item
+- Subject appears as 13px italic gray text when `item.subject` exists
+- Maintains existing table structure with new content inserted into Message Preview column
+
+**No new views required** - modifications to existing `renderQueue()` output only
+
+## FUNCTIONS
+
+**generateMsg(contact, reason):**
+1. Update Claude API prompt text to request JSON format: `{reason:string, subject:string, message:string}`
+2. Add instruction: "subject should be 5-8 words, human and specific, avoid cliches like 'Following up' unless genuinely appropriate"
+3. After receiving response, parse with `JSON.parse(cleanJSON(txt))`
+4. Extract `parsed.subject` into variable
+5. Return object with three fields: `{reason, subject, message}`
+6. Handle missing subject gracefully with fallback empty string
+
+**addToQueue(contact, reason, message, subject):**
+1. Add fourth parameter `subject` (optional)
+2. Create queue item object with new field: `subject: subject || ''`
+3. Maintain existing fields: `id`, `contact`, `reason`, `message`, `addedAt`
+4. Store to localStorage `"queue"`
+5. Call `renderQueue()` to update UI
+
+**renderQueue():**
+1. Retrieve queue from localStorage
+2. For each item, check if `item.subject` exists and is non-empty
+3. If subject exists, insert before message preview:
+   - Create `<div style="font-size:13px; font-style:italic; color:#666; margin-bottom:4px;">${item.subject}</div>`
+4. Follow with existing message preview display
+5. Maintain all existing action buttons and functionality
+
+**sendEmail(qid):**
+1. Retrieve queue item by `qid`
+2. Determine subject line: `const subject = item.subject || "Following up: " + item.contact.name`
+3. Pass `subject` to `sendGmailMessage()` call
+4. Continue with existing send logic (remove from queue, add to sentLog)
+5. Handle errors as before
+
+**bulkSendAll():**
+1. For each queue item in iteration loop
+2. Determine subject: `const subject = item.subject || "Following up: " + contact.name`
+3. Pass `subject` to `sendGmailMessage()` call
+4. Continue with existing batch send logic
+5. Maintain delay and error handling
+
+**saveDraft(contact, message, subject):**
+1. Add third parameter `subject` (optional)
+2. Create draft object with new field: `subject: subject || ''`
+3. Maintain existing fields: `id`, `contact`, `message`, `savedAt`
+4. Store to localStorage `"drafts"`
+5. Update drafts UI
+
+**refineDraft(did):**
+1. Retrieve draft by `did`
+2. Make primary Claude API call to refine message (existing logic)
+3. After message refinement completes, make second API call:
+   - Use `claude-haiku` model (faster, cheaper)
+   - Prompt: `"Given this email body, write a subject line (5-8 words, no cliches):\n\n${refinedMessage}"`
+   - Parse response to extract subject line
+4. Update draft object: `draft.message = refinedMessage; draft.subject = newSubject`
+5. Save updated draft to localStorage
+6. Re-render drafts UI
+
+**refineQueueMsg(qid):**
+1. Retrieve queue item by `qid`
+2. Make primary Claude API call to refine message (existing logic)
+3. After message refinement completes, make second API call:
+   - Use `claude-haiku` model
+   - Prompt: `"Given this email body, write a subject line (5-8 words, no cliches):\n\n${refinedMessage}"`
+   - Parse response to extract subject line
+4. Update queue item: `item.message = refinedMessage; item.subject = newSubject`
+5. Save updated queue to localStorage
+6. Call `renderQueue()` to update UI
+
+**callClaude() modifications:**
+- No changes required - function already supports different models and prompts
+- Refinement functions will call with `model: "claude-haiku-3"` parameter
+
+## DATA
+
+**Queue Item Schema (localStorage "queue"):**
+```
+{
+  id: string (timestamp-based),
+  contact: {name, email, ...},
+  reason: string,
+  subject: string (NEW - defaults to empty string),
+  message: string,
+  addedAt: timestamp
+}
+```
+
+**Draft Item Schema (localStorage "drafts"):**
+```
+{
+  id: string (timestamp-based),
+  contact: {name, email, ...},
+  message: string,
+  subject: string (NEW - defaults to empty string),
+  savedAt: timestamp
+}
+```
+
+**Sent Log Item (no changes needed):**
+- Existing schema remains unchanged
+- Sent emails already store full details
+
+## API
+
+**Claude API - Message Generation:**
+- Endpoint: Existing `callClaude()` wrapper
+- Model: `claude-3-5-sonnet-20241022` (existing)
+- Updated Prompt Template:
+```
+Generate a professional email for {contact.name} ({contact.email}).
+Reason: {reason}
+Context: {contact details}
+
+Return ONLY valid JSON with this exact structure:
+{
+  "reason": "brief explanation",
+  "subject": "5-8 word subject line, human and specific, avoid cliches",
+  "message": "email body"
+}
+```
+- Response Handling: Parse three fields, fallback subject to empty string if missing
+
+**Claude API - Subject Regeneration:**
+- Endpoint: Existing `callClaude()` wrapper
+- Model: `claude-haiku-3` (faster, cheaper for simple task)
+- Prompt Template:
+```
+Given this email body, write a subject line (5-8 words, no cliches):
+
+{message}
+
+Return ONLY the subject line, no JSON, no explanation.
+```
+- Response Handling: Trim whitespace, validate length, fallback to existing subject if API fails
+- Called from: `refineDraft()`, `refineQueueMsg()`
+
+**Gmail API:**
+- No changes to `sendGmailMessage()` - already accepts subject parameter
+- Existing error handling maintained
+
+## DESIGN
+
+**Subject Line Display in Queue:**
+- Font size: 13px
+- Font style: italic
+- Color: #666 (medium gray)
+- Margin bottom: 4px (spacing before message preview)
+- Display only when subject exists and is non-empty
+- Text wrapping: allow wrap for long subjects
+- No truncation - show full subject
+
+**Existing UI Elements:**
+- Maintain all current colors, fonts, spacing
+- No changes to buttons, headers, or layout structure
+- Subject line seamlessly integrates into Message Preview column
+
+**Visual Hierarchy:**
+- Subject appears more prominent than message preview (less gray)
+- Italic style differentiates from body text
+- Compact spacing maintains table density
+
+## ERRORS
+
+**JSON Parsing Failures:**
+- If Claude returns invalid JSON from main generation: use existing error handling, set subject to empty string
+- If subject field missing from valid JSON: default to empty string, continue with reason and message
+- Log parsing errors to console for debugging
+
+**Subject Regeneration Failures:**
+- If Claude API call fails during refinement: keep existing subject unchanged
+- If response is empty or invalid: retain original subject
+- Display user-facing message: "Message refined, subject unchanged"
+- Log API error to console
+
+**Missing Subject in Send Operations:**
+- If `item.subject` is null/undefined/empty: use fallback `"Following up: {name}"`
+- No error thrown - graceful degradation
+- Ensure Gmail API receives valid subject in all cases
+
+**LocalStorage Issues:**
+- If queue/draft read fails: handle as existing code does
+- If write fails after subject update: retry once, log error
+- Maintain data consistency - don't partially update
+
+**Empty or Invalid Subjects:**
+- If subject is only whitespace: treat as empty, use fallback
+- If subject exceeds 100 characters: truncate with ellipsis (edge case protection)
+- If subject contains invalid characters: sanitize before storing
+
+**Rate Limiting:**
+- Subject regeneration adds second API call - may hit rate limits faster
+- If rate limited during refinement: skip subject update, keep existing
+- Show user message: "Message refined (subject update pending)"
+
+## SCOPE_CHECK
+
+**Estimated Total Lines: 180**
+
+**Breakdown:**
+- `generateMsg()` modification: 15 lines (prompt update, parsing)
+- `addToQueue()` modification: 5 lines (add parameter, include subject)
+- `renderQueue()` modification: 25 lines (subject display logic)
+- `sendEmail()` modification: 8 lines (subject selection logic)
+- `bulkSendAll()` modification: 8 lines (subject selection in loop)
+- `saveDraft()` modification: 5 lines (add parameter, include subject)
+- `refineDraft()` modification: 35 lines (second API call, parsing, update)
+- `refineQueueMsg()` modification: 35 lines (second API call, parsing, update)
+- Error handling additions: 25 lines (spread across functions)
+- Helper function for subject validation: 15 lines
+- Comments and code documentation: 4 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+This task is well under the 650-line limit and should be completed in a single implementation. All modifications are to existing functions with clear integration points. No splitting required.
+
+**Implementation Priority:**
+1. Update `generateMsg()` first (core functionality)
+2. Update storage functions (`addToQueue`, `saveDraft`)
+3. Update display (`renderQueue`)
+4. Update send functions (`sendEmail`, `bulkSendAll`)
+5. Add refinement subject regeneration last (enhancement)
+
+**Testing Checkpoints:**
+- Verify new messages include subjects
+- Confirm subjects display in queue
+- Test sending with and without stored subjects
+- Validate refinement updates both message and subject
+- Check fallback behavior when subject is missing

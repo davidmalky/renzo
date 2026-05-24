@@ -1,0 +1,725 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sync Mapping Configuration Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#2D6A4F;--primary-light:#40916C;--primary-dark:#1B4332;--bg-base:#F7F4EF;--bg-card:#FFF;--text-primary:#1A1A1A;--text-secondary:#666;--border:#E0E0E0;--danger:#DC2626;--warning:#F59E0B;--success:#10B981;--info:#3B82F6;--sidebar-bg:#1A1A1A;--sidebar-text:#F7F4EF;--transition:0.2s ease;--shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.12);--shadow-lg:0 10px 40px rgba(0,0,0,.16);--focus-outline:2px solid var(--primary);--focus-offset:2px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-base);color:var(--text-primary);line-height:1.5;font-size:14px}
+.hidden{display:none!important}
+.app-container{display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);display:flex;flex-direction:column;padding:24px 0;height:100vh;overflow-y:auto;position:fixed;left:0;top:0;z-index:100}
+.sidebar-logo{font-size:20px;font-weight:700;color:var(--primary-light);padding:0 24px;margin-bottom:32px}
+.nav-section{margin-bottom:24px}
+.nav-section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;padding:0 24px;margin-bottom:8px;font-weight:600}
+.nav-link{display:flex;align-items:center;padding:12px 24px;color:var(--sidebar-text);text-decoration:none;transition:background var(--transition);gap:12px;cursor:pointer;border-left:3px solid transparent}
+.nav-link:hover{background:rgba(255,255,255,.05)}
+.nav-link.active{background:rgba(64,145,108,.15);border-left-color:var(--primary-light)}
+.nav-link:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset)}
+.main-content{margin-left:240px;flex:1;padding:32px;width:calc(100% - 240px)}
+.header{margin-bottom:32px}
+.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.header-title{font-size:28px;font-weight:700}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-bottom:32px}
+.stat-card{background:var(--bg-card);padding:20px;border-radius:8px;box-shadow:var(--shadow-sm);border:1px solid var(--border)}
+.stat-label{color:var(--text-secondary);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.stat-value{font-size:32px;font-weight:700;color:var(--text-primary)}
+.stat-change{font-size:13px;margin-top:4px;color:var(--success)}
+.stat-change.negative{color:var(--danger)}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-weight:600;cursor:pointer;transition:all var(--transition);font-size:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset)}
+.btn-primary{background:var(--primary);color:#FFF}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg-base)}
+.btn-danger{background:var(--danger);color:#FFF}
+.btn-danger:hover{background:#B91C1C}
+.btn-sm{padding:6px 12px;font-size:13px}
+.card{background:var(--bg-card);border-radius:8px;box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.card-title{font-size:18px;font-weight:600}
+.card-body{padding:20px}
+.toolbar{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;align-items:center}
+.search-box{position:relative;flex:1;min-width:280px}
+.search-box input{width:100%;padding:10px 40px 10px 16px;border:1px solid var(--border);border-radius:6px;font-size:14px}
+.search-box input:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset);border-color:var(--primary)}
+.search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-secondary)}
+.filter-group{display:flex;gap:12px;align-items:center}
+.select-wrapper{position:relative}
+.select-wrapper select{padding:10px 36px 10px 16px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--bg-card);cursor:pointer;appearance:none}
+.select-wrapper select:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset);border-color:var(--primary)}
+.select-wrapper::after{content:'▼';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:10px;pointer-events:none;color:var(--text-secondary)}
+.table-container{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg-base)}
+th{text-align:left;padding:12px 16px;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:var(--border)}
+td{padding:16px;border-bottom:1px solid var(--border)}
+tbody tr:hover{background:var(--bg-base)}
+.badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+.badge-active{background:#D1FAE5;color:#065F46}
+.badge-paused{background:#FEF3C7;color:#92400E}
+.badge-error{background:#FEE2E2;color:#991B1B}
+.badge-sync{background:#DBEAFE;color:#1E40AF}
+.badge-bidirectional{background:#E9D5FF;color:#6B21A8}
+.action-buttons{display:flex;gap:8px}
+.icon-btn{background:none;border:none;padding:6px;cursor:pointer;color:var(--text-secondary);border-radius:4px;transition:all var(--transition);display:inline-flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:var(--bg-base);color:var(--text-primary)}
+.icon-btn:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:var(--bg-card);border-radius:12px;box-shadow:var(--shadow-lg);max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{padding:24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:20px;font-weight:700}
+.modal-body{padding:24px}
+.modal-footer{padding:20px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:12px}
+.wizard{max-width:1200px;margin:0 auto}
+.wizard-progress{display:flex;justify-content:space-between;margin-bottom:40px;position:relative}
+.wizard-progress::before{content:'';position:absolute;top:16px;left:0;right:0;height:2px;background:var(--border);z-index:0}
+.wizard-step{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:1;flex:1}
+.wizard-step-circle{width:32px;height:32px;border-radius:50%;background:var(--bg-card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;transition:all var(--transition)}
+.wizard-step.completed .wizard-step-circle{background:var(--primary);border-color:var(--primary);color:#FFF}
+.wizard-step.active .wizard-step-circle{background:var(--primary-light);border-color:var(--primary-light);color:#FFF}
+.wizard-step-label{font-size:12px;color:var(--text-secondary);text-align:center}
+.wizard-step.active .wizard-step-label{color:var(--text-primary);font-weight:600}
+.form-group{margin-bottom:20px}
+.form-label{display:block;margin-bottom:6px;font-weight:600;font-size:14px}
+.form-label.required::after{content:'*';color:var(--danger);margin-left:4px}
+.form-input,.form-textarea,.form-select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;transition:border-color var(--transition)}
+.form-input:focus,.form-textarea:focus,.form-select:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset);border-color:var(--primary)}
+.form-input.error,.form-textarea.error,.form-select.error{border-color:var(--danger)}
+.form-error{color:var(--danger);font-size:13px;margin-top:4px;display:none}
+.form-input.error + .form-error,.form-textarea.error + .form-error,.form-select.error + .form-error{display:block}
+.form-help{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.form-textarea{resize:vertical;min-height:100px}
+.field-mapper{display:grid;grid-template-columns:1fr 80px 1fr;gap:20px;margin-top:20px}
+.field-list{background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:16px;max-height:500px;overflow-y:auto}
+.field-list-title{font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.field-item{padding:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;cursor:move;transition:all var(--transition)}
+.field-item:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.field-item.mapped{opacity:0.5}
+.mapper-controls{display:flex;flex-direction:column;justify-content:center;gap:12px;align-items:center}
+.connection-line{stroke:var(--primary);stroke-width:2;fill:none}
+.toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:12px}
+.toast{background:var(--bg-card);padding:16px 20px;border-radius:8px;box-shadow:var(--shadow-lg);border-left:4px solid var(--info);min-width:300px;max-width:400px;display:flex;align-items:center;gap:12px;animation:slideIn 0.3s ease}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.warning{border-left-color:var(--warning)}
+.toast-message{flex:1}
+.toast-close{background:none;border:none;padding:4px;cursor:pointer;color:var(--text-secondary);font-size:18px;line-height:1}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+.version-history{max-height:400px;overflow-y:auto}
+.version-item{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:start;gap:16px}
+.version-item:last-child{border-bottom:none}
+.version-info{flex:1}
+.version-header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.version-timestamp{font-size:13px;font-weight:600}
+.version-user{font-size:13px;color:var(--text-secondary)}
+.version-changes{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.pagination{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:24px}
+.pagination-btn{padding:8px 12px;border:1px solid var(--border);background:var(--bg-card);border-radius:6px;cursor:pointer;transition:all var(--transition)}
+.pagination-btn:hover:not(:disabled){background:var(--bg-base)}
+.pagination-btn:disabled{opacity:0.5
+<script>
+// Core Data Management
+const StorageKeys = {
+  MAPPINGS: 'syncMappings',
+  USER_SESSION: 'userSession',
+  SETTINGS: 'appSettings'
+};
+
+const Storage = {
+  get(key) {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.error('Storage get error:', e);
+      return null;
+    }
+  },
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.error('Storage set error:', e);
+      return false;
+    }
+  },
+  remove(key) {
+    localStorage.removeItem(key);
+  },
+  clear() {
+    localStorage.clear();
+  }
+};
+
+// Initialize storage schema
+function initializeStorage() {
+  if (!Storage.get(StorageKeys.MAPPINGS)) {
+    Storage.set(StorageKeys.MAPPINGS, []);
+  }
+  if (!Storage.get(StorageKeys.USER_SESSION)) {
+    Storage.set(StorageKeys.USER_SESSION, {
+      userId: 'user_' + Date.now(),
+      username: 'Demo User',
+      authenticated: true,
+      lastLogin: new Date().toISOString()
+    });
+  }
+  if (!Storage.get(StorageKeys.SETTINGS)) {
+    Storage.set(StorageKeys.SETTINGS, {
+      theme: 'light',
+      pageSize: 10,
+      defaultSyncInterval: 300
+    });
+  }
+}
+
+// Authentication
+const Auth = {
+  getSession() {
+    return Storage.get(StorageKeys.USER_SESSION);
+  },
+  isAuthenticated() {
+    const session = this.getSession();
+    return session && session.authenticated;
+  },
+  logout() {
+    Storage.remove(StorageKeys.USER_SESSION);
+    Router.navigate('login');
+  }
+};
+
+// Router
+const Router = {
+  currentView: 'list',
+  routes: {
+    'list': 'renderMappingListView',
+    'create': 'renderMappingWizardView',
+    'edit': 'renderMappingWizardView',
+    'test': 'renderMappingTestPanel'
+  },
+  navigate(view, params = {}) {
+    this.currentView = view;
+    window.location.hash = view + (params.id ? '/' + params.id : '');
+    this.render();
+  },
+  render() {
+    const handler = this.routes[this.currentView];
+    if (handler && typeof window[handler] === 'function') {
+      window[handler]();
+    }
+  },
+  init() {
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.slice(1);
+      const [view, id] = hash.split('/');
+      this.currentView = view || 'list';
+      this.render();
+    });
+    const hash = window.location.hash.slice(1);
+    this.currentView = hash.split('/')[0] || 'list';
+  }
+};
+
+// Utility Functions
+function generateId() {
+  return 'map_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+function sanitizeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Toast Notifications
+const Toast = {
+  container: null,
+  init() {
+    if (!this.container) {
+      this.container = document.createElement('div');
+      this.container.className = 'toast-container';
+      this.container.setAttribute('aria-live', 'polite');
+      this.container.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(this.container);
+    }
+  },
+  show(message, type = 'info', duration = 4000) {
+    this.init();
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+      <div class="toast-message">${sanitizeHTML(message)}</div>
+      <button class="toast-close" aria-label="Close notification">&times;</button>
+    `;
+    this.container.appendChild(toast);
+    const closeBtn = toast.querySelector('.toast-close');
+    const remove = () => {
+      toast.style.animation = 'slideIn 0.3s ease reverse';
+      setTimeout(() => toast.remove(), 300);
+    };
+    closeBtn.addEventListener('click', remove);
+    if (duration > 0) {
+      setTimeout(remove, duration);
+    }
+  },
+  success(message) {
+    this.show(message, 'success');
+  },
+  error(message) {
+    this.show(message, 'error', 6000);
+  },
+  warning(message) {
+    this.show(message, 'warning');
+  }
+};
+
+// Modal Management
+const Modal = {
+  stack: [],
+  show(config) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'modal-title');
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title" class="modal-title">${sanitizeHTML(config.title)}</h2>
+          <button class="modal-close" aria-label="Close dialog">&times;</button>
+        </div>
+        <div class="modal-body">${config.body}</div>
+        <div class="modal-footer">
+          ${config.actions.map(action => `
+            <button class="btn btn-${action.type || 'secondary'}" data-action="${action.id}">${sanitizeHTML(action.label)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    this.stack.push(modal);
+    setTimeout(() => modal.classList.add('active'), 10);
+    const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    firstElement?.focus();
+    const trapFocus = (e) => {
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      } else if (e.key === 'Escape') {
+        this.close();
+      }
+    };
+    modal.addEventListener('keydown', trapFocus);
+    modal.querySelector('.modal-close').addEventListener('click', () => this.close());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.close();
+    });
+    config.actions.forEach(action => {
+      modal.querySelector(`[data-action="${action.id}"]`)?.addEventListener('click', () => {
+        if (action.handler) action.handler();
+        this.close();
+      });
+    });
+  },
+  close() {
+    const modal = this.stack.pop();
+    if (modal) {
+      modal.classList.remove('active');
+      setTimeout(() => modal.remove(), 300);
+    }
+  }
+};
+
+// Form Validation
+const Validator = {
+  rules: {
+    required: (value) => value?.toString().trim().length > 0,
+    email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+    url: (value) => /^https?:\/\/.+/.test(value),
+    minLength: (value, min) => value?.toString().length >= min,
+    maxLength: (value, max) => value?.toString().length <= max
+  },
+  validate(input, rules) {
+    for (let rule of rules) {
+      const [ruleName, ...params] = rule.split(':');
+      if (!this.rules[ruleName](input.value, ...params)) {
+        return false;
+      }
+    }
+    return true;
+  },
+  markError(input, message) {
+    input.classList.add('error');
+    input.setAttribute('aria-invalid', 'true');
+    let error = input.nextElementSibling;
+    if (!error || !error.classList.contains('form-error')) {
+      error = document.createElement('div');
+      error.className = 'form-error';
+      error.setAttribute('role', 'alert');
+      input.parentNode.insertBefore(error, input.nextSibling);
+    }
+    error.textContent = message;
+  },
+  clearError(input) {
+    input.classList.remove('error');
+    input.removeAttribute('aria-invalid');
+    const error = input.nextElementSibling;
+    if (error?.classList.contains('form-error')) {
+      error.textContent = '';
+    }
+  }
+};
+
+// Initialize application
+function initializeMappingInterface() {
+  initializeStorage();
+  if (!Auth.isAuthenticated()) {
+    window.location.href = '/login.html';
+    return;
+  }
+  Router.init();
+  Router.render();
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && Modal.stack.length > 0) {
+      Modal.close();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initializeMappingInterface);
+</script>
+<!-- END:CoreJavaScript -->
+<script>
+// Feature JavaScript - Mapping List View
+function renderMappingListView() {
+  const mappings = loadMappings({}, 'name', 'asc', 1, 20);
+  const stats = calculateStats(mappings.mappings);
+  const html = `
+    <div class="mapping-list-view">
+      <div class="page-header">
+        <h1>Sync Mappings</h1>
+        <button class="btn btn-primary" onclick="Router.navigate('/mappings/new')">
+          <span class="icon">+</span> Create New Mapping
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${stats.total}</div>
+          <div class="stat-label">Total Mappings</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.active}</div>
+          <div class="stat-label">Active Mappings</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.successRate}%</div>
+          <div class="stat-label">Success Rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.last24h}</div>
+          <div class="stat-label">Syncs (24h)</div>
+        </div>
+      </div>
+      <div class="table-controls">
+        <input type="search" placeholder="Search mappings..." class="search-input" 
+               id="mappingSearch" aria-label="Search mappings">
+        <select id="directionFilter" aria-label="Filter by direction">
+          <option value="">All Directions</option>
+          <option value="salesforce-to-target">Salesforce → Target</option>
+          <option value="target-to-salesforce">Target → Salesforce</option>
+          <option value="bidirectional">Bidirectional</option>
+        </select>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="error">Error</option>
+        </select>
+      </div>
+      ${renderMappingTable(mappings.mappings)}
+    </div>
+  `;
+  document.getElementById('app').innerHTML = html;
+  attachListViewHandlers();
+}
+
+function loadMappings(filters, sortBy, sortOrder, page, pageSize) {
+  let mappings = Storage.get('syncMappings') || [];
+  if (filters.status) mappings = mappings.filter(m => m.status === filters.status);
+  if (filters.direction) mappings = mappings.filter(m => m.direction === filters.direction);
+  if (filters.search) {
+    const term = filters.search.toLowerCase();
+    mappings = mappings.filter(m => 
+      m.name.toLowerCase().includes(term) || 
+      m.description?.toLowerCase().includes(term)
+    );
+  }
+  mappings.sort((a, b) => {
+    const order = sortOrder === 'asc' ? 1 : -1;
+    return a[sortBy] > b[sortBy] ? order : -order;
+  });
+  const start = (page - 1) * pageSize;
+  return {
+    mappings: mappings.slice(start, start + pageSize),
+    total: mappings.length,
+    page
+  };
+}
+
+function calculateStats(mappings) {
+  const total = mappings.length;
+  const active = mappings.filter(m => m.status === 'active').length;
+  const totalRuns = mappings.reduce((sum, m) => sum + (m.stats?.totalRuns || 0), 0);
+  const successRuns = mappings.reduce((sum, m) => sum + (m.stats?.successRuns || 0), 0);
+  const successRate = totalRuns > 0 ? Math.round((successRuns / totalRuns) * 100) : 0;
+  const last24h = mappings.reduce((sum, m) => sum + (m.stats?.last24h || 0), 0);
+  return { total, active, successRate, last24h };
+}
+
+function renderMappingTable(mappings) {
+  const rows = mappings.map(m => `
+    <tr data-id="${m.id}">
+      <td>${m.name}</td>
+      <td><span class="badge badge-${m.direction}">${m.direction}</span></td>
+      <td>${m.sourceObject}</td>
+      <td>${m.targetObject}</td>
+      <td><span class="status-badge status-${m.status}">${m.status}</span></td>
+      <td>${new Date(m.lastSync || Date.now()).toLocaleString()}</td>
+      <td class="actions">
+        <button class="btn-icon" onclick="editMapping('${m.id}')" aria-label="Edit mapping">✏️</button>
+        <button class="btn-icon" onclick="toggleMapping('${m.id}')" aria-label="${m.status === 'active' ? 'Pause' : 'Resume'} mapping">
+          ${m.status === 'active' ? '⏸️' : '▶️'}
+        </button>
+        <button class="btn-icon" onclick="duplicateMapping('${m.id}')" aria-label="Duplicate mapping">📋</button>
+        <button class="btn-icon" onclick="deleteMapping('${m.id}')" aria-label="Delete mapping">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+  return `
+    <table class="mapping-table" role="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Direction</th>
+          <th>Source Object</th>
+          <th>Target Object</th>
+          <th>Status</th>
+          <th>Last Sync</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function attachListViewHandlers() {
+  const searchInput = document.getElementById('mappingSearch');
+  const directionFilter = document.getElementById('directionFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  let debounceTimer;
+  const filterMappings = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const filters = {
+        search: searchInput.value,
+        direction: directionFilter.value,
+        status: statusFilter.value
+      };
+      const mappings = loadMappings(filters, 'name', 'asc', 1, 20);
+      const tbody = document.querySelector('.mapping-table tbody');
+      tbody.innerHTML = renderMappingTable(mappings.mappings).match(/<tbody>(.*)<\/tbody>/s)[1];
+    }, 300);
+  };
+  searchInput.addEventListener('input', filterMappings);
+  directionFilter.addEventListener('change', filterMappings);
+  statusFilter.addEventListener('change', filterMappings);
+}
+
+function editMapping(id) {
+  Router.navigate(`/mappings/edit/${id}`);
+}
+
+function toggleMapping(id) {
+  const mappings = Storage.get('syncMappings') || [];
+  const mapping = mappings.find(m => m.id === id);
+  if (mapping) {
+    mapping.status = mapping.status === 'active' ? 'paused' : 'active';
+    Storage.set('syncMappings', mappings);
+    Toast.show(`Mapping ${mapping.status === 'active' ? 'resumed' : 'paused'}`, 'success');
+    renderMappingListView();
+  }
+}
+
+function duplicateMapping(id) {
+  const mappings = Storage.get('syncMappings') || [];
+  const mapping = mappings.find(m => m.id === id);
+  if (mapping) {
+    const duplicate = { ...mapping, id: generateId(), name: `${mapping.name} (Copy)`, status: 'paused' };
+    mappings.push(duplicate);
+    Storage.set('syncMappings', mappings);
+    Toast.show('Mapping duplicated successfully', 'success');
+    renderMappingListView();
+  }
+}
+
+function deleteMapping(id) {
+  const mappings = Storage.get('syncMappings') || [];
+  const mapping = mappings.find(m => m.id === id);
+  Modal.open({
+    title: 'Delete Mapping',
+    content: `<p>Are you sure you want to delete "${mapping?.name}"? This action cannot be undone.</p>`,
+    actions: [
+      { id: 'cancel', label: 'Cancel', type: 'secondary' },
+      { id: 'delete', label: 'Delete', type: 'danger', handler: () => {
+        Storage.set('syncMappings', mappings.filter(m => m.id !== id));
+        Toast.show('Mapping deleted', 'success');
+        renderMappingListView();
+      }}
+    ]
+  });
+}
+
+// Mapping Wizard
+function renderMappingWizardView(id) {
+  const mapping = id ? (Storage.get('syncMappings') || []).find(m => m.id === id) : null;
+  const wizardState = Storage.get('wizardState') || {
+    step: 1,
+    data: mapping || { id: generateId(), name: '', description: '', direction: '', sourceObject: '', targetObject: '', fieldMappings: [], transformations: [], validationRules: [], conflictResolution: 'sourceWins', schedule: { type: 'manual' }, status: 'paused' }
+  };
+  const html = `
+    <div class="wizard-container">
+      <div class="wizard-header">
+        <h1>${mapping ? 'Edit' : 'Create'} Sync Mapping</h1>
+        <div class="wizard-progress" role="progressbar" aria-valuenow="${wizardState.step}" aria-valuemin="1" aria-valuemax="8">
+          ${[1,2,3,4,5,6,7,8].map(i => `
+            <div class="step ${i < wizardState.step ? 'completed' : ''} ${i === wizardState.step ? 'active' : ''}">
+              <div class="step-number">${i}</div>
+              <div class="step-label">${getStepLabel(i)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="wizard-content">${renderWizardStep(wizardState)}</div>
+      <div class="wizard-footer">
+        <button class="btn btn-secondary" ${wizardState.step === 1 ? 'disabled' : ''} onclick="wizardPrevious()">Previous</button>
+        <button class="btn btn-secondary" onclick="Router.navigate('/mappings')">Cancel</button>
+        ${wizardState.step < 8 ? 
+          `<button class="btn btn-primary" onclick="wizardNext()">Next</button>` : 
+          `<button class="btn btn-primary" onclick="wizardSave()">Save Mapping</button>`
+        }
+      </div>
+    </div>
+  `;
+  document.getElementById('app').innerHTML = html;
+  attachWizardHandlers();
+}
+
+function getStepLabel(step) {
+  const labels = ['Basic Info', 'Objects', 'Field Mapping', 'Transformations', 'Validation', 'Conflict Resolution', 'Schedule', 'Review'];
+  return labels[step - 1];
+}
+
+function renderWizardStep(state) {
+  switch(state.step) {
+    case 1: return renderBasicInfoStep(state.data);
+    case 2: return renderObjectSelectionStep(state.data);
+    case 3: return renderFieldMappingStep(state.data);
+    case 4: return renderTransformationStep(state.data);
+    case 5: return renderValidationStep(state.data);
+    case 6: return renderConflictResolutionStep(state.data);
+    case 7: return renderScheduleStep(state.data);
+    case 8: return renderReviewStep(state.data);
+  }
+}
+
+function renderBasicInfoStep(data) {
+  return `
+    <div class="form-group">
+      <label for="mappingName">Mapping Name <span class="required">*</span></label>
+      <input type="text" id="mappingName" value="${data.name}" required aria-required="true">
+    </div>
+    <div class="form-group">
+      <label for="mappingDescription">Description</label>
+      <textarea id="mappingDescription" rows="3">${data.description || ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="mappingDirection">Sync Direction <span class="required">*</span></label>
+      <select id="mappingDirection" required aria-required="true">
+        <option value="">Select direction...</option>
+        <option value="salesforce-to-target" ${data.direction === 'salesforce-to-target' ? 'selected' : ''}>Salesforce → Target</option>
+        <option value="target-to-salesforce" ${data.direction === 'target-to-salesforce' ? 'selected' : ''}>Target → Salesforce</option>
+        <option value="bidirectional" ${data.direction === 'bidirectional' ? 'selected' : ''}>Bidirectional</option>
+      </select>
+    </div>
+  `;
+}
+
+function renderObjectSelectionStep(data) {
+  const sfObjects = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case', 'Custom_Object__c'];
+  return `
+    <div class="form-group">
+      <label for="sourceObject">Source Object <span class="required">*</span></label>
+      <select id="sourceObject" required aria-required="true">
+        <option value="">Select object...</option>
+        ${sfObjects.map(obj => `<option value="${obj}" ${data.sourceObject === obj ? 'selected' : ''}>${obj}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="targetObject">Target Object <span class="required">*</span></label>
+      <input type="text" id="targetObject" value="${data.targetObject}" required aria-required="true" placeholder="e.g., users, products">
+    </div>
+  `;
+}
+
+function renderFieldMappingStep(data) {
+  const sourceFields = ['Id', 'Name', 'Email', 'Phone', 'CreatedDate', 'LastModifiedDate'];
+  const mappings = data.fieldMappings || [];
+  return `
+    <div class="field-mapping-canvas">
+      <div class="field-panel source-fields">
+        <h3>Source Fields</h3>
+        <ul id="sourceFieldList">
+          ${sourceFields.map(f => `<li data-field="${f}">${f}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="mapping-connections" id="mappingConnections">
+        ${mappings.map((m, i) => `
+          <div class="field-mapping" data-index="${i}">
+            <span>${m.source}</span> → <span>${m.target}</span>
+            <button onclick="removeFieldMapping(${i})" aria-label="Remove mapping">×</button>
+          </div>
+        `).join('')}
+      </div>
+      <div class="field-panel target-fields">
+        <h3>Target Fields</h3>
+</body>
+</html>

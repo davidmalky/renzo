@@ -1,0 +1,89 @@
+# TECHNICAL SPECIFICATION: Fix Batch Outreach JSON Parsing
+
+## OVERVIEW
+Replace fragile JSON parsing in the batch outreach function (runBatch) that uses charCodeAt(0)===96 checks with robust parsing that handles markdown code blocks and extracts JSON reliably. Update two locations: the filter step response parsing and the per-contact generation loop parsing. Add enhanced error logging for contact-specific failures.
+
+## VIEWS
+No view changes required. This is a pure code robustness fix.
+
+## FUNCTIONS
+
+- extractJSON(rawText):
+  * Input: raw string from API response (may contain markdown code blocks)
+  * Step 1: Trim whitespace
+  * Step 2: Remove markdown code block delimiters with regex: /^```(?:json)?\s*/i and /\s*```\s*$/
+  * Step 3: Trim again after delimiter removal
+  * Step 4: Extract JSON object using regex: /\{[\s\S]*\}/
+  * Step 5: If no match found, throw Error('No JSON object found in response')
+  * Step 6: Parse extracted JSON string with JSON.parse()
+  * Return: parsed object
+  * Purpose: Centralized robust JSON extraction from Claude API responses
+
+- runBatch(templateId, checkedIds):
+  * Modify filter step parsing (around line where filterData.content[0].text is accessed):
+    - Replace charCodeAt check with: let txt = filterData.content[0].text.trim()
+    - Remove code block markers: txt = txt.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+    - Extract JSON: const jsonMatch = txt.match(/\{[\s\S]*\}/)
+    - Validate: if (!jsonMatch) throw new Error('No JSON in filter response')
+    - Parse: const filterResult = JSON.parse(jsonMatch[0])
+    - Use filterResult.relevant array as before
+  * Modify per-contact generation parsing (inside loop where data.content[0].text is accessed):
+    - Replace charCodeAt check with: let txt = data.content[0].text.trim()
+    - Remove code block markers: txt = txt.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+    - Extract JSON: const jsonMatch = txt.match(/\{[\s\S]*\}/)
+    - Validate: if (!jsonMatch) { failed++; log('Batch: no JSON for ' + c.name); continue; }
+    - Parse: const parsed = JSON.parse(jsonMatch[0])
+    - Use parsed.message as before
+  * Modify catch block in per-contact loop:
+    - Change console.error to: console.warn('Batch generation failed for ' + c.name + ':', e.message)
+    - Keep failed++ and continue as is
+
+## DATA
+No data structure changes. All existing localStorage schemas remain unchanged:
+- contacts: array of contact objects
+- templates: array of template objects
+- results: array of generated message results
+
+## API
+No API changes. Still uses existing Anthropic Claude API:
+- POST https://api.anthropic.com/v1/messages
+- Headers: x-api-key, anthropic-version, content-type
+- Response format unchanged: content[0].text contains the generated text
+
+## DESIGN
+No UI changes. This is backend logic only.
+
+## ERRORS
+
+- NoJSONInFilterResponse:
+  * Trigger: Filter step returns text without extractable JSON object
+  * Handling: Throw error with message 'No JSON in filter response'
+  * User sees: "Batch failed: No JSON in filter response" in modal
+
+- NoJSONInContactGeneration:
+  * Trigger: Individual contact generation returns text without extractable JSON
+  * Handling: Increment failed counter, log 'Batch: no JSON for [contactName]', continue to next contact
+  * User sees: Reduced success count in final summary
+
+- JSONParseError:
+  * Trigger: Extracted text is not valid JSON
+  * Handling: In filter step - propagate error; In contact loop - catch, log with contact name, increment failed, continue
+  * User sees: In filter - batch stops; In contact loop - skipped contact in summary
+
+- ContactGenerationFailure:
+  * Trigger: Any exception during individual contact message generation
+  * Handling: Log 'Batch generation failed for [contactName]: [error.message]' as warning, increment failed, continue
+  * User sees: Contact skipped, shown in failed count
+
+## SCOPE_CHECK
+
+- Estimated total lines: 45
+  * extractJSON function: 15 lines (optional helper, can be inlined)
+  * runBatch filter parsing modification: 8 lines
+  * runBatch per-contact parsing modification: 10 lines
+  * catch block enhancement: 2 lines
+  * Testing/validation: minimal (reuse existing batch flow)
+
+- SINGLE_TASK: proceed as one build
+
+This is a focused refactor of two parsing locations plus error logging. All changes are within the existing runBatch function. No new views, no new API endpoints, no data migration. Total modification footprint is under 50 lines.

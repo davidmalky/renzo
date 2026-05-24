@@ -1,0 +1,194 @@
+{
+  "task": {
+    "id": "renzo-quick-007",
+    "title": "Add localStorage quota protection and storage usage indicator",
+    "description": "Three changes: (1) Wrap the s() function body in a try/catch: function s(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(e.name==='QuotaExceededError'){showStorageWarning();}}} Add function showStorageWarning(){if(document.getElementById('storageWarn'))return;const el=document.createElement('div');el.id='storageWarn';el.style.cssText='position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;padding:10px;font-size:13px;z-index:9999;';el.innerHTML='Storage nearly full. <a href=\"#\" onclick=\"exportContacts();return false;\" style=\"color:#fff;text-decoration:underline;\">Export your data</a> to free space.';document.body.prepend(el);} (2) In the Settings view, add a storage usage line above the Save button: <div id=\"storageUsage\" style=\"font-size:12px;color:var(--gray);margin-bottom:16px;\"></div>. Populate it in loadSettings(): const keys=Object.keys(localStorage).filter(k=>k.startsWith('renzo'));const used=keys.reduce((t,k)=>t+(localStorage.getItem(k)||'').length,0);document.getElementById('storageUsage').textContent='Storage: '+(used/1024).toFixed(1)+' KB used'; (3) In the contacts table, if contacts.length > 50, add simple pagination: show only contacts slice [page*50,(page+1)*50], add Previous/Next buttons below the table, and a count 'Showing X-Y of Z contacts'. Add a page state variable and wire the buttons.",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 6692
+      },
+      "t": 44.1
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 74.3
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 84.7
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 149661
+      },
+      "t": 286.0
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Code is truncated mid-property at '.search-input' and mid-HTML tag '</optio' \u2014 file is incomplete and will not render/function properly",
+          "localStorage quota protection completely missing \u2014 no try-catch for QuotaExceededError around any localStorage.setItem() calls (required by task)",
+          "Storage usage indicator has CSS styling but zero JavaScript implementation \u2014 no calculation of usage, no updating of .storage-bar-fill width or .storage-pct text (required by task)"
+        ],
+        "feedback": "CRITICAL: File is truncated and incomplete. First, deliver the COMPLETE file without truncation. Then implement: (1) Wrap ALL localStorage.setItem() calls in try-catch blocks checking for QuotaExceededError and show user-friendly error messages; (2) Add calculateStorageUsage() function that measures total size of localStorage data in bytes; (3) Add updateStorageIndicator() function that calculates usage percentage, updates .storage-bar-fill width style, and updates .storage-pct text content; (4) Call updateStorageIndicator() after every data save operation. The storage-meter HTML and CSS already exist \u2014 just wire up the JavaScript logic."
+      },
+      "t": 404.4
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 149311
+      },
+      "t": 540.4
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Code is severely truncated in multiple places (CSS ends mid-property 'transition:bo', HTML ends at '<div class=\"f', input element incomplete) causing complete rendering failure",
+          "Required localStorage quota protection completely missing - no try-catch blocks for QuotaExceededError, no error handling for write operations",
+          "Required storage usage indicator is non-functional - storageText shows placeholder '\u2014', storageFill hardcoded to 0%, missing calculation/display logic for actual usage"
+        ],
+        "feedback": "CRITICAL: Complete the truncated code first - all CSS properties must close, all HTML tags must close properly. Then implement: 1) Wrap ALL localStorage.setItem() calls in try-catch blocks to handle QuotaExceededError and show user-friendly warnings, 2) Add calculateStorageUsage() function that iterates localStorage keys to sum byte sizes, 3) Update storageText.textContent with actual KB/MB used vs quota, 4) Set storageFill.style.width dynamically based on percentage used, 5) Call storage update after every localStorage write operation. Also fix typo: 'justify-content:justify' \u2192 'justify-content:center'."
+      },
+      "t": 687.3
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 150718
+      },
+      "t": 882.1
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Code is severely truncated at multiple points (CSS rule cuts off at 'transition:bo', HTML ends mid-attribute 'div class=\"f'), causing parsing errors and broken rendering",
+          "Required localStorage quota protection completely missing - no checks before writing, no QuotaExceededError handling anywhere in code",
+          "Required storage usage indicator completely missing - no UI component, no calculation logic, no display of localStorage usage/quota"
+        ],
+        "feedback": "CRITICAL FAILURES: 1) Fix truncation - complete all CSS rules (finish .search-input transition property) and close all HTML tags properly. 2) Add localStorage quota protection: wrap ALL localStorage.setItem() calls in try-catch blocks to handle QuotaExceededError, check available storage before writes using navigator.storage.estimate() if available, implement cleanup of old data when quota approached. 3) Add storage usage indicator UI: create visible component showing current usage (calculate total localStorage size in bytes/KB), display quota limit or percentage used, add warning when >80% full. Example: calculate used bytes by iterating localStorage keys, display in footer/header as 'Storage: 2.3MB / 5MB (46%)', update after each save operation. These are core task requirements - the feature is non-functional without them."
+      },
+      "t": 1031.0
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 147078
+      },
+      "t": 1414.5
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "CSS truncated mid-property: '.search-input' style block ends with 'transition:bo' - missing complete transition property and closing brace, will cause rendering issues",
+          "Code chunk is truncated mid-HTML (ends with incomplete '<div class=\"f'), causing broken markup and preventing page from rendering correctly",
+          "Complete missing implementation: Task requires localStorage quota protection and storage usage indicator, but NO JavaScript code present for quota checking, storage monitoring, error handling, or UI indicators"
+        ],
+        "feedback": "CRITICAL: The HTML file is severely truncated with incomplete CSS and broken markup. Fix: 1) Complete the truncated CSS transition property and add closing brace for .search-input, 2) Complete all truncated HTML tags and ensure valid markup structure, 3) Implement the core task requirements: add try-catch blocks around localStorage.setItem() calls with QUOTA_EXCEEDED_ERR handling, create a storage usage indicator UI component showing used/available space, add quota checking logic before write operations, and implement storage cleanup functions. The truncation makes the file non-functional - ensure complete, valid HTML/CSS/JS before review."
+      },
+      "t": 1527.7
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "localStorage quota protection - s(k,v) function not wrapped in try/catch",
+          "showStorageWarning() function not implemented",
+          "Storage usage indicator not implemented in Settings view",
+          "loadSettings() modification for storage calculation not implemented",
+          "Contacts pagination system not implemented (loadContacts modification, renderContactsPagination, prevContactsPage, nextContactsPage functions missing)",
+          "contactsPage global variable not declared",
+          "StorageWarning banner HTML structure not implemented",
+          "Settings view #storageUsage div not present",
+          "Contacts view #contactsPagination div not present"
+        ],
+        "note": "Code appears to be incomplete/truncated at 5000 characters. None of the required localStorage quota protection features, storage usage indicator, or pagination functionality have been implemented. Only base UI styling and structure are present. All key functions and modifications specified in the requirements are missing."
+      },
+      "t": 1533.7
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 151170
+      },
+      "t": 1723.4
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 4,
+        "blocking_issues": [
+          "Mobile navigation completely broken - 230px fixed sidebar cannot collapse/hide on mobile, making app unusable on small screens",
+          "Modal overlays not scrollable on mobile when content exceeds viewport - users cannot access form fields or buttons",
+          "Table horizontal overflow not handled - wide tables will break layout on mobile with no scroll mechanism",
+          "Touch targets below minimum 44x44px - nav items (9px padding), buttons (btn-xs at 4px padding), and modal close buttons fail accessibility standards",
+          "Queue actions missing: Users can see queued messages but there's no visible way to edit or delete them before sending - only a 'Send' button is rendered. Need Edit/Delete buttons to prevent accidentally sending wrong messages.",
+          "AI Guide modal not responsive on mobile - fixed 340px width breaks on small screens, bottom positioning (90px) may overlay navigation, no viewport constraints for max-height: 480px on short screens"
+        ]
+      },
+      "t": 1750.8
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 151170
+      },
+      "t": 1812.9
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No skip link for keyboard users to bypass sidebar navigation - accessibility violation",
+          "Modal overlays lack proper focus trap - keyboard users can tab to elements behind modal",
+          "No aria-labels or screen reader text for icon-only buttons (modal close button shows only \u00d7)",
+          "Forms missing associated error announcements for screen readers when validation fails",
+          "Color-only differentiation for priority/tier badges - fails WCAG for color blindness",
+          "No visible focus indicators on sidebar navigation items for keyboard navigation",
+          "Missing error handling for sendEmail onclick - function call references queued message ID but no error state if contact email is missing/invalid",
+          "Activity expansion toggle references toggleActivity function that isn't shown in chunk - if missing, all activity items will break on click"
+        ]
+      },
+      "t": 1846.6
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1851.7
+    }
+  ],
+  "cost": 1.1100509999999997
+}

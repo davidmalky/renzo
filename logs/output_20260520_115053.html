@@ -1,0 +1,1113 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo - Smart CRM with AI Outreach</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --forest-green: #2d5016;
+  --forest-green-hover: #1f3810;
+  --forest-green-light: #e8f3e0;
+  --cream: #f5f1e8;
+  --cream-dark: #e8e1d0;
+  --gold: #c5a028;
+  --gold-light: #f5e8b8;
+  --error: #dc2626;
+  --error-light: #fee2e2;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --priority-critical: #dc2626;
+  --priority-high: #f97316;
+  --priority-medium: #eab308;
+  --priority-low: #22c55e;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4b5563;
+  --border: #d1d5db;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--cream);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+*:focus {
+  outline: 3px solid var(--forest-green);
+  outline-offset: 2px;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--forest-green);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--forest-green);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--forest-green);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--forest-green-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--forest-green);
+  border: 2px solid var(--forest-green);
+}
+
+.btn-secondary:hover {
+  background: var(--forest-green-light);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--forest-green);
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: var(--forest-green);
+  outline: none;
+}
+
+.form-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.form-error {
+  color: var(--error);
+  font-size: 13px;
+  margin-top: 6px;
+  display: none;
+}
+
+.form-error.visible {
+  display: block;
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  min-width: 42px;
+}
+
+.priority-critical {
+  background: var(--priority-critical);
+}
+
+.priority-high {
+  background: var(--priority-high);
+}
+
+.priority-medium {
+  background: var(--priority-medium);
+}
+
+.priority-low {
+  background: var(--priority-low);
+}
+
+.contact-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.contact-row:hover {
+  background: var(--cream);
+}
+
+.contact-row:last-child {
+  border-bottom: none;
+}
+
+.contact-info {
+  flex: 1;
+}
+
+.contact-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.contact-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.contact-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+}
+
+.modal-content:focus {
+  outline: none;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--forest-green);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--cream);
+}
+
+.trigger-box {
+  background: var(--warning-light);
+  border-left: 4px solid var(--warning);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+}
+
+.trigger-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.trigger-reason {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.batch-outreach-container {
+  max-width: 800px;
+  margin: 40px auto;
+}
+
+.batch-query-box {
+  margin-bottom: 24px;
+}
+
+.batch-query-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.batch-progress {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.batch-results {
+  margin-top: 24px;
+}
+
+.batch-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.batch-result-item:last-child {
+  border-bottom: none;
+}
+
+.batch-checkmark {
+  color: var(--success);
+  font-size: 20px;
+}
+
+.csv-import-modal .modal-content {
+  max-width: 800px;
+}
+
+.csv-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 24px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.csv-dropzone:hover, .csv-dropzone.dragover {
+  border-color: var(--forest-green);
+  background: var(--forest-green-light);
+}
+
+.csv-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+
+.csv-preview-table th {
+  background: var(--forest-green-light);
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--forest-green);
+  border-bottom: 2px solid var(--border);
+}
+
+.csv-preview-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.column-mapper {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.column-mapper select {
+  flex: 1;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+}
+
+.trainable-instructions-section {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 2px solid var(--border);
+}
+
+.trainable-instructions-section h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--forest-green);
+  margin-bottom: 16px;
+}
+
+.instructions-textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.alert-error {
+  background: var(--error-light);
+  color: var(--error);
+  border-left: 4px solid var(--error);
+}
+
+.alert-success {
+  background: var(--success-light);
+  color: var(--success);
+  border-left: 4px solid var(--success);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+[aria-live] {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+</style>
+</head>
+<body>
+<div class="app-container" id="app">
+  <div class="header">
+    <h1>Renzo</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="settingsBtn" aria-label="Open settings">Settings</button>
+      <button class="btn btn-primary" id="logoutBtn" aria-label="Logout">Logout</button>
+    </div>
+  </div>
+  <div id="mainContent"></div>
+</div>
+<div id="modalContainer"></div>
+<div id="announcer" role="status" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
+<!-- END:HTMLAndCSS -->
+<script>
+// ============================================================================
+// CORE JAVASCRIPT: Data Management, Auth, Navigation, Utility Functions
+// ============================================================================
+
+// STATE MANAGEMENT
+const state = {
+  currentUser: null,
+  contacts: [],
+  queue: [],
+  drafts: [],
+  currentView: 'contacts',
+  apiKey: '',
+  customInstructions: '',
+  trainableInstructions: '',
+  activeModal: null
+};
+
+// INITIALIZATION
+function init() {
+  loadStateFromStorage();
+  if (state.currentUser) {
+    renderApp();
+  } else {
+    renderLoginView();
+  }
+  setupGlobalEventListeners();
+}
+
+// STORAGE OPERATIONS
+function loadStateFromStorage() {
+  const stored = localStorage.getItem('renzoState');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    Object.assign(state, parsed);
+  }
+}
+
+function saveStateToStorage() {
+  localStorage.setItem('renzoState', JSON.stringify(state));
+}
+
+// AUTHENTICATION
+function login(username, password) {
+  if (username && password) {
+    state.currentUser = { username, loggedInAt: Date.now() };
+    saveStateToStorage();
+    renderApp();
+    announce('Logged in successfully');
+    return true;
+  }
+  return false;
+}
+
+function logout() {
+  state.currentUser = null;
+  saveStateToStorage();
+  renderLoginView();
+  announce('Logged out successfully');
+}
+
+// NAVIGATION
+function navigateTo(view) {
+  state.currentView = view;
+  renderApp();
+  focusMainContent();
+}
+
+function focusMainContent() {
+  const mainContent = document.getElementById('mainContent');
+  if (mainContent) {
+    mainContent.focus();
+  }
+}
+
+// CONTACT OPERATIONS
+function addContact(contactData) {
+  const contact = {
+    id: Date.now().toString(),
+    name: contactData.name,
+    company: contactData.company,
+    email: contactData.email,
+    phone: contactData.phone,
+    notes: contactData.notes || '',
+    contractExpiry: contactData.contractExpiry || null,
+    invoiceAmount: parseFloat(contactData.invoiceAmount) || 0,
+    lastContactDate: Date.now(),
+    createdAt: Date.now()
+  };
+  state.contacts.push(contact);
+  saveStateToStorage();
+  announce(`Contact ${contact.name} added successfully`);
+  return contact;
+}
+
+function updateContact(id, contactData) {
+  const index = state.contacts.findIndex(c => c.id === id);
+  if (index !== -1) {
+    state.contacts[index] = {
+      ...state.contacts[index],
+      ...contactData,
+      invoiceAmount: parseFloat(contactData.invoiceAmount) || 0
+    };
+    saveStateToStorage();
+    announce(`Contact ${contactData.name} updated successfully`);
+    return true;
+  }
+  return false;
+}
+
+function deleteContact(id) {
+  const contact = state.contacts.find(c => c.id === id);
+  state.contacts = state.contacts.filter(c => c.id !== id);
+  saveStateToStorage();
+  if (contact) {
+    announce(`Contact ${contact.name} deleted successfully`);
+  }
+}
+
+function getContactById(id) {
+  return state.contacts.find(c => c.id === id);
+}
+
+// PRIORITY SCORING
+function calculatePriorityScore(contact) {
+  const now = Date.now();
+  const daysSinceLastContact = (now - contact.lastContactDate) / (1000 * 60 * 60 * 24);
+  const lastContactScore = Math.min((daysSinceLastContact / 90) * 100, 100);
+  
+  let contractExpiryScore = 0;
+  if (contact.contractExpiry) {
+    const expiryDate = new Date(contact.contractExpiry).getTime();
+    const daysUntilExpiry = (expiryDate - now) / (1000 * 60 * 60 * 24);
+    if (daysUntilExpiry >= 0 && daysUntilExpiry <= 90) {
+      contractExpiryScore = ((90 - daysUntilExpiry) / 90) * 100;
+    } else if (daysUntilExpiry < 0) {
+      contractExpiryScore = 100;
+    }
+  }
+  
+  const invoiceScore = Math.min((contact.invoiceAmount / 10000) * 100, 100);
+  
+  const totalScore = (lastContactScore * 0.4) + (contractExpiryScore * 0.3) + (invoiceScore * 0.3);
+  return Math.round(totalScore);
+}
+
+function getPriorityBadgeColor(score) {
+  if (score >= 80) return 'priority-critical';
+  if (score >= 60) return 'priority-high';
+  if (score >= 40) return 'priority-medium';
+  return 'priority-low';
+}
+
+function sortContactsByPriority(contacts) {
+  return contacts.map(c => ({
+    ...c,
+    priorityScore: calculatePriorityScore(c)
+  })).sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
+function computeOutreachTrigger(contact) {
+  const now = Date.now();
+  
+  if (contact.contractExpiry) {
+    const expiryDate = new Date(contact.contractExpiry).getTime();
+    const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
+    if (daysUntilExpiry >= 0 && daysUntilExpiry <= 90) {
+      return `Contract expires in ${daysUntilExpiry} days`;
+    } else if (daysUntilExpiry < 0) {
+      return `Contract expired ${Math.abs(daysUntilExpiry)} days ago`;
+    }
+  }
+  
+  if (contact.invoiceAmount > 0) {
+    return `Invoice $${contact.invoiceAmount.toLocaleString()} overdue`;
+  }
+  
+  const daysSinceLastContact = Math.floor((now - contact.lastContactDate) / (1000 * 60 * 60 * 24));
+  if (daysSinceLastContact > 30) {
+    return `Not contacted in ${daysSinceLastContact} days`;
+  }
+  
+  return 'Regular follow-up';
+}
+
+// BATCH OUTREACH QUERY PARSING
+function parseNaturalLanguageQuery(query) {
+  const lowercased = query.toLowerCase();
+  
+  const contractExpiryMatch = lowercased.match(/contract.{0,10}expir.{0,10}(\d+)\s*day/);
+  if (contractExpiryMatch) {
+    return { type: 'contractExpiry', operator: 'within', value: parseInt(contractExpiryMatch[1]) };
+  }
+  
+  const invoiceMatch = lowercased.match(/invoice/);
+  if (invoiceMatch) {
+    return { type: 'invoice', operator: 'greater', value: 0 };
+  }
+  
+  const notContactedMatch = lowercased.match(/not\s+contact.{0,10}(\d+)\s*day/);
+  if (notContactedMatch) {
+    return { type: 'lastContact', operator: 'older', value: parseInt(notContactedMatch[1]) };
+  }
+  
+  return { type: 'all', operator: 'any', value: null };
+}
+
+function filterContactsByQuery(contacts, filterObj) {
+  const now = Date.now();
+  
+  if (filterObj.type === 'contractExpiry') {
+    return contacts.filter(c => {
+      if (!c.contractExpiry) return false;
+      const expiryDate = new Date(c.contractExpiry).getTime();
+      const daysUntilExpiry = (expiryDate - now) / (1000 * 60 * 60 * 24);
+      return daysUntilExpiry >= 0 && daysUntilExpiry <= filterObj.value;
+    });
+  }
+  
+  if (filterObj.type === 'invoice') {
+    return contacts.filter(c => c.invoiceAmount > filterObj.value);
+  }
+  
+  if (filterObj.type === 'lastContact') {
+    return contacts.filter(c => {
+      const daysSince = (now - c.lastContactDate) / (1000 * 60 * 60 * 24);
+      return daysSince > filterObj.value;
+    });
+  }
+  
+  return contacts;
+}
+
+// MODAL MANAGEMENT
+function openModal(modalContent, options = {}) {
+  const container = document.getElementById('modalContainer');
+  state.activeModal = { content: modalContent, options };
+  container.innerHTML = modalContent;
+  container.style.display = 'flex';
+  
+  const firstFocusable = container.querySelector('button, input, textarea, select');
+  if (firstFocusable) {
+    setTimeout(() => firstFocusable.focus(), 100);
+  }
+  
+  if (options.ariaLabel) {
+    const modalDialog = container.querySelector('.modal-content');
+    if (modalDialog) {
+      modalDialog.setAttribute('role', 'dialog');
+      modalDialog.setAttribute('aria-label', options.ariaLabel);
+    }
+  }
+}
+
+function closeModal() {
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = '';
+  container.style.display = 'none';
+  state.activeModal = null;
+  focusMainContent();
+}
+
+// ACCESSIBILITY ANNOUNCEMENTS
+function announce(message) {
+  const announcer = document.getElementById('announcer');
+  if (announcer) {
+    announcer.textContent = message;
+    setTimeout(() => { announcer.textContent = ''; }, 1000);
+  }
+}
+
+// GLOBAL EVENT LISTENERS
+function setupGlobalEventListeners() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.activeModal) {
+      closeModal();
+    }
+  });
+  
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+  }
+  
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => navigateTo('settings'));
+  }
+}
+
+// SETTINGS OPERATIONS
+function saveSettings(apiKey, customInstructions, trainableInstructions) {
+  state.apiKey = apiKey;
+  state.customInstructions = customInstructions;
+  state.trainableInstructions = trainableInstructions;
+  saveStateToStorage();
+  announce('Settings saved successfully');
+}
+
+// QUEUE AND DRAFT OPERATIONS
+function addToQueue(contact) {
+  if (!state.queue.find(q => q.contactId === contact.id)) {
+    state.queue.push({
+      id: Date.now().toString(),
+      contactId: contact.id,
+      addedAt: Date.now()
+    });
+    saveStateToStorage();
+    announce(`${contact.name} added to queue`);
+  }
+}
+
+function removeFromQueue(queueId) {
+  state.queue = state.queue.filter(q => q.id !== queueId);
+  saveStateToStorage();
+  announce('Removed from queue');
+}
+
+function saveDraft(contactId, message, reasoning) {
+  const draft = {
+    id: Date.now().toString(),
+    contactId,
+    message,
+    reasoning,
+    createdAt: Date.now()
+  };
+  state.drafts.push(draft);
+  saveStateToStorage();
+  announce('Draft saved successfully');
+  return draft;
+}
+
+function deleteDraft(draftId) {
+  state.drafts = state.drafts.filter(d => d.id !== draftId);
+  saveStateToStorage();
+  announce('Draft deleted');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<!-- END:CoreJavaScript -->
+// FEATURE FUNCTIONS - PRIORITY SCORING
+function calculatePriorityScore(contact) {
+  let score = 0;
+  const today = Date.now();
+  
+  // Days since last contact (40% weight)
+  if (contact.lastContactDate) {
+    const daysSince = Math.floor((today - contact.lastContactDate) / (1000 * 60 * 60 * 24));
+    const daysFactor = Math.min(daysSince / 90, 1) * 100;
+    score += daysFactor * 0.4;
+  }
+  
+  // Contract expiry (30% weight)
+  if (contact.contractExpiry) {
+    const daysUntil = Math.floor((contact.contractExpiry - today) / (1000 * 60 * 60 * 24));
+    if (daysUntil >= 0 && daysUntil <= 90) {
+      const expiryFactor = ((90 - daysUntil) / 90) * 100;
+      score += expiryFactor * 0.3;
+    }
+  }
+  
+  // Invoice amount (30% weight)
+  if (contact.invoiceAmount && contact.invoiceAmount > 0) {
+    const invoiceFactor = Math.min((contact.invoiceAmount / 10000) * 100, 100);
+    score += invoiceFactor * 0.3;
+  }
+  
+  return Math.round(score);
+}
+
+function computeOutreachTrigger(contact) {
+  const today = Date.now();
+  
+  // Check contract expiry first
+  if (contact.contractExpiry) {
+    const daysUntil = Math.floor((contact.contractExpiry - today) / (1000 * 60 * 60 * 24));
+    if (daysUntil >= 0 && daysUntil <= 90) {
+      return `Contract expires in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
+    }
+  }
+  
+  // Check invoice amount
+  if (contact.invoiceAmount && contact.invoiceAmount > 0) {
+    const formatted = contact.invoiceAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    return `Invoice ${formatted} overdue`;
+  }
+  
+  // Check last contact date
+  if (contact.lastContactDate) {
+    const daysSince = Math.floor((today - contact.lastContactDate) / (1000 * 60 * 60 * 24));
+    if (daysSince > 30) {
+      return `Not contacted in ${daysSince} days`;
+    }
+  }
+  
+  return null;
+}
+
+function getPriorityBadgeColor(score) {
+  if (score >= 80) return 'priority-critical';
+  if (score >= 60) return 'priority-high';
+  if (score >= 40) return 'priority-medium';
+  return 'priority-low';
+}
+
+function sortContactsByPriority(contacts) {
+  return contacts.map(c => ({
+    ...c,
+    priorityScore: calculatePriorityScore(c)
+  })).sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
+// BATCH OUTREACH
+function parseNaturalLanguageQuery(query) {
+  const lower = query.toLowerCase();
+  
+  if (lower.includes('contract') && (lower.includes('expir') || lower.includes('end'))) {
+    const match = lower.match(/(\d+)\s*day/);
+    const days = match ? parseInt(match[1]) : 90;
+    return { type: 'contractExpiry', operator: 'within', value: days };
+  }
+  
+  if (lower.includes('invoice')) {
+    const match = lower.match(/\$?(\d+)/);
+    const amount = match ? parseInt(match[1]) : 0;
+    return { type: 'invoice', operator: 'above', value: amount };
+  }
+  
+  if (lower.includes('not contacted') || lower.includes('haven\'t contacted')) {
+    const match = lower.match(/(\d+)\s*day/);
+    const days = match ? parseInt(match[1]) : 30;
+    return { type: 'lastContact', operator: 'moreThan', value: days };
+  }
+  
+  return null;
+}
+
+async function executeBatchOutreach(query) {
+  const filterObj = parseNaturalLanguageQuery(query);
+  if (!filterObj) {
+    announce('Could not understand query');
+    return;
+  }
+  
+  const filtered = filterContactsByQuery(state.contacts, filterObj);
+  if (filtered.length === 0) {
+    announce('No contacts match this query');
+    return;
+  }
+  
+  const results = [];
+  
+  for (let i = 0; i < filtered.length; i++) {
+    const contact = filtered[i];
+    updateBatchProgress(i + 1, filtered.length, contact.name);
+    
+    try {
+      const result = await generateAIMessage(contact);
+      if (result.message) {
+        saveDraft(contact.id, result.message, result.reasoning);
+        results.push({ contact, success: true });
+      }
+    } catch (err) {
+      results.push({ contact, success: false, error: err.message });
+    }
+  }
+  
+  announce(`Generated ${results.filter(r => r.success).length} of ${filtered.length} messages`);
+  return results;
+}
+
+function updateBatchProgress(current, total, contactName) {
+  const progress = document.getElementById('batchProgress');
+  if (progress) {
+    progress.innerHTML = `<div role="status" aria-live="polite">Generating message ${current} of ${total}...<br><strong>${contactName}</strong></div>`;
+  }
+}
+
+// CSV IMPORT
+function parseCSV(csvText) {
+  const lines = csvText.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  
+  const rows = [];
+  for (let i = 1; i < Math.min(6, lines.length); i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = values[idx] || '';
+    });
+    rows.push(row);
+  }
+  
+  return { headers, preview: rows, totalRows: lines.length - 1 };
+}
+
+function autoMapColumns(headers) {
+  const mapping = {};
+  headers.forEach(h => {
+    const lower = h.toLowerCase();
+    if (lower.includes('name')) mapping[h] = 'name';
+    else if (lower.includes('company')) mapping[h] = 'company';
+    else if (lower.includes('email')) mapping[h] = 'email';
+    else if (lower.includes('phone')) mapping[h] = 'phone';
+  });
+  return mapping;
+}
+
+function importContactsFromCSV(csvText, columnMapping, skipDuplicates) {
+  const lines = csvText.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  
+  let imported = 0;
+  let skipped = 0;
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = values[idx] || '';
+    });
+    
+    const contact = {
+      id: Date.now().toString() + Math.random(),
+      name: row[columnMapping.name] || 'Unknown',
+      company: row[columnMapping.company] || '',
+      email: row[columnMapping.email] || '',
+      phone: row[columnMapping.phone] || '',
+      notes: '',
+      lastContactDate: null,
+      contractExpiry: null,
+      invoiceAmount: 0,
+      createdAt: Date.now()
+    };
+    
+    if (skipDuplicates && state.contacts.find(c => c.email === contact.email && contact.email)) {
+      skipped++;
+      continue;
+    }
+    
+    state.contacts.push(contact);
+    imported++;
+  }
+  
+  saveStateToStorage();
+  announce(`Imported ${imported} contacts, skipped ${skipped} duplicates`);
+  return { imported, skipped };
+}
+
+// FOCUS MANAGEMENT
+function focusMainContent() {
+  const main = document.querySelector('main');
+  if (main) {
+    main.setAttribute('tabindex', '-1');
+    main.focus();
+    setTimeout(() => main.removeAttribute('tabindex'), 100);
+  }
+}
+
+function trapFocusInModal(modalElement) {
+  const focusables = modalElement.querySelectorAll('button, input, textarea, select, a[href]');
+  const firstFocusable = focusables[0];
+  const lastFocusable = focusables[focusables.length - 1];
+  
+  modalElement.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === firstFocusable) {
+        e.preventDefault();
+        lastFocusable.focus();
+      } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+        e.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+  });
+}
+
+// ENHANCED MODAL OPENING
+const originalOpenModal = openModal;
+openModal = function(modalContent, options = {}) {
+  originalOpenModal(modalContent, options);
+  const container = document.getElementById('modalContainer');
+  const modalDialog = container.querySelector('.modal-content');
+  if (modalDialog) {
+    trapFocusInModal(modalDialog);
+  }
+};
+</script>
+</body>
+</html>

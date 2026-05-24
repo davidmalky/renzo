@@ -1,0 +1,89 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+- Contact management system with renderContacts() function
+- Contact search filter that checks c.name and c.company fields
+- Contact data structure with fields: name, company, email, title, notes, products, lastContact, annualSpend
+- computePriority() function for contact priority calculation
+- localStorage-based data persistence
+- Sidebar navigation system
+- Stats grid displaying metrics
+- Table/card view rendering
+- Toolbar with search input (.search-input)
+- Filter select dropdown styling (.filter-select)
+- Event listener system for UI interactions
+- Comprehensive CSS styling system with design tokens
+- Button components (btn-primary, btn-ghost, btn-danger, btn-sm, btn-xs)
+- Form fields with validation styling
+- Card and table wrapper components
+
+## MISSING_FEATURES:
+- Extended search that includes email, title, notes, and products fields
+- Sort dropdown control in contacts toolbar
+- Sort functionality for contacts by: priority, lastContact, company, name, spend
+- Event listener for sort dropdown change events
+- Sorting logic implementation for multiple criteria:
+  - Priority sorting (using existing computePriority)
+  - Last contact date sorting (ascending)
+  - Company alphabetical sorting
+  - Name alphabetical sorting
+  - Annual spend sorting (descending)
+
+## CHANGES_NEEDED:
+- **renderContacts() function**: 
+  - Modify search filter condition from simple name/company check to include email, title, notes, products
+  - Add sorting logic after filtering step
+  - Sort based on ctSortF dropdown value
+  - Implement 5 different sort algorithms based on selected option
+- **Contacts toolbar HTML**:
+  - Add sort dropdown element with id="ctSortF"
+  - Include 5 option elements: priority, lastContact, company, name, spend
+- **Event listeners**:
+  - Add change event listener to ctSortF that calls renderContacts()
+
+## REUSE:
+- Existing .filter-select CSS class for sort dropdown styling
+- Existing .toolbar container class for dropdown placement
+- Existing computePriority() function for priority-based sorting
+- Existing renderContacts() function structure - extend rather than replace
+- Existing contact data structure fields (c.name, c.company, c.email, c.title, c.notes, c.products, c.lastContact, c.annualSpend)
+- Existing search input pattern and query handling (q variable, toLowerCase() pattern)
+- Existing event listener attachment pattern (document.getElementById().addEventListener())
+- CSS custom properties for consistent styling (--gray-light, --white, --radius-sm)
+
+## RISKS:
+- **Null/undefined field handling**: Contact objects may have missing optional fields (email, title, notes, products) - must use (c.field||'') pattern to avoid runtime errors
+- **Date sorting complexity**: c.lastContact field format not specified - may be string or Date object, needs verification for correct sorting
+- **Sort function conflicts**: If renderContacts() is called during initial load before ctSortF element exists, getElementById will return null
+- **Performance**: Multiple toLowerCase() calls in search filter - should cache ql.toLowerCase() once (already addressed in task description)
+- **Array mutation**: Sorting modifies array in place - ensure working with correct data copy if needed
+- **Event listener duplication**: If renderContacts() is called multiple times during initialization, may attach duplicate listeners to ctSortF
+- **Existing sort logic**: Verify no existing sort is applied that would conflict with new dropdown sorting
+
+## DATA_STRUCTURES:
+- **Contact object structure**:
+  ```javascript
+  {
+    name: string,
+    company: string,
+    email: string (optional),
+    title: string (optional),
+    notes: string (optional),
+    products: string (optional),
+    lastContact: string/Date (format unknown),
+    annualSpend: number
+  }
+  ```
+- **localStorage keys**: Not explicitly visible in provided code snippet, but contact data likely stored under a key like 'contacts', 'renzo_contacts', or similar
+- **Search query**: Stored in variable `q`, processed with toLowerCase()
+- **Filter logic**: Uses early return pattern with `return false` to exclude non-matching contacts
+- **Sort dropdown values**: 'priority', 'lastContact', 'company', 'name', 'spend'
+
+## TECHNICAL IMPLEMENTATION NOTES:
+- Search filter uses short-circuit AND logic (&&) with multiple !includes() checks
+- Must return false if NO fields match query
+- Sort should happen AFTER filtering but BEFORE rendering
+- Priority sort requires calling computePriority(contact) for each contact
+- Date string sorting may need new Date() conversion for accurate chronological order
+- String sorting should use localeCompare() for proper alphabetical ordering
+- Numeric sorting (spend) should use standard number comparison (b - a for descending)

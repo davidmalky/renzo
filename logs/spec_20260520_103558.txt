@@ -1,0 +1,146 @@
+# TECHNICAL SPECIFICATION: DATA QUALITY & VALIDATION RULES ENGINE
+
+## OVERVIEW
+
+A comprehensive data quality and validation system that integrates with the existing transformation pipeline to provide real-time validation feedback, rule composition, and detailed validation reporting. The system uses a 300px right sidebar for rule management, an 800px modal for visual rule building with AND/OR logic, and enhanced results views with pass/fail indicators. Validation executes post-transformation using Web Workers for performance, stores state per record, and provides templates for common validation patterns.
+
+## VIEWS
+
+- **ValidationRulesPanel**: 300px right sidebar with collapsible categories (Format, Range, Data Type, Custom Regex, Required Fields, Uniqueness), rule list with enable/disable toggles, search filter, template quick-load buttons, and "Add Rule" button opening RuleBuilderModal
+- **RuleBuilderModal**: 800px modal with rule name input, field selector dropdown, operator dropdown (equals, contains, matches, greater than, less than, between, startsWith, endsWith, isEmpty, isNotEmpty), value input(s), logic group builder (AND/OR combinations), nested condition support, severity selector (Error/Warning), test validation button, save/cancel actions
+- **ValidationResultsView**: Tab in results area showing validation summary card (total records, passed count with green badge, failed count with red badge, pass rate percentage), filterable data table with color-coded row indicators, expandable row details showing failed rules with reasons, export buttons (CSV/JSON), filter controls (Show All/Failures Only/Passed Only)
+- **ValidationBadgeOverlay**: Inline badges in mapping preview showing validation status per field (green checkmark for pass, red X with count for failures), tooltip on hover showing specific failed rules
+- **ValidationTemplateLibrary**: Modal (600px) with pre-built template cards (Email Contact, Address, Financial, Custom), template preview showing included rules, load/duplicate/delete actions, "Create New Template" button
+- **ValidationWarningBar**: Fixed bottom bar (50px height) appearing during preview showing validation warnings count, "View Details" button, quick stats, dismiss option
+
+## FUNCTIONS
+
+- **initValidationSystem()**: Initialize validation panel, attach event listeners, load saved rules from localStorage, setup Web Worker, register keyboard shortcuts, inject validation panel into DOM, initialize template library, restore panel state
+- **openValidationPanel()**: Slide in panel from right with animation, add body class 'validation-panel-open', focus search input, update rule list display, log panel opened event
+- **closeValidationPanel()**: Slide out panel to right, remove body class after animation, clear search if active, save panel state to localStorage
+- **toggleValidationPanel()**: Check current state, call open or close accordingly
+- **openRuleBuilderModal(ruleId=null)**: Show modal overlay, populate fields if editing existing rule, initialize field dropdown from current mapping, reset form if new rule, setup logic group interface, focus rule name input
+- **closeRuleBuilderModal()**: Hide modal with fade animation, clear form fields, reset validation state, remove any temporary data
+- **saveValidationRule()**: Validate rule configuration, generate unique rule ID, create rule object with name/field/operator/value/logic/severity, add to validationRules array, update localStorage, refresh rule list display, close modal, show success toast
+- **deleteValidationRule(ruleId)**: Show confirmation dialog, remove from validationRules array, update localStorage, refresh UI, show deletion toast
+- **toggleRuleEnabled(ruleId)**: Find rule in array, toggle enabled boolean, update localStorage, refresh rule display with disabled styling, rerun validation if auto-validate enabled
+- **renderValidationRulesList()**: Clear container, iterate validationRules array, create rule card for each with name/field/operator display, add toggle switch, add edit/delete buttons, apply search filter if active, handle empty state
+- **renderRuleBuilderForm(rule)**: Populate rule name input, set field selector value, populate operator dropdown, show/hide value inputs based on operator, render logic groups if present, set severity radio, update modal title (Add/Edit)
+- **addLogicGroup(parentGroup=null)**: Create new logic group object with AND/OR type and empty conditions array, add to parent or root, render logic group UI with nested structure, setup add condition button
+- **removeLogicGroup(groupId)**: Find group in rule structure, remove from parent, update UI, reindex remaining groups
+- **addCondition(groupId)**: Create condition object with field/operator/value, add to group's conditions array, render condition row with field/operator/value selectors, setup remove button
+- **removeCondition(groupId, conditionIndex)**: Remove condition from group array, update UI, check if group is empty
+- **updateConditionField(groupId, conditionIndex, field)**: Update condition's field property, validate field exists in mapping, refresh operator options based on field type
+- **updateConditionOperator(groupId, conditionIndex, operator)**: Update condition's operator, show/hide value inputs based on operator type (between shows two inputs, isEmpty shows none), set input type based on operator
+- **updateConditionValue(groupId, conditionIndex, valueIndex, value)**: Update condition's value or value array, validate input format, show inline validation feedback
+- **validateRuleConfiguration(rule)**: Check rule has name, field, operator, validate value format matches operator requirements, ensure logic groups have at least one condition, return validation result with errors array
+- **executeValidation(data, transformedData)**: Create validation worker if not exists, prepare validation payload with rules and data, post message to worker, setup promise for results, handle worker response, update UI with results
+- **validateRecord(record, rules, recordIndex)**: Iterate enabled rules, evaluate each rule against record, check field value against operator/value, evaluate logic groups recursively, collect failed rules with reasons, return validation result object
+- **evaluateCondition(record, condition)**: Get field value from record, apply operator logic (equals: strict equality, contains: string indexOf, matches: regex test, greaterThan: numeric comparison, lessThan: numeric comparison, between: range check, startsWith: string check, endsWith: string check, isEmpty: null/undefined/'', isNotEmpty: inverse), return boolean result
+- **evaluateLogicGroup(record, group)**: Get group type (AND/OR), iterate conditions, evaluate each condition or nested group, apply AND (all true) or OR (any true) logic, return boolean result
+- **renderValidationResults(results)**: Update ValidationResultsView with results object, render summary statistics, populate data table with color-coded rows, setup expandable row handlers, initialize filter controls, enable export buttons
+- **renderValidationSummary(results)**: Calculate total/passed/failed counts, compute pass rate percentage, create summary card HTML with color-coded badges, display in results header
+- **renderValidationTable(results)**: Create table with columns (Row, Status, Fields, Failed Rules), iterate results array, create row for each record with status indicator (green dot + "Passed" or red dot + "Failed"), show failed rule count, add expand icon if failures exist, attach click handlers
+- **expandValidationRow(recordIndex)**: Get validation result for record, create detail row showing each failed rule (rule name, field, reason, expected vs actual), insert detail row below main row, toggle expanded state
+- **collapseValidationRow(recordIndex)**: Find and remove detail row, toggle expanded state icon
+- **filterValidationResults(filterType)**: Store current filter ('all', 'failures', 'passed'), filter results array based on validation status, re-render table with filtered data, update filter button states
+- **exportValidationReport(format)**: Prepare export data from validation results, include failed records with rule details for 'failures' export or all records with status for 'full' export, format as CSV or JSON based on parameter, trigger download with appropriate filename and timestamp
+- **generateValidationCSV(results)**: Create CSV header row (Record Index, Status, Failed Rules, Details), iterate results, add row for each with quoted fields, join with newlines, return CSV string
+- **generateValidationJSON(results)**: Create structured JSON object with metadata (timestamp, total rules, pass rate), include results array with record index/status/failures, stringify with formatting, return JSON string
+- **addValidationBadges(previewContainer)**: Iterate preview field elements, check if field has validation rules, run validation on preview data, add badge element (green checkmark or red X with count) to field display, attach tooltip with rule details
+- **updateValidationBadge(fieldElement, validationResult)**: Remove existing badge, determine badge type from result (passed/failed), create badge HTML with icon and count, append to field element, setup tooltip
+- **showValidationWarningBar(warningCount, details)**: Create warning bar HTML with count and message, position at bottom of viewport, add "View Details" button opening validation results, add dismiss button, animate in from bottom, auto-hide after 10 seconds unless hovered
+- **hideValidationWarningBar()**: Animate warning bar out, remove from DOM after animation, clear timeout if exists
+- **openValidationTemplateLibrary()**: Show template modal, load templates from localStorage and built-in templates, render template cards with rule count and description, setup load/edit/delete handlers, focus search input
+- **closeValidationTemplateLibrary()**: Hide modal with animation, clear search filter, save library state
+- **loadValidationTemplate(templateId)**: Get template object, load rules into validationRules array, update localStorage, close template modal, open validation panel, show loaded toast with rule count
+- **saveValidationTemplate(templateName, description)**: Create template object with current rules array, generate unique template ID, save to localStorage templates array, refresh template library display, show success toast
+- **deleteValidationTemplate(templateId)**: Show confirmation dialog, remove from templates array, update localStorage, refresh library display, show deletion toast
+- **duplicateValidationTemplate(templateId)**: Get template object, create copy with new ID and "(Copy)" suffix, add to templates array, update localStorage, refresh display
+- **searchValidationRules(query)**: Filter validationRules array by name/field/operator matching query, update rule list display with filtered results, show result count, highlight matched text
+- **searchValidationTemplates(query)**: Filter templates array by name/description matching query, update template library display, show result count
+- **getBuiltInTemplates()**: Return array of predefined template objects (Email Contact Validation: email format, required name/email fields; Address Validation: required address fields, zip format, state validation; Financial Data: numeric amount fields, date format, positive value checks; Phone Number Validation: phone format with multiple patterns), each with rules array ready to use
+- **createValidationWorker()**: Create Web Worker from inline script or separate file, setup message handler for validation results, setup error handler, store worker reference globally
+- **terminateValidationWorker()**: Terminate existing worker, clear worker reference, cleanup any pending promises
+- **workerValidationTask(data, rules)**: Worker function that receives data and rules via postMessage, iterates records, validates each against rules, posts progress updates every 100 records, posts final results object with validation details
+- **initValidationStorage()**: Check localStorage for 'validationRules' key, initialize empty array if missing, check for 'validationTemplates' key, load built-in templates on first run, return loaded configuration
+- **saveValidationStorage()**: Stringify validationRules array, save to localStorage 'validationRules' key, save validationTemplates separately, handle quota exceeded errors
+- **loadValidationStorage()**: Parse 'validationRules' from localStorage, validate structure, return rules array or empty array on error, load templates similarly
+- **migrateValidationStorage()**: Check storage version, run migration functions for old formats, update version flag, save migrated data
+- **attachValidationEventListeners()**: Attach click handler to validation panel toggle button, attach click handler to add rule button, attach input handler to rule search, attach change handlers to filter controls in results view, attach click handlers to export buttons, attach keyboard shortcuts (Ctrl+Shift+V for panel, Escape to close modals)
+- **setupValidationKeyboardShortcuts()**: Listen for keydown events, check for Ctrl+Shift+V to toggle panel, Escape to close open modals, handle focus management
+- **integrateWithTransformationPipeline()**: Hook into existing transformation execution, add validation step after transformations complete, pass transformed data to executeValidation, display results in results tab, update preview with badges
+- **autoValidateOnChange()**: Watch for changes to transformation expressions, watch for data source changes, debounce validation execution (500ms), run validation automatically if auto-validate setting enabled
+- **getFieldsFromMapping()**: Iterate current mapping configuration, extract target field names, return array of field objects with name and type
+- **inferFieldType(fieldName, sampleValue)**: Check sample value type, return 'number', 'string', 'date', 'boolean', or 'unknown', used to populate appropriate operators
+- **getOperatorsForFieldType(fieldType)**: Return appropriate operator array based on field type (string: equals, contains, matches, startsWith, endsWith, isEmpty; number: equals, greaterThan, lessThan, between; date: equals, greaterThan, lessThan, between), include common operators for all types
+- **formatValidationError(rule, actualValue, expectedValue)**: Create human-readable error message, include field name, rule name, operator description, expected vs actual values, return formatted string
+- **calculateValidationStatistics(results)**: Count total/passed/failed records, calculate pass rate percentage, group failures by rule to show most common issues, create statistics object with breakdown
+- **createValidationTooltip(failedRules)**: Build HTML tooltip content listing each failed rule with icon, rule name, and reason, limit to first 5 rules with "and X more" message, return tooltip HTML string
+- **initializeValidationPanel()**: Create panel HTML structure, add categories with headers, add rule list container, add action buttons (Add Rule, Load Template), inject into document body, apply initial styling
+- **initializeRuleBuilderModal()**: Create modal HTML with form structure, add field selector, operator selector, value inputs, logic group builder section, severity selector, test/save/cancel buttons, inject into document body
+- **initializeValidationResultsTab()**: Add validation tab to results tabs if not present, create validation results container, add summary section, add table container, add export controls, setup tab switch handler
+- **testValidationRule(rule, testData)**: Run validation rule against test data or sample data, show inline results in modal with pass/fail indicators, display matched/unmatched records count, help user verify rule before saving
+- **showValidationToast(message, type)**: Create toast notification element, style based on type (success/error/warning), position in top-right corner, auto-dismiss after 3 seconds, animate in and out
+- **debounce(func, delay)**: Return debounced function that delays execution until delay milliseconds after last call, used for search and auto-validate features
+- **generateRuleId()**: Create unique ID using timestamp and random string, ensure no collision with existing rule IDs, return unique ID string
+- **cloneRule(rule)**: Deep clone rule object including nested logic groups, assign new ID, return cloned rule object
+- **validateFieldExists(fieldName, mapping)**: Check if field name exists in current mapping configuration, return boolean, used to validate rule configuration against current mapping
+
+## DATA
+
+- **validationRules**: Array of rule objects [{id: string, name: string, enabled: boolean, field: string, operator: string, value: any, values: array (for between), logicGroups: array, severity: 'error'|'warning', createdAt: timestamp, updatedAt: timestamp}], stored in localStorage 'validationRules' key
+- **validationTemplates**: Array of template objects [{id: string, name: string, description: string, rules: array, isBuiltIn: boolean, createdAt: timestamp}], stored in localStorage 'validationTemplates' key
+- **validationResults**: Object {timestamp: number, totalRecords: number, passedRecords: number, failedRecords: number, passRate: number, results: array of {recordIndex: number, status: 'passed'|'failed', failedRules: array of {ruleId: string, ruleName: string, field: string, reason: string, expected: any, actual: any}}}, stored in memory during session
+- **validationState**: Object {panelOpen: boolean, currentFilter: 'all'|'failures'|'passed', expandedRows: Set of record indices, autoValidate: boolean, lastValidation: timestamp}, stored in memory
+- **validationWorker**: Web Worker reference for background validation processing, created on first validation execution, terminated on cleanup
+- **fieldDefinitions**: Array derived from current mapping [{name: string, type: string, path: string}], extracted from transformation configuration
+- **operatorDefinitions**: Object mapping operator keys to {label: string, requiresValue: boolean, valueCount: number, description: string}, used to populate operator dropdown and validate inputs
+- **validationCategories**: Array of category objects [{id: string, name: string, icon: string, collapsed: boolean}], defines rule panel organization
+- **builtInTemplates**: Array of predefined template objects loaded on initialization, immutable, merged with user templates in UI
+- **validationCache**: Map of data hash to validation results, used to avoid re-validating unchanged data, cleared on rule changes
+- **pendingValidations**: Set of validation request IDs, used to track in-flight validations and avoid duplicate executions
+
+## API
+
+- **No external APIs**: System operates entirely client-side using localStorage for persistence and Web Workers for processing
+- **Web Worker Message Protocol**: 
+  - Request: {type: 'validate', requestId: string, data: array, rules: array, batchSize: number}
+  - Progress: {type: 'progress', requestId: string, processed: number, total: number}
+  - Response: {type: 'complete', requestId: string, results: object}
+  - Error: {type: 'error', requestId: string, error: string}
+- **localStorage Operations**:
+  - Key 'validationRules': JSON string of validationRules array
+  - Key 'validationTemplates': JSON string of validationTemplates array
+  - Key 'validationSettings': JSON string of {autoValidate: boolean, panelState: object}
+  - All localStorage writes wrapped in try-catch for quota errors, fallback to session-only storage
+
+## DESIGN
+
+- **Validation Panel Styling**: Width 300px, height 100vh, background white, box-shadow -4px 0 16px rgba(0,0,0,0.1), position fixed right 0, transform translateX(100%) when closed, transition transform 0.3s ease, z-index 1001
+- **Panel Header**: Height 60px, padding 16px, border-bottom 1px solid #e5e7eb, display flex align-items-center justify-content-between, background linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%), color white
+- **Rule Categories**: Collapsible sections using existing .function-category pattern, category header with chevron icon (rotate -90deg when collapsed), category body with padding 12px and max-height transition
+- **Rule Cards**: Background #f9fafb, border 1px solid #e5e7eb, border-radius 6px, padding 12px, margin-bottom 8px, hover background #f3f4f6, display flex with space-between alignment
+- **Rule Toggle Switch**: Custom checkbox styled as toggle switch, width 44px, height 24px, border-radius 12px, background #d1d5db when off, var(--color-success) when on, transition 0.2s, ::after pseudo-element for slider circle
+- **RuleBuilderModal**: Width 800px, max-width 90vw, max-height 90vh, overflow-y auto, background white, border-radius 12px, box-shadow var(--shadow-xl), padding 32px
+- **Logic Group Container**: Border-left 3px solid var(--color-primary), padding-left 16px, margin-left 8px, margin-bottom 16px, background #f9fafb, border-radius 4px
+- **Condition Row**: Display flex gap 12px, align-items flex-start, margin-bottom 12px, background white, padding 12px, border-radius 6px, border 1px solid #e5e7eb
+- **Field Selector Dropdown**: Width 200px, height 36px, border 1px solid #d1d5db, border-radius 6px, padding 8px 12px, font-size 14px, focus border-color var(--color-primary), focus box-shadow 0 0 0 3px rgba(59,130,246,0.1)
+- **Operator Selector**: Width 160px, same styling as field selector, options organized with optgroups for clarity
+- **Value Input**: Flex 1, height 36px, border/padding/focus same as selectors, type changes based on operator (text, number, date), placeholder provides example format
+- **Add Condition Button**: Background transparent, border 2px dashed var(--color-primary), border-radius 6px, padding 8px 16px, color var(--color-primary), hover background rgba(59,130,246,0.05), font-size 14px, font-weight 500
+- **Logic Type Toggle**: Button group for AND/OR, selected button has background var(--color-primary) and color white, unselected has background transparent and color var(--color-primary), border 1px solid var(--color-primary)
+- **Severity Selector**: Radio buttons styled as pills, Error is red background, Warning is yellow background, selected state with darker shade and white text
+- **Validation Results Summary Card**: Background linear-gradient(135deg, #ffffff 0%, #f9fafb 100%), border 1px solid #e5e7eb, border-radius 12px, padding 24px, margin-bottom 24px, display grid grid-template-columns repeat(4, 1fr) gap 24px
+- **Summary Stat Item**: Text-align center, stat-value font-size 32px font-weight 700, stat-label font-size 14px color var(--color-text-secondary) text-transform uppercase
+- **Pass Badge**: Background var(--color-success-light), color var(--color-success), border-radius 20px, padding 4px 12px, font-size 14px font-weight 600, display inline-flex align-items-center gap 6px, icon checkmark circle
+- **Fail Badge**: Background var(--color-error-light), color var(--color-error), same styling as pass badge, icon X circle
+- **Validation Table**: Width 100%, border-collapse separate, border-spacing 0, thead background #f9fafb, th padding 12px 16px, text-align left, font-size 12px, font-weight 600, text-transform uppercase, color var(--color-text-secondary)
+- **Table Row Status**: Green left border 3px solid var(--color-success) for passed, red border var(--color-error) for failed, hover background #f9fafb, transition background 0.2s
+- **Status Indicator Dot**: Width 8px, height 8px, border-radius 50%, display inline-block, margin-right 8px, green for passed, red for failed
+- **Expanded Row Details**: Background #f9fafb, border-top 1px solid #e5e7eb, padding 16px 24px, font-size 14px, nested table for failed rules with columns Rule/Field/Reason
+- **Validation Badge Overlay**: Position absolute, top -8px, right -8px, width 20px, height 20px, border-radius 50%, display flex align-items-center justify-content-center, font-size 11px, font-weight 700, box-shadow 0 2px 4px rgba(0,0,0,0.1), green background var(--color-success) with white checkmark, red background var(--color-error) with white X or count
+- **Validation Tooltip**: Position absolute, z-index 10000, background rgba(0,0,0,0.9), color white, border-radius 6px, padding 12px, font-size 13px, line-height 1.4, max-width 300px, box-shadow var(--shadow-lg), ::before pseudo for arrow pointer
+- **Warning Bar**: Position fixed, bottom 0, left 0, right 0, height 50px, background var(--color-warning-light), border-top 2px solid var(--color-warning), display flex align-items-center justify-content-space-between, padding 0 24px, z-index 1002, transform translateY(100%) when hidden, transition transform 0.3s
+- **Template Card**: Background white, border 1px solid #e5e7eb, border-radius 8px, padding 20px, margin-bottom 16px, hover border-color var(--color-primary), hover box-shadow var(--shadow-md), transition 0.2s
+- **Template Badge**: Display inline-block, background var(--color-info-light), color var(--color-info), border-radius 4px, padding 2px 8px, font-size 12

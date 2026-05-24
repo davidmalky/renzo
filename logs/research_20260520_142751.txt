@@ -1,0 +1,245 @@
+# RESEARCH REPORT: CSV Import Feature for Renzo Contacts
+
+## EXISTING_FEATURES:
+
+### Contact Management
+- **Contact Storage**: Uses localStorage to persist contact data (key pattern: needs verification in JS code)
+- **Contact Display**: `contact-row` class with structured layout showing contact info
+- **Contact Data Fields**: 
+  - `contact-name` (displayed)
+  - `contact-meta` (displayed as secondary info)
+  - Contact actions section exists
+- **Contact List UI**: Card-based layout with contact rows, hover effects, border styling
+- **Empty State**: Built-in empty state UI for when no contacts exist (empty-state classes)
+
+### UI Components & Patterns
+- **Modal System**: Full modal overlay implementation
+  - `modal-overlay` with `.active` toggle class
+  - `modal-header`, `modal-body`, `modal-footer` structure
+  - `modal-close` button pattern
+  - `modal-title` styling
+  - Centered overlay with backdrop
+  - z-index: 1000 for overlays
+- **Button System**:
+  - `btn`, `btn-primary`, `btn-secondary`, `btn-danger` classes
+  - `btn-small` variant available
+  - Icon + text pattern (inline-flex with gap: 8px)
+  - Hover states with transform and shadow
+  - Focus visible outlines
+- **Form Components**:
+  - `form-group`, `form-label`, `form-input` pattern
+  - `form-error` with `.visible` toggle class
+  - `aria-invalid` attribute handling
+  - 2px border system
+  - Focus state changes border-color to var(--forest-green)
+- **Card System**: `card` class with consistent padding (24px), border-radius (12px), shadow
+- **Search**: `search-container` and `search-input` already exist
+
+### Design System
+- **Color Palette**:
+  - Primary: `--forest-green` (#2d5016), `--forest-green-hover` (#1f3810), `--forest-green-light` (#e8f3e0)
+  - Background: `--cream` (#f5f1e8), `--cream-dark` (#e8e1d0)
+  - Accent: `--gold` (#c5a028), `--gold-light` (#f5e8b8)
+  - Status colors: error, success, warning variants
+  - Priority colors: critical/high/medium/low
+  - Text: `--text-primary` (#1a1a1a), `--text-secondary` (#4b5563)
+  - Border: `--border` (#d1d5db)
+- **Shadow System**: sm/md/lg/xl variants defined
+- **Typography**: -apple-system font stack, line-height 1.6
+- **Spacing**: 24px card padding, 12px gap in flex layouts, 8px icon gaps
+- **Border Radius**: 12px cards, 8px inputs/buttons, 16px modals
+- **Focus States**: 3px solid outline with 2px offset
+
+### Badge System
+- **Priority Badges**: `priority-badge` with color variants (critical/high/medium/low)
+- **Priority Score Badges**: `priority-score-badge` with gradient backgrounds and shadows (high/medium/low)
+- Inline-flex, centered content, rounded corners
+
+### Layout Patterns
+- **App Container**: max-width 1400px, centered, 24px padding
+- **Header**: Flex layout with space-between, 32px margin-bottom
+- **Header Actions**: Flex with 12px gap
+- **Contact Row**: Flex layout with space-between alignment
+- **Stats Grid**: CSS Grid with auto-fit, minmax(200px, 1fr), 16px gap
+
+### Accessibility Features
+- Focus visible outlines (3px solid, 2px offset)
+- ARIA attributes pattern (aria-invalid for form validation)
+- Semantic heading structure
+- Label associations via form patterns
+
+## MISSING_FEATURES:
+
+### CSV Import Functionality
+- **File Input Button**: "Import CSV" button on contacts page (does not exist)
+- **FileReader API Integration**: No CSV file reading logic present
+- **CSV Parsing Logic**: No parser for CSV text to structured data
+- **Column Auto-Detection**: No logic to detect name/first/last/name, company/organization, email, phone columns (case-insensitive header matching)
+- **Preview Modal**: No dedicated modal for CSV preview functionality
+- **Column Mapping Display**: No UI to show detected column mappings to user
+- **Preview Data Table**: No table component to display first 5 rows of CSV
+- **Import Confirmation Flow**: No confirm button handler for CSV import
+- **Duplicate Detection**: No logic to skip duplicate contacts during import
+- **Empty Row Filtering**: No logic to skip rows where name AND company are both empty
+- **Import Result Feedback**: No success message showing "Imported X contacts, skipped Y duplicates"
+- **Row Processing Loop**: No batch contact creation from CSV rows
+
+### Data Structure Knowledge
+- **localStorage Contact Schema**: Not visible in HTML (need JS code to determine exact structure)
+- **Contact ID Generation**: Unknown how contacts are uniquely identified
+- **Duplicate Detection Strategy**: Unknown what fields determine duplicates (email? name+company?)
+
+## CHANGES_NEEDED:
+
+### No Breaking Changes Required
+- All existing functionality must be preserved
+- This is a purely additive feature
+- No modifications to existing components necessary
+
+### Potential Integration Points
+- **Header Actions Section**: Add "Import CSV" button to `.header-actions` div alongside existing buttons
+- **Contact Storage**: Will need to append to existing localStorage contact array using existing schema
+- **Contact Display**: After import, existing contact rendering logic should automatically show new contacts
+
+## REUSE:
+
+### UI Components to Reuse
+- **Modal Structure**: Use existing `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer` pattern for CSV preview
+- **Button Styles**: Use `.btn .btn-secondary` for "Import CSV" file trigger button
+- **Button Styles**: Use `.btn .btn-primary` for confirm import, `.btn .btn-secondary` for cancel
+- **Card Layout**: If CSV preview needs table wrapper, use `.card` class
+- **Form Input Pattern**: Can use `.form-input` styling for file input if needed (though file inputs are challenging to style)
+- **Success/Error Colors**: Use `--success`, `--success-light` for import success feedback; `--error`, `--error-light` for errors
+
+### Layout Patterns to Reuse
+- **Modal Centered Overlay**: Existing flex centering pattern for preview modal
+- **Modal Footer Button Group**: Existing flex gap pattern (gap: 12px, justify-content: flex-end)
+- **Header Actions Layout**: Existing flex with 12px gap for adding Import button
+
+### JavaScript Patterns to Infer
+- **Modal Toggle Pattern**: Use `.active` class to show/hide modal overlay
+- **Event Delegation**: Likely using event listeners on parent containers
+- **LocalStorage Operations**: Existing pattern for reading/writing contacts (need to match schema)
+- **DOM Manipulation**: Vanilla JS approach (no frameworks visible)
+
+### Styling Patterns to Reuse
+- **Color Scheme**: Use forest-green for primary actions, cream backgrounds for neutral areas
+- **Spacing**: 24px padding, 12px gaps, 8px internal spacing
+- **Border Radius**: 12px for large containers, 8px for controls
+- **Box Shadows**: var(--shadow-sm) for subtle elevation
+- **Transitions**: 0.2s duration for interactive elements
+- **Focus States**: 3px solid var(--forest-green) outline with 2px offset
+
+### Table Display (May Need Creation)
+- No existing table styles visible in CSS
+- Will need to create table styles for CSV preview that match design system:
+  - Border colors: var(--border)
+  - Header background: var(--forest-green-light) or var(--cream-dark)
+  - Text colors: var(--text-primary) for data, var(--text-secondary) for headers
+  - Padding: 12px for cells (consistent with button/input padding)
+  - Border-radius on table: 8px
+
+## RISKS:
+
+### Technical Risks
+
+1. **localStorage Schema Unknown**
+   - Cannot see JavaScript code with contact data structure
+   - Risk: Import may create contacts with wrong schema, breaking existing display logic
+   - Mitigation: Must inspect existing localStorage structure before implementation
+
+2. **Duplicate Detection Logic Undefined**
+   - Task says "skip duplicates" but doesn't specify duplicate criteria
+   - Risk: May skip valid contacts or allow duplicates
+   - Common strategies: email-based, name+company combination, or ID-based
+   - Need to determine existing duplicate detection strategy (if any)
+
+3. **CSV Parsing Edge Cases**
+   - Quoted fields with commas, newlines within fields, inconsistent quote escaping
+   - Risk: Naive split-by-comma parsing will break on complex CSVs
+   - Mitigation: Need robust CSV parsing logic (though task says "no external libraries")
+
+4. **File Size Limits**
+   - FileReader loads entire file into memory
+   - Risk: Large CSV files (>10MB) could freeze browser
+   - No file size validation mentioned in task
+
+5. **Character Encoding**
+   - CSV may have non-UTF-8 encoding (e.g., Latin-1, Windows-1252)
+   - Risk: Special characters may display incorrectly
+   - FileReader defaults to UTF-8
+
+6. **Column Detection Ambiguity**
+   - Task says detect "name/first/last" but doesn't specify priority
+   - Risk: CSV with both "name" and "first"+"last" columns - which to use?
+   - Need decision rule for conflicting columns
+
+7. **Empty Field Handling**
+   - Task says skip rows where "name AND company are both empty"
+   - Risk: What if CSV has first/last but no "name" column? Does empty first+last count?
+   - Need clear definition of "empty" (null, empty string, whitespace-only?)
+
+8. **Modal Accessibility**
+   - File input triggers aren't keyboard accessible by default
+   - Risk: Screen reader users or keyboard-only users cannot import
+   - Need to ensure file input is focusable and has proper labeling
+
+9. **localStorage Quota Exceeded**
+   - Importing many contacts could exceed 5-10MB localStorage limit
+   - Risk: Import fails silently or with unhelpful error
+   - No quota checking mentioned in task
+
+10. **Existing Contact Display Refresh**
+    - After import, need to trigger re-render of contact list
+    - Risk: New contacts don't appear until page reload
+    - Need to call existing render function after import
+
+### UI/UX Risks
+
+1. **Button Placement Unclear**
+   - Task says "on the contacts page" but doesn't specify exact location
+   - Header actions seems logical, but could also be above contact list
+   - Risk: Poor placement could disrupt existing layout
+
+2. **Preview Modal Size**
+   - Showing 5 rows + column mapping could be tall
+   - Risk: Modal may not fit on mobile viewports
+   - Existing modal has max-height: 90vh, but content could still be cramped
+
+3. **No Loading State**
+   - Large CSV parsing is synchronous and could take time
+   - Risk: UI appears frozen during processing
+   - No loading spinner or progress indicator specified
+
+4. **No Error Handling UI**
+   - If CSV is malformed, what error message to show?
+   - Risk: Silent failures or browser console errors only
+   - Need error modal or inline error message
+
+5. **Column Mapping Non-Obvious**
+   - User may not understand detected mapping
+   - Risk: User imports with wrong column assignments
+   - Preview should clearly show which CSV columns map to which contact fields
+
+## DATA_STRUCTURES:
+
+### From HTML (Inferred)
+- **Contacts are stored in localStorage** (implied by task requirement "imports all rows as contacts with localStorage")
+- **localStorage key unknown** - need to inspect JavaScript code
+  - Common patterns: "contacts", "renzo_contacts", "crm_contacts"
+  
+### Expected Contact Schema (Inferred from UI)
+Based on displayed elements:
+```
+Contact object likely contains:
+- name (or first + last) - displayed in .contact-name
+- company/organization - potentially in .contact-meta
+- email - likely in .contact-meta or separate field
+- phone - likely in .contact-meta or separate field
+- id - for duplicate detection and CRUD operations
+- possibly: created date, priority, status, notes
+```
+
+### CSV Column Mapping (Per Task)
+Must detect case-insensitively:
+- **Name field**: "name", "first", "last", "firstname", "lastname", "first name", "

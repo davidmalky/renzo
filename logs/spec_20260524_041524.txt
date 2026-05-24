@@ -1,0 +1,61 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a version footer to the Renzo sidebar that displays "Renzo v1.0 – Built by Agent Pipeline". The footer will be positioned at the bottom of the sidebar, below the logout button, using the existing dark color scheme. This is a minimal UI addition requiring only HTML markup and CSS styling – no JavaScript or data changes needed.
+
+## VIEWS
+- **Sidebar Footer (existing)**: Add new version footer element inside `.sidebar-footer`, positioned below `.sidebar-logout` button
+  - New element: `.sidebar-version` containing version text
+  - Visual hierarchy: user info > logout button > version footer (bottom-most)
+
+## FUNCTIONS
+None required. This is a static display element with no interactive behavior.
+
+## DATA
+None required. Version text is hardcoded in HTML markup.
+
+## API
+None required. No backend communication or data fetching needed.
+
+## DESIGN
+
+**HTML Structure:**
+- Insert after `.sidebar-logout` button, before closing `</div>` of `.sidebar-footer`
+- Class name: `.sidebar-version`
+- Text content: "Renzo v1.0 – Built by Agent Pipeline"
+
+**CSS Styling:**
+- Font family: inherit from body (DM Sans)
+- Font size: `10px`
+- Font weight: `400`
+- Color: `rgba(232, 228, 220, 0.35)` (more muted than .sidebar-user)
+- Text align: `center`
+- Letter spacing: `0.3px`
+- Line height: `1.4`
+- Padding: `12px 16px 16px 16px` (top spacing from logout, bottom margin)
+- Border top: `1px solid rgba(255, 255, 255, 0.04)` (subtle separator)
+- Margin top: `auto` (push to absolute bottom if flex layout)
+- No text transform (keep natural casing for readability)
+
+**Positioning:**
+- Should remain at bottom when sidebar content grows
+- No fixed positioning needed (already inside sidebar footer container)
+
+## ERRORS
+None. This is a static display element with no failure modes. If CSS fails to load, text will still be readable with browser defaults.
+
+## SCOPE_CHECK
+
+**Estimated total lines:** ~15 lines total
+- HTML: 3 lines (opening tag, text content, closing tag)
+- CSS: ~10 lines (one selector block with properties)
+
+**SINGLE_TASK:** Proceed as one build. This is well under the 650-line limit and requires changes to only one file (index.html). The addition is minimal, non-breaking, and has no dependencies.
+
+**Implementation notes:**
+- Modify index.html only
+- Add HTML markup in sidebar footer section (around line 85-95 based on research)
+- Add CSS rules in existing `<style>` block (around line 250-450)
+- No JavaScript changes required
+- No new files needed
+- Zero risk of breaking existing functionality (purely additive)

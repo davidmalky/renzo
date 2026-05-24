@@ -1,0 +1,134 @@
+# TECHNICAL SPECIFICATION: RENZO PHASE 2 ENHANCEMENTS
+
+## OVERVIEW
+This spec defines additions to the existing Renzo single-file HTML/JS application. We add intelligent priority scoring based on weighted business factors, trigger-based AI message reasoning, batch outreach with natural language queries, CSV contact import with preview, and trainable AI instruction rules. All features extend the existing localStorage-based frontend application without modifying core existing functionality (login, basic CRUD, existing AI generation, queue/drafts).
+
+---
+
+## VIEWS
+
+- **ContactRow (enhanced)**: Existing contact list row now displays priority score badge (colored 0-100 scale: red <40, yellow 40-70, green >70) before contact name. Badge shows score number and priority icon.
+
+- **ContactFormModal (enhanced)**: Existing form gains two new fields: "Contract Expiry Date" (date input) and "Invoice Amount Outstanding" (number input with $ prefix). Fields appear after existing phone field, before tier dropdown (tier remains for backward compatibility but hidden from UI).
+
+- **MessageReasoningBox (enhanced)**: Existing AI message generation area gains prominent "Trigger" section at top showing computed reason (e.g., "Contract expires in 23 days" in orange warning box). Below trigger, existing reasoning text appears.
+
+- **BatchOutreachView**: New full-page view with navigation item "Batch Outreach" (icon: layers). Contains: large textarea for natural language query ("Reach out to all contacts with..."), "Execute Batch" button, results area showing matched contacts count, progress indicator ("Generating 3 of 7..."), and preview list of generated messages with queue-all button.
+
+- **ImportCSVModal**: New modal triggered by "Import CSV" button on contacts page. Contains: file input (accepts .csv), 5-row preview table with column mapping dropdowns (Name, Company, Email, Phone, Contract Expiry, Invoice Amount, Ignore), validation messages per row (red for errors, yellow for duplicates), and "Import X Valid Rows" button.
+
+- **SettingsTrainingSection (enhanced)**: Existing settings page gains new "My Outreach Rules" section below API key. Contains: heading, help text ("Add rules that guide every AI message..."), textarea for rules (10 rows), character count (max 2000), and "Save Rules" button. Rules appear as numbered list when saved.
+
+---
+
+## FUNCTIONS
+
+- **calculatePriorityScore(contact)**: Takes contact object. Computes daysSinceLastContact from contact.lastContactDate vs today (max 365 days), daysUntilContractExpiry from contact.contractExpiry vs today (max 365 days, handles past dates as 0), and invoiceAmount from contact.invoiceAmount (normalized to $10k scale). Applies weights: (365 - daysSinceLastContact)/365 * 0.4 + (daysUntilContractExpiry > 0 ? (365 - daysUntilContractExpiry)/365 : 1) * 0.3 + min(invoiceAmount/10000, 1) * 0.3. Returns integer 0-100. Caches result on contact object.
+
+- **determineTriggerReason(contact)**: Takes contact object. Evaluates three conditions in priority order: if invoiceAmount > 0 and > 1000, return "Invoice $X,XXX outstanding" (formatted with commas). Else if contractExpiry exists and days until expiry < 90, return "Contract expires in X days". Else if lastContactDate exists and days since > 30, return "Not contacted in X days". Else return "Proactive outreach opportunity". Returns object {text: string, urgency: 'high'|'medium'|'low'}.
+
+- **renderPriorityBadge(score)**: Takes priority score integer. Returns HTML string for badge span. If score >= 70: green background (#2d5016), white text, "🌟 " prefix. If score >= 40: yellow background (#c4941f), dark text, "⚡ " prefix. If score < 40: red background (#8b1a1a), white text, "⚠️ " prefix. Badge shows score number, has rounded corners, padding 4px 8px, font-size 0.85em, font-weight bold.
+
+- **sortContactsByPriority(contacts)**: Takes array of contact objects. First ensures all contacts have priority score computed via calculatePriorityScore. Sorts descending by score. Returns sorted array. Uses stable sort to maintain secondary alphabetical order for equal scores.
+
+- **enhanceAIPromptWithContext(basePrompt, contact, userRules)**: Takes base message prompt string, contact object, and user rules string. Computes trigger via determineTriggerReason. Prepends to prompt: "CONTEXT: {trigger.text}. CUSTOM RULES: {userRules}". Returns enhanced prompt string. Handles empty userRules gracefully.
+
+- **parseBatchQuery(queryText)**: Takes natural language string. Tokenizes to lowercase words. Detects keywords: "contract" + "expir" (within 90 days filter), "invoice" or "outstanding" (invoice > 0 filter), "not contacted" or "inactive" (lastContact > 60 days filter), "all" (no filter). Returns filter object {contractExpiring: bool, hasInvoice: bool, inactive: bool, all: bool}. Uses simple includes() matching, no NLP.
+
+- **filterContactsByBatchQuery(contacts, filterObj)**: Takes contacts array and filter object from parseBatchQuery. If filterObj.all, return all contacts. Otherwise apply filters: contractExpiring checks contractExpiry within 90 days from now. hasInvoice checks invoiceAmount > 0. inactive checks lastContactDate > 60 days ago. Combines filters with OR logic (match any condition). Returns filtered array.
+
+- **generateBatchMessages(contacts, basePrompt, progressCallback)**: Takes filtered contacts array, base prompt template, and progress callback function. Iterates contacts, for each: computes trigger, enhances prompt with enhanceAIPromptWithContext, calls existing generateAIMessage function (assumes it exists and returns promise), invokes progressCallback(index, total, contactName) after each generation. Returns promise resolving to array of {contact, message, trigger} objects. Handles API errors by storing error message instead of generated text.
+
+- **parseCSVFile(fileContent)**: Takes CSV string. Splits by newline, handles quoted fields with commas inside quotes using regex /"([^"]*)"|([^,]+)/g. Returns array of row arrays (strings). First row assumed headers. Handles Windows/Unix line endings. Max 1000 rows processed (rest ignored with warning).
+
+- **detectCSVColumns(headers)**: Takes array of header strings. Normalizes to lowercase, removes spaces. Matches against known patterns: "name"/"full name"/"contact", "company"/"organization", "email"/"e-mail", "phone"/"mobile"/"tel", "contract"/"expiry"/"renewal", "invoice"/"amount"/"outstanding". Returns mapping object {nameCol: index, companyCol: index, ...} with -1 for unmatched columns.
+
+- **validateCSVRow(rowData, columnMapping)**: Takes row array and column mapping. Checks: name not empty, email matches regex /^[^\s@]+@[^\s@]+\.[^\s@]+$/, phone optional but if present matches /^[\d\s\-\+\(\)]+$/ (min 10 digits), contractExpiry if present is valid date string, invoiceAmount if present is number >= 0. Returns {valid: bool, errors: array of strings, warnings: array of strings}. Warnings for missing optional fields.
+
+- **checkDuplicateContact(email, existingContacts)**: Takes email string and contacts array. Normalizes email to lowercase. Checks if any existing contact has matching email. Returns boolean.
+
+- **importValidCSVRows(validatedRows, columnMapping)**: Takes array of validated row objects {rowData, validation, isDuplicate}. Filters to valid non-duplicate rows. Maps to contact objects using column indices from columnMapping. Sets default values: lastContactDate to 30 days ago, tier to "B", priority score computed. Merges into existing contacts in localStorage. Returns count of imported contacts.
+
+- **saveOutreachRules(rulesText)**: Takes rules string from textarea. Validates length <= 2000 chars. Trims whitespace. Saves to localStorage key "renzo_outreach_rules". Updates UI to show saved state (green checkmark, "Saved!" message for 2 seconds). Returns success boolean.
+
+- **loadOutreachRules()**: Reads from localStorage key "renzo_outreach_rules". Returns string or empty string if not found. Called on settings page load to populate textarea.
+
+- **getOutreachRulesForPrompt()**: Loads rules via loadOutreachRules. If empty, returns empty string. Otherwise prepends "USER TRAINING RULES:\n" and appends rules. Returns formatted string for AI prompt injection.
+
+---
+
+## DATA
+
+- **contact (enhanced schema)**: Existing contact object gains: contractExpiry (ISO date string or null), invoiceAmount (number or 0), priorityScore (integer 0-100, computed not stored), triggerReason (object {text, urgency}, computed not stored). Stored in localStorage "renzo_contacts" as JSON array. Backward compatible: missing new fields default to null/0.
+
+- **renzo_outreach_rules (new key)**: localStorage string, plain text user rules (max 2000 chars). Created on first save, updated on subsequent saves. Used in every AI message generation.
+
+- **batchOperationState (session state, not persisted)**: In-memory object during batch outreach: {query: string, matchedContacts: array, generatedMessages: array of {contact, message, trigger}, currentIndex: number, isGenerating: bool}. Reset on page navigation or new batch query.
+
+- **csvImportState (session state)**: In-memory object during CSV import: {fileContent: string, headers: array, rows: array of arrays, columnMapping: object, validatedRows: array of {rowData, validation, isDuplicate}, previewRows: array of first 5 validated rows}. Reset on modal close.
+
+---
+
+## API
+
+- **Anthropic Messages API (existing, usage enhanced)**: POST https://api.anthropic.com/v1/messages. Headers: x-api-key (from localStorage renzo_api_key), anthropic-version: 2023-06-01, content-type: application/json. Payload: {model: "claude-3-5-sonnet-20241022", max_tokens: 1024, messages: [{role: "user", content: enhancedPrompt}]}. Enhanced prompt now includes trigger context and user rules via enhanceAIPromptWithContext. Response: {content: [{text: string}]}. Extract text from first content item. Error handling: catch 401 (show "Invalid API key"), 429 (show "Rate limit, wait 60s"), network errors (show "Connection failed, retry?"). Batch operations make sequential calls with 1-second delay between to avoid rate limits.
+
+---
+
+## DESIGN
+
+- **Priority Badge Colors**: High priority (70-100): background #2d5016 (forest green), text white, emoji 🌟. Medium priority (40-69): background #c4941f (golden yellow), text #1a1a1a, emoji ⚡. Low priority (0-39): background #8b1a1a (dark red), text white, emoji ⚠️. Border-radius 12px, padding 4px 10px, font 0.85em/1.2 "Inter", font-weight 600, margin-right 8px, display inline-flex, align-items center, gap 4px.
+
+- **Trigger Warning Box**: Background #fff3cd (light yellow), border-left 4px solid #c4941f, padding 12px 16px, margin-bottom 16px, border-radius 4px. Heading "Outreach Trigger" in #856404 (dark yellow), font 0.9em bold. Trigger text in #856404, font 1em normal. High urgency uses red tones (#f8d7da bg, #721c24 text), low urgency uses blue tones (#d1ecf1 bg, #0c5460 text).
+
+- **Batch Outreach Page**: Full-width container, max-width 900px, margin auto, padding 40px 20px. Query textarea: width 100%, height 120px, border 2px solid #e0e0e0, border-radius 8px, padding 16px, font 1em "Inter", resize vertical. Focus state: border-color #2d5016, box-shadow 0 0 0 3px rgba(45,80,22,0.1). Execute button: background #2d5016, color white, padding 14px 32px, border-radius 8px, font 1em bold, hover: background #1f3810. Progress indicator: margin-top 24px, padding 16px, background #f5f5f5, border-radius 8px. Progress text: font 1.1em, color #333. Matched contacts count: font 1.3em bold, color #2d5016, margin 16px 0.
+
+- **CSV Import Modal**: Width 800px, max-height 90vh, overflow auto. Preview table: width 100%, border-collapse collapse. Headers: background #f5f5f5, padding 10px, font 0.9em bold, border-bottom 2px solid #ddd. Rows: padding 8px 10px, border-bottom 1px solid #eee. Column mapping dropdowns: width 100%, padding 6px, border 1px solid #ccc, border-radius 4px, font 0.85em. Validation icons: ✓ green (#2d5016) for valid, ✗ red (#8b1a1a) for errors, ⚠️ yellow (#c4941f) for warnings. Error messages: font 0.8em, color #8b1a1a, margin-top 4px. Import button: disabled state when 0 valid rows (opacity 0.5, cursor not-allowed).
+
+- **Settings Training Section**: Margin-top 32px, padding-top 32px, border-top 2px solid #e0e0e0. Heading: font 1.4em bold, color #2d5016, margin-bottom 8px. Help text: font 0.95em, color #666, margin-bottom 16px, line-height 1.5. Textarea: width 100%, height 240px, border 2px solid #e0e0e0, border-radius 8px, padding 16px, font 0.95em "Inter", line-height 1.6. Character count: position absolute, bottom 8px, right 12px, font 0.8em, color #999. Over limit: color #8b1a1a, font-weight bold. Save button: same style as other primary buttons. Success message: color #2d5016, font 0.9em, margin-left 12px, opacity animation fade-out after 2s.
+
+- **Contact Row Enhancement**: Priority badge positioned before contact name with margin-right 8px. Row height increases to accommodate badge (min-height 44px). Hover state shows tooltip with score breakdown on badge hover: "Priority Score: 72\nDays since contact: 15 (40%)\nContract expiry: 45 days (30%)\nInvoice: $3,200 (30%)" in white tooltip, dark background, padding 8px, border-radius 4px, font 0.85em, position absolute, z-index 100.
+
+- **Fonts**: Existing Inter font family maintained. Monospace for CSV preview and character counts: "SF Mono", "Monaco", "Inconsolata", "Courier New", monospace. All numeric displays (scores, amounts, dates) use tabular-nums font-feature-setting.
+
+- **Animations**: Priority badge fade-in when contacts load: @keyframes fadeInBadge {from {opacity 0; transform: translateX(-10px)} to {opacity 1; transform: translateX(0)}} duration 0.3s ease-out, stagger 0.05s per contact. Batch progress indicator pulse: @keyframes pulse {0%, 100% {opacity 1} 50% {opacity 0.6}} duration 1.5s infinite. CSV import modal slide-down: @keyframes slideDown {from {opacity 0; transform: translateY(-20px)} to {opacity 1; transform: translateY(0)}} duration 0.3s ease-out.
+
+---
+
+## ERRORS
+
+- **Invalid API Key During Batch**: If any batch generation fails with 401, stop batch immediately, show modal: "Invalid API key detected. Please update in Settings before continuing batch operation." with "Go to Settings" button. Already generated messages saved to queue. State preserved for retry after key update.
+
+- **Rate Limit During Batch**: If 429 error occurs, pause batch, show countdown timer: "Rate limit reached. Resuming in 60 seconds... (57)". Auto-resume after countdown. User can cancel batch during pause. Already generated messages preserved.
+
+- **CSV Column Detection Failure**: If detectCSVColumns finds 0 matches for required columns (name, email), show warning banner: "Could not auto-detect columns. Please map manually." All dropdowns default to "Ignore", user must manually select Name and Email (required indicators shown).
+
+- **CSV Validation Errors**: Show validation summary above preview table: "Found 12 valid rows, 3 duplicates (skipped), 2 errors (skipped)." Each error row in preview table highlighted in light red (#ffe0e0) with specific error message below cells. Duplicate rows highlighted in light yellow (#fff9e0) with "Duplicate email" warning.
+
+- **Empty Batch Query Results**: If parseBatchQuery returns filters that match 0 contacts, show message: "No contacts match your query. Try: 'all contacts with invoices' or 'contracts expiring soon'". Provide 3 example queries as clickable suggestions that populate textarea.
+
+- **Missing Contract/Invoice Data**: When computing priority score, if contact missing lastContactDate, use 30 days ago as default. If missing contractExpiry, skip that factor and reweight (days:57%, invoice:43%). If missing invoiceAmount, treat as 0. Show info icon next to priority badge with tooltip: "Score computed with limited data. Add contract expiry and invoice amount for accurate priority."
+
+- **Outreach Rules Too Long**: If user types >2000 chars in training rules, show real-time warning below textarea (updates on input): "Rules are X characters over limit. Maximum 2000 characters." Save button disabled. Character count turns red. Textarea border turns red.
+
+- **AI Generation Timeout**: If Anthropic API takes >30 seconds for single message, show timeout error: "Message generation timed out. This may be due to network issues. Retry?" with Retry button. For batch operations, log timeout contact, continue to next contact.
+
+- **localStorage Quota Exceeded**: When importing large CSV or saving many contacts, if localStorage.setItem throws QuotaExceededError, catch and show: "Storage limit reached. Please delete old drafts or contacts to free space." Provide "Manage Storage" button that opens modal showing size breakdown and bulk delete options.
+
+- **Invalid Date/Amount Format**: In contact form or CSV import, if contractExpiry is not parseable as date, show error: "Invalid date format. Use MM/DD/YYYY or YYYY-MM-DD." If invoiceAmount is not a number or negative, show: "Invoice amount must be a positive number."
+
+- **Batch Operation Interrupted**: If user navigates away or closes tab during batch generation, show browser confirmation: "Batch operation in progress (3 of 8 completed). Leave page and lose progress?" If confirmed, abandon operation. If user returns via browser back button, show: "Previous batch operation was interrupted. Resume from where you left off?" with Resume button that reloads session state if available (sessionStorage fallback).
+
+---
+
+## SECTIONS
+
+- **Section1_PriorityScoring**: Priority score calculation engine and badge rendering (~100 lines). Includes calculatePriorityScore function with weighted factor computation (days since contact normalized to 0-1 over 365 day range, contract expiry days remaining normalized similarly with special handling for past dates as maximum urgency, invoice amount normalized to $10k scale). Includes renderPriorityBadge function with conditional color/emoji/style generation based on score thresholds (70+ green, 40-69 yellow, 0-39 red). Includes sortContactsByPriority function that ensures scores computed then sorts descending with stable sort. Includes tooltip generation function that creates hover tooltip showing score breakdown with percentage contribution per factor. Adds priority badge to contact row rendering in existing contact list loop. Integrates score computation into contact save/update flow. Handles edge cases: null/undefined dates default appropriately, negative invoice amounts treated as 0, dates in past treated as maximum urgency for expiry or maximum age for last contact.
+
+- **Section2_TriggerReasonComputation**: Trigger reason determination and display logic (~95 lines). Includes determineTriggerReason function that evaluates contact data in priority order: invoice amount check first (if >$1000 returns "Invoice $X,XXX outstanding" with urgency high), contract expiry check second (if within 90 days returns "Contract expires in X days" with urgency high if <30 days else medium), days since last contact check third (if >30 days returns "Not contacted in X days" with urgency medium if >60 days else low), default fallback "Proactive outreach opportunity" with urgency low. Includes formatTriggerDisplay function that generates HTML for trigger warning box with appropriate color scheme based on urgency level (high=red tones, medium=yellow tones, low=blue tones). Includes trigger box rendering in message generation modal, positioned prominently above existing reasoning text area. Integrates trigger computation into message generation button click handler so trigger computed before API call. Handles null/missing data gracefully: if no dates or amounts available, defaults to proactive trigger.
+
+- **Section3_AIPromptEnhancement**: AI prompt context injection with trigger and training rules (~85 lines). Includes enhanceAIPromptWithContext function that takes base prompt, contact object, and user rules string, computes trigger via determineTriggerReason, formats enhanced prompt with structure: "CONTEXT: [trigger text]. CUSTOM RULES: [user rules text]. ORIGINAL REQUEST: [base prompt]". Includes getOutreachRulesForPrompt function that loads rules from localStorage and formats with header. Integrates enhancement into existing generateAIMessage function call (wraps existing prompt with enhancement before API call). Includes prompt preview display in UI (expandable "View Full Prompt" link in message generation modal that shows enhanced prompt in readonly textarea). Handles empty rules case (omits CUSTOM RULES section if no rules saved). Includes token estimation (rough character count) to warn if enhanced prompt might exceed model limits. Updates existing API call to use enhanced prompt. Maintains backward compatibility if enhancement fails (falls back to original prompt).
+
+- **Section4_BatchOutreachUI**: Batch outreach page structure and navigation (~105 lines). Includes new navigation item addition to existing sidebar menu ("Batch Outreach" with layers icon, positioned after Contacts before Settings). Includes createBatchOutreachView function that generates full page HTML: heading "Batch Outreach", instruction text, large query textarea with placeholder examples ("Try: 'Reach out to all contacts with contracts expiring in 90 days'"), Execute Batch button, results container (hidden initially). Includes showBatchResults function that displays matched contacts count, contact list with name/company/trigger preview, and Generate All button. Includes progress indicator UI with current/total counter, contact name being processed, animated spinner, and cancel button. Includes generated messages preview area showing all generated messages in cards with contact name, trigger, message preview (first 150 chars), and individual Edit/Queue buttons. Includes Queue All button that adds all generated messages to existing outreach queue. Handles view switching: when Batch Outreach nav item clicked, hide existing view (contacts/queue/drafts/settings), show batch view. Maintains existing view state when navigating away.
+
+- **Section5_BatchQueryParsing**: Natural language query parsing and contact filtering (~110 lines). Includes parseBatchQuery function with tokenization (convert to lowercase, split on spaces), keyword detection logic (checks for "contract"+"expir", "invoice"/"outstanding", "not contacted"/"inactive", "all"), returns filter criteria object. Includes filterContactsByBatchQuery function that takes contacts array and filter object, applies filter logic with date math (contractExpiring: contractExpiry exists and within 90 days from today using new Date() comparison, hasInvoice: invoiceAmount > 0, inactive: lastContactDate exists and >60 days ago), combines multiple filters with OR logic (matches if any condition true), returns filtered array. Includes query validation that checks if query too short (<5 chars) or produces 0 matches, shows helpful error messages. Includes sample query suggestions ("all contacts with invoices", "contracts expiring in 60 days", "inactive contacts", "all contacts") displayed as clickable chips that populate textarea. Includes query history (last 5 queries stored in localStorage

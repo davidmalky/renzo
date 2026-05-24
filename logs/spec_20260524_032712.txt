@@ -1,0 +1,38 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a minimal version footer to the Renzo sidebar displaying "Renzo v1.0 — Built by Agent Pipeline". The footer will be inserted as a new element within the existing `.sidebar-footer` container, positioned below the logout button. It will use the existing dark sidebar color scheme with muted text styling to remain subtle and unobtrusive.
+
+## VIEWS
+- **Sidebar Footer Extension**: Add a new `<div class="version-footer">` element containing the version text, styled to match existing sidebar muted text patterns
+
+## FUNCTIONS
+No JavaScript functions required. This is a pure HTML/CSS change.
+
+## DATA
+No data storage required. Version number is hardcoded as "v1.0".
+
+## API
+No API interactions required.
+
+## DESIGN
+- **Container**: New `<div class="version-footer">` element
+- **Text Content**: "Renzo v1.0 — Built by Agent Pipeline"
+- **Font**: DM Sans (inherited from body)
+- **Font Size**: 10px (smaller than `.sidebar-user` 11px for extra subtlety)
+- **Color**: `rgba(232,228,220,.3)` (more muted than `.sidebar-user` .4 opacity)
+- **Text Transform**: none (keep natural case)
+- **Letter Spacing**: 0.3px (subtle spacing)
+- **Margin**: 12px top (spacing from logout button)
+- **Text Align**: center
+- **Line Height**: 1.4 (for readability if text wraps)
+
+## ERRORS
+- **No logout button found**: Footer will still render if logout button is missing (degrades gracefully)
+- **Sidebar footer missing**: If `.sidebar-footer` doesn't exist, footer won't render (acceptable failure mode for this minor feature)
+
+## SCOPE_CHECK
+- **Estimated total lines**: ~15 lines (10 lines CSS, 5 lines HTML)
+- **SINGLE_TASK**: Proceed as one build
+- **Files Modified**: 1 (index.html — both HTML structure and embedded CSS)
+- **Complexity**: Minimal — pure presentational change with no logic

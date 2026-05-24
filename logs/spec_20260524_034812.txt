@@ -1,0 +1,52 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+
+Add a version footer displaying "Renzo v1.0 – Built by Agent Pipeline" to the bottom of the sidebar in index.html. The footer will use the existing dark sidebar color scheme with muted text, positioned below the logout button within the existing .sidebar-footer container. This is a minimal UI addition requiring only HTML markup and CSS styling with no JavaScript functionality.
+
+## VIEWS
+
+- Sidebar Footer: Add new `.sidebar-version` element after `.sidebar-logout` button within existing `.sidebar-footer` container. Element displays version text in a subtle, small format matching sidebar design language.
+
+## FUNCTIONS
+
+None required. This is a static UI element with no interactive functionality.
+
+## DATA
+
+None required. Version string is hardcoded as "Renzo v1.0 – Built by Agent Pipeline".
+
+## API
+
+None required. No backend interaction needed for static version display.
+
+## DESIGN
+
+- **Element**: `.sidebar-version` div containing version text
+- **Font**: 'DM Sans', 10px size, 400 weight
+- **Color**: `rgba(232,228,220,.3)` (more muted than standard sidebar text)
+- **Text transform**: none (preserve "v1.0" formatting and "–" dash)
+- **Alignment**: center
+- **Spacing**: `margin-top:16px` to separate from logout button, `padding:0 22px` to align with sidebar padding
+- **Line height**: 1.4
+- **Positioning**: Block element, naturally flows below logout button within `.sidebar-footer`
+- **Border**: None (keeps it subtle)
+
+## ERRORS
+
+- None anticipated. Static HTML/CSS change with no failure modes.
+
+## SCOPE_CHECK
+
+- **Estimated total lines**: ~15 lines (5 lines HTML, 10 lines CSS)
+- **SINGLE_TASK**: Proceed as one build
+- **Reason**: Simple markup addition with minimal styling, well under 650 line limit
+
+---
+
+**Implementation Notes**:
+- Modify existing `.sidebar-footer` section in index.html
+- Add new CSS rule for `.sidebar-version` in existing `<style>` block
+- No JavaScript changes needed
+- No database or API changes needed
+- Testing: Visual verification that text appears below logout button with correct styling

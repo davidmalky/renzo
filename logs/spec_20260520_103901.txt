@@ -1,0 +1,177 @@
+# TECHNICAL SPECIFICATION: DATA QUALITY & VALIDATION RULES ENGINE
+
+## OVERVIEW
+
+A comprehensive data quality and validation system that allows users to define, manage, and execute validation rules on data mappings. The system provides a visual rule builder with complex logic support (AND/OR), multiple validation categories (format, range, type, regex, required, uniqueness), real-time validation execution with detailed results, template library for reusable rule sets, and validation report export. Built with vanilla JavaScript using Web Workers for performance on large datasets, integrated with existing transformation pipeline and localStorage persistence.
+
+## VIEWS
+
+- **ValidationRulesPanel** (300px right sidebar): Collapsible category sections for Format Validation, Range Validation, Data Type Checks, Custom Regex, Required Fields, and Uniqueness Constraints. Each category shows existing rules with edit/delete actions. Fixed header with "Validation Rules" title, Add Rule button, and search input. Sticky footer with Run Validation button and validation status indicator.
+
+- **RuleBuilderModal** (800px width): Three-section layout - top section for rule name and description inputs, middle section with visual rule composer showing field selector dropdown, operator dropdown (equals, not equals, contains, matches regex, greater than, less than, between, in list, is empty, is not empty), value input fields, AND/OR logic toggle buttons between conditions. Bottom section with template save checkbox and action buttons (Save, Cancel, Test Rule).
+
+- **ValidationResultsView**: Tab content area showing validation summary cards at top (total records, passed count in green, failed count in red, pass rate percentage), filterable table of records with expandable rows, each row showing record identifier, overall status badge (green checkmark or red X), failed rule count, and expand icon. Expanded state reveals list of specific rule failures with rule name, expected value, actual value, and severity indicator.
+
+- **ValidationResultsHeader**: Action bar above results table with filter dropdown (All Records, Failed Only, Passed Only), search input for record filtering, export button dropdown (CSV, JSON), and clear results button.
+
+- **ValidationBadge**: Inline component in mapping preview rows showing validation status icon (checkmark, X, warning triangle) with count tooltip, appears next to field mapping when validation has been run.
+
+- **ValidationTemplateLibrary**: Section within RuleBuilderModal accessed via "Load Template" button, displays grid of saved template cards with name, rule count, description preview, and action buttons (Load, Delete). Includes search filter and "Save as New Template" option.
+
+- **ValidationWarningToast**: Dismissible notification appearing at top of preview section when validation detects issues, shows count of failed validations and "View Details" link to jump to ValidationResultsView tab.
+
+- **RuleConditionRow**: Repeatable component within RuleBuilderModal showing field dropdown, operator dropdown, value input(s), AND/OR toggle, and remove button. Dynamically adds/removes rows as user builds complex rules.
+
+- **ValidationProgressIndicator**: Progress bar overlay during validation execution showing percentage complete, current record count, estimated time remaining, and cancel button.
+
+## FUNCTIONS
+
+- **initValidationSystem()**: Initialize entire validation system on page load. Create ValidationRulesPanel DOM structure, attach event listeners for Add Rule button, Run Validation button, search input. Load saved validation rules from localStorage key 'validationRules'. Load validation templates from localStorage key 'validationTemplates'. Initialize Web Worker for validation processing. Set up mutation observer on mapping rows to trigger inline validation badge updates.
+
+- **openValidationRulesPanel()**: Slide in ValidationRulesPanel from right side. Add 'validation-panel-open' class to body. Set panel transform to translateX(0). Add overlay with click handler to close panel. Focus search input. Update panel state in sessionStorage.
+
+- **closeValidationRulesPanel()**: Slide out ValidationRulesPanel to right. Remove 'validation-panel-open' class from body. Set panel transform to translateX(100%). Remove overlay. Save panel state to sessionStorage.
+
+- **renderValidationRulesPanel()**: Generate HTML for all validation rule categories. For each category (Format, Range, Type, Regex, Required, Uniqueness), create collapsible section with category header and rule list. Each rule displays as card with rule name, summary of conditions, edit icon, delete icon, and toggle switch for enabled/disabled state. Append no-rules-placeholder if category empty.
+
+- **openRuleBuilderModal(ruleId = null)**: Display RuleBuilderModal with overlay. If ruleId provided, load existing rule data and populate form fields. Otherwise, initialize empty rule form. Create initial RuleConditionRow. Attach event listeners for Add Condition button, AND/OR toggles, Save button, Cancel button, Test Rule button, Load Template button. Set modal aria-hidden to false and focus rule name input.
+
+- **closeRuleBuilderModal()**: Hide RuleBuilderModal and overlay. Clear all form inputs and condition rows. Remove event listeners. Set modal aria-hidden to true. Return focus to triggering button.
+
+- **addRuleConditionRow()**: Create new RuleConditionRow DOM element with field dropdown populated from current mapping fields, operator dropdown with all validation operators, empty value input, AND/OR toggle defaulting to AND, and remove button. Insert row before Add Condition button. Attach change listener to operator dropdown to show/hide value inputs based on operator type (between needs two inputs, in list needs textarea, is empty needs none).
+
+- **removeRuleConditionRow(rowElement)**: Remove specified RuleConditionRow from DOM. If only one row remains, disable its remove button. Update AND/OR visibility (hide toggle on first row).
+
+- **buildRuleFromForm()**: Extract data from RuleBuilderModal form fields. Collect rule name, description, category, enabled state. Iterate through all RuleConditionRows and extract field, operator, value(s), and logic connector (AND/OR). Build rule object structure: {id, name, description, category, enabled, conditions: [{field, operator, value, logic}], createdAt, modifiedAt}. Validate that all required fields filled and return rule object or validation error.
+
+- **saveValidationRule(ruleObject)**: Save rule to localStorage 'validationRules'. If rule.id exists, update existing rule in array. Otherwise, generate new UUID for rule.id and append to array. Update modifiedAt timestamp. Serialize array to JSON and store. Trigger renderValidationRulesPanel() to refresh display. Show success toast notification. If "Save as Template" checked, also call saveValidationTemplate().
+
+- **deleteValidationRule(ruleId)**: Show confirmation dialog "Delete this validation rule?". If confirmed, remove rule from localStorage 'validationRules' array. Update localStorage. Re-render ValidationRulesPanel. Show success toast. Remove any validation results associated with this rule.
+
+- **loadValidationRules()**: Retrieve 'validationRules' from localStorage. Parse JSON string to array. Return array or empty array if not found. Handle JSON parse errors gracefully.
+
+- **executeValidation(mappingData, rules)**: Main validation execution function. Show ValidationProgressIndicator overlay. Filter rules to only enabled rules. Create Web Worker and post message with {type: 'validate', data: mappingData, rules: rules}. Worker processes each record against each rule condition, evaluating expressions and operators. Worker returns {results: [{recordId, passed, failedRules: [{ruleId, ruleName, field, expected, actual, message}]}], summary: {total, passed, failed, passRate}}. Store results in memory under validationResults object. Update ValidationResultsView if currently visible. Update inline ValidationBadges on mapping rows. Hide progress indicator. Show completion toast with pass rate.
+
+- **createValidationWorker()**: Initialize Web Worker from inline script. Worker contains validateRecord(record, rule), evaluateCondition(record, condition), and processValidationBatch(data, rules) functions. Worker handles all validation operators: equals (===), notEquals (!==), contains (String.includes), matchesRegex (RegExp.test), greaterThan (>), lessThan (<), between (>= and <=), inList (array.includes), isEmpty (null/undefined/''), isNotEmpty (not empty), isEmail (regex), isPhone (regex), isURL (regex), isDate (Date.parse), isNumber (!isNaN), isString (typeof), minLength (length >=), maxLength (length <=), isUnique (track seen values).
+
+- **validateRecord(record, rule)**: Worker function to validate single record against single rule. Evaluate all conditions in rule.conditions array. Apply AND/OR logic between conditions. For AND, all conditions must pass. For OR, at least one condition must pass. Return {passed: boolean, failedConditions: []} with details of which conditions failed.
+
+- **evaluateCondition(record, condition)**: Worker function to evaluate single condition. Extract field value from record using condition.field path (support nested with dot notation). Apply condition.operator with condition.value. Return boolean result. Handle null/undefined values appropriately per operator.
+
+- **processValidationBatch(data, rules)**: Worker function to process full dataset. Iterate through all records, for each record iterate through all rules, call validateRecord, aggregate results. Track uniqueness values across records for isUnique operator. Post progress messages every 100 records: {type: 'progress', processed: count, total: data.length}. Return final results object.
+
+- **renderValidationResults(results)**: Generate HTML for ValidationResultsView. Create summary cards showing total/passed/failed counts and pass rate percentage with color coding. Build table with header row (Record ID, Status, Failed Rules, Actions). For each result, create table row with record identifier, status badge (green checkmark if passed, red X if failed), failed rule count in red badge, and expand button. Attach click handler to expand button to call toggleResultRowExpansion(). Apply current filter setting (all/failed/passed). Show no-results message if empty.
+
+- **toggleResultRowExpansion(rowElement)**: Toggle expanded class on table row. If expanding, generate and insert detailed failure list showing each failed rule with icon, rule name, field name, expected value, actual value, and failure message. Use color coding: error rules in red, warning rules in orange. If collapsing, remove detail element and update expand icon.
+
+- **filterValidationResults(filterType)**: Apply filter to ValidationResultsView table. filterType values: 'all', 'failed', 'passed'. Hide/show table rows based on their passed status. Update active state on filter buttons. Update results count display.
+
+- **searchValidationResults(searchTerm)**: Filter table rows where record ID or any failed rule name contains searchTerm (case insensitive). Hide non-matching rows. Show "no results match search" message if all hidden.
+
+- **exportValidationResults(format)**: Generate export file from validation results. For CSV format: create header row with columns Record ID, Status, Failed Rules, Details. For each failed record, create row with comma-separated values, escaping commas in details. For JSON format: serialize validation results object with full detail. Trigger download via Blob and temporary anchor element with download attribute. Filename includes timestamp: "validation-results-2024-01-15-143022.csv".
+
+- **updateValidationBadges()**: Iterate through all visible mapping rows in preview. For each row, check if validation results exist for corresponding field. If field has validation failures, inject or update ValidationBadge component showing red X icon and failure count. If passed, show green checkmark. If not yet validated, show grey circle. Add tooltip with summary of failed rules. Attach click handler to badge to jump to detailed results for that record/field.
+
+- **showValidationWarning(failureCount)**: Create ValidationWarningToast element if it doesn't exist. Update message with failure count. Slide in from top of preview section with animation. Add click handler on "View Details" link to switch to ValidationResultsView tab and scroll to first failure. Auto-dismiss after 10 seconds or user click on close button.
+
+- **saveValidationTemplate(templateName, rules)**: Create template object: {id: UUID, name: templateName, description: auto-generated from rule names, rules: rules array, category: inferred from rules, createdAt: timestamp}. Load existing templates from localStorage 'validationTemplates'. Append new template. Save back to localStorage. Show success toast. Update template library view if open.
+
+- **loadValidationTemplates()**: Retrieve 'validationTemplates' from localStorage. Parse JSON to array. Return array or empty array if not found.
+
+- **renderValidationTemplateLibrary()**: Generate grid layout of template cards. Each card shows template name, rule count badge, description preview (first 100 chars), category tag, created date, Load button, and Delete button. Include search input to filter templates by name/description. Sort templates by most recently created. Show empty state message if no templates.
+
+- **loadValidationTemplate(templateId)**: Retrieve template from localStorage. Extract template.rules array. For each rule, call saveValidationRule() to add to current validation configuration. Close template library. Show success toast indicating how many rules were loaded. Refresh ValidationRulesPanel.
+
+- **deleteValidationTemplate(templateId)**: Show confirmation dialog with template name. If confirmed, remove from localStorage 'validationTemplates' array. Update localStorage. Re-render template library. Show success toast.
+
+- **testValidationRule(ruleObject)**: Execute validation on preview data sample (first 100 records) using only this rule. Show mini results modal with pass/fail counts and example failures. Allow user to see if rule works as expected before saving. Display test in progress indicator. Handle test errors and show error message if rule configuration invalid.
+
+- **getValidationOperators(fieldType)**: Return array of applicable operators based on field data type. For string fields: equals, notEquals, contains, matchesRegex, isEmpty, isNotEmpty, minLength, maxLength, isEmail, isPhone, isURL. For number fields: equals, notEquals, greaterThan, lessThan, between, isEmpty, isNotEmpty. For date fields: equals, notEquals, greaterThan (after), lessThan (before), between, isEmpty, isNotEmpty, isDate. For any field: isUnique, inList.
+
+- **inferFieldType(fieldName, sampleData)**: Analyze first 10 non-null values from sampleData for given fieldName. Check if all values are numbers, dates, booleans, or strings. Return inferred type to populate operator dropdown with relevant options.
+
+- **formatValidationMessage(condition, actual)**: Generate human-readable validation failure message. Template examples: "Expected {field} to equal {expected}, but got {actual}", "Expected {field} to match pattern {regex}", "Expected {field} to be unique, but found duplicate value {actual}". Return formatted string.
+
+- **clearValidationResults()**: Clear validation results from memory. Remove all ValidationBadges from mapping rows. Clear ValidationResultsView table. Reset summary cards. Hide ValidationWarningToast. Show "No validation has been run" empty state message.
+
+- **persistValidationConfig()**: Save complete validation configuration to localStorage. Key 'validationConfig' stores {rules: array, lastRun: timestamp, settings: {autoValidate: boolean, stopOnFirstError: boolean}}. Called whenever rules are added/modified/deleted.
+
+- **loadValidationConfig()**: Retrieve 'validationConfig' from localStorage on app initialization. Parse JSON. Apply rules to validation system. Restore settings. If autoValidate enabled and mapping exists, automatically run validation.
+
+- **handleValidationWorkerMessage(event)**: Worker message handler. If event.data.type === 'progress', update ValidationProgressIndicator. If event.data.type === 'complete', process results with executeValidation completion logic. If event.data.type === 'error', show error toast and hide progress indicator.
+
+- **cancelValidation()**: Terminate running Web Worker. Hide ValidationProgressIndicator. Show "Validation cancelled" toast. Clean up partial results.
+
+- **toggleRuleEnabled(ruleId)**: Update rule.enabled boolean in localStorage. If disabling, remove any validation results for this rule. Re-render ValidationRulesPanel to update toggle switch state. Show toast indicating rule enabled/disabled.
+
+- **duplicateValidationRule(ruleId)**: Load existing rule from localStorage. Create copy with new UUID, append " (Copy)" to name, set createdAt to now. Save as new rule. Refresh ValidationRulesPanel. Show success toast.
+
+- **exportValidationRules(format)**: Export all validation rules configuration. For JSON format: serialize full rules array with pretty printing. For CSV format: create table with columns Rule Name, Category, Enabled, Conditions Count, Created Date. Trigger download with filename "validation-rules-export-{timestamp}.{format}".
+
+- **importValidationRules(fileContent)**: Parse imported file (JSON or CSV). Validate structure matches expected format. For each rule, check if rule with same name exists (prompt for overwrite/skip/rename). Import rules to localStorage. Refresh ValidationRulesPanel. Show import summary: X rules imported, Y skipped, Z errors.
+
+- **validateBeforeTransformation()**: Hook into transformation execution. If validation rules exist and enabled, run validation on source data before transformation. If failures exceed threshold (configurable), show warning dialog "X records fail validation. Continue with transformation?". Provide options: Continue, Fix Issues, Cancel. If Fix Issues selected, jump to ValidationResultsView with failures filtered.
+
+- **getValidationSummaryForField(fieldName)**: Aggregate validation results for specific field across all records. Return {totalRecords, failedCount, passedCount, failureRate, commonFailureReasons: [{reason, count}]}. Used to show field-level validation health in mapping configuration.
+
+## DATA
+
+- **validationRules**: Array of rule objects stored in localStorage. Each rule: {id: 'uuid-string', name: 'string', description: 'string', category: 'format|range|type|regex|required|uniqueness', enabled: boolean, conditions: [{field: 'string', operator: 'string', value: any, logic: 'AND|OR'}], createdAt: timestamp, modifiedAt: timestamp, severity: 'error|warning'}
+
+- **validationTemplates**: Array of template objects in localStorage. Each template: {id: 'uuid-string', name: 'string', description: 'string', rules: [rule objects], category: 'string', createdAt: timestamp, usageCount: number}
+
+- **validationResults**: In-memory object (not persisted) storing current validation results. Structure: {timestamp: number, summary: {total: number, passed: number, failed: number, passRate: number, ruleBreakdown: [{ruleId, ruleName, failureCount}]}, records: [{recordId: string, passed: boolean, failedRules: [{ruleId, ruleName, field, expected, actual, message, severity}]}]}
+
+- **validationConfig**: localStorage object storing global validation settings. Structure: {autoValidate: boolean, stopOnFirstError: boolean, validationMode: 'strict|permissive', maxConcurrentValidations: number, lastRun: timestamp}
+
+- **validationWorker**: Web Worker instance stored as global variable for validation processing. Terminated and recreated if validation cancelled or errors occur.
+
+- **validationProgressState**: In-memory object tracking validation progress. Structure: {running: boolean, processed: number, total: number, startTime: timestamp, estimatedTimeRemaining: number}
+
+- **fieldValidationCache**: In-memory Map caching validation results per field to avoid redundant validation. Key: '{recordId}-{fieldName}', Value: {passed: boolean, failedRules: array, checkedAt: timestamp}. Cleared when rules change or validation re-run.
+
+- **validationOperatorDefinitions**: Static object defining all validation operators. Structure: {equals: {label: 'Equals', valueCount: 1, applicableTypes: ['string', 'number', 'date', 'boolean'], evaluate: function}, contains: {label: 'Contains', valueCount: 1, applicableTypes: ['string'], evaluate: function}, ...}
+
+- **validationUIState**: SessionStorage object tracking UI state. Structure: {panelOpen: boolean, currentFilter: 'all|failed|passed', expandedRows: [recordIds], activeTab: 'rules|results|templates', searchTerm: string}
+
+## API
+
+- **Web Worker Message API**: postMessage({type: 'validate', data: array, rules: array}) to worker. Worker responds with {type: 'progress', processed: number, total: number} during processing and {type: 'complete', results: object} when done. Worker can also respond {type: 'error', message: string} on failure.
+
+- **localStorage.getItem('validationRules')**: Retrieve serialized validation rules array. Returns JSON string or null if not found.
+
+- **localStorage.setItem('validationRules', jsonString)**: Persist validation rules array. Called after any rule add/edit/delete operation.
+
+- **localStorage.getItem('validationTemplates')**: Retrieve serialized templates array. Returns JSON string or null.
+
+- **localStorage.setItem('validationTemplates', jsonString)**: Persist templates array. Called after template save/delete.
+
+- **localStorage.getItem('validationConfig')**: Retrieve global validation configuration object. Returns JSON string or null.
+
+- **localStorage.setItem('validationConfig', jsonString)**: Persist validation configuration. Called when settings change.
+
+- **sessionStorage.getItem('validationUIState')**: Retrieve UI state for current session. Returns JSON string or null.
+
+- **sessionStorage.setItem('validationUIState', jsonString)**: Persist UI state. Called on panel open/close, tab change, filter change.
+
+- **window.addEventListener('storage', handler)**: Listen for localStorage changes in other tabs to sync validation rules across tabs. Handler checks if 'validationRules' or 'validationTemplates' changed and refreshes UI accordingly.
+
+- **Blob API for Export**: new Blob([content], {type: 'text/csv' or 'application/json'}), URL.createObjectURL(blob), anchor.download attribute for triggering file download.
+
+- **FileReader API for Import**: FileReader.readAsText(file) to parse imported validation rules file. onload event handler processes file content.
+
+## DESIGN
+
+- **Colors**: Use existing CSS variables. --color-success (#10b981) for passed validation, --color-success-light (#d1fae5) for passed backgrounds. --color-error (#ef4444) for failed validation, --color-error-light (#fee2e2) for failed backgrounds. --color-warning (#f59e0b) for warning severity, --color-warning-light (#fef3c7) for warning backgrounds. --color-purple (#8b5cf6) for validation panel accent, --color-purple-light (#ede9fe) for hover states. --color-secondary (#6b7280) for disabled rules and empty states.
+
+- **Typography**: Use system font stack. Rule names in 14px semibold. Condition text in 13px regular. Field labels in 11px uppercase semibold with letter-spacing 0.5px. Validation messages in 13px regular. Monospace font (Consolas, Monaco, 'Courier New') for field values and regex patterns.
+
+- **ValidationRulesPanel**: Width 300px, fixed position right 0, height 100vh, background white, box-shadow --shadow-xl, transform translateX(100%) when closed, transition 0.3s ease. Header with padding 16px, background --color-purple-light, sticky top 0, z-index 10. Category sections with 8px margin between. Scrollable content area with padding 12px. Footer with padding 12px, background white, sticky bottom 0, border-top 1px solid --color-border.
+
+- **RuleBuilderModal**: Width 800px, max-height 90vh, background white, border-radius 12px, box-shadow --shadow-xl. Header with 24px padding, border-bottom 1px solid --color-border. Content area with 24px padding, scrollable. Three sections separated by 20px margin: Rule Info section, Conditions section (light grey background, 16px padding, border-radius 8px), Template section. Footer with 20px padding, border-top 1px solid --color-border, buttons aligned right with 8px gap.
+
+- **RuleConditionRow**: Flex layout with 8px gap, padding 12px, background white, border 1px solid --color-border, border-radius 6px, margin-bottom 8px. Field dropdown 200px width, operator dropdown 180px width, value input flexible width. AND/OR toggle as segmented control with 60px width per segment, active segment with --color-purple background. Remove button as icon-only button with red color on hover.
+
+- **ValidationResultsView**: Summary cards in flex layout with 16px gap, each card 200px width, 100px height, padding 16px, border-radius 8px, box-shadow --shadow-sm. Passed card with --color-success-light background, failed card with --color-error-light background. Large number (32px bold) showing count, small label below (12px uppercase). Table with 100% width, border-collapse, alternating row backgrounds (white and --color-gray-50). Header row with 12px padding, background --color-gray-100, sticky top 0. Data rows with 12px padding, hover background --color-gray-50. Expanded row detail section with 16px left margin, padding 12px, background --color-gray-50, border-left 3px solid --color-error.
+
+- **ValidationBadge**: Inline-flex badge with 6px padding horizontal, 4px padding vertical, border-radius 4px,

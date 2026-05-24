@@ -1,0 +1,199 @@
+{
+  "task": {
+    "id": "renzo-quick-006",
+    "title": "Fix contact form validation UX and auto-populate frequency from tier",
+    "description": "Four specific fixes to the contact form: (1) When saveContact() validation fails, instead of just showing ctErr div, also add style border-color:var(--red) to each missing required field's input/select element. Add a focusin listener to each required field that removes the red border when user clicks it. (2) Add email format validation in saveContact(): if(data.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email)){show error on ctEmail: 'Enter a valid email address';return;} (3) Wire the Tier dropdown to auto-populate Frequency: document.getElementById('ctTier').addEventListener('change',function(){const freqEl=document.getElementById('ctFreq');if(!freqEl.value){const defaults={A:14,B:30,C:60};freqEl.value=defaults[this.value]||'';};}); (4) Add character counters below History and Notes textareas. After each textarea, add a small div showing character count. Wire input events: ctHist and ctNotes textareas get oninput handlers that update a counter div showing 'N / 500 characters' in 12px gray text. In saveContact(), truncate history and notes to 500 chars and show a warning toast if truncation occurs.",
+    "priority": "medium",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 8407
+      },
+      "t": 55.4
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 93.5
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 113.9
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 145535
+      },
+      "t": 217.5
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "TASK NOT COMPLETED: Auto-populate frequency from tier feature completely missing - no frequency field exists in onboarding modal step 2, no tier-to-frequency mapping logic, and contacts table has no frequency column to display the feature",
+          "TASK NOT COMPLETED: Contact form validation UX not implemented - the #ctErr error element exists but has no validation logic to trigger it, users get no real-time feedback on empty/invalid fields before clicking save",
+          "CRITICAL CSS BUG: Invalid CSS 'justify-content:justify' in email integration card (line ~90) will break layout - should be 'center'"
+        ],
+        "feedback": "MANDATORY FIXES: 1) Add frequency dropdown/input to onboarding modal step 2 (obPage2) with options like 'Weekly', 'Bi-weekly', 'Monthly'. 2) Add JavaScript to auto-populate frequency when tier is selected: listen for tier radio button changes, map Basic\u2192Monthly, Pro\u2192Bi-weekly, Enterprise\u2192Weekly, update frequency field. 3) Add frequency column to contacts table to display this data. 4) Implement real-time validation: add event listeners (onblur/oninput) to contact form inputs that show #ctErr with specific messages ('Email required', 'Invalid email format') BEFORE user clicks save. 5) Fix CSS bug: change 'justify-content:justify' to 'justify-content:center' in .integration-card. Both task requirements are completely missing from the codebase."
+      },
+      "t": 350.0
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 145349
+      },
+      "t": 493.8
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS truncation at '.search-input' causes parsing errors and will break styling for search functionality",
+          "Task requires contact form validation UX fixes but no validation logic exists for onboarding form fields (obUrl, obCo, obSell, obCust, obRole, obRep) - Continue/Save buttons remain disabled with no re-enable code",
+          "Task requires auto-populate frequency from tier but no tier-to-frequency mapping or auto-fill logic is implemented anywhere in the code"
+        ],
+        "feedback": "1) Fix CSS truncation: Complete the .search-input style definition that's cut off mid-declaration. 2) Add contact form validation: Implement client-side validation for onboarding form fields - add input event listeners to obUrl, obCo, obSell fields that enable obNextStep/obSave buttons when valid data is entered. 3) Implement frequency auto-population: Add tier-to-frequency mapping (e.g., Starter\u2192Weekly, Pro\u2192Daily, Enterprise\u2192Hourly) and auto-populate the frequency dropdown when tier is selected in onboarding/settings. 4) Fix typo in email accounts section: Change 'justify-content:justify' to 'justify-content:center' for proper alignment. 5) Complete truncated HTML: The code ends mid-attribute 'style=\"backgroun' and mid-word 'QuickBook' - add proper closing tags for all open divs, modals, and HTML structure."
+      },
+      "t": 635.9
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 145051
+      },
+      "t": 779.2
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS truncated mid-property: '.search-input' transition property incomplete ('transition:bo' instead of full declaration), causing potential styling failures",
+          "Missing closing </style> tag - CSS section incomplete, will break page rendering",
+          "HTML truncated at end - QuickBooks card description cuts off mid-attribute (ends with 'font-size:12px;co'), creating invalid HTML with missing closing tags"
+        ],
+        "feedback": "The file is severely truncated causing multiple syntax errors: 1) Complete the '.search-input' transition property (likely 'transition: border-color 0.2s ease'), 2) Add missing </style> closing tag after CSS section, 3) Complete the truncated QuickBooks card HTML at the end. Additionally, the TASK requirements (contact form validation UX and auto-populate frequency from tier) are not visible in this chunk - ensure the complete file includes the onboarding contact form with validation states and tier-based frequency logic."
+      },
+      "t": 908.4
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 145635
+      },
+      "t": 1018.3
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 2,
+        "issues": [
+          "Code is severely truncated (ends mid-CSS declaration 'font-size:12px;co'), missing closing style tag and likely all contact form/validation code needed for the task",
+          "TASK requirements completely missing: No contact form validation UX improvements visible, no auto-populate frequency from tier logic implemented anywhere in chunk",
+          "Critical CSS syntax error: .search-input style ends at 'transition:bo' creating parse error that breaks styling for search functionality"
+        ],
+        "feedback": "The submitted code is incomplete and fails both task requirements. 1) Submit the COMPLETE HTML file including the closing </style> tag and full document structure. 2) Implement contact form validation: add visible error messages, required field indicators (*), and validation logic that prevents submission of invalid data with clear user feedback. 3) Implement tier-to-frequency auto-population: when user selects a tier for a contact, automatically set the corresponding frequency field (e.g., Enterprise tier \u2192 Weekly frequency). 4) Fix the truncated CSS - complete the .search-input transition property. The current chunk appears to be only the top portion of the file - ensure you're providing the entire working HTML document."
+      },
+      "t": 1148.6
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "applyFieldError() function implementation",
+          "clearFieldError() function implementation",
+          "validateEmail() function implementation",
+          "Modified saveContact() with email format validation and field error styling",
+          "Tier-based frequency auto-population logic",
+          "Character counters for ctHist and ctNotes textareas",
+          "Character limit enforcement (500 chars)",
+          "Toast warning on character truncation",
+          "Focus-to-clear behavior on invalid fields",
+          "Red border styling application on validation failure",
+          "Character counter display elements (N / 500 characters)",
+          "Email format-specific error message"
+        ],
+        "note": "Code only shows HTML/CSS structure (first 5000 chars) with no JavaScript implementation. None of the required validation functions (applyFieldError, clearFieldError, validateEmail), modified saveContact(), tier-to-frequency mapping, or character counter features are present in the provided code snippet. The CSS includes .invalid class styling but no JS applies it. Requires complete implementation of all specified validation UX features."
+      },
+      "t": 1157.5
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 146187
+      },
+      "t": 1327.0
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No keyboard focus indicators visible on interactive elements (nav-item, buttons, inputs show outline:none without visible alternative)",
+          "Modal close buttons use \u00d7 symbol without accessible label/aria-label for screen readers",
+          "Tables lack proper semantic structure - no <thead>/<tbody> separation affects screen reader navigation",
+          "Color-only differentiation for priority/tier badges (red/amber/green) fails accessibility for colorblind users",
+          "No skip-to-main-content link for keyboard users to bypass sidebar navigation",
+          "Missing keyboard navigation: Modal dialogs (ctModal, histModal, delModal, AI modal) do not trap focus or handle Escape key to close, making them inaccessible to keyboard users",
+          "No ARIA labels or roles: Interactive elements like '.contact-name-link' and '.msg-btn' buttons lack proper ARIA attributes for screen readers",
+          "Click handlers on table rows conflict with internal buttons: Clicking 'Message' button may trigger both the button action AND the row click (openEditContact), despite stopPropagation - verify this doesn't create navigation chaos on mobile"
+        ]
+      },
+      "t": 1357.5
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 146311
+      },
+      "t": 1472.2
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No skip-to-main-content link for keyboard/screen reader users to bypass sidebar navigation",
+          "Modal close buttons lack accessible labels (aria-label) - screen readers will announce only '\u00d7'",
+          "Focus trap not evident in modals - keyboard users may tab out to background content",
+          "No visible focus indicators on .nav-item, .sidebar-logout, and modal close buttons for keyboard navigation",
+          "Color-only differentiation for priority/tier badges fails WCAG accessibility (no text/icon distinction)",
+          "Form inputs lack associated error announcements (aria-describedby) for screen readers when invalid",
+          "No ARIA labels or roles on modal dialogs - screen readers cannot identify modals or their purpose (ctModal, histModal, delModal, aiPromptBox)",
+          "No focus trap in modals - keyboard users can tab out of modal into background content, breaking accessibility"
+        ]
+      },
+      "t": 1503.0
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1503.9
+    }
+  ],
+  "cost": 1.0933290000000002
+}

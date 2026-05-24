@@ -1,0 +1,206 @@
+# TECHNICAL SPECIFICATION: Real-time Sync Execution Engine with Live Monitoring Dashboard
+
+## OVERVIEW
+A comprehensive sync execution engine that processes configured data mappings between systems with real-time monitoring capabilities. The engine executes field-level transformations, applies validation rules, handles conflicts, and manages batch processing with rate limiting. A live monitoring dashboard displays sync status, history, detailed logs, and performance metrics with real-time updates via polling simulation.
+
+## VIEWS
+
+- **SyncMonitorView**: Main dashboard displaying live sync status widget with progress bars, recent sync history table with filtering, metrics cards (total syncs, success rate, avg duration, records synced), manual trigger buttons, and access to detailed log viewer modal.
+
+- **SyncLogDetailModal**: Modal overlay showing record-by-record sync results for a specific sync job, with expandable error messages, field-level transformation traces, filter by success/failure, and CSV export functionality.
+
+- **ManualTriggerConfirmDialog**: Confirmation modal for manually triggering a sync job, displaying mapping details, estimated records to process, last sync info, and confirm/cancel actions.
+
+- **SyncProgressWidget**: Live status component showing currently running sync jobs with animated progress bars, record counts (processed/total/failed), elapsed time, current batch, and cancel button.
+
+- **EmptyStatesView**: Placeholder screens for no sync history, no active syncs, and no mappings configured scenarios.
+
+## FUNCTIONS
+
+- **initSyncEngine()**: Initializes the sync execution engine on page load; loads mapping configurations from localStorage; checks for scheduled syncs due to run; sets up polling interval for real-time updates (3 seconds); initializes sync queue and active sync tracking.
+
+- **loadMappingConfigurations()**: Retrieves all saved mapping configurations from localStorage key 'syncMappings'; parses JSON data; validates mapping structure; returns array of mapping objects with id, name, schedule, field mappings, validation rules, conflict strategy.
+
+- **checkScheduledSyncs()**: Iterates through all mappings with schedules; compares schedule time with current time; identifies syncs due to run; adds them to sync queue; respects rate limiting and concurrent sync limits.
+
+- **executeSyncJob(mappingId)**: Main sync execution function; loads mapping configuration; validates source and target systems are configured; fetches source data using API connector; processes data in batches; applies transformations; validates records; handles conflicts; writes to target system; generates sync log; updates sync status in real-time.
+
+- **fetchSourceData(mapping)**: Connects to source system using stored credentials from localStorage; constructs API query based on mapping filters; handles pagination for large datasets; implements retry logic with exponential backoff; returns array of source records.
+
+- **processBatch(records, mapping, syncLogId, batchNumber)**: Processes a batch of records (default size 100); iterates through each record; applies field transformations; runs validation rules; detects conflicts with existing target records; executes conflict resolution; attempts to write to target; updates batch progress; logs success/failure per record.
+
+- **applyFieldTransformations(record, fieldMappings)**: Iterates through field mapping definitions; applies transformation formulas (arithmetic, string operations, date formatting); executes lookup functions against reference data; runs custom JavaScript transformation functions in sandboxed environment; handles transformation errors gracefully; returns transformed record object.
+
+- **executeFormula(formula, record, fieldContext)**: Parses formula string (e.g., "{{fieldA}} + {{fieldB}} * 2"); replaces field placeholders with actual values; evaluates arithmetic operations; handles date math; applies string functions (concat, substring, uppercase, lowercase, trim); catches evaluation errors; returns computed value or error object.
+
+- **executeLookup(lookupConfig, record)**: Retrieves lookup table from localStorage or API; matches current record value against lookup key field; returns mapped value from lookup result field; handles missing lookup values based on config (default value, error, skip); caches lookup tables for performance.
+
+- **runCustomFunction(functionCode, record)**: Creates isolated function context to prevent security issues; parses custom JavaScript function code; passes record data as parameter; executes function with timeout limit (5 seconds); catches runtime errors; validates return type matches expected field type; returns transformed value or error.
+
+- **validateRecord(record, validationRules)**: Iterates through validation rule definitions; checks required fields are present and non-empty; validates field data types (string, number, date, email, phone); enforces field length constraints; runs pattern matching (regex validation); executes custom validation functions; collects all validation errors; returns validation result object with pass/fail and error array.
+
+- **checkRequiredFields(record, requiredFields)**: Verifies each required field exists in record; checks field value is not null, undefined, or empty string; returns array of missing required field names.
+
+- **validateDataType(value, expectedType)**: Checks if value matches expected data type; handles type coercion where appropriate; validates date strings can be parsed; checks number strings are valid numeric values; validates email format using regex; validates phone format; returns boolean validation result.
+
+- **validateFieldConstraints(value, constraints)**: Checks string length min/max constraints; validates number range min/max; validates date range; checks enum values against allowed list; validates uniqueness against target system if required; returns constraint violation details or null.
+
+- **detectConflicts(transformedRecord, mapping, targetSystem)**: Queries target system for existing records matching unique identifiers; compares field values between source and target; identifies conflicting fields (different values); checks record timestamps if available; returns conflict object with matched record, conflicting fields, and metadata.
+
+- **resolveConflict(conflict, strategy, sourceRecord, targetRecord)**: Executes conflict resolution based on strategy; 'source_wins': uses source record values; 'target_wins': keeps target record values; 'most_recent': compares timestamps and uses newer; 'manual_review': queues for manual resolution; 'field_priority': uses configured field-level rules; returns resolved record for sync.
+
+- **writeToTarget(record, targetSystem, operation)**: Establishes connection to target system API; determines operation type (create, update, upsert); constructs API payload matching target schema; executes API call with authentication; handles API rate limiting with retry; processes API response; returns success status with created/updated record ID or error details.
+
+- **handleWriteError(error, record, syncLogId)**: Logs detailed error information including error code, message, stack trace; determines if error is retryable (network, rate limit) vs fatal (validation, auth); implements retry logic for transient errors (3 attempts); updates sync log with failure details; triggers rollback if configured; sends error notification.
+
+- **createSyncLog(mapping, startTime)**: Generates unique sync log ID (timestamp + random); creates log entry object with mapping ID, name, start time, status 'running', records processed 0, records failed 0, batch details array; saves to localStorage 'syncLogs' array; returns sync log ID for updating.
+
+- **updateSyncLog(syncLogId, updates)**: Retrieves sync log from localStorage by ID; merges update object into log entry; updates calculated fields (duration, success rate); saves back to localStorage; triggers real-time UI update; returns updated log object.
+
+- **addRecordLog(syncLogId, recordLog)**: Appends individual record result to sync log detail; includes record ID, source data, transformed data, validation result, conflict info, write result, error if failed, timestamp; stores in nested recordLogs array; implements log size limit (max 10000 record logs per sync).
+
+- **completeSyncLog(syncLogId, status, endTime)**: Marks sync job as complete; updates status to 'completed', 'failed', or 'partial'; calculates total duration; computes final statistics (success rate, total records); triggers cleanup of old logs; sends completion notification.
+
+- **initDashboard()**: Initializes the sync monitoring dashboard view; renders metrics cards; loads recent sync history from localStorage; sets up filter controls; attaches event listeners to buttons; starts polling for live updates; displays empty state if no sync history.
+
+- **renderMetricsCards()**: Calculates aggregate metrics from sync logs; counts total syncs today (filter by date); computes success rate percentage (successful / total); calculates average sync duration; sums total records synced across all jobs; updates metric card values in DOM; applies trend indicators (up/down/neutral).
+
+- **calculateTodaysSyncs(syncLogs)**: Filters sync logs array by date; checks log start time is within current day (midnight to now); returns count of matching logs.
+
+- **calculateSuccessRate(syncLogs, timeRange)**: Filters logs by time range (today, week, month, all); counts logs with status 'completed'; divides by total logs; returns percentage with 2 decimal precision.
+
+- **calculateAvgDuration(syncLogs, timeRange)**: Filters logs by time range; extracts duration from each log; sums durations and divides by count; formats result as human-readable (e.g., "2m 34s"); returns formatted average duration string.
+
+- **calculateTotalRecords(syncLogs, timeRange)**: Filters logs by time range; sums recordsProcessed field from each log; formats large numbers with commas; returns formatted total as string.
+
+- **loadSyncHistory(filters)**: Retrieves all sync logs from localStorage; applies date range filter if specified; filters by mapping name if selected; filters by status if selected; sorts by start time descending (most recent first); paginates results (20 per page); returns filtered and sorted log array.
+
+- **renderSyncHistoryTable(syncLogs)**: Clears existing table rows; iterates through sync log array; creates table row for each log; populates columns: mapping name, start time (formatted), duration, status badge, records synced, error count, actions (View Details, Re-run, Export); appends rows to table body; attaches click handlers.
+
+- **formatSyncDuration(durationMs)**: Converts milliseconds to human-readable format; calculates hours, minutes, seconds; formats as "1h 23m 45s" or "2m 15s" depending on duration; returns formatted string.
+
+- **formatTimestamp(timestamp)**: Converts ISO timestamp to local timezone; formats as "MMM DD, YYYY HH:mm:ss"; returns formatted date string.
+
+- **renderStatusBadge(status)**: Determines badge class based on status ('completed' = success, 'failed' = error, 'running' = info, 'partial' = warning); creates badge element with appropriate class and text; returns badge HTML string.
+
+- **renderLiveSyncWidget(activeSyncs)**: Displays currently running sync jobs; iterates through active syncs array; renders progress bar for each sync; shows processed/total/failed counts; displays elapsed time (updates every second); shows current batch number; provides cancel button; animates progress bars smoothly; shows empty state if no active syncs.
+
+- **updateSyncProgress(syncLogId)**: Retrieves current sync log from localStorage; calculates progress percentage (processed / total * 100); updates progress bar width; updates text counters; refreshes elapsed time display; triggers re-render if sync completed.
+
+- **pollForUpdates()**: Executed every 3 seconds via setInterval; loads active sync logs (status 'running'); updates progress widgets; refreshes recent history table if new completions; updates metrics cards; checks for newly scheduled syncs; implements efficient DOM updates (only changed elements).
+
+- **openSyncLogDetail(syncLogId)**: Loads complete sync log including record-level details from localStorage; renders modal with sync overview (mapping, times, totals); displays record results table with columns: record ID, status, error message, transformed fields; implements expandable rows for full record data; attaches filter controls (all/success/failure); provides CSV export button; shows modal overlay.
+
+- **renderRecordLogsTable(recordLogs, filter)**: Filters record logs by status if specified; creates table rows with record ID, status badge, error message (truncated); implements expand/collapse for full details; shows transformation trace (original → transformed); displays validation errors; handles large datasets with virtual scrolling or pagination.
+
+- **expandRecordDetails(recordId)**: Toggles expanded view for a specific record log; displays full source data (formatted JSON); shows field-by-field transformation results; lists validation checks performed; shows conflict resolution details if applicable; displays target system response; formats data with syntax highlighting.
+
+- **exportSyncLogToCSV(syncLogId)**: Retrieves sync log and record logs; constructs CSV with headers: Record ID, Status, Error Message, Source Fields, Target Fields, Timestamp; converts record logs to CSV rows; handles special characters and escaping; triggers browser download with filename sync_log_{syncLogId}_{timestamp}.csv; shows success notification.
+
+- **generateCSVContent(recordLogs)**: Iterates through record logs array; extracts relevant fields for CSV export; flattens nested objects; escapes commas, quotes, newlines in cell values; joins with commas for columns and newlines for rows; returns complete CSV string.
+
+- **triggerManualSync(mappingId)**: Displays confirmation modal with mapping details; shows estimated record count and last sync info; on confirmation, validates mapping configuration; checks no sync already running for this mapping; adds to sync queue or starts immediately if queue empty; closes modal and shows toast notification "Sync started"; redirects focus to live sync widget.
+
+- **showConfirmationDialog(mappingId)**: Loads mapping configuration by ID; retrieves last sync log for this mapping; estimates record count from source system (quick query); renders confirmation modal with mapping name, schedule info, estimated records, last sync time/result; attaches confirm/cancel button handlers; displays modal overlay.
+
+- **validateMappingBeforeSync(mapping)**: Checks source and target systems are configured; verifies authentication credentials exist in localStorage; validates field mappings are not empty; checks all transformation formulas are syntactically valid; ensures conflict resolution strategy is set; returns validation result with errors array if invalid.
+
+- **addToSyncQueue(mappingId, priority)**: Pushes mapping ID to sync queue array; assigns priority (manual = high, scheduled = normal); sorts queue by priority; persists queue to localStorage for recovery after crashes; triggers queue processor if not already running.
+
+- **processSyncQueue()**: Dequeues next sync job from queue; checks concurrent sync limit (max 3 simultaneous); starts sync execution in background; updates queue status in localStorage; continues processing remaining queue items; implements queue retry logic for failed syncs if configured.
+
+- **cancelSyncJob(syncLogId)**: Finds running sync by log ID; sets cancel flag on sync process; waits for current batch to complete; rolls back partial changes if configured; updates sync log status to 'cancelled'; removes from active syncs; shows cancellation notification; allows manual cleanup actions.
+
+- **cleanupOldLogs()**: Runs daily or on dashboard load; retrieves all sync logs from localStorage; filters logs older than 30 days (configurable); removes old logs from storage; recalculates storage metrics; keeps at least 100 most recent logs regardless of age; optimizes localStorage size.
+
+- **filterSyncHistory(filters)**: Applies multiple filters to sync log array; filters by date range (start and end date); filters by mapping name (exact match or contains); filters by status (completed, failed, running, partial, cancelled); chains filters using array methods; returns filtered array.
+
+- **applyDateRangeFilter(logs, startDate, endDate)**: Converts date strings to Date objects; filters logs where startTime is between startDate and endDate; handles timezone conversions; returns filtered array.
+
+- **applyMappingNameFilter(logs, mappingName)**: Filters logs where mappingName matches (case-insensitive); supports partial matching; returns filtered array.
+
+- **applyStatusFilter(logs, status)**: Filters logs where status field matches selected value; handles 'all' option to skip filtering; returns filtered array.
+
+- **showToastNotification(message, type)**: Creates toast notification element; applies type class (success, error, info, warning); positions at top-right of viewport; animates slide-in; auto-dismisses after 5 seconds; provides manual close button; stacks multiple toasts vertically.
+
+- **showLoadingSpinner(container)**: Creates loading spinner element with animated CSS; displays in center of specified container; disables user interactions with overlay; returns spinner element reference for later removal.
+
+- **hideLoadingSpinner(spinnerElement)**: Removes spinner element from DOM; re-enables user interactions; fades out with CSS transition.
+
+- **handleSyncError(error, context)**: Logs error details to console and sync log; determines error type (network, auth, validation, transform, conflict, target API); shows appropriate user-facing error message in toast; triggers rollback if needed; updates sync status to failed; sends error report if monitoring enabled.
+
+- **rollbackPartialSync(syncLogId)**: Retrieves successfully written records from sync log; iterates through created/updated target records; attempts to delete created records or restore previous values for updates; logs rollback actions; marks sync log with rollback status; shows rollback completion notification.
+
+- **retryFailedRecords(syncLogId)**: Loads sync log record details; filters for failed records only; creates new sync job with only failed records; applies same transformations and validations; attempts to write to target again; updates original sync log with retry results; links retry sync log to original.
+
+- **getActiveSyncs()**: Retrieves all sync logs with status 'running' from localStorage; sorts by start time; returns array of active sync log objects.
+
+- **getSyncById(syncLogId)**: Retrieves specific sync log from localStorage by ID; returns sync log object or null if not found.
+
+- **updateMappingLastSync(mappingId, syncLogId)**: Loads mapping configuration by ID; updates lastSyncId field with new sync log ID; updates lastSyncTime with current timestamp; saves mapping back to localStorage; used for displaying last sync info.
+
+- **formatRecordCount(count)**: Formats large numbers with thousand separators; converts to abbreviated form for very large numbers (1.2K, 3.4M); returns formatted string.
+
+- **calculateEstimatedDuration(recordCount, avgRecordsPerMinute)**: Estimates sync duration based on historical performance; divides record count by processing rate; adds buffer time for API calls and transformations; returns estimated duration in milliseconds.
+
+- **trackSyncPerformance(syncLogId, metrics)**: Records performance metrics for analytics; tracks records per second; monitors API response times; measures transformation execution time; stores in performance history for optimization insights; updates moving averages.
+
+- **initEventListeners()**: Attaches all event listeners on dashboard load; manual trigger buttons click handlers; filter control change handlers; pagination controls; table sort headers; modal close buttons; CSV export buttons; cancel sync buttons; poll interval setup; handles cleanup on page unload.
+
+- **handleFilterChange(filterType, value)**: Updates filter state object; triggers filterSyncHistory with new filters; re-renders sync history table with filtered results; updates URL parameters for bookmarkable filters.
+
+- **handleTableSort(columnName)**: Toggles sort direction (asc/desc) for clicked column; sorts sync logs array by specified column; updates sort indicator in table header; re-renders table with sorted data.
+
+- **handlePaginationClick(pageNumber)**: Updates current page state; calculates offset for data slice; loads and renders sync logs for specified page; updates pagination controls (active page, prev/next buttons).
+
+- **initPolling()**: Sets up polling interval for real-time updates; stores interval ID for cleanup; implements adaptive polling (slower when no active syncs); handles page visibility (pause when tab inactive); cleans up on navigation away.
+
+- **handlePageUnload()**: Cleanup function called on page unload; clears polling interval; cancels any pending API calls; saves current state to localStorage; prevents memory leaks.
+
+## DATA
+
+- **syncMappings**: Array of mapping configuration objects stored in localStorage with key 'syncMappings'; each object contains {id: string, name: string, sourceSystem: object, targetSystem: object, fieldMappings: array, validationRules: array, conflictStrategy: string, schedule: object, enabled: boolean, lastSyncId: string, lastSyncTime: timestamp, createdAt: timestamp, updatedAt: timestamp}.
+
+- **syncLogs**: Array of sync execution log objects stored in localStorage with key 'syncLogs'; each object contains {id: string, mappingId: string, mappingName: string, status: string ('running'|'completed'|'failed'|'partial'|'cancelled'), startTime: timestamp, endTime: timestamp, duration: number (ms), recordsTotal: number, recordsProcessed: number, recordsFailed: number, recordsSkipped: number, batchSize: number, batchesTotal: number, batchesCompleted: number, recordLogs: array, errors: array, performanceMetrics: object, createdBy: string}.
+
+- **recordLogs**: Array of individual record sync results nested within syncLogs; each object contains {recordId: string, sourceData: object, transformedData: object, validationResult: object, conflictInfo: object, writeResult: object, status: string ('success'|'failed'|'skipped'), errorMessage: string, errorStack: string, timestamp: timestamp, retryCount: number}.
+
+- **syncQueue**: Array of pending sync jobs stored in localStorage with key 'syncQueue'; each object contains {mappingId: string, priority: string ('high'|'normal'|'low'), queuedAt: timestamp, estimatedDuration: number, triggeredBy: string ('manual'|'scheduled'|'api')}.
+
+- **activeSyncs**: In-memory array tracking currently executing sync jobs; each object contains {syncLogId: string, mappingId: string, startTime: timestamp, currentBatch: number, processedCount: number, cancelRequested: boolean, progressCallback: function}.
+
+- **systemCredentials**: Object storing authentication credentials for source and target systems in localStorage with key 'systemCredentials'; structure {systemId: {type: string, apiKey: string, username: string, password: string, token: string, endpoint: string, encrypted: boolean}}.
+
+- **lookupTables**: Object storing lookup reference data in localStorage with key 'lookupTables'; each entry maps lookup table name to array of lookup records {key: value}; cached for performance.
+
+- **validationSchemas**: Object storing reusable validation rule sets in localStorage with key 'validationSchemas'; each schema contains array of validation rules {fieldName: string, type: string, required: boolean, constraints: object}.
+
+- **transformationFunctions**: Object storing custom transformation functions in localStorage with key 'transformationFunctions'; each entry contains {name: string, description: string, parameters: array, code: string, testCases: array}.
+
+- **conflictResolutionRules**: Object storing field-level conflict resolution priorities in localStorage with key 'conflictResolutionRules'; structure {mappingId: {fieldName: strategy}}.
+
+- **performanceHistory**: Array storing historical sync performance metrics in localStorage with key 'performanceHistory'; each entry contains {date: string, mappingId: string, avgDuration: number, avgRecordsPerSecond: number, successRate: number}.
+
+- **filterState**: In-memory object tracking current dashboard filter selections; structure {dateRange: {start: date, end: date}, mappingName: string, status: string, page: number, sortColumn: string, sortDirection: string}.
+
+- **pollingState**: In-memory object managing polling behavior; structure {intervalId: number, frequency: number (ms), isPaused: boolean, lastUpdateTime: timestamp}.
+
+- **notificationQueue**: In-memory array of toast notifications to display; each object contains {id: string, message: string, type: string, duration: number, createdAt: timestamp}.
+
+- **syncSchedules**: Array of scheduled sync configurations in localStorage with key 'syncSchedules'; each object contains {mappingId: string, frequency: string ('once'|'hourly'|'daily'|'weekly'), time: string, timezone: string, enabled: boolean, lastRun: timestamp, nextRun: timestamp}.
+
+- **errorCatalog**: Object storing error code definitions in localStorage with key 'errorCatalog'; each entry maps error code to {message: string, category: string, retryable: boolean, documentation: string}.
+
+- **rateLimitConfig**: Object storing rate limiting settings in localStorage with key 'rateLimitConfig'; structure {maxConcurrentSyncs: number, maxRecordsPerBatch: number, apiCallsPerMinute: number, cooldownPeriod: number}.
+
+## API
+
+- **fetchSourceRecords**: Endpoint varies by source system; method GET or POST; payload {query: object, filters: array, fields: array, pagination: {limit: number, offset: number}}; handles response parsing into standard record format; implements authentication header injection; retries on 429 (rate limit) and 5xx errors.
+
+- **writeTargetRecord**: Endpoint varies by target system; method POST (create) or PUT/PATCH (update); payload {recordData: object, operation: string, idempotencyKey: string}; handles response to extract created/updated record ID; processes validation errors from target API; implements retry with exponential backoff.
+
+- **queryTargetRecords**: Endpoint varies by target system; method GET or POST; payload {filters: object, uniqueFields: array}; used for conflict detection; returns matching records array; handles pagination for large result sets.
+
+- **validateAuthentication**: Endpoint /api/validate; method POST; payload {systemType: string, credentials: object}; tests connection to source/target system; returns {valid: boolean, error: string, systemInfo: object}.
+
+- **executeLookupQuery**: Endpoint varies by lookup source; method GET

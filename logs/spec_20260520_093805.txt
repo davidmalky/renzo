@@ -1,0 +1,143 @@
+# TECHNICAL SPECIFICATION: Mapping Execution Engine with Real-Time Testing
+
+## OVERVIEW
+
+A comprehensive mapping execution system that enables users to test data transformations in real-time before deployment. The system provides a modal-based testing interface with three tabs (Sample Data, Live Test, Results), a robust execution engine that processes field mappings and transformations, comprehensive error handling and validation, and detailed result visualization with export capabilities. The implementation includes execution history tracking, performance metrics, and persistent storage of test results for iterative development workflows.
+
+## VIEWS
+
+- **TestMappingModal**: Full-screen modal with tab navigation containing Sample Data, Live Test, and Results tabs. Modal header shows mapping name and close button. Modal footer contains tab-specific action buttons (Test with Sample Data, Fetch & Test, Download Results). Modal body switches content based on active tab with smooth transitions.
+
+- **SampleDataTab**: Contains format selector dropdown (JSON/CSV), large textarea/JSON editor for input data (min-height 400px), Load Sample button to auto-generate dummy data, format validation indicator showing detected format, sample record count display, and clear button to reset input.
+
+- **LiveTestTab**: Two-panel layout with Connection Configuration form (endpoint URL, auth type dropdown, API key/token fields, query parameters key-value pairs, request method selector) on left side, and Fetched Records display table on right side with checkbox column for selection, record data columns, Select All checkbox in header, record count badge showing X/10, and Fetch Records button below form.
+
+- **ResultsTab**: Three-section vertical layout with Success Panel (before/after comparison with side-by-side JSON viewers, field-level diff highlighting, download individual outputs), Validation Panel (grouped error list by severity, field name badges, expandable error details, suggested fixes), and Performance Panel (execution time metric, records processed gauge, success/failure pie chart, transformation step breakdown with timing).
+
+- **ExecutionHistoryDrawer**: Slide-out panel from right showing last 10 test executions in reverse chronological order, each entry displays timestamp, record count badge, status icon (success/warning/error), execution time, click to load previous results, clear history button at bottom.
+
+- **ErrorInlineDisplay**: Appears within result table rows or field mapping cards, red border on problematic field, error icon with tooltip, error message text in smaller font, suggested fix as blue actionable link when available.
+
+## FUNCTIONS
+
+- **initTestMappingModal()**: Creates modal DOM structure dynamically, appends to body, sets up tab navigation event listeners, initializes all three tab contents, sets Sample Data as default active tab, focuses on sample data input, prevents body scroll when modal open.
+
+- **openTestMappingModal(mappingId)**: Retrieves mapping configuration from mappings array by ID, populates modal header with mapping name, loads last test results from localStorage if available, displays in Results tab, checks if mapping has required fields configured, shows warning if incomplete, displays modal with fadeIn animation, adds event listener for ESC key to close.
+
+- **closeTestMappingModal()**: Hides modal with fadeOut animation, removes ESC key listener, clears any pending async operations, re-enables body scroll, clears temporary state variables, keeps localStorage data intact.
+
+- **switchTab(tabName)**: Removes 'active' class from all tab buttons and tab content divs, adds 'active' class to clicked tab button and corresponding content div, updates modal footer buttons based on active tab, triggers tab-specific initialization if first visit, announces tab change to screen readers.
+
+- **detectDataFormat(inputText)**: Trims input text, checks if starts with '[' or '{' for JSON, attempts JSON.parse() with try-catch, if successful returns 'json' and parsed data, if fails checks for comma-separated structure for CSV, validates CSV headers and row consistency, returns 'csv' and parsed array of objects, returns 'unknown' if neither format detected.
+
+- **loadSampleData()**: Retrieves current mapping configuration, identifies all source fields with data types, generates realistic dummy data for each field type (strings use faker-like logic, numbers use random ranges, dates use current date ranges, booleans random true/false), creates array of 5 sample records, formats as JSON with pretty print, populates sample data textarea, displays success toast notification, enables Test button.
+
+- **validateInputData(data, format)**: Checks if data is empty array or null, verifies format matches detected format, for JSON validates structure is array of objects or single object, checks all objects have consistent keys, for CSV validates minimum column count, checks all rows have same number of columns, validates field names don't contain reserved characters, returns validation object with isValid boolean, errors array, and recordCount number.
+
+- **testWithSampleData()**: Reads sample data textarea content, calls detectDataFormat() to identify format, calls validateInputData() with detected format, if validation fails displays errors in UI and returns, shows loading spinner on Test button, calls executeMappingEngine() with sample data and mapping config, waits for promise resolution, switches to Results tab automatically, populates Success, Validation, and Performance panels with results, saves test run to execution history, stores results in localStorage, hides loading spinner.
+
+- **buildConnectionConfig()**: Collects endpoint URL from input field, gets selected auth type from dropdown, retrieves API key or token based on auth type, builds query parameters object from key-value pair inputs, validates URL format with regex, checks required auth fields are filled, returns configuration object with endpoint, authType, credentials, queryParams, method properties, displays validation errors inline if any fields invalid.
+
+- **fetchLiveRecords()**: Calls buildConnectionConfig() to get validated config, shows loading spinner on Fetch button, disables Fetch button, constructs HTTP request with proper headers (Authorization based on auth type, Content-Type application/json, Accept application/json), adds query parameters to URL, sets timeout to 30 seconds, makes fetch() call with AbortController for timeout, handles response errors with status code checking, parses JSON response body, limits results to first 10 records, displays records in table with checkboxes, enables checkboxes and Test button, hides loading spinner, catches and displays connection errors.
+
+- **renderRecordsTable(records)**: Clears existing table body content, creates table header row with Select All checkbox and column headers from record keys, iterates through records array, creates table row for each record with checkbox in first cell, adds data cells for each field value (truncates long strings to 100 chars), attaches checkbox change event to update selected count, adds Select All checkbox toggle functionality to select/deselect all rows, displays record count badge, applies alternating row colors, enables horizontal scroll for wide tables.
+
+- **getSelectedRecords()**: Queries all checkboxes in records table with :checked selector, maps checked checkboxes to their row index, retrieves corresponding record objects from records array, returns array of selected record objects, returns empty array if no selections.
+
+- **testWithLiveData()**: Calls getSelectedRecords() to get user selections, validates at least one record is selected, shows loading spinner, calls executeMappingEngine() with selected records and mapping config, waits for promise resolution, switches to Results tab, populates all result panels, saves to execution history, stores in localStorage, hides loading spinner, displays error if no records selected.
+
+- **executeMappingEngine(inputRecords, mappingConfig)**: Returns Promise that resolves with execution report, initializes execution context with startTime and empty results array, wraps execution in try-catch for graceful error handling, iterates through each input record, creates empty output object for transformed record, iterates through field mappings in order, applies each field transformation by calling applyFieldMapping(), collects any transformation errors in errors array, validates transformed record against destination schema if provided, adds success/error status to record result, pushes record result to results array, calculates execution time as Date.now() - startTime, compiles execution report with status, transformedData array, validationResults array, performanceMetrics object, returns execution report object.
+
+- **applyFieldMapping(inputRecord, fieldMapping, outputRecord)**: Extracts source field value from inputRecord using fieldMapping.sourceField path, checks if value exists or handles null/undefined, applies fieldMapping.transformationType if specified by calling appropriate transform function, validates transformed value against fieldMapping.validationRules if present, handles validation failures by collecting error details, assigns final value to outputRecord at fieldMapping.destinationField path, returns transformation result object with success boolean, transformedValue, and errors array if any.
+
+- **applyTransformation(value, transformationType, transformConfig)**: Switches on transformationType string, for 'uppercase' returns value.toString().toUpperCase(), for 'lowercase' returns value.toString().toLowerCase(), for 'trim' returns value.toString().trim(), for 'concat' appends transformConfig.suffix or prepends prefix, for 'substring' extracts based on start/end indices in config, for 'dateformat' uses transformConfig.outputFormat to format date, for 'numberformat' applies decimal places and thousand separators, for 'lookup' performs key-value lookup from transformConfig.lookupTable, for 'conditional' evaluates transformConfig.condition and returns trueValue or falseValue, for 'default' catches unknown types and returns value unchanged, wraps each operation in try-catch to handle type errors.
+
+- **validateField(value, validationRules)**: Iterates through validationRules array, for 'required' rule checks value is not null/undefined/empty string, for 'minLength' checks string length >= rule.value, for 'maxLength' checks string length <= rule.value, for 'pattern' tests value against regex in rule.pattern, for 'min' checks number >= rule.value, for 'max' checks number <= rule.value, for 'enum' checks value is in rule.allowedValues array, collects all failing validations in errors array, returns validation result with isValid boolean and errors array with field name, rule type, and message for each failure.
+
+- **validateDestinationSchema(outputRecord, schema)**: Checks if schema object is provided, iterates through schema.requiredFields array checking each exists in outputRecord, iterates through schema.fieldTypes object validating each field matches expected type, checks for extra fields not in schema if schema.strictMode is true, compiles list of schema violations with field names and violation types, returns validation result with isValid boolean and violations array.
+
+- **renderResultsSuccess(transformedData, inputRecords)**: Creates side-by-side comparison layout, renders input data in left panel as formatted JSON with syntax highlighting, renders transformed output data in right panel with same formatting, highlights fields that changed between input and output with yellow background, calculates and displays field-level diff statistics (X fields unchanged, Y fields transformed, Z fields added), adds collapsible sections for each record if multiple records, provides copy buttons for input and output JSON, displays record index badges for multi-record results.
+
+- **renderResultsValidation(validationResults)**: Groups validation errors by severity (error, warning, info), creates expandable sections for each severity level, displays count badges for each severity, iterates through each validation result creating a card, shows field name in bold with field type badge, displays error message text, renders suggested fix as clickable link if available, clicking fix link pre-populates correction in mapping editor, highlights affected field in before/after comparison, shows warning icon for warnings and error icon for errors, displays "All validations passed" success message if no errors.
+
+- **renderResultsPerformance(performanceMetrics)**: Displays total execution time in milliseconds with color coding (green <100ms, yellow <500ms, red >=500ms), shows records processed count with success/failure breakdown, renders horizontal bar showing success vs failure ratio, creates breakdown table of transformation steps with individual timing, calculates and displays average time per record, shows slowest transformation step with highlight, renders small pie chart for success/failure distribution using SVG or canvas, displays memory usage if available from performance API.
+
+- **addExecutionHistory(executionReport, mappingId)**: Retrieves existing execution history from localStorage for mappingId, creates history entry object with timestamp, recordCount, status, executionTime, and summary, prepends new entry to history array, limits array to 10 most recent entries by slicing, stores updated history array in localStorage with key "executionHistory_{mappingId}", updates ExecutionHistoryDrawer UI if currently open, displays notification badge on history button if not already visible.
+
+- **loadExecutionHistory(mappingId)**: Retrieves execution history array from localStorage using key "executionHistory_{mappingId}", returns empty array if no history found, sorts by timestamp descending, returns array of history entry objects.
+
+- **renderExecutionHistory(history)**: Opens ExecutionHistoryDrawer with slide-in animation, clears existing history list content, iterates through history array, creates list item for each entry with timestamp formatted as relative time (5 minutes ago, 2 hours ago), displays record count badge, shows status icon (checkmark for success, warning triangle for warnings, X for errors), displays execution time, adds click handler to load that execution's results into Results tab, shows "No execution history" empty state if array is empty, adds Clear History button at bottom.
+
+- **loadPreviousResults(historyEntry)**: Retrieves full execution results from localStorage using historyEntry.resultId, switches to Results tab, populates Success, Validation, and Performance panels with stored results, displays "Viewing Historical Results" banner at top of Results tab, disables export buttons until new test is run, highlights selected history entry in drawer.
+
+- **clearExecutionHistory(mappingId)**: Shows confirmation dialog "Are you sure you want to clear execution history?", if confirmed removes localStorage item "executionHistory_{mappingId}", removes all result snapshots associated with that mapping, closes ExecutionHistoryDrawer, displays success toast "Execution history cleared", resets history button notification badge.
+
+- **exportResults(format)**: Retrieves current transformedData from Results tab state, if format is 'json' stringifies data with pretty print (2 space indent), if format is 'csv' calls convertToCSV() function, creates Blob object with appropriate MIME type, generates download filename with mapping name and timestamp, creates temporary anchor element with download attribute, triggers click on anchor to download file, removes temporary anchor, displays success toast "Results exported as {format}".
+
+- **convertToCSV(dataArray)**: Extracts all unique keys from all objects in array for headers, creates CSV header row by joining keys with commas, iterates through each data object, creates row by mapping keys to values and escaping commas/quotes, handles nested objects by flattening or converting to JSON string, joins all rows with newline characters, returns complete CSV string.
+
+- **copyToClipboard(data)**: Stringifies data as formatted JSON, uses navigator.clipboard.writeText() to copy to clipboard, displays success toast "Copied to clipboard" on success, falls back to document.execCommand('copy') for older browsers, displays error toast if clipboard API is not available, adds temporary visual feedback (green checkmark icon) to copy button for 2 seconds.
+
+- **saveTestResults(mappingId, executionReport)**: Creates storage key "testResults_{mappingId}", creates storage object with timestamp, executionReport, and mapping snapshot, stringifies object, stores in localStorage, handles localStorage quota exceeded errors by removing oldest execution histories first, retries storage after cleanup, displays warning if storage still fails after cleanup.
+
+- **loadLastTestResults(mappingId)**: Retrieves item from localStorage with key "testResults_{mappingId}", parses JSON string, checks if results are less than 24 hours old, returns parsed results object if fresh, returns null if stale or not found, displays info message "Loading previous test results from {timeAgo}" if found.
+
+- **highlightProblematicFields(fieldName, errorType)**: Finds field mapping card in UI matching fieldName, adds 'error' class to card for red border and background, finds corresponding result table cell or JSON property, adds error icon inline next to field value, attaches tooltip showing error message on hover, adds error badge with count if multiple errors for same field, scrolls problematic field into view if not visible.
+
+- **showSuggestedFix(fieldName, errorType, currentMapping)**: Determines suggested fix based on errorType (for 'type_mismatch' suggests adding type conversion transformation, for 'required_field_missing' suggests adding default value, for 'validation_failed' suggests adjusting validation rules, for 'transformation_error' suggests simpler transformation), displays suggested fix as blue actionable text in validation panel, clicking suggestion opens mapping editor with pre-populated fix, applies fix to mapping configuration, prompts user to re-run test to verify fix.
+
+- **handleTransformationError(error, fieldMapping, recordIndex)**: Logs detailed error information to console including error type, stack trace, field mapping config, and input value, creates user-friendly error object with field name, record index, error message, and error type, adds error to execution report validationResults array, continues processing remaining fields (doesn't halt execution), highlights problematic field in UI, increments failure count in performance metrics.
+
+- **generateDummyValue(fieldType)**: Switches on fieldType string, for 'string' returns random string from predefined list of realistic values, for 'email' returns generated email with random name and domain, for 'number' returns random integer between 1 and 1000, for 'decimal' returns random float with 2 decimal places, for 'date' returns ISO date string for random date within last year, for 'datetime' returns ISO datetime string with time component, for 'boolean' returns random true or false, for 'uuid' generates UUID v4 string, for 'phone' returns formatted phone number string, for 'address' returns object with street, city, state, zip properties, returns empty string for unknown types.
+
+- **initSampleDataEditor()**: Checks if CodeMirror or Monaco editor library is available in window object, initializes rich JSON editor with syntax highlighting if available, configures editor with JSON mode, line numbers, and auto-indent, falls back to plain textarea with improved styling if no editor library found, adds line numbers to textarea using CSS counters, enables Tab key to insert spaces instead of focus change, adds Ctrl+Enter keyboard shortcut to trigger test execution.
+
+- **autoFormatJSON()**: Gets current textarea or editor content, attempts to parse as JSON, if successful re-stringifies with 2-space indentation, updates textarea/editor with formatted content, displays success indicator briefly, if parse fails highlights syntax error location, displays error message with line number and character position, suggests common fixes for syntax errors.
+
+## DATA
+
+- **mappings**: Array of mapping configuration objects, each contains { id: string, name: string, description: string, sourceSystem: string, destinationSystem: string, fieldMappings: array, createdAt: timestamp, updatedAt: timestamp, isActive: boolean }
+
+- **fieldMappings**: Array within each mapping, each contains { sourceField: string (path notation), destinationField: string (path notation), transformationType: string (enum), transformationConfig: object (varies by type), validationRules: array of rule objects, isRequired: boolean, defaultValue: any }
+
+- **testMappingModalState**: Object containing { isOpen: boolean, currentMappingId: string, activeTab: string (sample/live/results), sampleData: string (raw input), liveDataConfig: object, fetchedRecords: array, selectedRecordIds: array, lastExecutionReport: object, isLoading: boolean }
+
+- **executionReport**: Object returned from engine containing { status: string (success/partial/failure), transformedData: array of output records, validationResults: array of validation error objects, performanceMetrics: { executionTime: number, recordsProcessed: number, successCount: number, failureCount: number, transformationSteps: array with timing }, timestamp: ISO string }
+
+- **validationError**: Object structure { fieldName: string, recordIndex: number, errorType: string (required/type_mismatch/pattern/range), message: string, severity: string (error/warning/info), suggestedFix: string or null }
+
+- **connectionConfig**: Object for live testing { endpoint: string (URL), authType: string (none/apikey/bearer/basic), credentials: { apiKey: string, token: string, username: string, password: string }, queryParams: object (key-value pairs), method: string (GET/POST), headers: object (additional headers), timeout: number (milliseconds) }
+
+- **executionHistory**: Array stored in localStorage, each entry { historyId: string (UUID), timestamp: ISO string, recordCount: number, status: string, executionTime: number, resultId: string (reference to full results), summary: string }
+
+- **testResults**: Object stored in localStorage per mapping { mappingId: string, timestamp: ISO string, executionReport: full object, mappingSnapshot: frozen copy of mapping config at test time, inputDataSample: first 3 records for reference }
+
+- **transformationTypes**: Enum/constant object defining available transformations { UPPERCASE: 'uppercase', LOWERCASE: 'lowercase', TRIM: 'trim', CONCAT: 'concat', SUBSTRING: 'substring', DATE_FORMAT: 'dateformat', NUMBER_FORMAT: 'numberformat', LOOKUP: 'lookup', CONDITIONAL: 'conditional', CUSTOM: 'custom' }
+
+- **validationRuleTypes**: Enum/constant object { REQUIRED: 'required', MIN_LENGTH: 'minLength', MAX_LENGTH: 'maxLength', PATTERN: 'pattern', MIN: 'min', MAX: 'max', ENUM: 'enum', CUSTOM: 'custom' }
+
+- **destinationSchema**: Object defining expected output structure { requiredFields: array of field names, fieldTypes: object mapping field names to type strings, strictMode: boolean (disallow extra fields), customValidations: array of validation function references }
+
+- **dataFormats**: Enum for supported formats { JSON: 'json', CSV: 'csv', XML: 'xml', UNKNOWN: 'unknown' }
+
+- **authTypes**: Enum for authentication methods { NONE: 'none', API_KEY: 'apikey', BEARER: 'bearer', BASIC: 'basic', OAUTH: 'oauth' }
+
+## API
+
+- **fetchLiveRecordsAPI**: Endpoint constructed from user input (variable URL), method from connectionConfig (typically GET), payload includes query parameters from config and authentication headers (Authorization: Bearer {token} or X-API-Key: {key}), response handling expects JSON array or object with records property, extracts records array from response, limits to 10 records client-side, handles 401/403 auth errors with specific messaging, handles 404/500 server errors with retry suggestion, handles network errors with offline detection, implements 30-second timeout with AbortController
+
+- **validateSchemaAPI** (optional external validation): Endpoint POST /api/validate-schema if external validator exists, method POST, payload { destinationSystem: string, recordData: object, schemaVersion: string }, response { isValid: boolean, errors: array of error objects, warnings: array }, handles validation in executeMappingEngine if API unavailable by falling back to client-side schema validation, caches schema definitions to reduce API calls
+
+- **exportResultsAPI** (optional cloud export): Endpoint POST /api/export-results if cloud storage enabled, method POST, payload { mappingId: string, executionReport: object, format: string }, response { downloadUrl: string, expiresAt: timestamp }, provides fallback to client-side download if API unavailable, displays cloud export option only if user is authenticated and has permission
+
+- **saveMappingAPI** (existing): Used to persist mapping configuration after user applies suggested fixes, endpoint PUT /api/mappings/{mappingId}, method PUT, payload full mapping object with updated field mappings, response { success: boolean, mapping: updated object, version: number }, displays save success message, increments mapping version number
+
+## DESIGN
+
+- **Modal Styling**: Full-screen modal with .modal-overlay background rgba(0,0,0,0.6), .test-mapping-modal class with max-width 95vw, max-height 95vh, border-radius 12px, background white, box-shadow var(--shadow-lg), centered with fixed positioning, z-index 1000, modal-header with padding 24px, border-bottom 1px solid var(--border-color), displays mapping name in --font-size-xl with --font-weight-semibold, close button positioned absolute top-right with X icon
+
+- **Tab Navigation**: Horizontal tab strip below modal header with .tab-nav flex container, .tab-button for each tab with padding 16px 24px, border-bottom 3px solid transparent, color var(--text-secondary), hover shows border-color var(--primary-light), active tab shows border-color var(--primary-color) and color var(--primary-color), font-weight 600, smooth transition on all properties 0.2s ease
+
+- **Sample Data Tab Layout**: .sample-data-container with padding 24px, format selector dropdown in .form-group at top with label "Data Format", full-width textarea with min-height 400px, border 1px solid var(--border-color), border-radius 8px, font-family monospace for code readability, padding 16px, resize vertical enabled, button group below textarea with .btn-secondary "Load Sample Data" on left and .btn-primary "Test with Sample Data" on right with gap 12px, format indicator badge showing detected format with icon (JSON/CSV/Unknown) positioned top-right of textarea
+
+- **Live Test Tab Layout**: Two-column grid .live-test-container with grid-template-columns 400px 1fr, gap 24px, padding 24px, left panel .connection-config with white background, border 1px solid var(--border-color), border-radius 8px, padding 20px, contains form groups stacked vertically with gap 16px, endpoint input full width, auth type dropdown, conditional auth fields appearing based on selection, query params as key-value pair inputs with add/remove buttons,

@@ -1,0 +1,245 @@
+{
+  "task": {
+    "id": "renzo-v2-001",
+    "title": "Build Renzo Phase 2 - Smart outreach platform with real email and CRM foundation",
+    "description": "Enhance the existing Renzo app (currently at renzo-beige.vercel.app) into a full-featured smart outreach platform. The existing app has: login, contacts CRUD, AI message generation, queue/drafts, settings. BUILD THESE NEW FEATURES on top of the existing foundation:\n\n1. SMART CONTACT INTELLIGENCE (replace simple Tier A/B/C with dynamic prioritization)\n- Remove hardcoded tier frequency. Instead, compute priority score dynamically based on multiple factors the user can configure\n- Priority factors: days since last contact, contract expiry date, outstanding invoice amount, revenue/spend value, relationship score (user-rated 1-5)\n- Each contact has a 'Priority Score' (0-100) computed from weighted factors\n- User can set weights: 'I care 40% about contract expiry, 30% about spend, 30% about recency'\n- Dashboard shows contacts sorted by priority score, not just overdue\n- Contact form adds fields: Contract Expiry Date, Invoice Amount Outstanding, Revenue/Spend Value, Relationship Score (1-5 stars)\n\n2. OUTREACH REASON ENGINE (why is Renzo reaching out RIGHT NOW)\n- Every generated message must explain the specific trigger: 'Contract expires in 23 days' or 'Invoice $4,200 overdue 15 days' or 'Highest spend account not contacted in 45 days'\n- The AI uses this trigger as the core of the message \u00e2\u20ac\u201d not generic check-ins\n- Trigger is displayed prominently in the queue item and in the message reasoning box\n\n3. GMAIL DRAFT INTEGRATION\n- Settings page: add Gmail section with Email field + 'Connect Gmail' button\n- When user clicks 'Mark Sent' on a queue item, show two options: 'Log as Sent' (existing) and 'Create Gmail Draft'\n- 'Create Gmail Draft' opens a new window/tab to Gmail compose with the message pre-filled: gmail.com URL with subject and body as query params (mailto: link approach \u00e2\u20ac\u201d no OAuth needed for MVP)\n- The subject line is auto-generated: 'Following up \u00e2\u20ac\u201d [contact company]' or AI-generated based on message content\n\n4. BATCH OUTREACH WITH PROMPT\n- New view: 'Batch Outreach' in sidebar\n- User types a natural language prompt: 'Reach out to all contacts with contracts expiring in 90 days and mention our renewal team'\n- System finds matching contacts, generates a draft for each one, adds all to queue\n- Show progress: 'Generating 1 of 7...'\n- User reviews the full batch in queue before any are sent\n\n5. CONTACT IMPORT (CSV)\n- Contacts view: add 'Import CSV' button\n- Accept CSV with flexible column detection: looks for name/first/last, company/organization, email, phone, notes columns\n- Shows preview of first 5 rows before import\n- Maps columns to Renzo fields\n- Imports all valid rows, skips duplicates (same name + company)\n\n6. COMMUNICATION LOG (full history per contact)\n- Contact detail modal: clicking a contact name opens a full detail panel (not edit form)\n- Shows all past messages sent, with dates, the AI reasoning, and the message text\n- 'Edit Contact' and 'Generate Message' buttons within detail panel\n- Timeline view: most recent first\n\n7. TRAINABLE INSTRUCTIONS PER USER\n- Settings: 'My Outreach Rules' section\n- User adds plain-text rules: 'Always mention our Q3 pricing program', 'Never reach out on Fridays', 'For finance contacts always reference invoice numbers'\n- These rules are injected into every AI prompt for this user\n- Stored in localStorage as array of instruction strings\n- Easy add/remove interface\n\n8. DESIGN ENHANCEMENTS\n- Keep existing warm design (off-white #F7F4EF, forest green #2D6A4F, dark sidebar)\n- Add contact priority score as a colored number badge on each contact row\n- Queue items show the trigger reason prominently above the message\n- Batch outreach view has a clean prompt input with send button\n- Mobile responsive throughout\n\nCRITICAL TECHNICAL REQUIREMENTS:\n- Single HTML file, all CSS and JS inline\n- All data in localStorage (no backend)\n- Must end with </html>\n- Import Inter font from Google Fonts\n- Anthropic API calls use model claude-haiku-4-5 with anthropic-dangerous-direct-browser-access header\n- Keep total file under 900 lines by being concise \u00e2\u20ac\u201d no verbose comments\n- Build in logical sections so each section is complete and testable",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Renzo is an AI-powered relationship outreach platform for B2B sales reps, procurement teams, and any business that needs to maintain regular contact with customers, vendors, or partners. It should be a standalone app that can connect to external systems (Salesforce, Gmail, CRMs) via APIs, read contact and relationship data from those systems, and generate personalized outreach messages with clear reasoning. The long-term vision is a plug-and-play outreach intelligence layer that works with any existing business system without requiring migration. Priority is smart automation, genuine personalization, and human approval before any message is sent.",
+    "retry_count": 1,
+    "last_attempted": "2026-05-20T04:20:20.382865"
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11149
+      },
+      "t": 69.7
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 218.4
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 267.7
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 407.8
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 459.1
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 602.3
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 651.6
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 30428
+      },
+      "t": 776.7
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "Critical XSS vulnerabilities throughout - no input sanitization before DOM insertion or storage (contact data, rule text, message content all vulnerable)",
+          "Severe data integrity issues - localStorage.clear() removes ALL browser storage not just app data, ID generation has collision risk, no email validation allows corrupt data",
+          "Missing fundamental security controls - no CSRF protection, CSP headers, rate limiting, secure session management, or authentication timeout mechanisms"
+        ],
+        "feedback": "MUST FIX BEFORE DEPLOYMENT: 1) Implement DOMPurify or equivalent for ALL user input before storage/display - sanitize contact.email, contact.name, rule.text, message.content, etc. 2) Fix DataManager.clear() to only remove keys with 'renzo_' prefix using localStorage.removeItem() in loop instead of localStorage.clear(). 3) Add email validation regex in ContactsDB.importBatch() and reject invalid entries. 4) Replace ID generation with crypto.randomUUID() or proper sequential IDs. 5) Add CSP meta tag: <meta http-equiv='Content-Security-Policy' content=\"default-src 'self'; style-src 'self' 'unsafe-inline'; font-src https://fonts.gstatic.com\">. 6) Add rate limiting counter in localStorage for login attempts. 7) Add input maxlength attributes to all form fields. 8) Implement proper error boundaries and user feedback for validation failures. 9) Add SRI hash to Google Fonts link. 10) Type password fields explicitly. THEN re-test all user input paths with XSS payloads like <img src=x onerror=alert(1)>."
+      },
+      "t": 839.9
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 29935
+      },
+      "t": 966.4
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security: Passwords stored in plain text without hashing (AuthManager.login/signup) - must hash passwords server-side before storage",
+          "Critical Security: XSS vulnerabilities from CSP 'unsafe-inline', DOMPurify fallback using innerHTML, and unsanitized user data rendering in sidebar",
+          "Critical Security: No CSRF protection for authentication operations and sensitive data stored in localStorage accessible to any script"
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED:\n\n1. **Password Security (CRITICAL)**:\n   - Remove plain text password storage in AuthManager\n   - Implement proper server-side password hashing (bcrypt/argon2)\n   - Never send plain passwords in responses\n   - Add password strength requirements (min 8 chars, mixed case, numbers, symbols)\n\n2. **XSS Prevention (CRITICAL)**:\n   - Remove 'unsafe-inline' from CSP script-src, use nonces: `<script nonce=\"${nonce}\">`\n   - Fix DOMPurify fallback: use `textContent` only, never return `innerHTML`\n   - Sanitize all user-generated content before rendering (sidebar username, etc.)\n   - Fix CSP font-src to include both googleapis.com and gstatic.com\n\n3. **CSRF Protection (CRITICAL)**:\n   - Implement CSRF tokens for all state-changing operations\n   - Add SameSite=Strict cookie attribute\n   - Validate tokens server-side on login/signup/logout\n\n4. **Authentication Hardening**:\n   - Move rate limiting to server-side (client-side localStorage is bypassable)\n   - Add session timeout and token expiration (JWT with short-lived tokens)\n   - Implement proper password reset flow with time-limited tokens\n   - Add email verification for new signups\n\n5. **Form Security**:\n   - Add autocomplete attributes: `autocomplete='email'`, `autocomplete='current-password'`\n   - Strengthen email validation regex or use proper validation library\n   - Mark password inputs explicitly: `type='password'`\n\n6. **Code Quality**:\n   - Fix incomplete CSS (filter- class truncated at end)\n   - Remove invalid Link integrity attribute ('sha384-anonymous' is not a valid hash)\n   - Implement proper focus trapping for modals/panels (accessibility)\n\n7. **Data Storage**:\n   - Never store sensitive data in localStorage (passwords, tokens, PII)\n   - Use httpOnly, secure cookies for session management\n   - Implement proper token refresh mechanism\n\nThis code cannot go to production without addressing these security vulnerabilities. Recommend security audit before deployment."
+      },
+      "t": 1018.2
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 28590
+      },
+      "t": 1165.0
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "Content-Security-Policy blocks inline styles but uses 'unsafe-inline' in style-src - should extract CSS to external file or use nonces",
+          "CSP style-src has 'unsafe-inline' which defeats CSP security for XSS protection",
+          "Missing integrity/SRI hashes for CDN resources (jsdelivr.net, googleapis.com)"
+        ],
+        "feedback": ""
+      },
+      "t": 1219.2
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 27586
+      },
+      "t": 1394.6
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 7,
+        "issues": [
+          "CSS injection vulnerability: No Content Security Policy (CSP) defined to prevent inline style attacks",
+          "Missing input sanitization: HTML inputs lack any XSS protection or validation",
+          "No CSRF token implementation visible for form submissions"
+        ],
+        "feedback": ""
+      },
+      "t": 1448.7
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "Priority score calculation algorithm (contract expiry, revenue, recency, relationship strength weights)",
+          "Priority score distribution chart on Dashboard",
+          "Upcoming contract expiries section (next 30 days)",
+          "High-value overdue contacts section on Dashboard",
+          "Contact Detail Panel Communication Log timeline with AI reasoning",
+          "Generate Message functionality with contextual triggers",
+          "Gmail draft creation via mailto links",
+          "Batch outreach from natural language prompts",
+          "CSV import functionality for contacts",
+          "Per-user trainable instruction rules",
+          "Contract Expiry Date field in contact form",
+          "Invoice Amount Outstanding field",
+          "Revenue/Spend Value field",
+          "Relationship Score (1-5 star selector)",
+          "Priority score badge display (color-coded 80+/60-79/40-59/<40)",
+          "Sortable columns (by priority/name/company)",
+          "Communication log entries with trigger reasons and AI reasoning",
+          "Message generation triggers (contract expiry, outstanding invoice, no recent contact, high-value dormant)",
+          "Editable instruction rules interface",
+          "localStorage persistence of all new data fields",
+          "Backward compatibility with legacy tier field"
+        ],
+        "note": "Code shows basic UI structure (sidebar, login, dashboard skeleton, contact list grid) but lacks all Phase 2 intelligence features: no priority scoring system, no communication logs, no message generation, no CSV import, no trainable rules, no contract/revenue/relationship fields, no timeline views, and no mailto integration. Only foundational HTML/CSS layout present."
+      },
+      "t": 1458.2
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 30603
+      },
+      "t": 1619.4
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Sidebar footer HTML is truncated - incomplete closing tags will break layout",
+          "No mobile viewport handling - sidebar is fixed 240px width causing horizontal scroll on mobile",
+          "Fixed-width modal (600px) and panel (600px) exceed mobile screen widths",
+          "No keyboard navigation support for modals - accessibility failure for screen readers and keyboard users",
+          "Missing focus trap in modals - users can tab to elements behind modal",
+          "No ARIA labels on interactive elements - screen readers cannot identify button purposes",
+          "Form inputs lack associated labels (missing 'for' attribute connection to input IDs)",
+          "No error state messaging or validation feedback visible to users"
+        ]
+      },
+      "t": 1687.1
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 28394
+      },
+      "t": 1837.6
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "No form validation or error display for login inputs - users cannot see validation errors",
+          "No accessible labels on interactive elements - star ratings, close buttons lack aria-labels",
+          "Slider inputs missing accessible value announcements for screen readers",
+          "Modal/detail panel lack focus trapping - keyboard users can tab outside",
+          "No keyboard navigation for custom controls (star ratings, filter tabs) - Tab/Enter/Space not handled",
+          "Fixed sidebar at 240px causes horizontal scroll on tablets (768px-1024px range)",
+          "Color contrast issues: #6B7280 text on #F7F4EF background (3.8:1) fails WCAG AA (4.5:1 required)",
+          "No loading states or error feedback after login button click - user has no confirmation action is processing"
+        ]
+      },
+      "t": 1882.1
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1898.1
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "External CRM Integration - Salesforce Connector"
+      },
+      "t": 1914.8
+    }
+  ],
+  "cost": 1.8846929999999997
+}

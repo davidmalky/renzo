@@ -1,0 +1,244 @@
+{
+  "task": {
+    "id": "auto-1779276377",
+    "title": "Real-time Sync Execution Engine",
+    "description": "Build the core synchronization engine that executes the field mappings configured in the UI. The engine should: (1) Poll Salesforce API for changes using change data capture or last modified timestamps with configurable polling intervals (5min, 15min, 30min, 1hr). (2) Apply field transformations defined in mappings (direct copy, string formatting, date conversions, lookup resolutions, formula calculations). (3) Validate data against destination schema rules before writing. (4) Handle bidirectional sync conflicts using configured resolution strategies (source wins, destination wins, manual review, most recent timestamp). (5) Queue failed syncs with automatic retry logic (exponential backoff, max 3 retries). (6) Create detailed sync logs with timestamps, records processed, fields updated, errors encountered, and conflict resolutions. (7) Expose REST API endpoints: POST /sync/execute (trigger manual sync), GET /sync/status/:syncId (check sync progress), GET /sync/history (retrieve past syncs with pagination). (8) Store sync state in database tables: sync_executions (id, mapping_id, status, started_at, completed_at, records_processed, errors_count), sync_logs (id, execution_id, record_id, field_name, old_value, new_value, error_message, timestamp). (9) Implement background worker process that processes sync queue and executes transformations. (10) Add sync health monitoring with alerts for repeated failures.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "auto_generated": true,
+    "rationale": "The field mapping UI creates the configuration, but without an execution engine, no actual data synchronization occurs. Users can't realize value from their mappings until data flows between systems. This is the critical backend component that makes the entire sync feature functional. It should be built immediately after the configuration UI so users can see their mappings in action and validate their configurations with real data."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 11834
+      },
+      "t": 65.5
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 3
+      },
+      "t": 212.1
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": false
+      },
+      "t": 263.7
+    },
+    {
+      "agent": "planner_revision_1",
+      "data": {
+        "sections": 3
+      },
+      "t": 406.3
+    },
+    {
+      "agent": "spec_critic_2",
+      "data": {
+        "approved": false
+      },
+      "t": 451.6
+    },
+    {
+      "agent": "planner_revision_2",
+      "data": {
+        "sections": 3
+      },
+      "t": 592.1
+    },
+    {
+      "agent": "spec_critic_3",
+      "data": {
+        "approved": false
+      },
+      "t": 638.7
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 25824
+      },
+      "t": 746.0
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSP allows 'unsafe-inline' for both style-src and script-src, completely undermining XSS protection. This is a critical security flaw that allows arbitrary script injection.",
+          "WebSocket connection (ws://localhost:8080/ws) has no authentication mechanism and uses hardcoded localhost URL. Unauthorized clients can connect and the code will fail in production.",
+          "No CSRF protection on any API calls or state-changing operations. Authentication token from localStorage is used without validation, creating session security vulnerabilities."
+        ],
+        "feedback": "Critical fixes required: 1) Remove 'unsafe-inline' from CSP - use nonces or hashes for inline scripts/styles, move all inline JS to external files. 2) Implement WebSocket authentication by sending token in connection handshake (e.g., ws://host/ws?token=${token}) and validate server-side. Use environment-based URL configuration instead of hardcoded localhost. 3) Add CSRF token mechanism: generate token server-side, include in meta tag, send with all state-changing requests in X-CSRF-Token header. 4) Validate auth token before use: check expiration, signature, and refresh if needed. 5) Restrict CSP connect-src to specific domains instead of 'https: wss:'. 6) Add SRI integrity attributes to Google Fonts. 7) Implement proper input sanitization for all data rendered in tables, status badges, and diff views using a templating engine with auto-escaping."
+      },
+      "t": 797.1
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 27779
+      },
+      "t": 905.5
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security: CSRF token meta tag is empty and placeholder values (PLACEHOLDER_HASH, PLACEHOLDER_SRI) remain in CSP headers - these MUST be replaced with actual values before any deployment or the security mechanisms will not function",
+          "Critical Security: Authentication token stored in localStorage and passed via WebSocket URL query string creates XSS vulnerability and exposes tokens in server logs/browser history - must use httpOnly cookies and header-based authentication instead",
+          "Critical Production Breakage: CSP configuration blocks Google Fonts CSS (font-src missing googleapis.com) and SRI integrity will fail on Google Fonts due to dynamic CSS generation - application will have broken styling and CSP violations in production"
+        ],
+        "feedback": "Your real-time sync engine has critical security vulnerabilities and deployment blockers that must be fixed immediately: (1) Replace ALL placeholder values in CSP - the 'PLACEHOLDER_HASH' and 'PLACEHOLDER_SRI' strings with actual computed hashes/integrity values or remove SRI entirely if not using it. The empty CSRF token meta tag must be populated server-side with a real token. (2) Fix the authentication flow - remove token from localStorage and WebSocket URL parameters. Instead, use httpOnly secure cookies for token storage and pass authentication via WebSocket handshake headers or implement a secure token exchange after connection. (3) Fix CSP font configuration - add 'https://fonts.googleapis.com' to font-src directive, and remove SRI integrity check from Google Fonts link since their CSS is dynamically generated. (4) Complete the truncated CSS declaration (.diff-field-value background rule). (5) Add WebSocket message validation/sanitization before JSON.parse to prevent injection attacks. (6) Implement exponential backoff in WebSocket reconnection logic. (7) Add proper error boundaries and loading states. (8) Make sidebar responsive for mobile. (9) Fix accessibility: convert nav-link divs to semantic buttons/links with proper ARIA labels and add skip-to-content link. (10) Ensure color contrast meets WCAG AA standards. This code cannot be deployed in its current state - it has both security holes and will break in production due to CSP violations."
+      },
+      "t": 958.2
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 25773
+      },
+      "t": 1073.0
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical XSS vulnerability: WebSocket message sanitization uses incomplete regex `data.replace(/<[^>]*>/g, '')` that can be bypassed with malformed HTML tags or JavaScript protocol handlers. Must implement proper HTML sanitization library (DOMPurify) or use textContent for DOM insertion instead of innerHTML.",
+          "Critical security: Missing CSRF token validation in apiRequest() function combined with credentials being sent. Add CSRF token to all state-changing requests and validate on backend. Also missing authentication mechanism for WebSocket connections allowing unauthorized access.",
+          "Critical memory leak: Unbounded array growth in state.conflicts.unshift() and state.syncExecutions.unshift() will cause browser crashes over time. Implement maximum array size limits (e.g., slice to 100 items) and proper cleanup strategies."
+        ],
+        "feedback": "IMMEDIATE FIXES REQUIRED:\n\n1. **XSS Prevention** - Replace all instances of `element.innerHTML = escapeHtml(data)` with `element.textContent = data` for user-generated content. If HTML rendering is required, integrate DOMPurify library and use: `element.innerHTML = DOMPurify.sanitize(data, {ALLOWED_TAGS: [], ALLOWED_ATTR: []})`\n\n2. **CSRF Protection** - Add to apiRequest(): `const csrfToken = document.querySelector('meta[name=\"csrf-token\"]').content; headers['X-CSRF-Token'] = csrfToken;` and ensure backend validates this token.\n\n3. **Memory Management** - Add to updateConflicts(): `state.conflicts = state.conflicts.slice(0, 100);` and same for syncExecutions. Better: implement circular buffer or use Map with size tracking.\n\n4. **WebSocket Security** - Add authentication: `const ws = new WebSocket(wsUrl + '?token=' + encodeURIComponent(authToken));` and validate on backend.\n\n5. **CSP Hardening** - Remove 'unsafe-inline' and use nonces: Generate random nonce server-side, add to CSP header and script tags: `<script nonce=\"{{nonce}}\">`\n\n6. **Complete CSS** - The CSS is truncated at `.empty-state` definition. Complete the rule and verify no syntax errors remain.\n\n7. **Input Validation** - Add WebSocket URL validation: `if (!/^wss?:\\/\\/[a-zA-Z0-9.-]+/.test(wsUrl)) throw new Error('Invalid WebSocket URL');`\n\nTESTING NEEDED: XSS payloads (`<img src=x onerror=alert(1)>`, `<svg/onload=alert(1)>`), memory stress test with 10000+ sync executions, CSRF with requests from different origin, WebSocket hijacking attempts."
+      },
+      "t": 1126.6
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 28457
+      },
+      "t": 1284.9
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Critical Security: CSRF token meta tag is empty, XSS vulnerability in modal onclick handlers without sanitization, and WebSocket auth token exposed in URL query parameters",
+          "Critical Security: CSP policy is overly permissive with unrestricted 'wss:' and 'https:' directives, and inline onclick handlers violate CSP causing potential security bypasses",
+          "Critical Completeness: Code is incomplete with HTML cut off mid-tag, debounce function body missing, and navigation/body sections truncated making the application non-functional"
+        ],
+        "feedback": "BLOCKING ISSUES:\n1. CSRF Protection: Set actual token value in <meta name='csrf-token' content='{{ csrf_token }}'>\n2. XSS Prevention: Replace onclick='${action.handler}' with addEventListener pattern using proper event delegation and sanitization\n3. WebSocket Security: Move authentication token from URL to connection headers or first message payload: ws.send(JSON.stringify({type:'auth',token}))\n4. CSP Hardening: Replace 'wss:' with 'wss://yourdomain.com' and 'https:' with specific API domains\n5. Code Completion: Finish debounce function implementation and complete HTML closing tags for body/html\n6. Complete all truncated sections including navigation menu and main content areas\n\nMEDIUM PRIORITY:\n7. Add responsive CSS with @media queries for mobile (sidebar should collapse)\n8. Implement keyboard accessibility: add ESC key handler for modals and proper ARIA labels\n9. Add rate limiting for WebSocket reconnection using exponential backoff\n10. Remove !important flags from CSS and use proper specificity\n\nThe application has critical security vulnerabilities and is incomplete. Fix security issues and complete the code before deployment."
+      },
+      "t": 1334.8
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "SyncExecutionDetailView not implemented (only stub detected)",
+          "SyncHealthMonitorView not implemented",
+          "ConflictResolutionView not implemented (spec appears cut off)",
+          "Critical functions missing: startSyncExecution, pollSalesforceChanges, subscribeToCDC",
+          "Field transformation functions missing: applyFieldTransformations, transformDirectCopy, transformStringFormat, transformDateConversion, transformLookupResolution, transformFormulaCalculation",
+          "Validation function missing: validateAgainstSchema",
+          "Bidirectional sync conflict handling not implemented",
+          "Retry logic with exponential backoff not implemented",
+          "Background worker architecture with job queues not implemented",
+          "Database-backed state management not visible",
+          "Health monitoring with alerting for repeated failures not implemented",
+          "REST APIs for manual triggering and monitoring not implemented",
+          "Detailed audit logs system not fully implemented",
+          "WebSocket/CDC subscription for real-time Salesforce changes not implemented",
+          "Conflict resolution strategies not implemented",
+          "Alert configuration panel not implemented",
+          "Notification history not implemented",
+          "Performance metrics tracking (records/sec, API calls) not implemented",
+          "Retry Failed Records functionality not implemented",
+          "Export to CSV functionality not implemented",
+          "Infinite scroll option for SyncHistoryView not implemented"
+        ],
+        "note": "Only partial UI implementation detected. Code shows basic dashboard structure with stat cards and navigation, but lacks all backend sync engine functionality, 3+ major views, critical data transformation/validation functions, conflict resolution, retry mechanisms, job queue system, and real-time monitoring capabilities. This is approximately 15-20% complete."
+      },
+      "t": 1343.6
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 28993
+      },
+      "t": 1499.5
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Sidebar is fixed position with no mobile hamburger menu - will completely break mobile UX by covering content",
+          "Main content has fixed 240px left margin that doesn't adapt on mobile - content will be partially hidden",
+          "No keyboard navigation support for modals - cannot tab through form fields or close with ESC key",
+          "Modal close button has no accessible label or ARIA attributes - screen readers will announce as unlabeled button",
+          "Navigation links use <a> tags with data-view attributes but no href - breaks keyboard navigation and right-click context menu",
+          "Action menu dropdown has no keyboard accessibility - cannot open or navigate with keyboard alone",
+          "Tables have no responsive solution for mobile - horizontal overflow will require awkward scrolling on small screens",
+          "Filter inputs have no associated <label> elements - screen readers cannot identify input purposes"
+        ]
+      },
+      "t": 1555.8
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 30205
+      },
+      "t": 1713.0
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 2,
+        "blocking_issues": [
+          "Configuration view SVG path is truncated in the source code - this will cause a rendering error for the configuration navigation icon",
+          "No keyboard navigation implementation between views - users cannot navigate the application using Tab/Arrow keys effectively",
+          "Modal close buttons lack proper keyboard trap - focus can escape modal when open, violating WCAG 2.1 AA",
+          "Form inputs missing required/error state ARIA attributes (aria-required, aria-invalid, aria-describedby)",
+          "No skip-to-content link for keyboard users to bypass navigation",
+          "Color contrast issues: --text-secondary (#666) on --bg-card (#FFF) is 5.74:1 - fails WCAG AA for small text (requires 7:1)",
+          "Tables missing proper ARIA labels and table headers lack scope attributes for screen readers",
+          "Incomplete code block at line ~350 (startSyncExecution function cuts off mid-condition)"
+        ]
+      },
+      "t": 1767.9
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1783.5
+    },
+    {
+      "agent": "task_generator",
+      "data": {
+        "next": "Sync Mapping Configuration Interface"
+      },
+      "t": 1804.6
+    }
+  ],
+  "cost": 1.7790450000000002
+}

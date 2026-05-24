@@ -1,0 +1,140 @@
+# RESEARCH REPORT: Smart Priority Scoring for Renzo Contacts
+
+## EXISTING_FEATURES:
+
+- **Contact Storage**: localStorage key 'renzo_contacts' stores contact objects
+- **Contact Data Model**: Each contact has: name, company, tier, frequency, lastContact, email, phone, notes
+- **Contact Form**: HTML form with inputs for existing contact fields
+- **Contact Rendering**: `renderContacts()` function displays contacts in a table/card grid
+- **Contact Card System**: `.contact-card`, `.contact-card-header`, `.contact-card-title`, `.contact-card-subtitle`, `.contact-card-meta`, `.contact-card-actions` classes
+- **Badge System**: `.badge`, `.tier-badge` classes with tier-specific styling (A/B/C/D tiers)
+- **Status Badge System**: `.status-badge`, `.status-pending`, `.status-sent`, `.status-failed` classes
+- **AI Message Generation**: `generateAiMessage()` function creates outreach messages
+- **Modal System**: `.modal`, `.modal-content`, `.modal-header`, `.modal-body`, `.modal-footer` classes
+- **Form Inputs**: `.form-group`, `.form-label`, `.form-input`, `.form-textarea`, `.form-select` classes
+- **Button System**: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-sm` classes
+- **Color System**: CSS variables for --forest-green, --gold, --cream, --text-primary, --text-secondary, --border
+- **Alert System**: `.alert`, `.alert-error`, `.alert-success`, `.alert-warning` classes
+- **Outreach Queue**: `.outreach-queue-item`, `.outreach-queue-header`, `.outreach-queue-contact`, `.outreach-queue-message` classes
+- **Insights System**: `.insights-grid`, `.insight-card`, `.insight-card-value`, `.insight-card-label` classes
+- **Search/Filter**: `.search-bar`, `.search-input`, `.filters`, `.filter-select` classes
+- **Loading States**: `.loading-spinner` animation
+- **Empty States**: `.empty-state`, `.empty-state-icon`, `.empty-state-title` classes
+
+## MISSING_FEATURES:
+
+- **Priority Score Computation**: No `computePriorityScore(c)` function exists
+- **Outreach Trigger Computation**: No `computeOutreachTrigger(c)` function exists
+- **Contract Expiry Field**: No 'contractExpiry' input field in contact form
+- **Invoice Amount Field**: No 'invoiceAmount' input field in contact form
+- **Last Contact Date Field**: No 'lastContactDate' input field in contact form (note: 'lastContact' exists but may be different format)
+- **Priority Score Badge**: No visual priority score badge in contact display
+- **Priority-Based Sorting**: No sorting by priority score in `renderContacts()`
+- **Priority Score Colors**: No CSS classes for priority score badges (need red/amber/green based on thresholds)
+- **Outreach Trigger Display**: No display of urgent trigger reason in AI message generation or reasoning box
+
+## CHANGES_NEEDED:
+
+- **Contact Form HTML**: Must add three new input fields after the 'notes' textarea:
+  - contractExpiry (type="date", label "Contract Expiry")
+  - invoiceAmount (type="number", label "Outstanding Invoice $")
+  - lastContactDate (type="date", label "Last Contact Date")
+  
+- **Contact Data Model**: Must extend to store contractExpiry, invoiceAmount, lastContactDate fields
+
+- **renderContacts() Function**: Must be modified to:
+  - Call `computePriorityScore()` for each contact
+  - Sort contacts by priority score descending before rendering
+  - Include priority score badge in the rendered HTML (next to tier badge)
+
+- **generateAiMessage() Function**: Must be modified to:
+  - Call `computeOutreachTrigger(contact)` 
+  - Include the trigger string in the AI prompt
+  - Display the trigger in the reasoning box
+
+- **Contact Save/Update Logic**: Must save the three new fields to localStorage
+
+## REUSE:
+
+- **Badge Pattern**: Reuse existing `.badge`, `.tier-badge` structure for priority score badge
+- **Form Pattern**: Use existing `.form-group`, `.form-label`, `.form-input` classes for new fields
+- **Color Variables**: Utilize existing CSS custom properties (--error for red, --warning for amber, --success for green)
+- **Contact Card Layout**: Leverage existing `.contact-card-header` flex structure to add priority badge
+- **localStorage Pattern**: Follow existing pattern for reading/writing 'renzo_contacts'
+- **Alert/Status Badge Pattern**: Reference `.status-badge` classes as template for priority badges
+- **Date/Number Input Styling**: Apply existing form input styles to new fields
+- **Modal Form Structure**: Use existing `.modal-body` form layout pattern
+
+## RISKS:
+
+- **Data Migration**: Existing contacts in localStorage won't have the three new fields (contractExpiry, invoiceAmount, lastContactDate) - need default values or null handling
+- **Date Format Inconsistency**: Existing 'lastContact' field format may conflict with new 'lastContactDate' - need to verify format compatibility
+- **Null/Undefined Handling**: `computePriorityScore()` must handle missing field values gracefully (e.g., contacts without contractExpiry)
+- **Sort Performance**: Adding priority calculation and sorting to every render could impact performance with large contact lists
+- **Visual Clutter**: Adding priority badge next to tier badge may create crowded UI - need careful placement
+- **Breaking Changes**: Modifying `renderContacts()` signature or behavior could break other code that calls it
+- **AI Prompt Length**: Including outreach trigger in `generateAiMessage()` prompt could exceed token limits or change message quality
+- **Division by Zero**: Priority score formula uses division - need safe math operations
+- **Date Math**: Computing daysSince and contract expiry urgency requires robust date parsing
+- **localStorage Limits**: Adding three fields per contact increases storage size
+
+## DATA_STRUCTURES:
+
+**localStorage Keys:**
+- `renzo_contacts` - Array of contact objects
+
+**Contact Object Structure (Current):**
+```javascript
+{
+  name: string,
+  company: string,
+  tier: string,        // A/B/C/D
+  frequency: string,   
+  lastContact: string, // date format unknown
+  email: string,
+  phone: string,
+  notes: string
+}
+```
+
+**Contact Object Structure (Required After Changes):**
+```javascript
+{
+  name: string,
+  company: string,
+  tier: string,
+  frequency: string,
+  lastContact: string,
+  email: string,
+  phone: string,
+  notes: string,
+  contractExpiry: string,      // NEW - date format YYYY-MM-DD
+  invoiceAmount: number,        // NEW - dollar amount
+  lastContactDate: string       // NEW - date format YYYY-MM-DD
+}
+```
+
+**Priority Score Algorithm:**
+- Returns: 0-100 (number)
+- Formula: `(min(daysSince/90, 1) * 40) + (contractExpiryUrgency * 30) + (min(invoiceAmount/10000, 1) * 30)`
+- Components:
+  - Days since last contact component: max 40 points (caps at 90 days)
+  - Contract expiry urgency component: max 30 points
+  - Invoice amount component: max 30 points (caps at $10,000)
+
+**Outreach Trigger Return Values:**
+- Returns: string (most urgent trigger)
+- Options:
+  - "Contract expires in X days"
+  - "Invoice $X outstanding"
+  - "Not contacted in X days"
+
+**Priority Score Badge Thresholds:**
+- 80+: Red (high priority) - use --error or --priority-high
+- 50-79: Amber (medium priority) - use --warning or --priority-medium  
+- <50: Green (low priority) - use --success or --priority-low
+
+**CSS Classes Referenced in Code:**
+- `.priority-score-high` - exists (gradient with --priority-high)
+- `.priority-score-medium` - exists (gradient with --priority-medium, --gold)
+- `.priority-score-low` - exists (gradient with --priority-low, #10b981)

@@ -1,0 +1,186 @@
+# TECHNICAL SPECIFICATION: CSV Import for Renzo Contacts
+
+## OVERVIEW
+Add CSV import capability to the existing Renzo contacts page with a surgical approach. Users click an "Import CSV" button, select a CSV file, preview first 5 rows with column mapping controls, then confirm import. The feature integrates seamlessly with existing contact storage and UI patterns.
+
+## VIEWS
+
+**Contacts Toolbar Enhancement:**
+- Add hidden file input (`#csv-file-input`, `accept=".csv"`, `display: none`)
+- Add "Import CSV" button (`.btn .btn-secondary`, positioned next to existing Add Contact button)
+- Use existing toolbar container, no structural changes
+
+**CSV Preview Modal:**
+- Modal overlay using existing `.modal` pattern
+- Header: "Import Contacts from CSV" with close button
+- Body: preview table showing first 5 rows, column mapping dropdowns for each CSV column
+- Footer: "Cancel" and "Import X Contacts" buttons
+- Mapping dropdowns: options = "Name", "Company", "Email", "Phone", "Ignore"
+
+## FUNCTIONS
+
+**handleCSVButtonClick():**
+1. Trigger click on hidden file input `#csv-file-input`
+
+**handleCSVFileSelect(event):**
+1. Get selected file from `event.target.files[0]`
+2. Validate file exists and has .csv extension
+3. Create FileReader instance
+4. On reader.onload: call `parseCSV(reader.result)`
+5. On success: call `showCSVPreview(parsedRows, detectedHeaders)`
+6. On error: show error toast "Invalid CSV file"
+7. Reset file input value to allow re-selection
+
+**parseCSV(text):**
+1. Split text by `\n` (handle `\r\n` by trimming)
+2. Parse first row as potential headers
+3. Detect header indices: loop through first row cells, check if cell.toLowerCase() contains "name", "company", "email", or "phone"
+4. If headers detected: slice rows from index 1, map to objects using header keys
+5. If no headers: treat all rows as data, use generic keys (col0, col1, etc.)
+6. Return object: `{ rows: Array, headers: Array, hasHeaders: Boolean }`
+
+**showCSVPreview(data):**
+1. Clone existing modal template or create modal elements
+2. Set modal title "Import Contacts from CSV"
+3. Build preview table: thead with "CSV Column" and "Maps To" headers
+4. For each column in data.headers (max first 5 sample values):
+   - Create row with column name and first sample value
+   - Add dropdown with id `mapping-${columnIndex}`
+   - Dropdown options: Name, Company, Email, Phone, Ignore
+   - Auto-select based on header detection (case-insensitive match)
+5. Store data.rows in modal's dataset attribute
+6. Attach event to Import button: `confirmCSVImport()`
+7. Show modal (add `.active` class)
+
+**confirmCSVImport():**
+1. Read mapping dropdowns to build columnMap object `{ csvColumnIndex: contactField }`
+2. Retrieve full rows from modal dataset
+3. Initialize counters: imported = 0, skipped = 0
+4. Loop through rows:
+   - Extract name, company, email, phone using columnMap
+   - Validate: if name is empty AND company is empty, increment skipped and continue
+   - Create contact object with timestamp, id (Date.now() + random)
+   - Add to contacts array
+5. Save contacts to localStorage key `renzo_contacts`
+6. Close modal
+7. Refresh contacts display (trigger existing render function)
+8. Show success toast: "Imported X contacts, skipped Y rows"
+
+**showToast(message, type):**
+1. Create toast element with class `.toast .toast-${type}`
+2. Set message text
+3. Append to body
+4. Auto-remove after 3 seconds with fade-out transition
+
+## DATA
+
+**localStorage.renzo_contacts:**
+- Array of contact objects
+- Each contact: `{ id, name, company, email, phone, createdAt, updatedAt }`
+- Format: JSON string
+
+**Modal Temporary Data:**
+- `data-csv-rows`: JSON stringified array of parsed CSV rows
+- Stored in modal element's dataset during preview
+
+**Column Mapping:**
+- Runtime object `{ columnIndex: 'name'|'company'|'email'|'phone'|null }`
+- Built from dropdown selections at import confirmation
+
+## API
+
+No external API calls. All operations are client-side using:
+- FileReader API for CSV file reading
+- localStorage for contact persistence
+- DOM manipulation for UI updates
+
+## DESIGN
+
+**Import Button:**
+- Class: `.btn .btn-secondary .btn-import-csv`
+- Icon: 📄 or upload icon (use existing icon pattern)
+- Text: "Import CSV"
+- Margin-left: 12px (spacing from Add Contact button)
+
+**CSV Preview Modal:**
+- Width: 600px
+- Max-height: 80vh
+- Background: var(--cream) or white
+- Border-radius: 12px
+- Box-shadow: var(--shadow-xl)
+
+**CSV Preview Table:**
+- Class: `.csv-preview-table`
+- Width: 100%
+- Border-collapse: collapse
+- Thead background: var(--forest-green) with 10% opacity
+- Cell padding: 12px
+- Border: 1px solid var(--border)
+- Font-size: 14px
+
+**Column Mapping Dropdowns:**
+- Class: `.csv-mapping-select`
+- Width: 160px
+- Height: 36px
+- Border: 1px solid var(--border)
+- Border-radius: 6px
+- Padding: 6px 10px
+- Font-size: 14px
+
+**Sample Value Display:**
+- Class: `.csv-sample-value`
+- Color: var(--text-secondary)
+- Font-style: italic
+- Font-size: 13px
+- Truncate with ellipsis at 30 characters
+
+**Toast Notification:**
+- Class: `.toast .toast-success` or `.toast-error`
+- Position: fixed, bottom: 24px, right: 24px
+- Background: var(--forest-green) for success, #dc3545 for error
+- Color: white
+- Padding: 14px 20px
+- Border-radius: 8px
+- Box-shadow: var(--shadow-md)
+- Animation: slide up and fade in (0.3s), fade out (0.3s)
+- Z-index: 10000
+
+## ERRORS
+
+**File Selection Errors:**
+- No file selected: silent (no action)
+- Non-CSV file: toast "Please select a CSV file"
+- File read error: toast "Could not read file. Please try again."
+
+**CSV Parsing Errors:**
+- Empty file: toast "CSV file is empty"
+- Malformed CSV: attempt best-effort parse, show preview with available data
+- Single column CSV: allow but show warning in preview "Only one column detected"
+
+**Import Validation:**
+- All rows missing name AND company: toast "No valid contacts found. Each row needs a name or company."
+- Partial validation: skip invalid rows, show count in success message
+- No columns mapped: toast "Please map at least one column to a contact field"
+
+**localStorage Errors:**
+- Quota exceeded: toast "Storage full. Please delete some contacts and try again."
+- Parse error on existing data: initialize empty array, log error to console
+
+## SCOPE_CHECK
+
+**Estimated Total Lines: 380**
+
+Breakdown:
+- HTML additions: 15 lines (file input + button)
+- CSS additions: 85 lines (modal table, dropdowns, toast)
+- JavaScript functions: 280 lines
+  - handleCSVButtonClick: 5 lines
+  - handleCSVFileSelect: 35 lines
+  - parseCSV: 60 lines
+  - showCSVPreview: 95 lines
+  - confirmCSVImport: 70 lines
+  - showToast: 15 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+The entire CSV import feature can be implemented as a single cohesive addition. All code fits within one file modification with clear insertion points in the existing contacts page structure. The 380-line estimate is well under the 650-line threshold, and the feature has natural boundaries with no dependencies requiring separate tasks.

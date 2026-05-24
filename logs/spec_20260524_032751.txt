@@ -1,0 +1,48 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a minimal version footer to the Renzo sidebar that displays "Renzo v1.0 — Built by Agent Pipeline" positioned below the existing logout button. The footer will use the existing dark sidebar color scheme with muted text styling to maintain visual hierarchy. This is a single-element addition requiring no structural changes to the existing layout.
+
+## VIEWS
+- **Sidebar Footer Version Display**: A small text element appended to the existing `.sidebar-footer` container, positioned below the logout button. Uses muted gray text with uppercase styling to match the existing sidebar aesthetic. No new containers needed — direct insertion into existing DOM structure.
+
+## FUNCTIONS
+- **No JavaScript required**: This is a pure HTML/CSS addition with no interactive behavior.
+
+## DATA
+- **version**: Static string "v1.0" hardcoded in HTML
+- **attribution**: Static string "Built by Agent Pipeline" hardcoded in HTML
+
+## API
+- **No API changes**: This is a frontend-only UI modification with no backend interaction.
+
+## DESIGN
+- **Typography**: 
+  - Font: DM Sans (already loaded)
+  - Size: 10px
+  - Weight: 400 (normal)
+  - Letter spacing: 0.3px
+  - Text transform: none (natural casing for readability)
+  - Line height: 1.4
+- **Colors**:
+  - Text color: `rgba(232, 228, 220, 0.35)` (slightly more muted than .sidebar-user labels)
+  - Use existing sidebar background (no background change needed)
+- **Spacing**:
+  - Margin-top: 16px (separation from logout button)
+  - No additional padding (inherits from .sidebar-footer container)
+  - Text align: center
+- **Layout**:
+  - Display: block
+  - Width: 100% (fills sidebar-footer width)
+  - Position: Static (normal flow, last element in .sidebar-footer)
+- **Content Format**: "Renzo v1.0 — Built by Agent Pipeline" (em dash character: —)
+
+## ERRORS
+- **No error states**: Static display element with no user interaction or data dependencies.
+
+## SCOPE_CHECK
+- **Estimated total lines**: ~15 lines total
+  - HTML: ~3 lines (one div with text content)
+  - CSS: ~10 lines (one class definition with styling properties)
+  - No JavaScript required
+- **SINGLE_TASK**: Proceed as one build — well under 650 line limit. This is a minimal addition requiring only HTML markup insertion and a single CSS class definition.

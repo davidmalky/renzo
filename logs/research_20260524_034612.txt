@@ -1,0 +1,62 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+- Login view with authentication UI (`#loginView`, `.login-card`, `.login-logo`)
+- App view with sidebar navigation (`#appView`, `.sidebar`)
+- Sidebar logo with branding ("Renzo" + tagline in `.sidebar-logo`)
+- Sidebar navigation items (`.nav-item`, `.nav-icon`, `.nav-badge`)
+- Sidebar footer section (`.sidebar-footer`)
+- Sidebar user display (`.sidebar-user`)
+- Sidebar logout button (`.sidebar-logout`)
+- Complete CSS design system with color variables (`:root` custom properties)
+- Dark sidebar color scheme (`--sidebar:#141410`, `--sidebar-text:#EAE5DB`)
+- Typography system using 'DM Sans' and 'DM Serif Display' fonts
+- Responsive button styles (`.btn`, `.btn-primary`, `.btn-ghost`, etc.)
+- Main content area with views (`.main`, `.view`)
+- Stats grid, cards, tables, and form elements
+- Shadow and border radius design tokens
+
+## MISSING_FEATURES:
+- Version number display element
+- Footer text showing "Renzo v1.0 – Built by Agent Pipeline"
+- CSS styling for version footer text
+- Positioning logic to place footer at bottom of sidebar
+
+## CHANGES_NEEDED:
+- Modify `index.html` to add version footer HTML element inside `.sidebar-footer` (after logout button)
+- Add new CSS class for version footer styling (e.g., `.sidebar-version`)
+- Ensure `.sidebar-footer` can accommodate additional content below logout button
+
+## REUSE:
+- **Color scheme**: Use existing `rgba(232,228,220,.4)` or similar muted sidebar text colors for version text
+- **Typography**: Use existing 'DM Sans' font family, small font size (10px-11px like `.sidebar-user`)
+- **Spacing**: Follow existing sidebar padding patterns (`padding:16px 22px` in `.sidebar-footer`)
+- **Border styling**: Maintain consistency with `border-top:1px solid rgba(255,255,255,.07)` if needed
+- **Text transformation**: Use `text-transform:uppercase` and `letter-spacing` like `.sidebar-user`
+- **Existing structure**: Place new element within existing `.sidebar-footer` div
+- **HTML structure**: Follow existing semantic HTML patterns in sidebar
+
+## RISKS:
+- **Layout conflict**: Adding content below logout button might cause overflow if sidebar is too short (mitigate: test at various viewport heights)
+- **Text wrapping**: "Built by Agent Pipeline" text might wrap awkwardly on narrow sidebars (sidebar width is fixed at 230px)
+- **Visual hierarchy**: Version text must not compete with or obscure logout button
+- **Accessibility**: Ensure sufficient color contrast for small muted text
+- **Content overflow**: `.sidebar-footer` may need flex/spacing adjustments to prevent crowding
+- **Character encoding**: Task description shows "â€"" (garbled en-dash) - use proper `–` or `-` in implementation
+
+## DATA_STRUCTURES:
+- **No localStorage usage found** in the provided codebase snippet
+- **No JavaScript data structures** visible (HTML/CSS only provided)
+- **No API endpoints** or data models present in snippet
+- **Structural note**: The HTML is truncated (ends mid-CSS rule `.priority-badge{display:inline-block;`) - full file likely contains JavaScript and additional HTML, but not relevant to this task
+
+---
+
+**RECOMMENDATION FOR PLANNER:**
+This is a straightforward CSS/HTML addition task. The implementation should:
+1. Add HTML element after `.sidebar-logout` button within `.sidebar-footer`
+2. Create new CSS class `.sidebar-version` with: small font (10-11px), muted color (rgba(232,228,220,.3-.4)), centered or left-aligned text, appropriate top margin (8-12px)
+3. Use simple text content: "Renzo v1.0 – Built by Agent Pipeline" (fix encoding issue)
+4. Test that sidebar footer accommodates new element without overflow
+
+No JavaScript changes required. No data persistence needed. Minimal risk, isolated change.

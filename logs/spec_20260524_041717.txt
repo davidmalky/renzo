@@ -1,0 +1,53 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a version footer to the Renzo application sidebar displaying "Renzo v1.0 – Built by Agent Pipeline". The footer will be inserted below the logout button in the existing `.sidebar-footer` section, styled to match the dark sidebar aesthetic with muted text and minimal visual weight.
+
+## VIEWS
+- **Sidebar Footer Enhancement**: Add version display component to existing `.sidebar-footer` section in `#appView`. Position after `.sidebar-logout` button. Uses small font, muted color, and subtle top border to separate from logout button.
+
+## FUNCTIONS
+No JavaScript functions required. This is a pure HTML/CSS addition.
+
+## DATA
+No data storage required. Version string is hardcoded in HTML markup.
+
+## API
+No API calls required.
+
+## DESIGN
+**HTML Structure**:
+- Add `<div class="sidebar-version">` after the `<button class="sidebar-logout">` element
+- Content: "Renzo v1.0 – Built by Agent Pipeline"
+
+**CSS Styling** (`.sidebar-version`):
+- Font size: `10px`
+- Color: `rgba(232,228,220,.35)` (more muted than sidebar user text)
+- Text align: `center`
+- Padding: `12px 16px 0 16px` (top spacing from logout, match horizontal padding)
+- Margin top: `12px`
+- Border top: `1px solid rgba(255,255,255,.05)` (subtle separator)
+- Letter spacing: `.3px`
+- Line height: `1.4`
+- Font weight: `400`
+
+**Positioning**:
+- Place inside existing `.sidebar-footer` container
+- Appears below logout button due to natural document flow
+- No absolute positioning needed
+
+## ERRORS
+- **No Visual Impact**: If CSS class not applied, text still displays but unstyled (graceful degradation)
+- **Overflow**: Text is short enough to fit on all viewport widths above 200px
+
+## SCOPE_CHECK
+- Estimated total lines: **15 lines** (3 HTML + 12 CSS)
+- Impact: Single file modification (`index.html`)
+- SINGLE_TASK: Proceed as one build
+
+**Breakdown**:
+- HTML addition: 3 lines
+- CSS addition: 12 lines
+- Total changes: 15 lines
+
+This is well under the 650-line limit and requires modification of only one file.

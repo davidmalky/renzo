@@ -1,0 +1,160 @@
+# TECHNICAL SPECIFICATION: BATCH OUTREACH & TRAINABLE INSTRUCTIONS
+
+## OVERVIEW
+Add batch outreach capability allowing natural language queries to filter contacts and generate AI messages in bulk. Add trainable rules system in settings allowing users to define custom AI instruction preferences that persist across all AI message generation. Surgical edits to existing Renzo codebase only.
+
+## VIEWS
+
+**Sidebar Navigation Enhancement:**
+- Add list item with button: text "Batch Outreach", data-view="batch", positioned between existing nav items
+
+**view-batch (new div):**
+- Header: h2 "Batch Outreach"
+- Instruction paragraph: "Enter a natural language query to find and message contacts. Examples: 'contracts expiring next month', 'high invoice amounts', 'not contacted recently'"
+- Textarea: id="batchPromptInput", placeholder="Describe which contacts to reach out to...", rows=4
+- Button: id="generateBatchBtn", text "Generate Batch Messages", btn btn-primary
+- Progress container: id="batchProgress", hidden by default, contains progress-bar and status text div id="batchProgressText"
+- Results container: id="batchResults", contains dynamically added outreach-queue-item elements
+
+**view-settings Enhancement:**
+- Add new section after existing settings content
+- Section header: h3 "My Outreach Rules"
+- Description paragraph: "Add custom instructions that will be included in all AI-generated messages"
+- Textarea: id="newRuleInput", placeholder="Example: Always mention our 24/7 support availability", rows=3
+- Button: id="addRuleBtn", text "Add Rule", btn btn-secondary
+- Rules list container: id="rulesList", contains dynamically rendered rule items with delete buttons
+
+## FUNCTIONS
+
+**executeBatchOutreach(query):**
+1. Parse query string for keywords: "contract"/"expiry"→contractExpiry filter, "invoice"→invoiceAmount filter, "contacted"/"contact"→lastContactDate filter
+2. Retrieve contacts array from localStorage key 'renzo_contacts'
+3. Filter contacts: if query includes "contract"/"expiry" check contractExpiry exists and within 60 days, if "invoice" check invoiceAmount > 5000, if "contacted" check lastContactDate older than 30 days or null
+4. If no matches, show alert-warning "No contacts match your query"
+5. Show batchProgress div, initialize progress bar at 0%
+6. For each matched contact: call generateAiMessage(contact, loadRules()), add result to queue localStorage key 'renzo_queue', update progress bar (current/total * 100), update batchProgressText "Processing contact X of Y"
+7. After completion: render results in batchResults using renderQueueItem() for each, show alert-success "Generated N messages"
+8. Hide batchProgress after 1 second delay
+
+**addOutreachRule():**
+1. Get value from newRuleInput textarea, trim whitespace
+2. If empty, show alert-warning "Please enter a rule" and return
+3. Retrieve existing rules from localStorage key 'renzo_rules' (parse JSON array or default [])
+4. Create rule object: {id: Date.now(), text: trimmedValue}
+5. Push to rules array, save to localStorage as JSON string
+6. Clear newRuleInput textarea
+7. Call renderRules()
+8. Show alert-success "Rule added"
+
+**deleteOutreachRule(ruleId):**
+1. Retrieve rules from localStorage key 'renzo_rules'
+2. Filter out rule with matching id
+3. Save updated array to localStorage
+4. Call renderRules()
+5. Show alert-success "Rule deleted"
+
+**loadRules():**
+1. Retrieve from localStorage key 'renzo_rules'
+2. Parse JSON, return array or empty array if null/error
+3. Map array to text strings
+4. Join with ". " separator
+5. Return formatted string: "Additional instructions: [joined rules]." or empty string if no rules
+
+**renderRules():**
+1. Call loadRules() to get rules array
+2. Clear rulesList innerHTML
+3. If rules empty: insert empty-state div with message "No custom rules yet"
+4. For each rule: create div with class "rule-item", insert rule text in span, create delete button with onclick="deleteOutreachRule(rule.id)", append to rulesList
+
+**Modify existing generateAiMessage(contact, additionalInstructions=""):**
+1. In AI prompt construction, append additionalInstructions parameter to system prompt
+2. Format: existing prompt + "\n\n" + additionalInstructions (if not empty)
+3. No other changes to function
+
+**Event Listeners (add to existing init/DOMContentLoaded):**
+- generateBatchBtn click → executeBatchOutreach(batchPromptInput.value)
+- addRuleBtn click → addOutreachRule()
+- Sidebar button[data-view="batch"] click → existing view switcher handles
+
+## DATA
+
+**localStorage 'renzo_rules':**
+- JSON array of rule objects
+- Format: [{id: timestamp_number, text: "rule_string"}, ...]
+- Example: [{"id":1704067200000,"text":"Always be concise"},{"id":1704153600000,"text":"Mention ROI benefits"}]
+
+**localStorage 'renzo_contacts' (existing):**
+- Access fields: contactExpiry (ISO date string), invoiceAmount (number), lastContactDate (ISO date string or null)
+
+**localStorage 'renzo_queue' (existing):**
+- Append new queue items from batch generation
+
+## API
+
+**No new API endpoints required.**
+- Uses existing generateAiMessage() which handles AI API calls
+- All data stored in localStorage
+
+## DESIGN
+
+**Batch View Styling:**
+- Use existing .search-input styles for batchPromptInput textarea (add class)
+- batchProgress: use existing .progress-bar structure
+- batchProgressText: font-size 14px, color #64748b, margin-top 8px
+- batchResults: margin-top 24px, display grid, gap 12px
+- Use existing .outreach-queue-item styles for results
+
+**Rules Section Styling:**
+- Section margin-top: 32px, padding-top: 32px, border-top: 1px solid #e2e8f0
+- newRuleInput: use .search-input styles, width 100%
+- rulesList: margin-top 16px, display flex, flex-direction column, gap 8px
+- rule-item: padding 12px 16px, background #f8fafc, border-radius 8px, display flex, justify-content space-between, align-items center
+- rule-item span: flex 1, font-size 14px, color #334155
+- rule-item button: btn btn-sm, background #ef4444, color white, hover background #dc2626
+
+**Reuse existing classes:**
+- btn, btn-primary, btn-secondary, btn-sm
+- alert-warning, alert-success
+- progress-bar, progress-bar-fill
+- empty-state, empty-state-title
+
+## ERRORS
+
+**Batch Outreach Errors:**
+- No query entered: alert-warning "Please enter a search query"
+- No matches found: alert-warning "No contacts match your query. Try different keywords."
+- AI generation fails for contact: catch error, log to console, continue to next contact, note in batchProgressText "Skipped 1 contact due to error"
+- localStorage quota exceeded: alert-error "Storage limit reached. Please clear old queue items."
+
+**Rules Errors:**
+- Empty rule submission: alert-warning "Please enter a rule"
+- localStorage read failure: console.error, return empty array, continue
+- localStorage write failure: alert-error "Could not save rule. Storage may be full."
+- Invalid JSON parse: console.error, treat as empty array, reinitialize
+
+**General:**
+- View not found (batch): verify div id matches data-view attribute
+- Function undefined: verify all functions added to global scope or app object
+- Contact data missing fields: use null coalescing, skip filter criteria if field undefined
+
+## SCOPE_CHECK
+
+**Estimated total lines: 420**
+
+Breakdown:
+- HTML additions (batch view, settings section): ~80 lines
+- CSS additions (rule-item, batch-specific): ~60 lines
+- executeBatchOutreach function: ~70 lines
+- addOutreachRule function: ~25 lines
+- deleteOutreachRule function: ~15 lines
+- loadRules function: ~20 lines
+- renderRules function: ~35 lines
+- generateAiMessage modification: ~10 lines
+- Event listener additions: ~15 lines
+- Helper functions (date parsing, keyword matching): ~40 lines
+- Error handling additions: ~30 lines
+- Comments and spacing: ~20 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+All functionality fits within 650-line limit. Implementation requires surgical edits to existing HTML, CSS, and JS files. No file splitting needed. Builder can complete in single pass with clear section markers for where to insert code.

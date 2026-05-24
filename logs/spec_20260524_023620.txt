@@ -1,0 +1,36 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a version number footer to the Renzo app sidebar that displays "Renzo v1.0 – Built by Agent Pipeline". This footer will be placed at the bottom of the sidebar, below the existing logout button, using the existing dark color scheme with subtle, small text styling.
+
+## VIEWS
+- AppView (#appView): Add version footer element inside `.sidebar` container, positioned after `.sidebar-footer`
+
+## FUNCTIONS
+- No JavaScript functions required (static HTML element)
+
+## DATA
+- Static text string: "Renzo v1.0 – Built by Agent Pipeline"
+
+## API
+- No API calls required
+
+## DESIGN
+- Element: `<div class="sidebar-version">Renzo v1.0 – Built by Agent Pipeline</div>`
+- Position: Inside `.sidebar`, after `.sidebar-footer` (logout button section)
+- Background: `--sidebar` (#141410) - inherited from parent
+- Text color: `rgba(232, 228, 220, .4)` (muted version of sidebar text)
+- Font: 'DM Sans', system-ui, sans-serif (inherited)
+- Font size: 10px (smaller than .sidebar-user which is 11px)
+- Letter spacing: .4px
+- Text align: center
+- Padding: 12px 22px (slightly less top/bottom than sidebar-footer's 16px)
+- Border top: 1px solid rgba(255,255,255,.05) (more subtle than .07 used above)
+- Margin top: auto (pushes to absolute bottom if sidebar uses flex)
+
+## ERRORS
+- No error states required (static content)
+
+## SCOPE_CHECK
+- Estimated total lines: 8 lines (3 lines HTML, 5 lines CSS)
+- SINGLE_TASK: proceed as one build

@@ -1,0 +1,147 @@
+# TECHNICAL SPECIFICATION: AI-GENERATED SUBJECT LINES
+
+## OVERVIEW
+Extend the AI message generation system to produce subject lines alongside message bodies. Update the Claude API prompt to return a three-field JSON object (reason, subject, message), store subjects in queue and draft items, display subjects in the queue view, and use subjects when sending emails. Add subject regeneration capability to the refinement functions.
+
+## VIEWS
+
+- **Queue View**: Add subject line display above message preview. Show subject in 13px italic gray text when present. Subject appears between lead name and message preview in each queue card.
+
+- **No changes needed to**: Dashboard, Leads, Drafts, Settings views (structure remains the same, only data model changes).
+
+## FUNCTIONS
+
+- **generateMsg(leadName, leadNotes)**:
+  1. Update Claude prompt JSON response format from `{reason, message}` to `{reason, subject, message}`
+  2. Add instruction: "subject: a 5-8 word subject line, human and specific, avoid 'Following up' cliches unless genuinely appropriate"
+  3. Parse response to extract `parsed.subject` in addition to reason and message
+  4. Store `parsed.subject` in variable
+  5. Return object with subject included: `{reason, subject, message}`
+  6. Handle missing subject gracefully with empty string fallback
+
+- **addToQueue(leadId, leadName, leadNumber, message, reason, subject)**:
+  1. Add `subject` parameter to function signature
+  2. Create queue item object including `subject: subject || ''`
+  3. Save to localStorage queue array with subject field
+  4. Re-render queue view
+
+- **saveDraft(leadId, leadName, leadNumber, message, reason, subject)**:
+  1. Add `subject` parameter to function signature
+  2. Create draft item object including `subject: subject || ''`
+  3. Save to localStorage drafts array with subject field
+  4. Update drafts display
+
+- **renderQueue()**:
+  1. Loop through queue items
+  2. For each item, check if `item.subject` exists
+  3. If subject exists, add div before message preview: `<div style="font-size:13px; font-style:italic; color:#666; margin-bottom:4px;">${item.subject}</div>`
+  4. Render message preview below subject
+  5. If no subject, display only message preview as before
+
+- **sendEmail(qid)**:
+  1. Retrieve queue item by qid
+  2. Check if `item.subject` exists and is non-empty
+  3. If subject exists, use `item.subject` as email subject
+  4. If no subject, fall back to current generated string: `"Quick note for ${item.leadName}"`
+  5. Send via Zapier webhook with subject field
+  6. Remove from queue on success
+
+- **bulkSendAll()**:
+  1. Loop through all queue items
+  2. For each item, check if `item.subject` exists
+  3. If subject exists, use `item.subject`
+  4. If no subject, fall back to `"Quick note for ${item.leadName}"`
+  5. Send each email with appropriate subject
+  6. Clear queue on completion
+
+- **refineDraft(did)**:
+  1. Execute existing message rewrite with Claude Haiku
+  2. Update draft message with refined text
+  3. Make second Claude Haiku API call for subject regeneration
+  4. Prompt: `"Given this email body, write a subject line (5-8 words, no cliches): ${refinedMessage}"`
+  5. Parse subject from response (plain text, not JSON)
+  6. Update draft item: `draft.subject = newSubject`
+  7. Save updated draft to localStorage
+  8. Re-render drafts view
+
+- **refineQueueMsg(qid)**:
+  1. Execute existing message rewrite with Claude Haiku
+  2. Update queue message with refined text
+  3. Make second Claude Haiku API call for subject regeneration
+  4. Prompt: `"Given this email body, write a subject line (5-8 words, no cliches): ${refinedMessage}"`
+  5. Parse subject from response (plain text)
+  6. Update queue item: `queueItem.subject = newSubject`
+  7. Save updated queue to localStorage
+  8. Re-render queue view
+
+- **Update all callers of addToQueue() and saveDraft()**:
+  1. After `generateMsg()` call, extract `result.subject`
+  2. Pass subject as additional parameter: `addToQueue(leadId, name, number, result.message, result.reason, result.subject)`
+  3. Pass subject to saveDraft: `saveDraft(leadId, name, number, result.message, result.reason, result.subject)`
+
+## DATA
+
+- **queue array items**: Add `subject` field (string)
+  - Format: `{id, leadId, leadName, leadNumber, message, reason, subject, timestamp}`
+  - subject: string, 5-8 words, empty string if not generated
+
+- **drafts array items**: Add `subject` field (string)
+  - Format: `{id, leadId, leadName, leadNumber, message, reason, subject, timestamp}`
+  - subject: string, 5-8 words, empty string if not generated
+
+- **localStorage keys** (no new keys, existing structure updated):
+  - `queue`: JSON array with subject field added
+  - `drafts`: JSON array with subject field added
+
+## API
+
+- **generateMsg Claude API call**:
+  - Endpoint: Claude Sonnet 3.5 (existing)
+  - Method: POST
+  - Updated prompt: Include subject field in JSON response format instruction
+  - Response: Parse three fields from JSON: `{reason, subject, message}`
+  - Error: If subject missing in response, default to empty string
+
+- **Subject regeneration API call** (new, used in refineDraft and refineQueueMsg):
+  - Endpoint: Claude Haiku (cost-effective for simple task)
+  - Method: POST
+  - Payload: `{model: "claude-3-haiku-20240307", max_tokens: 50, messages: [{role: "user", content: "Given this email body, write a subject line (5-8 words, no cliches): [message]"}]}`
+  - Response: Plain text subject line (not JSON)
+  - Error handling: If API fails, keep existing subject unchanged
+
+- **Zapier webhook** (existing, modified):
+  - Endpoint: User-configured webhook URL
+  - Method: POST
+  - Updated payload: `{phone: item.leadNumber, message: item.message, subject: item.subject || "Quick note for " + item.leadName}`
+  - No response handling change
+
+## DESIGN
+
+- **Subject line display in queue**:
+  - Font size: 13px
+  - Font style: italic
+  - Color: #666 (medium gray)
+  - Margin bottom: 4px (spacing before message preview)
+  - Position: Between lead name/number and message preview
+
+- **No other visual changes**: All other UI elements remain unchanged
+
+## ERRORS
+
+- **Missing subject in AI response**: Default to empty string, proceed with message generation
+- **Subject regeneration API failure**: Display error toast, keep existing subject unchanged, do not block message refinement
+- **Empty subject in sendEmail**: Fall back to generated string "Quick note for [name]"
+- **localStorage corruption with subject field**: Handle gracefully by treating missing subject as empty string when loading queue/drafts
+
+## SCOPE_CHECK
+
+- Estimated total lines: **180 lines**
+  - generateMsg update: 15 lines
+  - addToQueue/saveDraft updates: 10 lines
+  - renderQueue subject display: 15 lines
+  - sendEmail/bulkSendAll updates: 20 lines
+  - refineDraft/refineQueueMsg updates: 60 lines (two functions with API calls)
+  - Caller updates throughout codebase: 40 lines
+  - Error handling additions: 20 lines
+
+- **SINGLE_TASK**: Proceed as one build. Well under 650 line limit. All changes are localized modifications to existing functions plus one simple new API call pattern. No architectural changes required.

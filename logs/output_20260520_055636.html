@@ -1,0 +1,601 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Sync Dashboard - Renzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#F7F4EF;color:#1A1A1A;line-height:1.5}
+.hidden{display:none!important}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+.app-container{display:flex;min-height:100vh}
+.sidebar{width:240px;background:#1A1A1A;color:#F7F4EF;display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:fixed;height:100vh;overflow-y:auto}
+.sidebar-logo{font-size:24px;font-weight:700;color:#2D6A4F;padding:0 24px;margin-bottom:32px}
+.sidebar-nav{flex:1}
+.nav-item{padding:12px 24px;cursor:pointer;transition:background .2s;display:flex;align-items:center;gap:8px;border:none;background:transparent;color:inherit;width:100%;text-align:left;font-size:14px}
+.nav-item:hover,.nav-item:focus{background:rgba(255,255,255,.05);outline:2px solid #40916C;outline-offset:-2px}
+.nav-item.active{background:#2D6A4F;border-left:3px solid #40916C}
+.main-content{flex:1;overflow-y:auto;padding:32px;margin-left:240px;max-width:calc(100% - 240px)}
+.view{display:none}
+.view.active{display:block}
+.breadcrumb{display:flex;gap:8px;align-items:center;color:#666;font-size:14px;margin-bottom:24px}
+.breadcrumb-separator{color:#999}
+.section-header{margin-bottom:24px}
+.section-title{font-size:28px;font-weight:700;margin-bottom:8px}
+.section-subtitle{color:#666;font-size:14px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#FFF;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1);position:relative}
+.stat-label{font-size:13px;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:32px;font-weight:700;margin-bottom:4px}
+.stat-delta{font-size:12px;display:flex;align-items:center;gap:4px}
+.stat-delta.positive{color:#2D6A4F}
+.stat-delta.positive::before{content:'↑ ';font-weight:700}
+.stat-delta.negative{color:#D32F2F}
+.stat-delta.negative::before{content:'↓ ';font-weight:700}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-dot.success{background:#2D6A4F}
+.status-dot.warning{background:#F59E0B}
+.status-dot.error{background:#D32F2F}
+.status-text{margin-left:4px;font-size:13px}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn:focus{outline:2px solid #40916C;outline-offset:2px}
+.btn-primary{background:#2D6A4F;color:#FFF}
+.btn-primary:hover{background:#40916C}
+.btn-primary:disabled{background:#CCC;cursor:not-allowed}
+.btn-secondary{background:#E5E5E5;color:#1A1A1A}
+.btn-secondary:hover{background:#D5D5D5}
+.progress-indicator{background:#FFF;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:24px}
+.progress-bar{width:100%;height:8px;background:#E5E5E5;border-radius:4px;overflow:hidden;margin:12px 0}
+.progress-fill{height:100%;background:#2D6A4F;border-radius:4px;transition:width .3s ease;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.7}}
+.progress-info{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;color:#666}
+.log-container{display:flex;gap:24px}
+.filter-panel{width:260px;background:#FFF;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1);align-self:flex-start;position:sticky;top:32px}
+.filter-section{margin-bottom:24px}
+.filter-label{font-weight:600;font-size:14px;margin-bottom:12px;display:block}
+.filter-group{display:flex;flex-direction:column;gap:8px}
+.checkbox-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px}
+.checkbox-label input[type="checkbox"]{width:16px;height:16px;cursor:pointer}
+.checkbox-label input[type="checkbox"]:focus{outline:2px solid #40916C;outline-offset:2px}
+.date-presets{display:flex;flex-direction:column;gap:4px}
+.date-preset{padding:8px 12px;background:#F7F4EF;border:1px solid #E5E5E5;border-radius:6px;cursor:pointer;font-size:13px;text-align:center;transition:all .2s}
+.date-preset:hover,.date-preset:focus{background:#E5E5E5;outline:2px solid #40916C;outline-offset:-2px}
+.date-preset.active{background:#2D6A4F;color:#FFF;border-color:#2D6A4F}
+.log-table-container{flex:1;background:#FFF;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden}
+.log-table{width:100%;border-collapse:collapse}
+.log-table thead{position:sticky;top:0;background:#FFF;z-index:10}
+.log-table th{text-align:left;padding:12px;font-size:13px;font-weight:600;color:#666;border-bottom:2px solid #E5E5E5;text-transform:uppercase;letter-spacing:.5px}
+.log-table td{padding:12px;border-bottom:1px solid #F0F0F0}
+.log-row{cursor:pointer;transition:background .2s}
+.log-row:hover,.log-row:focus-within{background:#F7F4EF}
+.log-row:focus{outline:2px solid #40916C;outline-offset:-2px}
+.log-row.expanded{background:#F7F4EF}
+.expand-icon{transition:transform .2s;user-select:none}
+.log-row.expanded .expand-icon{transform:rotate(90deg)}
+.status-badge{padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase}
+.status-badge.success{background:#D1FAE5;color:#065F46}
+.status-badge.failed{background:#FEE;color:#991B1B}
+.status-badge.conflict{background:#FEF3C7;color:#92400E}
+.status-badge.in-progress{background:#DBEAFE;color:#1E40AF}
+.detail-row{background:#F7F4EF}
+.detail-content{padding:16px;font-size:13px}
+.field-changes{display:grid;gap:12px}
+.field-change{display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px;background:#FFF;border-radius:6px}
+.field-name{font-weight:600}
+.field-value{color:#666}
+.field-value.old{text-decoration:line-through}
+.field-value.new{color:#2D6A4F;font-weight:500}
+.error-summary{background:#FFF;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:24px}
+.error-summary-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.error-summary-header:focus{outline:2px solid #40916C;outline-offset:2px}
+.error-list{margin-top:16px;display:grid;gap:12px}
+.error-item{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#FEF3F2;border-left:3px solid #D32F2F;border-radius:6px}
+.error-info{flex:1}
+.error-type{font-weight:600;margin-bottom:4px}
+.error-meta{font-size:12px;color:#666}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal-content{background:#FFF;border-radius:12px;padding:32px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
+.modal-large .modal-content{max-width:700px}
+.modal-close{position:absolute;top:16px;right:16px;background:transparent;border:none;font-size:24px;cursor:pointer;color:#666;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.modal-close:hover,.modal-close:focus{background:#F0F0F0;outline:2px solid #40916C}
+.modal-title{font-size:24px;font-weight:700;margin-bottom:16px}
+.toast-container{position:fixed;top:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.toast{background:#1A1A1A;color:#FFF;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px;min-width:300px;pointer-events:auto;animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-left:4px solid #2D6A4F}
+.toast.error{border-left:4px solid #D32F2F}
+.toast.warning{border-left:4px solid #F59E0B}
+.toast-close{background:transparent;border:none;color:#FFF;cursor:pointer;font-size:18px;margin-left:auto;padding:4px;border-radius:4px}
+.toast-close:hover,.toast-close:focus{background:rgba(255,255,255,.1);outline:2px solid #FFF}
+</style>
+</head>
+<body>
+<div class="app-container">
+<aside class="sidebar" role="navigation" aria-label="Main navigation">
+<div class="sidebar-logo">Renzo</div>
+<nav class="sidebar-nav">
+<button class="nav-item" data-view="dashboard" tabindex="0">📊 Dashboard</button>
+<button class="nav-item active" data-view="sync" tabindex="0">🔄 Sync Activity</button>
+<button class="nav-item" data-view="contacts" tabindex="0">👥 Contacts</button>
+<button class="nav-item" data-view="settings" tabindex="0">⚙️ Settings</button>
+</nav>
+</aside>
+<main class="main-content">
+<div class="view active" id="syncView" role="main">
+<nav class="breadcrumb" aria-label="Breadcrumb">
+<span>Integration</span>
+<span class="breadcrumb-separator">/</span>
+<span>Salesforce</span>
+<span class="breadcrumb-separator">/</span>
+<span aria-current="page">Sync Activity</span>
+</nav>
+<header class="section-header">
+<h1 class="section-title">Contact Sync Dashboard</h1>
+<p class="section-subtitle">Monitor Salesforce-Renzo contact synchronization</p>
+</header>
+<div class="dashboard-grid">
+<div class="stat-card">
+<div class="stat-label">Total Syncs (30 Days)</div>
+<div class="stat-value">1,247</div>
+<div class="stat-delta positive" role="status" aria-label="Increased by 8.2%">8.2%<span class="visually-hidden"> increase</span></div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Average Duration</div>
+<div class="stat-value">2.4<span style="font-size:16px">s</span></div>
+<div class="stat-delta positive" role="status" aria-label="Improved by 12% faster">12% faster<span class="visually-hidden"> improvement</span></div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Error Rate</div>
+<div class="stat-value" style="color:#2D6A4F">3.2<span style="font-size:16px">%</span></div>
+<div class="stat-delta positive" role="status" aria-label="Decreased by 1.1%">1.1%<span class="visually-hidden"> decrease</span></div>
+</div>
+<div class="stat-card">
+<div class="stat-label">Last Successful Sync</div>
+<div class="stat-value" style="font-size:18px;font-weight:600;color:#666">2 minutes ago</div>
+<div style="margin-top:12px">
+<span class="status-dot success" aria-hidden="true"></span>
+<span
+// Data Store
+const AppState = {
+  syncLogs: [],
+  filters: {
+    dateRange: 'last7days',
+    statuses: [],
+    recordTypes: [],
+    operationTypes: []
+  },
+  activeSyncId: null,
+  user: null,
+  currentView: 'sync'
+};
+
+// Authentication
+function initAuth() {
+  const token = localStorage.getItem('renzo_auth_token');
+  if (!token) {
+    window.location.href = '/login';
+    return false;
+  }
+  AppState.user = JSON.parse(localStorage.getItem('renzo_user') || '{}');
+  return true;
+}
+
+function logout() {
+  localStorage.removeItem('renzo_auth_token');
+  localStorage.removeItem('renzo_user');
+  window.location.href = '/login';
+}
+
+// Navigation
+function initNavigation() {
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+    btn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        switchView(btn.dataset.view);
+      }
+    });
+  });
+}
+
+function switchView(viewName) {
+  AppState.currentView = viewName;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewName + 'View')?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewName);
+  });
+}
+
+// API Layer
+async function apiRequest(endpoint, options = {}) {
+  const token = localStorage.getItem('renzo_auth_token');
+  const response = await fetch(`/api${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
+    }
+  });
+  if (response.status === 401) {
+    logout();
+    throw new Error('Unauthorized');
+  }
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function fetchSyncLogs(filters = {}) {
+  const params = new URLSearchParams({
+    dateRange: filters.dateRange || 'last7days',
+    statuses: (filters.statuses || []).join(','),
+    recordTypes: (filters.recordTypes || []).join(','),
+    operationTypes: (filters.operationTypes || []).join(',')
+  });
+  return apiRequest(`/sync-logs?${params}`);
+}
+
+async function triggerSync() {
+  return apiRequest('/sync/trigger', { method: 'POST' });
+}
+
+async function retrySync(logId) {
+  return apiRequest(`/sync/retry/${logId}`, { method: 'POST' });
+}
+
+async function cancelSync(syncId) {
+  return apiRequest(`/sync/cancel/${syncId}`, { method: 'POST' });
+}
+
+// Utility Functions
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+function formatRelativeTime(timestamp) {
+  const seconds = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+function formatDuration(seconds) {
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+function truncateText(text, maxLength) {
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Modal Management
+function openModal(modalId, onOpenCallback) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  const firstFocusable = focusableElements[0];
+  const lastFocusable = focusableElements[focusableElements.length - 1];
+  modal.dataset.previousFocus = document.activeElement?.id || '';
+  firstFocusable?.focus();
+  modal._trapFocus = (e) => {
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === firstFocusable) {
+        e.preventDefault();
+        lastFocusable?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+        e.preventDefault();
+        firstFocusable?.focus();
+      }
+    } else if (e.key === 'Escape') {
+      closeModal(modalId);
+    }
+  };
+  modal.addEventListener('keydown', modal._trapFocus);
+  if (onOpenCallback) onOpenCallback();
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+  if (modal._trapFocus) {
+    modal.removeEventListener('keydown', modal._trapFocus);
+    delete modal._trapFocus;
+  }
+  const previousFocusId = modal.dataset.previousFocus;
+  if (previousFocusId) {
+    document.getElementById(previousFocusId)?.focus();
+  }
+}
+
+// Toast Notifications
+function showToast(message, type = 'success', duration = 4000) {
+  const container = document.querySelector('.toast-container') || createToastContainer();
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.innerHTML = `
+    <span>${escapeHtml(message)}</span>
+    <button class="toast-close" aria-label="Close notification">✕</button>
+  `;
+  container.appendChild(toast);
+  const closeBtn = toast.querySelector('.toast-close');
+  const close = () => {
+    toast.style.animation = 'slideIn .3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  };
+  closeBtn.addEventListener('click', close);
+  if (duration) setTimeout(close, duration);
+}
+
+function createToastContainer() {
+  const container = document.createElement('div');
+  container.className = 'toast-container';
+  container.setAttribute('aria-label', 'Notifications');
+  document.body.appendChild(container);
+  return container;
+}
+
+<!-- END:CoreJavaScript -->
+// Feature: Sync Dashboard Functionality
+let syncInterval = null;
+let currentFilters = { dateRange: 'last7days', status: [], recordType: [], operationType: [] };
+
+// Initialize Dashboard
+function initSyncDashboard() {
+  loadSyncData();
+  setupEventListeners();
+  startAutoRefresh();
+}
+
+// Data Loading
+async function loadSyncData() {
+  try {
+    const data = await fetchSyncData(currentFilters);
+    updateStatusCards(data.overview);
+    updateStatistics(data.statistics);
+    updateActivityLog(data.activities);
+    updateErrorSummary(data.errors);
+    if (data.syncInProgress) showSyncProgress(data.progress);
+  } catch (error) {
+    showToast('Failed to load sync data', 'error');
+  }
+}
+
+async function fetchSyncData(filters) {
+  // Mock implementation - replace with actual API call
+  return {
+    overview: { lastSync: new Date(Date.now() - 3600000), totalContacts: 1247, errorRate: 3.2, inProgress: false },
+    statistics: { totalSyncs: 342, avgDuration: 12.4, errorRate: 3.2, lastSuccess: new Date(Date.now() - 3600000) },
+    activities: generateMockActivities(),
+    errors: { authFailed: 2, mappingError: 5, validationFailed: 3, timeout: 1, duplicate: 0 },
+    syncInProgress: false
+  };
+}
+
+function generateMockActivities() {
+  const types = ['Initial Sync', 'Update', 'Delete'];
+  const statuses = ['success', 'failed', 'conflict'];
+  return Array.from({ length: 25 }, (_, i) => ({
+    id: `sync-${i}`,
+    timestamp: new Date(Date.now() - i * 3600000),
+    operation: types[Math.floor(Math.random() * types.length)],
+    salesforceId: `00Q${Math.random().toString(36).substring(7)}`,
+    renzoContact: `Contact ${i + 1}`,
+    direction: ['←', '→', '↔'][Math.floor(Math.random() * 3)],
+    status: statuses[Math.floor(Math.random() * statuses.length)],
+    changes: [{ field: 'Email', oldValue: 'old@example.com', newValue: 'new@example.com' }]
+  }));
+}
+
+// UI Updates
+function updateStatusCards(overview) {
+  document.getElementById('lastSyncTime').textContent = formatRelativeTime(overview.lastSync);
+  document.getElementById('totalContactsCount').textContent = overview.totalContacts.toLocaleString();
+  const statusDot = document.querySelector('.status-dot');
+  statusDot.className = `status-dot ${overview.errorRate < 5 ? 'success' : overview.errorRate < 15 ? 'warning' : 'error'}`;
+}
+
+function updateStatistics(stats) {
+  document.getElementById('totalSyncsValue').textContent = stats.totalSyncs;
+  document.getElementById('avgDurationValue').textContent = `${stats.avgDuration}s`;
+  document.getElementById('errorRateValue').textContent = `${stats.errorRate}%`;
+  document.getElementById('lastSuccessValue').textContent = formatRelativeTime(stats.lastSuccess);
+}
+
+function updateActivityLog(activities) {
+  const tbody = document.querySelector('.log-table tbody');
+  tbody.innerHTML = activities.map(activity => `
+    <tr class="log-row" data-activity-id="${activity.id}" tabindex="0" aria-label="Sync activity for ${activity.renzoContact}">
+      <td>${formatDateTime(activity.timestamp)}</td>
+      <td><span class="operation-label">${activity.operation}</span></td>
+      <td><span title="${activity.salesforceId}">${truncateText(activity.salesforceId, 12)}</span></td>
+      <td><a href="#" class="contact-link">${escapeHtml(activity.renzoContact)}</a></td>
+      <td class="text-center">${activity.direction}</td>
+      <td><span class="badge badge-${activity.status}">${activity.status}</span></td>
+      <td><button class="btn-icon expand-btn" aria-label="Show details" aria-expanded="false">▼</button></td>
+    </tr>
+    <tr class="log-details" aria-hidden="true">
+      <td colspan="7">
+        <div class="changes-list">
+          ${activity.changes.map(c => `<div class="change-item"><strong>${c.field}:</strong> ${c.oldValue} → ${c.newValue}</div>`).join('')}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  
+  tbody.querySelectorAll('.log-row').forEach(row => {
+    row.addEventListener('click', () => toggleLogDetails(row));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleLogDetails(row);
+      }
+    });
+  });
+}
+
+function toggleLogDetails(row) {
+  const detailsRow = row.nextElementSibling;
+  const expandBtn = row.querySelector('.expand-btn');
+  const isExpanded = expandBtn.getAttribute('aria-expanded') === 'true';
+  expandBtn.setAttribute('aria-expanded', !isExpanded);
+  expandBtn.textContent = isExpanded ? '▼' : '▲';
+  detailsRow.setAttribute('aria-hidden', isExpanded);
+  detailsRow.style.display = isExpanded ? 'none' : 'table-row';
+}
+
+function updateErrorSummary(errors) {
+  const total = Object.values(errors).reduce((a, b) => a + b, 0);
+  if (total === 0) {
+    document.querySelector('.error-summary').style.display = 'none';
+    return;
+  }
+  const errorList = document.querySelector('.error-list');
+  errorList.innerHTML = Object.entries(errors)
+    .filter(([_, count]) => count > 0)
+    .map(([type, count]) => `
+      <div class="error-item">
+        <span class="error-type">${type.replace(/([A-Z])/g, ' $1').trim()}</span>
+        <span class="error-count" aria-label="${count} occurrences">${count}</span>
+      </div>
+    `).join('');
+}
+
+function showSyncProgress(progress) {
+  const progressSection = document.querySelector('.sync-progress');
+  progressSection.style.display = 'block';
+  progressSection.setAttribute('aria-live', 'polite');
+  document.getElementById('progressFill').style.width = `${progress.percentage}%`;
+  document.getElementById('progressText').textContent = progress.message;
+  document.getElementById('progressCount').textContent = `${progress.current}/${progress.total}`;
+}
+
+// Event Listeners
+function setupEventListeners() {
+  document.getElementById('syncNowBtn').addEventListener('click', triggerManualSync);
+  document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+  document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+  document.getElementById('exportLogsBtn').addEventListener('click', () => openModal('exportModal'));
+  document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+  
+  document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const modal = e.target.closest('.modal');
+      closeModal(modal.id);
+    });
+  });
+  
+  document.querySelectorAll('.date-preset').forEach(preset => {
+    preset.addEventListener('click', (e) => {
+      document.querySelectorAll('.date-preset').forEach(p => p.classList.remove('active'));
+      e.target.classList.add('active');
+      currentFilters.dateRange = e.target.dataset.range;
+    });
+    preset.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        preset.click();
+      }
+    });
+  });
+  
+  document.querySelectorAll('.filter-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => updateFilterState());
+  });
+}
+
+async function triggerManualSync() {
+  const btn = document.getElementById('syncNowBtn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing...';
+  try {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Mock API call
+    showToast('Sync completed: 245 contacts updated', 'success');
+    loadSyncData();
+  } catch (error) {
+    showToast('Sync failed: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sync Now';
+  }
+}
+
+function applyFilters() {
+  loadSyncData();
+  showToast('Filters applied', 'success', 2000);
+}
+
+function clearFilters() {
+  currentFilters = { dateRange: 'last7days', status: [], recordType: [], operationType: [] };
+  document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
+  document.querySelector('.date-preset[data-range="last7days"]').click();
+  loadSyncData();
+}
+
+function updateFilterState() {
+  currentFilters.status = Array.from(document.querySelectorAll('.filter-checkbox[name="status"]:checked')).map(cb => cb.value);
+  currentFilters.recordType = Array.from(document.querySelectorAll('.filter-checkbox[name="recordType"]:checked')).map(cb => cb.value);
+  currentFilters.operationType = Array.from(document.querySelectorAll('.filter-checkbox[name="operationType"]:checked')).map(cb => cb.value);
+}
+
+async function generateReport() {
+  const format = document.querySelector('input[name="exportFormat"]:checked').value;
+  showToast(`Generating ${format.toUpperCase()} report...`, 'success');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  showToast('Report downloaded', 'success');
+  closeModal('exportModal');
+}
+
+function startAutoRefresh() {
+  syncInterval = setInterval(() => {
+    if (!document.hidden) loadSyncData();
+  }, 30000);
+}
+
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSyncDashboard);
+} else {
+  initSyncDashboard();
+}
+</script>
+</body>
+</html>

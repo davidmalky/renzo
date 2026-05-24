@@ -1,0 +1,155 @@
+# RESEARCH REPORT: CSV Import Feature for Renzo Contacts Page
+
+## EXISTING_FEATURES:
+
+**Contact Management:**
+- Contact cards with display/list view (`.contact-card`, `.contact-list`)
+- Contact card UI with header, title, subtitle, meta, and actions
+- Modal system for forms (`.modal`, `.modal-content`, `.modal-header`, `.modal-body`, `.modal-footer`)
+- Modal animation (`modalSlideIn`, `.modal.active` state management)
+- Modal close button (`.modal-close`)
+
+**UI Components:**
+- Button styles (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-small`)
+- Empty state UI (`.empty-state`, `.empty-state-icon`, `.empty-state-title`)
+- Alert/notification system (`.alert`, `.alert-error`, `.alert-success`, `.alert-warning`)
+- Status badges (`.status-badge`, `.status-pending`, `.status-sent`, `.status-failed`)
+- Toast notification system (implied by task requirement "shows 'Imported X, skipped Y' toast")
+
+**Layout & Navigation:**
+- View toolbar/header with buttons (context: "next to existing Add Contact button")
+- Search bar (`.search-bar`, `.search-input`)
+- Filter system (`.filters`, `.filter-select`)
+
+**Data Structures:**
+- Contacts stored in localStorage (implied by existing contact system)
+- Contact fields: name, company, email, phone (specified in task requirements)
+- Priority scoring system (`.priority-score-high`, `.priority-score-medium`, `.priority-score-low`)
+
+**Visual Design System:**
+- CSS variables: `--forest-green`, `--cream`, `--gold`, `--border`, `--text-primary`, `--text-secondary`
+- Shadow variables: `--shadow-md`, `--shadow-xl`
+- Color system for success/error/warning states
+- Consistent border-radius: 8px-16px range
+- Transition animations (0.2s-0.3s)
+
+## MISSING_FEATURES:
+
+1. **File input element** - hidden `<input type="file" accept=".csv">`
+2. **Import CSV button** - visible trigger button in toolbar
+3. **parseCSV(text) function** - CSV text parser with header detection (case-insensitive name/company/email/phone)
+4. **showCSVPreview(rows, headers) function** - preview modal with first 5 rows
+5. **Column mapping UI** - dropdowns for mapping CSV columns to contact fields
+6. **confirmCSVImport(rows, mapping) function** - bulk contact creation with validation
+7. **CSV preview modal HTML structure** - separate modal instance for CSV preview
+8. **CSV preview table styles** (`.csv-preview-modal`, `.csv-preview-table`)
+9. **FileReader API integration** - for reading uploaded CSV files
+10. **Row validation logic** - skip if name+company both empty
+11. **Import result toast** - "Imported X, skipped Y" notification
+12. **File input change event handler** - triggers parseCSV workflow
+
+## CHANGES_NEEDED:
+
+1. **Contacts view toolbar** - Add Import CSV button and hidden file input (surgical edit to existing toolbar HTML)
+2. **localStorage contact creation** - Ensure existing `addContact()` or equivalent function can handle bulk imports from CSV (may need batch processing)
+3. **Toast notification system** - If not already implemented, may need to add toast display function for import results
+4. **Modal system** - May need to ensure multiple modals can coexist or switch between contact form modal and CSV preview modal
+
+## REUSE:
+
+**CSS Patterns to Preserve:**
+- `.modal` and `.modal-content` structure for CSV preview modal
+- `.modal-header`, `.modal-body`, `.modal-footer` layout
+- `.btn`, `.btn-primary`, `.btn-secondary` for Import button and modal actions
+- `.alert` system for validation warnings in preview
+- Color variables: `--forest-green`, `--cream`, `--border`, `--text-secondary`
+- Border-radius: 8px-12px range
+- Box shadows: `var(--shadow-md)`, `var(--shadow-xl)`
+- Animation: `modalSlideIn` keyframes for CSV preview modal
+
+**JavaScript Patterns:**
+- Modal show/hide logic (add/remove `.active` class)
+- Event delegation for dynamic content
+- localStorage data persistence pattern
+- Form validation patterns from existing contact forms
+- Toast/alert display mechanism (if exists)
+
+**Existing Functions to Reuse/Call:**
+- Contact creation function (e.g., `addContact()`, `saveContact()`)
+- localStorage get/set wrappers
+- Toast/notification display function
+- Modal management functions (`showModal()`, `hideModal()`)
+
+**Data Format:**
+- Contact object structure: `{ name, company, email, phone, ...other fields }`
+- localStorage key pattern (likely `renzo_contacts` or similar)
+
+## RISKS:
+
+1. **localStorage key collision** - Need to identify exact localStorage key used for contacts to avoid data corruption
+2. **Contact object schema mismatch** - CSV import must match existing contact data structure (may have additional required fields like ID, timestamps, priority)
+3. **Modal conflict** - If "Add Contact" modal is open, CSV import modal may conflict; need modal management
+4. **Large CSV performance** - FileReader and parsing large files could freeze UI (but preview limits to 5 rows, so low risk)
+5. **Duplicate contacts** - No deduplication logic specified; may create duplicates if CSV contains existing contacts
+6. **Character encoding** - CSV may have special characters that need proper handling
+7. **Malformed CSV** - Need error handling for badly formatted CSV files (missing quotes, inconsistent columns)
+8. **Missing required fields** - If contacts have required fields beyond name/company, imports may fail
+9. **Event listener cleanup** - File input event listeners must not duplicate on multiple imports
+10. **CSV dialect variations** - Comma vs semicolon delimiters, quote handling
+
+## DATA_STRUCTURES:
+
+**Inferred from CSS/Context:**
+
+```javascript
+// Contact Object (likely structure)
+{
+  id: string,              // unique identifier
+  name: string,            // from .contact-card-title
+  company: string,         // from .contact-card-subtitle
+  email: string,           // from contact-card-meta
+  phone: string,           // from contact-card-meta
+  priority: string,        // 'high'|'medium'|'low' (from priority-score classes)
+  createdAt: timestamp,    // likely exists
+  lastContacted: timestamp // implied by outreach queue
+}
+
+// localStorage Key (to be verified in actual JS code)
+'renzo_contacts' // likely key name
+// or
+'contacts' // possible alternative
+
+// localStorage Format
+localStorage.getItem('renzo_contacts') // => JSON string of array
+[
+  { id: '1', name: '...', company: '...', email: '...', phone: '...' },
+  ...
+]
+```
+
+**CSV Expected Format:**
+```
+Name,Company,Email,Phone
+John Doe,Acme Inc,john@acme.com,555-1234
+Jane Smith,Tech Corp,jane@tech.com,555-5678
+```
+
+**CSV Mapping Object:**
+```javascript
+{
+  nameColumn: 'Name',     // selected from CSV headers
+  companyColumn: 'Company',
+  emailColumn: 'Email',
+  phoneColumn: 'Phone'
+}
+```
+
+---
+
+**CRITICAL FINDING:** The actual JavaScript code for contact management is NOT present in the provided CSS-only codebase. The Planner must locate or request:
+1. The actual JavaScript file handling contacts
+2. The exact localStorage key and contact object schema
+3. Existing modal management functions
+4. Toast/notification display function
+
+Without the JS code, implementations must make assumptions about existing function names and data structures.

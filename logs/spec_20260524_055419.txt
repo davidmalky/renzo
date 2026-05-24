@@ -1,0 +1,67 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add the missing annualSpend field to the contact form modal. This is a surgical fix adding one form field and updating three JavaScript functions (saveContact, openEditContact, clearCtForm) to handle the new field. The annualSpend value is used in priority scoring and AI generation throughout the application.
+
+## VIEWS
+- ctModal (Contact Form Modal): Add annualSpend input field in the existing form-row that contains ctInvoice. The field appears as a second column in that row with label "Annual Spend / Contract Value ($)" and numeric input with id "ctAnnual".
+
+## FUNCTIONS
+- **HTML Modification (in ctModal)**:
+  1. Locate the `.form-row` div containing the `#ctInvoice` input
+  2. Before the closing `</div>` of that form-row, add the new field div
+  3. Structure: `<div class="field"><label>Annual Spend / Contract Value ($)</label><input type="number" id="ctAnnual" min="0"></div>`
+  4. This creates a two-column layout with ctInvoice on left, ctAnnual on right
+
+- **saveContact() modification**:
+  1. Locate where contact object properties are being assembled (likely other fields like name, email, etc.)
+  2. Add one line: `annualSpend: parseFloat(document.getElementById('ctAnnual').value) || 0`
+  3. This parses the input value as float, defaults to 0 if empty/invalid
+  4. Property is saved to localStorage with rest of contact data
+
+- **openEditContact(id) modification**:
+  1. Locate where other form fields are being populated (e.g., `document.getElementById('ctName').value = c.name`)
+  2. Add one line: `document.getElementById('ctAnnual').value = c.annualSpend || ''`
+  3. This loads existing annualSpend value when editing, empty string if not set
+  4. Maintains consistency with other field loading patterns
+
+- **clearCtForm() modification**:
+  1. Locate the array of field IDs being cleared (likely `['ctName', 'ctEmail', 'ctInvoice', ...]`)
+  2. Add `'ctAnnual'` to this array
+  3. Existing loop will handle resetting to empty string
+  4. Ensures clean form state when opening for new contact
+
+## DATA
+- **annualSpend** (Number): Dollar value of annual spend or contract value for the contact. Stored in contact object in localStorage. Format: numeric, minimum 0, defaults to 0 if not provided.
+
+## API
+No external API calls required. All changes are client-side localStorage operations using existing patterns.
+
+## DESIGN
+- **Field Layout**: Use existing `.form-row` grid (2-column layout with `grid-template-columns: 1fr 1fr`)
+- **Label Text**: "Annual Spend / Contract Value ($)"
+- **Input Styling**: Match existing number input fields (ctInvoice pattern)
+- **Input Attributes**: `type="number"`, `min="0"`, `id="ctAnnual"`
+- **Field Container**: Standard `.field` class with label + input structure
+- **Visual Placement**: Second field in same row as ctInvoice (right column)
+
+## ERRORS
+- **Invalid Input Handling**: `parseFloat()` with `|| 0` fallback handles non-numeric input gracefully
+- **Missing Field on Load**: `|| ''` fallback in openEditContact handles contacts saved before this field existed
+- **Null/Undefined Values**: Both save and load use fallback patterns to prevent undefined errors
+- **Form Validation**: `min="0"` attribute prevents negative values at HTML level
+
+## SCOPE_CHECK
+- **Estimated total lines**: ~4 lines of code changes
+  - 1 line: HTML field addition (though formatted across multiple lines for readability)
+  - 1 line: annualSpend property in saveContact()
+  - 1 line: ctAnnual value assignment in openEditContact()
+  - 1 line: 'ctAnnual' added to clearCtForm() array
+- **SINGLE_TASK**: This is a surgical fix under 10 lines of code. Proceed as one build.
+
+**Implementation Notes**:
+- No refactoring of existing code required
+- No changes to CSS (uses existing classes)
+- No changes to other functions or features
+- No database schema changes (localStorage structure extends naturally)
+- Backward compatible (existing contacts without annualSpend will default to 0)

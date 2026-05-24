@@ -1,0 +1,200 @@
+# TECHNICAL SPECIFICATION: SYNC EXECUTION ENGINE AND STATUS DASHBOARD
+
+## OVERVIEW
+Build a comprehensive synchronization engine that executes field mappings between Salesforce and Renzo with real-time monitoring capabilities. The system includes a background job processor with batch processing (200 contacts per batch), configurable scheduling (manual/scheduled/webhook), conflict resolution strategies, transformation execution, exponential backoff retry logic, comprehensive logging to SyncLog table, and a real-time status dashboard with progress tracking, error visualization, and audit history.
+
+## VIEWS
+
+- **DashboardView** (`/sync/dashboard`): Primary monitoring interface showing active syncs with real-time progress bars, timeline visualization of recent operations, summary statistics cards (total synced today, success rate, average duration), filterable sync history table, and detailed error log viewer with expandable stack traces
+
+- **SyncHistoryTable**: Paginated table component displaying all sync operations with columns: sync_id, started_at, completed_at, duration, direction (badge), status (badge), contacts_processed, success_count, failure_count, actions (view details, retry). Includes filters for date range, direction, status, and search by sync_id
+
+- **SyncDetailsModal**: Modal overlay showing comprehensive details for a selected sync operation including: full sync metadata, per-contact processing results, field-level changes, transformation applications, conflict resolutions, error messages with stack traces, and retry history
+
+- **ContactSyncHistory** (`/contacts/{contact_id}/history`): Dedicated view showing complete audit trail for individual contact with timeline of all sync operations, field-by-field change history, transformation applications, conflict resolution decisions, and diff viewer comparing field values before/after each sync
+
+- **ManualSyncTrigger**: Modal interface with sync configuration options including: direction selector (Salesforce→Renzo, Renzo→Salesforce, bidirectional), scope selector (all contacts, date range filter, custom criteria builder), dry-run toggle, batch size input, and conflict strategy override selector
+
+- **ActiveSyncMonitor**: Real-time component showing currently running syncs with animated progress bars, live contact count updates, elapsed time counter, estimated time remaining, current batch number, pause/resume/cancel controls
+
+- **SyncStatsDashboard**: Summary metrics panel with cards displaying: total contacts synced (24h/7d/30d), overall success rate percentage with trend indicator, average sync duration, current API rate limit status for Salesforce, error rate trends, last successful sync timestamp
+
+- **ErrorLogViewer**: Filterable list of sync errors with grouping by error type, severity badges (warning/error/critical), affected contact count, expandable stack traces, quick actions (retry failed contacts, dismiss error), and export to CSV functionality
+
+## FUNCTIONS
+
+- **initializeSyncEngine()**: Entry point that establishes database connection pool, loads environment variables (Salesforce/Renzo API credentials, batch size config, retry limits), initializes job queue system, registers event listeners for sync triggers, starts scheduled job checker polling every 60 seconds, validates API connectivity to both systems, loads active mapping configurations into memory cache
+
+- **startManualSync(userId, syncConfig)**: Triggered by dashboard button click, validates user permissions, parses syncConfig object (direction, scope filters, dryRun flag), generates unique sync_id UUID, creates SyncLog entry with status='queued', enqueues sync job with priority flag, sends WebSocket notification to dashboard, returns sync_id for tracking
+
+- **processScheduledSyncs()**: Runs every 60 seconds via cron, queries mapping_configurations table for entries with schedule_enabled=true and next_run_time <= NOW(), for each due sync creates job entry, updates next_run_time based on schedule_interval, calls enqueueSyncJob() with scheduling metadata
+
+- **handleWebhookTrigger(webhookPayload)**: Express route handler for Salesforce/Renzo webhooks, validates webhook signature using HMAC, extracts changed contact IDs from payload, queries mapping_configurations for webhook-enabled mappings, creates targeted sync job for only affected contacts, logs webhook receipt in sync_webhooks table
+
+- **enqueueSyncJob(syncConfig)**: Adds job to Redis-backed queue (Bull/BullMQ), sets job options (attempts: 3, backoff: exponential with 1000ms base, removeOnComplete: false for audit), attaches metadata (sync_id, user_id, timestamp, config), emits job-queued event, increments queue depth metric
+
+- **processSyncJob(job)**: Main worker function, extracts syncConfig from job data, updates SyncLog status='running' and started_at=NOW(), calls fetchContactsToSync() to retrieve contact batch, wraps execution in try-catch, iterates batches calling processSyncBatch(), aggregates results, updates SyncLog with final status/counts/completed_at, handles job completion/failure events
+
+- **fetchContactsToSync(syncConfig)**: Based on direction determines source system, applies scope filters (date range, custom criteria SQL), queries contacts in batches using LIMIT/OFFSET, for Salesforce uses SOQL with specified fields from mappings, for Renzo uses REST API with pagination, returns array of contact objects with all mapped fields, handles API rate limiting with backoff
+
+- **processSyncBatch(contacts, mappingConfig, syncLog)**: Receives array of up to 200 contacts, retrieves field mappings from mapping_config object, for each contact calls syncSingleContact(), collects results (success/failure/skipped), updates SyncLog running totals, emits progress event via WebSocket with percentage complete, commits batch results to database transaction, implements error isolation (one contact failure doesn't stop batch)
+
+- **syncSingleContact(sourceContact, destinationSystem, mappings, conflictStrategy)**: Retrieves destination contact by matching identifier (email/external_id), if not exists calls createContact(), if exists performs conflict detection, applies transformation rules to each field, calls resolveConflicts() for changed fields, builds update payload, executes API call to destination, logs field changes to contact_sync_history table, returns success/failure result object
+
+- **applyTransformations(fieldValue, transformationRules)**: Receives raw field value and array of transformation rule objects, iterates rules in sequence, calls specific transformation function based on rule.type (trim/uppercase/lowercase/formatPhone/customRegex), for formatPhone extracts digits and applies (XXX) XXX-XXXX pattern, handles null/undefined values safely, returns transformed value or original if rules empty
+
+- **trimWhitespace(value)**: Returns value.toString().trim(), handles null by returning empty string
+
+- **uppercaseTransform(value)**: Returns value.toString().toUpperCase(), handles null by returning empty string
+
+- **lowercaseTransform(value)**: Returns value.toString().toLowerCase(), handles null by returning empty string
+
+- **formatPhoneNumber(value)**: Strips non-digit characters using regex /\D/g, validates length is 10 digits, formats as (XXX) XXX-XXXX, returns original value if invalid format, handles extensions by preserving digits after 10th position
+
+- **applyCustomRegex(value, regexPattern, replacement)**: Creates RegExp from pattern string, executes replace() with replacement template, handles regex errors with try-catch, logs transformation failures, returns original value on error
+
+- **detectConflicts(sourceContact, destContact, mappings)**: Iterates mapped fields, compares source and destination values, if values differ and both have last_modified timestamps newer than last sync, marks as conflict, collects conflicts into array with metadata (field_name, source_value, dest_value, source_modified, dest_modified), returns conflicts array
+
+- **resolveConflicts(conflicts, strategy, syncLog)**: Switches on strategy parameter ('newest_wins'/'salesforce_wins'/'renzo_wins'/'manual_review'), for newest_wins compares timestamps and selects newer value, for system_wins always uses specified source value, for manual_review creates conflict_review entry in database with status='pending' and skips field sync, logs resolution decision to sync_log_details, returns resolved field values object
+
+- **createContact(contactData, system, mappings)**: Builds contact payload from contactData using field mappings, calls system-specific API endpoint (Salesforce: POST /services/data/vXX/sobjects/Contact, Renzo: POST /api/contacts), handles required field validation, transforms response to standardized format, inserts contact_id mapping to sync_contact_mappings table for future syncs, returns created contact object with new ID
+
+- **updateContact(contactId, fieldUpdates, system)**: Constructs PATCH/PUT payload with only changed fields, calls system API endpoint with contactId, handles 404 not found by attempting create, validates response status, extracts updated_at timestamp, returns success boolean and response data
+
+- **handleApiError(error, context)**: Examines error object for status code, for 429 rate limit extracts Retry-After header and throws RetryableError with delay, for 401/403 authentication errors logs critical alert and throws NonRetryableError, for 5xx server errors throws RetryableError with exponential backoff, for 4xx client errors logs details and throws NonRetryableError, appends context object (sync_id, contact_id, operation) to error log
+
+- **executeWithRetry(asyncFunction, maxRetries, baseDelay)**: Wraps API calls in retry logic, attempts asyncFunction up to maxRetries times, catches errors and checks if RetryableError, calculates delay as baseDelay * (2 ^ attemptNumber) with jitter (Math.random() * 1000), sleeps for calculated delay using setTimeout, logs each retry attempt with context, throws final error if all retries exhausted
+
+- **checkRateLimits(system)**: Queries current API usage from system (Salesforce: /limits endpoint, Renzo: X-RateLimit headers from last response), calculates remaining quota percentage, if below 20% threshold emits rate-limit-warning event, if below 5% pauses sync queue and schedules resume, updates rate_limit_status in Redis cache with TTL, returns safe-to-proceed boolean
+
+- **pauseSync(syncId)**: Queries SyncLog for sync_id, validates status is 'running', updates status='paused', sets paused_at timestamp, emits pause-sync event to worker queue, worker checks pause flag between batches, sends WebSocket update to dashboard, logs pause action with user_id
+
+- **resumeSync(syncId)**: Validates sync status is 'paused', updates status='running', clears paused_at, emits resume-sync event, worker picks up from last completed batch using batch_offset, sends WebSocket update to dashboard, logs resume action
+
+- **cancelSync(syncId)**: Updates SyncLog status='cancelled', sets completed_at=NOW(), emits cancel-sync event, worker terminates current batch processing, rolls back incomplete transactions, marks in-progress contacts as 'cancelled' in detail log, sends final WebSocket update, returns cancellation confirmation
+
+- **fetchSyncLogs(filters, pagination)**: Builds SQL query with WHERE clauses for filter parameters (date_range, direction, status), applies pagination LIMIT/OFFSET, joins with users table for started_by name, calculates duration as completed_at - started_at, orders by started_at DESC, executes query and returns result rows with total count for pagination
+
+- **fetchSyncDetails(syncId)**: Queries SyncLog by sync_id, retrieves associated sync_log_details entries with contact-level results, fetches error entries from sync_errors table, retrieves field change history from contact_sync_history, aggregates transformation applications, combines into comprehensive details object, returns with nested structure (log/details/errors/history)
+
+- **fetchContactSyncHistory(contactId, pagination)**: Queries contact_sync_history table filtered by contact_id, joins with SyncLog for sync metadata, retrieves field_changes JSON column, formats as timeline events sorted by timestamp DESC, applies pagination, returns array of history entries with sync context
+
+- **logFieldChange(syncId, contactId, fieldName, oldValue, newValue, transformation, resolution)**: Inserts row into contact_sync_history table with columns (sync_id, contact_id, field_name, old_value, new_value, transformation_applied, conflict_resolution, changed_at=NOW()), handles JSON serialization for complex values, executes within transaction context
+
+- **logSyncError(syncId, contactId, errorType, errorMessage, stackTrace, retryable)**: Inserts into sync_errors table (sync_id, contact_id, error_type, error_message, stack_trace, is_retryable, occurred_at=NOW()), increments error count in SyncLog, emits error event for real-time dashboard updates, if critical error sends notification
+
+- **calculateSyncStats(timeRange)**: Executes aggregate queries on SyncLog table, groups by direction/status, calculates SUM(contacts_processed), AVG(TIMESTAMPDIFF(completed_at, started_at)), success rate as (SUM(contacts_succeeded) / SUM(contacts_processed) * 100), filters by started_at within timeRange (24h/7d/30d), returns stats object with metrics
+
+- **streamSyncProgress(syncId, websocket)**: Establishes WebSocket connection for real-time updates, subscribes to Redis pub/sub channel for sync events (sync:{syncId}:progress), on progress event calculates percentage (processedCount / totalCount * 100), estimates time remaining based on average batch duration, emits progress update through WebSocket, handles disconnect cleanup
+
+- **loadMappingConfigurations()**: Queries mapping_configurations table with status='active', retrieves associated field_mappings via JOIN, parses transformation_rules JSON, validates conflict_resolution_strategy enum, caches in memory Map keyed by mapping_id, sets TTL refresh every 5 minutes, returns mappings array
+
+- **validateSyncConfiguration(syncConfig)**: Checks required fields (direction, source, destination) are present, validates direction enum value, ensures mapping_id references valid configuration, validates date range format if provided, checks user has permission for direction, returns validation result object (valid: boolean, errors: array)
+
+- **buildContactQuery(system, mappings, filters)**: Constructs system-specific query, for Salesforce builds SOQL SELECT statement with mapped field names, applies WHERE clauses from filters (LastModifiedDate, CreatedDate, custom criteria), adds ORDER BY Id for pagination, for Renzo builds REST API query params, returns query string/object
+
+- **parseSalesforceResponse(response)**: Extracts records array from response.data, normalizes field names to internal format using mapping config, handles nested objects (Account.Name), converts date strings to Date objects, returns standardized contact array
+
+- **parseRenzoResponse(response)**: Extracts contacts from response.data, maps Renzo field names to internal format, handles pagination metadata (next_page token), normalizes data types, returns standardized contact array and pagination info
+
+- **formatSalesforcePayload(contact, mappings)**: Iterates mappings to build Salesforce field object, converts internal field names to Salesforce API names, handles required fields (LastName minimum), formats dates as ISO8601, removes null values, returns payload object ready for API call
+
+- **formatRenzoPayload(contact, mappings)**: Builds Renzo API payload structure, maps internal names to Renzo field names, wraps in required envelope structure, handles custom field format, returns payload object
+
+- **initializeWebSocket(server)**: Creates Socket.IO instance attached to HTTP server, sets up authentication middleware verifying JWT tokens, defines namespaces (/sync for sync events), registers event handlers (connection, disconnect, subscribe-sync), implements room-based event emission for sync-specific updates, returns io instance
+
+- **emitSyncEvent(eventType, syncId, payload)**: Publishes event to Redis pub/sub channel for worker coordination, emits via WebSocket to room `sync:${syncId}`, includes timestamp and event metadata, handles serialization of complex objects, logs event emission for debugging
+
+- **subscribeSyncEvents(socket, syncId)**: Adds socket to room for specific sync, retrieves current sync status from SyncLog, sends initial state to client, registers for Redis pub/sub updates, on disconnect removes from room and cleans up subscriptions
+
+- **exportSyncHistory(filters, format)**: Queries SyncLog with applied filters, retrieves related details and errors, formats as CSV or JSON based on format parameter, for CSV uses fast-csv library with column headers (sync_id, started_at, duration, status, direction, contacts_processed, success_rate, error_summary), streams large datasets using Node.js streams, returns file buffer or stream
+
+- **exportErrorLog(syncId, format)**: Queries sync_errors table for sync_id, formats with full stack traces, includes contact identifiers and error context, creates downloadable file, returns file path or stream
+
+- **cleanupOldSyncLogs(retentionDays)**: Scheduled job runs daily, calculates cutoff date (NOW() - retentionDays), archives SyncLog entries older than cutoff to sync_logs_archive table, deletes original entries maintaining referential integrity, compresses archived data, logs cleanup summary (records archived/deleted)
+
+- **generateSyncReport(syncId)**: Compiles comprehensive report for sync operation, includes executive summary (total contacts, success rate, duration), detailed breakdown by operation type (created/updated/skipped), error analysis with groupings, field-level change statistics, performance metrics, formats as HTML or PDF, returns report object
+
+- **initializeDashboard()**: Runs on page load, fetches initial sync stats via fetchSyncStats(), loads active syncs via fetchActiveSyncs(), populates sync history table, establishes WebSocket connection, registers event listeners for manual sync button, filter changes, pagination, sets up auto-refresh interval (30 seconds) for stats
+
+- **renderSyncTimeline(syncs)**: Creates visual timeline of sync operations, calculates position based on started_at timestamps, renders as horizontal timeline with markers, color-codes by status (green=success, red=failed, blue=running, gray=cancelled), displays tooltips on hover with sync summary, handles overlapping syncs with stacking
+
+- **updateProgressBar(syncId, progress)**: Selects progress bar element by sync-id data attribute, updates width style to progress percentage, updates text label with current/total counts, animates smoothly using CSS transitions, changes color based on threshold (green >80%, yellow 50-80%, red <50%)
+
+- **renderSyncHistoryTable(logs, container)**: Clears existing table content, iterates logs array, for each log creates table row with columns (sync_id as link, formatted timestamps, duration badge, direction badge with icon, status badge with color, count statistics, action buttons), attaches event listeners to action buttons, handles empty state with "No syncs found" message
+
+- **openSyncDetailsModal(syncId)**: Fetches detailed sync data via fetchSyncDetails(), populates modal with tabs (Overview, Contacts, Errors, Transformations), renders contact results table with filterable status, displays error logs with expandable stack traces, shows field transformations with before/after values, renders conflict resolutions, calls modal.show()
+
+- **openManualSyncModal()**: Displays sync configuration modal, initializes form with default values, populates direction dropdown, loads available filters (date range picker, custom criteria builder), fetches mapping configurations for dropdown, sets up dry-run toggle, attaches submit handler calling startManualSync(), validates form on change
+
+- **handleManualSyncSubmit(event)**: Prevents default form submission, extracts form values (direction, scope, filters, dryRun), validates configuration, calls API endpoint POST /api/sync/manual with payload, handles response (success shows toast, subscribes to sync progress, closes modal; error shows alert), disables submit button during processing
+
+- **refreshSyncStats()**: Calls calculateSyncStats() for multiple time ranges (24h, 7d, 30d), updates dashboard stat cards with new values, calculates trends by comparing to previous period, adds trend indicators (up/down arrows, percentage change), updates last_refreshed timestamp display, handles API errors gracefully
+
+- **filterSyncHistory(filters)**: Extracts filter values from UI controls (date range, direction select, status select, search input), builds filter object, calls fetchSyncLogs() with filters and current pagination, updates table with results, updates pagination controls, persists filters to sessionStorage
+
+- **setupWebSocketListeners(socket)**: Registers listeners for sync events (sync-started, sync-progress, sync-completed, sync-failed, sync-error), on sync-started adds to active syncs list, on sync-progress updates progress bar, on sync-completed refreshes stats and moves to history, on sync-error displays error notification, handles reconnection logic
+
+- **displayErrorNotification(error)**: Creates toast notification with error message, color-codes by severity (red=error, yellow=warning, blue=info), auto-dismisses after 5 seconds unless critical, includes action button to view details, stacks multiple notifications, implements ARIA live region for accessibility
+
+- **openContactHistoryView(contactId)**: Navigates to contact history page, fetches contact sync history via fetchContactSyncHistory(), renders timeline visualization with sync events, displays field-level changes in expandable cards, shows diff viewer for field values, includes filter for date range and sync direction, implements infinite scroll for pagination
+
+- **renderFieldDiffViewer(oldValue, newValue, fieldName)**: Creates side-by-side diff display, highlights changes using diff algorithm (similar to git diff), color-codes additions (green), deletions (red), modifications (yellow), handles various field types (text, date, boolean, number), formats for readability, supports copy to clipboard
+
+- **handlePauseSync(syncId)**: Confirms user action with modal, calls API endpoint POST /api/sync/{syncId}/pause, updates UI immediately (button changes to resume, status updates), handles success/error responses, emits WebSocket event for other connected clients
+
+- **handleResumeSync(syncId)**: Calls API endpoint POST /api/sync/{syncId}/resume, updates UI state, re-establishes progress monitoring, handles continuation from paused state
+
+- **handleCancelSync(syncId)**: Shows confirmation dialog with warning about incomplete state, calls API endpoint POST /api/sync/{syncId}/cancel, removes from active syncs, updates status to cancelled, refreshes stats
+
+- **retryFailedContacts(syncId)**: Fetches failed contact list from sync details, creates new sync job with only failed contact IDs, inherits original sync configuration, starts new sync and subscribes to progress, links to original sync for audit trail
+
+- **downloadSyncReport(syncId, format)**: Calls API endpoint GET /api/sync/{syncId}/report?format={format}, handles file download via blob creation, triggers browser download with suggested filename (sync-{syncId}-report.{csv|json|pdf}), shows progress indicator for large reports
+
+## DATA
+
+- **sync_logs table**: Persistent storage for all sync operations
+  - sync_id (UUID PRIMARY KEY): unique identifier for each sync operation
+  - mapping_id (INTEGER FOREIGN KEY): references mapping_configurations table
+  - started_by (INTEGER FOREIGN KEY): user_id who initiated sync
+  - started_at (TIMESTAMP): when sync began
+  - completed_at (TIMESTAMP NULLABLE): when sync finished
+  - status (ENUM): 'queued', 'running', 'paused', 'completed', 'failed', 'cancelled'
+  - direction (ENUM): 'salesforce_to_renzo', 'renzo_to_salesforce', 'bidirectional'
+  - trigger_type (ENUM): 'manual', 'scheduled', 'webhook'
+  - total_contacts (INTEGER): total contacts to process
+  - contacts_processed (INTEGER): contacts completed
+  - contacts_succeeded (INTEGER): successfully synced contacts
+  - contacts_failed (INTEGER): failed contacts
+  - contacts_skipped (INTEGER): skipped due to conflicts or rules
+  - batch_size (INTEGER): contacts per batch
+  - current_batch (INTEGER): current batch number
+  - errors_json (JSONB): aggregated error summary
+  - configuration_snapshot (JSONB): sync config at execution time
+  - created_at (TIMESTAMP DEFAULT NOW())
+  - updated_at (TIMESTAMP DEFAULT NOW())
+  - INDEXES: (status, started_at), (mapping_id), (started_by)
+
+- **sync_log_details table**: Per-contact sync results
+  - detail_id (BIGSERIAL PRIMARY KEY): unique detail record
+  - sync_id (UUID FOREIGN KEY): references sync_logs
+  - contact_id (VARCHAR): identifier from source system
+  - destination_contact_id (VARCHAR NULLABLE): identifier in destination system
+  - status (ENUM): 'success', 'failed', 'skipped', 'conflict'
+  - operation_type (ENUM): 'create', 'update', 'skip'
+  - fields_updated (ARRAY): list of field names changed
+  - transformations_applied (JSONB): transformation details per field
+  - conflicts_detected (JSONB): conflict information
+  - error_message (TEXT NULLABLE): error if failed
+  - processed_at (TIMESTAMP DEFAULT NOW())
+  - INDEXES: (sync_id), (contact_id), (status)
+
+- **contact_sync_history table**: Audit trail of field changes
+  - history_id (BIGSERIAL PRIMARY KEY): unique history record
+  - sync_id (UUID FOREIGN KEY): references sync_logs
+  - contact_id (VARCHAR): contact identifier
+  - field_name (VARCHAR): name of changed field
+  - old_value (TEXT NULLABLE): value before sync
+  - new_value (TEXT NULLABLE): value after sync
+  - transformation_applied (VARCHAR NULLABLE): transformation name
+  - conflict_resolution (VARCHAR NULLABLE

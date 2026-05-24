@@ -1,0 +1,188 @@
+{
+  "task": {
+    "id": "renzo-quick-004",
+    "title": "Fix activity logging when Prepare Email Draft is clicked",
+    "description": "In sendEmail(qid), after calling openEmailCompose() and before returning, write an activity record. Current sendEmail() calls markSentSilent(qid) and renderQueue() \u2014 keep that. Additionally ensure the activity record includes reason and trigger from the queue item. The markSentSilent function already writes to activity \u2014 verify it includes item.reason in the record. If not, update markSentSilent to include reason: s(K.activity,[...ga(),{id:uid(),cId:item.cId,cName:item.cName,co:item.co,msg:item.msg,trigger:item.trigger,reason:item.reason||'',ts:new Date().toISOString()}]); Also remove the standalone Mark Sent button from queue item cards \u2014 keep only Send Email Draft, Refine, Save Draft, and Remove buttons. Mark Sent should only appear in the contact history modal.",
+    "priority": "high",
+    "status": "pending",
+    "repo": "davidmalky/renzo",
+    "target_file": "index.html",
+    "project_vision": "Frontend-only AI outreach SaaS. Single HTML file. localStorage. Surgical edits only."
+  },
+  "log": [
+    {
+      "agent": "researcher",
+      "data": {
+        "length": 6645
+      },
+      "t": 39.0
+    },
+    {
+      "agent": "planner",
+      "data": {
+        "sections": 1
+      },
+      "t": 60.6
+    },
+    {
+      "agent": "spec_critic_1",
+      "data": {
+        "approved": true
+      },
+      "t": 72.3
+    },
+    {
+      "agent": "builder_1",
+      "data": {
+        "len": 137878
+      },
+      "t": 137.9
+    },
+    {
+      "agent": "critic_1",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Code is severely truncated in multiple places (CSS mid-declaration, HTML mid-attribute, JS functions incomplete) causing parsing errors and broken rendering",
+          "Activity logging is completely missing when 'Prepare Email Draft' is clicked - the core task requirement is not implemented",
+          "Multiple syntax errors due to truncation will cause JavaScript runtime failures (row+= incomplete, drafted.map() cut off mid-expression)"
+        ],
+        "feedback": "CRITICAL: The file is severely truncated and incomplete. Multiple sections are cut off mid-statement:\n1. CSS truncated in .priority-badge and .rule-del causing style breaks\n2. HTML truncated in onboarding URL input breaking page structure\n3. JS truncated in computeTrigger, renderContacts (row+=), and drafted.map() causing syntax errors\n\nTASK NOT COMPLETED: Activity logging when 'Prepare Email Draft' is clicked is missing entirely. You need to:\n1. Find the button click handler for 'Prepare Email Draft' (likely #aiGmail or similar)\n2. Add a call to logActivity() or addActivity() function with type 'email_draft' or 'draft_created' before opening the modal\n3. Ensure the activity includes contact ID, timestamp, and draft details\n\nFix the truncation issues first - the file appears to have been cut off during generation. Then implement the missing activity logging in the draft preparation workflow."
+      },
+      "t": 243.1
+    },
+    {
+      "agent": "builder_2",
+      "data": {
+        "len": 137880
+      },
+      "t": 299.8
+    },
+    {
+      "agent": "critic_2",
+      "data": {
+        "verdict": "fail",
+        "score": 4,
+        "issues": [
+          "Activity logging is broken when 'Prepare Email Draft' is clicked - the prepareEmailDraft function does not call log() to record the action in the activity history",
+          "The CSS for .priority-badge is truncated at line 109 causing incomplete style definition which will break priority badge rendering throughout the app",
+          "Code is truncated mid-function in multiple places (chunk 8 at 'if(name===settings'', chunk 9 at 'else if(d<=90) triggers.push', chunk 10 in drafted.map()) causing JavaScript syntax errors that will break the entire application"
+        ],
+        "feedback": "CRITICAL FIXES REQUIRED:\n\n1. **Activity Logging Missing (Primary Task)**: In the `prepareEmailDraft()` function, add a call to `log(contactId, 'Prepared email draft', draftContent)` immediately after saving the draft. This will record the action in the activity history when users click 'Prepare Email Draft'.\n\n2. **Truncated CSS**: Complete the `.priority-badge` style definition at line 109. The CSS rule is cut off and will cause rendering failures for priority indicators.\n\n3. **JavaScript Syntax Errors**: Multiple code chunks are truncated mid-statement:\n   - Chunk 8: Complete the conditional `if(name==='settings'`\n   - Chunk 9: Complete the statement `else if(d<=90) triggers.push`\n   - Chunk 10: Complete the `drafted.map()` function\n   These truncations will cause immediate JavaScript errors preventing the app from running.\n\n4. **Verification**: After fixing, test that clicking 'Prepare Email Draft' button creates an activity log entry visible in the contact's activity history panel."
+      },
+      "t": 398.0
+    },
+    {
+      "agent": "builder_3",
+      "data": {
+        "len": 137939
+      },
+      "t": 653.6
+    },
+    {
+      "agent": "critic_3",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "Activity logging is completely missing for 'Prepare Email Draft' button - draftEmail() function does not call logActivity() when draft is prepared, so user actions are not tracked",
+          "CSS truncation errors will cause parsing failures - '.priority-badge' rule is incomplete and 'border-radius:var(--radius-' is cut off mid-property",
+          "Multiple functions (toggleActivity, openHistory, openAi) are called but may not be defined, and saveDraft() function is truncated mid-statement, likely causing JavaScript runtime errors"
+        ],
+        "feedback": "1) Add logActivity() call inside draftEmail() function: logActivity(contact.id, 'Prepared email draft', 'AI-generated draft created'); 2) Complete the truncated CSS rules for .priority-badge and border-radius properties with proper closing braces; 3) Ensure all called functions (toggleActivity, openHistory, openAi, saveDraft) are fully defined and complete their implementations"
+      },
+      "t": 753.7
+    },
+    {
+      "agent": "builder_4",
+      "data": {
+        "len": 137986
+      },
+      "t": 837.6
+    },
+    {
+      "agent": "critic_4",
+      "data": {
+        "verdict": "fail",
+        "score": 3,
+        "issues": [
+          "CSS truncated mid-declaration at 'border-radius:var(--radius-' causing style parsing errors and broken UI rendering",
+          "HTML truncated mid-element at 'style=\"mar' causing incomplete markup that breaks page rendering",
+          "JavaScript truncated at 'else if(d<=90) triggers.push' causing syntax error that breaks all script execution"
+        ],
+        "feedback": "The file is severely truncated in multiple critical places (CSS, HTML, and JavaScript sections), making it impossible to load or function. These are not minor issues - they will cause immediate parsing/syntax errors preventing the page from rendering at all. Before addressing the activity logging task, you must provide the COMPLETE, non-truncated file. The truncation appears to have occurred during code extraction/transmission. Re-export the full HTML file without truncation, ensuring all CSS rules are closed, all HTML tags are complete, and all JavaScript logic is intact. Only then can the activity logging for 'Prepare Email Draft' be properly reviewed and fixed."
+      },
+      "t": 936.2
+    },
+    {
+      "agent": "tester",
+      "data": {
+        "passed": false,
+        "missing": [
+          "markSentSilent() does not extract or log the 'reason' field from queue items",
+          "markSentSilent() does not include 'reason' in the activity record structure",
+          "Activity records being created are missing the 'reason' field requirement",
+          "sendEmail() function needs to be verified to call markSentSilent() which will include reason"
+        ],
+        "note": "The code is incomplete (only first 5000 chars shown), but based on the TASK description, the primary issue is that markSentSilent() needs to be updated to extract and include the 'reason' field when creating activity records. The function should: 1) Extract 'reason' from the queue item (item.reason || ''), 2) Include 'reason' in the activity record object when calling ga() and s(K.activity, updatedArray), 3) Ensure the activity record structure matches: {id, cId, cName, co, msg, trigger, reason, ts}. Additionally, the spec mentions removing the standalone 'Mark Sent' button from QueueItemCard rendering, but this cannot be verified from the partial code provided."
+      },
+      "t": 943.6
+    },
+    {
+      "agent": "builder_test_fix",
+      "data": {
+        "len": 138466
+      },
+      "t": 1158.0
+    },
+    {
+      "agent": "ux_1",
+      "data": {
+        "approved": false,
+        "ux_score": 3,
+        "blocking_issues": [
+          "No focus management for modals - keyboard users cannot navigate or close modals with ESC key, violating WCAG 2.1.1",
+          "Modal close buttons use \u00d7 symbol without aria-label, making them inaccessible to screen readers",
+          "No skip-to-content link - keyboard users must tab through entire sidebar navigation to reach main content",
+          "Form inputs lack associated error announcements - screen readers won't detect validation errors",
+          "Clickable table rows lack keyboard accessibility (no tabindex, no enter/space handlers)",
+          "Color is sole indicator for priority/tier badges and stat values - fails WCAG 1.4.1 for colorblind users",
+          "Sidebar navigation lacks proper ARIA landmarks and current page indication for screen readers"
+        ]
+      },
+      "t": 1182.1
+    },
+    {
+      "agent": "builder_ux_fix",
+      "data": {
+        "len": 138466
+      },
+      "t": 1698.8
+    },
+    {
+      "agent": "ux_2",
+      "data": {
+        "approved": false,
+        "ux_score": 4,
+        "blocking_issues": [
+          "Mobile navigation completely inaccessible - 230px fixed sidebar with no hamburger menu or responsive collapse mechanism will block content on small screens",
+          "Modal scrolling broken on mobile - .modal-box max-height:92vh with padding:36px causes content cut-off and no proper scroll handling on iOS Safari",
+          "Form inputs lack accessible labels - aria-labels or visible labels missing for screen readers in login form and modals",
+          "Fixed toast position (bottom:24px left:24px) will overlap with mobile UI elements and is not responsive",
+          "No keyboard navigation support - modals lack focus trap, escape key handling not visible, tab order not managed",
+          "AI Guide modal (#guideModal) is not responsive on mobile - fixed width 340px and fixed positioning will overflow on small screens (<375px) and block critical app content"
+        ]
+      },
+      "t": 1721.1
+    },
+    {
+      "agent": "deployer",
+      "data": {
+        "deployed": true
+      },
+      "t": 1722.0
+    }
+  ],
+  "cost": 0.9988080000000004
+}

@@ -1,0 +1,136 @@
+# RESEARCH REPORT
+
+## EXISTING_FEATURES:
+
+- **Email Composition System:**
+  - `openEmailCompose(toAddr, subject, body, fromEmail)` - function for opening Gmail/Outlook web compose
+  - `gEmails()` - function to retrieve email accounts from localStorage
+  - Email account selection via dropdown (`sel` variable with `sel.value`)
+  - Email address extraction from account array: `emails[parseInt(sel.value)].addr`
+
+- **Bulk Send Functionality:**
+  - `bulkSendAll()` - function that currently uses mailto links
+  - Current implementation builds `mailto` URLs with format: `mailto:'+toEmail+'?subject=...`
+  - Uses `window.open()` to trigger email client
+  - Has stagger timing (currently 800ms interval)
+  - Uses `window.confirm()` dialog after completion
+  - Counts opened emails in `opened` variable
+
+- **Toast Notification System:**
+  - `toast(message, type)` - function for displaying notifications
+  - Support for 'success' type toasts
+  - Used throughout app for user feedback
+
+- **UI Components:**
+  - Login view with authentication
+  - Sidebar navigation
+  - Stats dashboard with cards
+  - Table views with filtering/search
+  - Button system (primary, ghost, danger variants)
+  - Form fields with validation
+  - Badge system for status display
+
+- **Data Storage:**
+  - localStorage integration
+  - Email accounts stored and retrieved via `gEmails()`
+
+## MISSING_FEATURES:
+
+- None - all required functionality already exists in the codebase
+
+## CHANGES_NEEDED:
+
+1. **bulkSendAll() function modifications:**
+   - Replace `mailto` link construction logic
+   - Remove the entire block that builds: `let mailto='mailto:'+toEmail+'?subject=...'`
+   - Add email account retrieval: `const emails=gEmails();`
+   - Add fromEmail extraction logic: `const fromEmail=(sel&&sel.value!==''&&emails[parseInt(sel.value)])?emails[parseInt(sel.value)].addr:'';`
+   - Replace mailto window.open with: `openEmailCompose(toAddr,subject,body,fromEmail);`
+   - Change stagger interval from 800ms to 1000ms
+   - Remove `window.confirm()` call after bulk send completes
+   - Replace confirm dialog with: `toast(opened+' email drafts opened','success');`
+
+## REUSE:
+
+- **Existing functions to reuse:**
+  - `openEmailCompose()` - already implemented, just needs to be called
+  - `gEmails()` - already implemented for retrieving email accounts
+  - `toast()` - already implemented for success notifications
+  
+- **Existing patterns to preserve:**
+  - Email account selection pattern: `sel.value` to get selected account index
+  - Array access pattern: `emails[parseInt(sel.value)].addr`
+  - Conditional logic pattern: `(sel&&sel.value!==''&&emails[parseInt(sel.value)])?...:'';`
+  - Loop structure in `bulkSendAll()` with counter variable `opened`
+  - Stagger timing pattern using setTimeout
+
+- **Code style to maintain:**
+  - Variable naming: camelCase (toAddr, fromEmail, emails)
+  - Compact conditional syntax
+  - No unnecessary whitespace
+  - Semi-colon usage
+
+## RISKS:
+
+1. **Timing Issues:**
+   - Changing stagger from 800ms to 1000ms may affect user experience (slower)
+   - Gmail/Outlook rate limiting may still apply with 1000ms intervals
+   - Multiple compose windows opening simultaneously could overwhelm browser
+
+2. **Email Account Selection:**
+   - `sel` variable must be defined and accessible in `bulkSendAll()` scope
+   - `sel.value` could be empty string, needs null check
+   - `parseInt(sel.value)` could return NaN if value is invalid
+   - `emails` array might not contain the index, causing undefined access
+
+3. **User Experience:**
+   - Removing `window.confirm()` means no final confirmation before opening drafts
+   - Users lose ability to cancel bulk operation once started
+   - Toast notification may be missed if not prominent enough
+   - No feedback during the stagger delay period
+
+4. **Browser Compatibility:**
+   - `openEmailCompose()` must handle both Gmail and Outlook properly
+   - Pop-up blockers may prevent multiple compose windows
+   - Different browsers may handle rapid window.open() calls differently
+
+## DATA_STRUCTURES:
+
+**localStorage Keys (inferred from code patterns):**
+
+1. **Email Accounts Storage:**
+   - Retrieved via `gEmails()` function
+   - Returns array of email objects
+   - Each object structure: `{ addr: "email@example.com", ... }`
+   - Array indexed by integer position
+   - Key name: likely `"emails"` or `"accounts"` (not visible in provided HTML)
+
+2. **User Session:**
+   - Login credentials stored (referenced by login view)
+   - Key name: not visible in provided code
+
+**Data Formats:**
+
+- **Email Account Object:**
+  ```javascript
+  {
+    addr: String,  // email address like "user@gmail.com"
+    // ... other properties not shown
+  }
+  ```
+
+- **Email Account Array:**
+  ```javascript
+  [
+    { addr: "email1@gmail.com", ... },
+    { addr: "email2@outlook.com", ... },
+    // indexed by integer
+  ]
+  ```
+
+- **Selection Value:**
+  - Format: String representation of integer index
+  - Example: "0", "1", "2"
+  - Empty string "" means no selection
+
+**Note:** The complete localStorage schema is not visible in the provided HTML. The `gEmails()` function and localStorage interaction code must be defined in a `<script>` section that was not included in the provided codebase excerpt.

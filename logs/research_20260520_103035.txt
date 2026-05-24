@@ -1,0 +1,222 @@
+# RESEARCH REPORT: DATA QUALITY & VALIDATION RULES ENGINE
+
+## EXISTING_FEATURES
+
+### UI Components & Layout
+- **Modal system**: `.modal-overlay`, `.modal`, `.modal-header`, `.modal-title`, `.modal-close` with animation and overlay
+- **Side panel system**: `.function-library-panel` with slide-in animation (300px width), sticky headers, scroll handling
+- **Panel management**: `body.modal-open`, `body.function-panel-open` classes for overflow control
+- **Button system**: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-icon` with hover/active states
+- **Form inputs**: `.search-input` with focus states and validation styling
+- **Card/row layouts**: `.mapping-row` with hover states, drop targets, and visual feedback
+
+### Data Structures (localStorage)
+- **Mapping configurations**: Stored but specific key names not visible in truncated code
+- **Field mappings**: `.mapping-row` structure with source/target fields and expressions
+- **Expression display**: `.expression-display` showing transformation logic
+
+### Styling System
+- **CSS Variables**: Comprehensive color system (primary, success, warning, error, info, purple with light variants)
+- **Shadow system**: `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--shadow-xl`
+- **Spacing/layout**: Consistent padding (8px, 10px, 12px, 16px, 20px, 24px, 32px)
+- **Border radius**: 6px (small), 8px (medium), 12px (large)
+- **Transitions**: 0.2s for hovers, 0.3s for panels
+
+### Component Patterns
+- **Collapsible categories**: `.function-category`, `.category-header`, `.collapsed` state with chevron rotation
+- **Chip/tag system**: `.function-chip` with draggable functionality
+- **Section headers**: `.section-header` with title and action buttons
+- **Field display**: `.field-label` (uppercase, small, secondary) + `.field-value` (monospace)
+
+### Interactive Features
+- **Drag and drop**: `.dragging` class, `.drop-target` state on mapping rows
+- **Search functionality**: `.search-input` in panel header
+- **Modal opening/closing**: Animation system, overlay interaction
+- **Panel toggling**: Slide-in/out with body margin adjustment
+
+### JavaScript Architecture
+- Vanilla JavaScript (no frameworks mentioned)
+- Event-driven interactions
+- Class-based state management (`.active`, `.collapsed`, `.dragging`)
+
+## MISSING_FEATURES
+
+### Core Validation Components
+- **ValidationRulesPanel**: 300px right sidebar (similar to function-library-panel but right-aligned)
+- **RuleBuilderModal**: 800px modal for visual rule composition
+- **ValidationResultsView**: Results tab component with pass/fail indicators
+- **ValidationTemplateLibrary**: Save/load interface for rule sets
+
+### Validation Logic
+- **Rule categories**: Format, Range, Data Type, Custom Regex, Required Fields, Uniqueness
+- **Rule builder**: AND/OR logic combinations, field selection, operator selection, value inputs
+- **Validation execution engine**: Batch processing after transformations
+- **Web Workers**: For heavy validation processing on large datasets
+- **Validation state storage**: Per-record validation results
+
+### UI Elements
+- **Color-coded indicators**: Green/red badges for pass/fail
+- **Expandable row details**: Show which rules failed per record
+- **Aggregate statistics**: Pass rate, failure breakdown by rule
+- **Filter controls**: Show only failures option
+- **Inline validation badges**: In mapping preview
+- **Validation warnings**: In transformation preview
+
+### Data Export
+- **Export functionality**: CSV/JSON format for validation reports
+- **Failed records report**: With failure reasons
+
+### Integration Points
+- **Results tab**: New tab or section for validation results
+- **Preview integration**: Validation warnings before transformation
+- **localStorage**: Validation configurations with mapping config
+
+## CHANGES_NEEDED
+
+### Layout Modifications
+- **App container**: Needs to accommodate both left (function panel) and right (validation panel) sidebars
+- **Body classes**: Add `validation-panel-open` similar to `function-panel-open`
+- **Container margins**: Adjust for dual panels: `margin-left: 300px; margin-right: 300px` when both open
+
+### Modal System Enhancement
+- **Larger modal size**: Add `.modal-large` class for 800px width (RuleBuilderModal)
+- **Modal scroll handling**: Ensure proper overflow for rule builder content
+
+### Tab System
+- **Add tab navigation**: New UI pattern needed for Results/Validation tabs (not currently present)
+- **Tab content areas**: Switching between transformation results and validation results
+
+### Data Storage
+- **localStorage structure**: Extend to include validation rules and results
+- **Mapping config**: Add validation configuration object
+
+## REUSE
+
+### Direct Reuse
+- **Panel structure**: Clone `.function-library-panel` for `.validation-rules-panel` (change `left` to `right`)
+- **Panel header**: Reuse `.panel-header`, `.search-input` pattern
+- **Category system**: Reuse `.function-category`, `.category-header`, `.collapsed` pattern for rule categories
+- **Modal base**: Reuse `.modal-overlay`, `.modal`, `.modal-header` for RuleBuilderModal
+- **Button styles**: All `.btn-*` classes for rule actions
+- **Color system**: Use `--success`/`--success-light` for passed, `--error`/`--error-light` for failed
+- **Chip pattern**: Adapt `.function-chip` for rule chips/tags
+- **Row pattern**: Adapt `.mapping-row` for validation result rows
+
+### Pattern Adaptation
+- **Expandable rows**: Use `.collapsed` pattern from categories for row details expansion
+- **Drop zones**: Adapt `.drop-target` pattern for rule builder drag-drop
+- **Form inputs**: Extend `.search-input` pattern for rule value inputs
+- **Card layout**: Use `.main-content` pattern for validation statistics cards
+
+### Style Variables to Use
+- **Success**: `var(--success)`, `var(--success-light)` for passed validations
+- **Error**: `var(--error)`, `var(--error-light)` for failed validations
+- **Warning**: `var(--warning)`, `var(--warning-light)` for validation warnings
+- **Info**: `var(--info)`, `var(--info-light)` for statistics
+- **Shadows**: `var(--shadow-md)` for cards, `var(--shadow-xl)` for modals
+- **Borders**: `var(--border)` for separators
+
+## RISKS
+
+### Performance Risks
+- **Large dataset validation**: Current code shows no Web Worker implementation - will need to add worker infrastructure
+- **UI blocking**: Synchronous validation could freeze interface on 10k+ records
+- **Memory management**: Storing validation state per record could exceed localStorage limits (5-10MB)
+
+### Architectural Risks
+- **Dual panel layout**: Two 300px sidebars (600px total) + content area may not fit on smaller screens
+- **localStorage limitations**: Validation results + rules + mappings may exceed quota
+- **Code organization**: Vanilla JS with complex validation logic could become unmaintainable without module structure
+
+### Integration Risks
+- **Transformation timing**: Validation "after transformations" implies transformations must complete before validation starts - need clear execution pipeline
+- **Preview integration**: Showing validation warnings in preview requires running validation during preview, potentially duplicating processing
+- **State synchronization**: Validation state, transformation state, and UI state must stay synchronized
+
+### UI/UX Risks
+- **Modal size**: 800px modal may be too large for smaller screens
+- **Information overload**: Validation results + transformation results + rules panel + function panel = complex UI
+- **Performance perception**: Users may not understand why validation takes time on large datasets
+
+## DATA_STRUCTURES
+
+### Found in Code
+```javascript
+// Mapping structure (inferred from HTML):
+{
+  mappings: [
+    {
+      sourceField: string,
+      targetField: string,
+      expression: string,  // transformation expression
+      // Missing: validationRules array
+    }
+  ]
+}
+```
+
+### Needed Data Structures
+```javascript
+// Validation Rule Structure (to add):
+{
+  id: string,
+  name: string,
+  category: 'format'|'range'|'dataType'|'regex'|'required'|'uniqueness',
+  field: string,
+  operator: string,  // 'equals', 'contains', 'matches', 'gt', 'lt', etc.
+  value: any,
+  logic: 'AND'|'OR',  // for compound rules
+  subRules: []  // nested rules
+}
+
+// Validation Result Structure:
+{
+  recordId: string|number,
+  passed: boolean,
+  failedRules: [
+    {
+      ruleId: string,
+      ruleName: string,
+      fieldName: string,
+      actualValue: any,
+      expectedValue: any,
+      message: string
+    }
+  ],
+  timestamp: number
+}
+
+// Validation Configuration (localStorage):
+{
+  validationRules: [ValidationRule],
+  validationTemplates: {
+    'template-name': {
+      name: string,
+      description: string,
+      rules: [ValidationRule]
+    }
+  },
+  validationResults: [ValidationResult],  // May need separate storage
+  validationSettings: {
+    runAfterTransformation: boolean,
+    showInlineWarnings: boolean,
+    stopOnFirstFailure: boolean
+  }
+}
+```
+
+### localStorage Keys (to add):
+- `validationRules` - Array of all validation rules
+- `validationTemplates` - Saved rule sets
+- `validationSettings` - User preferences
+- `lastValidationResults` - Recent validation run (may need IndexedDB for large datasets)
+
+---
+
+**RECOMMENDATION**: The existing codebase provides excellent UI patterns and styling to reuse, but lacks any validation logic or dual-panel layout. Key implementation priorities:
+1. Create right-side panel variant of existing function-library-panel
+2. Build modal system extension for 800px rule builder
+3. Implement Web Worker infrastructure (not present in current code)
+4. Add tab navigation system (currently missing)
+5. Consider IndexedDB for validation results to avoid localStorage limits
+6. Create execution pipeline for transformation → validation flow

@@ -1,0 +1,207 @@
+# TECHNICAL SPECIFICATION: BATCH OUTREACH & TRAINABLE INSTRUCTIONS
+
+## OVERVIEW
+Add batch outreach capability allowing natural language queries to filter contacts and generate AI messages in bulk. Add trainable instructions system in Settings allowing users to define custom outreach rules that append to all AI prompts. Both features integrate surgically into existing Renzo codebase without modifying core contact/queue infrastructure.
+
+## VIEWS
+
+**Batch Outreach View (new)**
+- Container: `<div id="view-batch" class="view" style="display:none;">`
+- Header section: `<div class="view-header">` with title "Batch Outreach" and subtitle
+- Input card: `.batch-input-card` containing:
+  - Label "Describe who to contact:"
+  - Textarea `.batch-query-input` (placeholder: "e.g., contracts expiring in 30 days with invoices over $5000")
+  - Button `.btn.btn-primary` "Generate Batch Messages"
+- Progress section: `<div class="batch-progress" style="display:none;">` with `.progress-bar` and status text
+- Results section: `<div class="batch-results" style="display:none;">` with `.batch-results-header` and `.batch-results-list`
+
+**Settings View (modified)**
+- Add new section after existing settings content:
+  - Section header: `<div class="settings-section-header">My Outreach Rules</div>`
+  - Description paragraph explaining trainable instructions
+  - Input card: `.rules-input-card` with textarea `.rule-input` and "Add Rule" button
+  - Rules list: `<div class="rules-list">` containing rule items
+  - Rule item structure: `.rule-item` with `.rule-text` and `.btn-sm.btn-secondary` delete button
+
+**Sidebar Navigation (modified)**
+- Add after Queue nav item: `<div class="nav-item" data-view="batch"><svg class="nav-icon">...</svg><span>Batch Outreach</span></div>`
+
+## FUNCTIONS
+
+**executeBatchOutreach(query)**
+1. Validate query is not empty, show alert if empty, return
+2. Parse query keywords: check for "contract" OR "expiry" (use contractExpiry field), "invoice" (use invoiceAmount field), "contacted" (use lastContactDate field)
+3. Get contacts from localStorage key 'renzo_contacts', parse JSON
+4. Filter contacts: for each contact, apply keyword-based filters:
+   - If query contains "contract"/"expiry": filter contractExpiry field (check if date within extracted days or exists)
+   - If query contains "invoice": filter invoiceAmount (check if amount > extracted number)
+   - If query contains "contacted": filter lastContactDate (check if date older than extracted days)
+5. Show `.batch-progress` div, hide results
+6. Initialize progress counter: processedCount = 0, totalCount = filteredContacts.length
+7. For each filtered contact:
+   - Call generateAiMessage(contact) with modified prompt including rules
+   - Create queue item object: {contactId, contactName, message, status: 'pending', date: ISO string}
+   - Add to queue in localStorage key 'renzo_queue'
+   - Increment processedCount, update progress bar width % and status text
+   - Use setTimeout for async simulation (50ms delay per contact)
+8. On completion: hide progress, show `.batch-results` with count summary
+9. Render results list with contact names and message previews
+10. Trigger queue view refresh if active
+
+**addOutreachRule()**
+1. Get value from `.rule-input` textarea, trim whitespace
+2. If empty, show alert "Please enter a rule", return
+3. Load existing rules from loadRules()
+4. Add new rule to array: rules.push({id: Date.now(), text: ruleText})
+5. Save to localStorage key 'renzo_rules' as JSON string
+6. Clear textarea input
+7. Call renderRules() to update display
+8. Show success alert "Rule added successfully"
+
+**deleteOutreachRule(ruleId)**
+1. Load rules from loadRules()
+2. Filter rules array to remove rule with matching id
+3. Save updated array to localStorage 'renzo_rules'
+4. Call renderRules() to update display
+
+**loadRules()**
+1. Get localStorage item 'renzo_rules'
+2. If null/undefined, return empty array []
+3. Parse JSON and return array of rule objects
+
+**renderRules()**
+1. Get rules from loadRules()
+2. Select `.rules-list` element
+3. If rules.length === 0, set innerHTML to empty state message
+4. Else, map rules to HTML: for each rule create `.rule-item` with `.rule-text` (escaped) and delete button with data-rule-id attribute
+5. Set innerHTML of `.rules-list`
+6. Attach click event listeners to all delete buttons calling deleteOutreachRule(ruleId)
+
+**getAiPromptWithRules(basePrompt)**
+1. Load rules from loadRules()
+2. If rules.length === 0, return basePrompt unchanged
+3. Create rules text: "Additional instructions: " + rules.map(r => r.text).join('. ') + '.'
+4. Return basePrompt + '\n\n' + rulesText
+
+**Modified: generateAiMessage(contact)** (existing function modification)
+1. Before making API call, wrap original prompt generation in getAiPromptWithRules()
+2. Existing logic remains unchanged, only prompt is enhanced
+
+**initializeBatchOutreach()**
+1. Attach click listener to "Generate Batch Messages" button calling executeBatchOutreach() with textarea value
+2. Initialize view state
+
+**initializeTrainableRules()**
+1. Call renderRules() to load initial display
+2. Attach click listener to "Add Rule" button calling addOutreachRule()
+3. Initialize event delegation for delete buttons
+
+## DATA
+
+**localStorage: 'renzo_rules'**
+- Format: JSON string array of objects
+- Structure: `[{id: number, text: string}, ...]`
+- Example: `[{id: 1703001234567, text: "Always mention ROI in first sentence"}, {id: 1703001234890, text: "Keep messages under 100 words"}]`
+
+**localStorage: 'renzo_queue'** (existing, modified)
+- Batch items added with same structure as manual queue items
+- Each item: `{contactId: string, contactName: string, message: string, status: string, date: string, batchId: string (optional)}`
+
+**localStorage: 'renzo_contacts'** (existing, read-only)
+- Read for filtering in batch operations
+- Expected fields: contractExpiry, invoiceAmount, lastContactDate, name, id
+
+**Session state: batchProgress**
+- In-memory object tracking current batch execution
+- Properties: {total: number, processed: number, isRunning: boolean}
+
+## API
+
+**No new API endpoints** (uses existing generateAiMessage API integration)
+
+**Modified AI Prompt Enhancement**
+- Existing API call payload modified to include rules in prompt field
+- No change to endpoint, method, or response handling
+- Enhancement occurs in prompt construction before API call
+
+## DESIGN
+
+**Batch View Layout**
+- `.batch-input-card`: background #ffffff, border 1px solid #e5e7eb, border-radius 8px, padding 24px, margin-bottom 24px
+- `.batch-query-input`: min-height 120px, font-family inherit, font-size 14px, border 1px solid #d1d5db, border-radius 6px, padding 12px, width 100%, resize vertical
+- `.batch-progress`: background #f9fafb, border-radius 8px, padding 20px, margin-bottom 24px
+- `.progress-bar`: height 8px, background #e5e7eb, border-radius 4px, overflow hidden
+- `.progress-bar-fill`: height 100%, background linear-gradient(90deg, #3b82f6, #2563eb), transition width 0.3s ease
+- `.batch-results-header`: font-size 16px, font-weight 600, color #111827, margin-bottom 16px
+- `.batch-results-list`: display grid, gap 12px
+- `.batch-result-item`: background #ffffff, border 1px solid #e5e7eb, border-radius 6px, padding 16px
+- `.batch-result-contact`: font-weight 600, color #111827, margin-bottom 8px
+- `.batch-result-preview`: font-size 13px, color #6b7280, overflow hidden, text-overflow ellipsis, display -webkit-box, -webkit-line-clamp 2, -webkit-box-orient vertical
+
+**Rules Section Design**
+- `.settings-section-header`: font-size 18px, font-weight 600, color #111827, margin-top 32px, margin-bottom 8px, padding-bottom 12px, border-bottom 2px solid #e5e7eb
+- `.rules-input-card`: background #f9fafb, border-radius 8px, padding 20px, margin-bottom 20px
+- `.rule-input`: min-height 80px, background #ffffff, font-size 14px, border 1px solid #d1d5db, border-radius 6px, padding 12px, width 100%, resize vertical, margin-bottom 12px
+- `.rules-list`: display flex, flex-direction column, gap 12px
+- `.rule-item`: display flex, justify-content space-between, align-items start, background #ffffff, border 1px solid #e5e7eb, border-radius 6px, padding 16px, gap 16px
+- `.rule-text`: flex 1, font-size 14px, color #374151, line-height 1.5
+- `.rule-item .btn-sm`: flex-shrink 0, background #ef4444, color #ffffff, border none, padding 6px 12px, border-radius 4px, font-size 13px, cursor pointer, hover background #dc2626
+
+**Navigation Icon**
+- Batch Outreach icon: SVG grid/table icon (3x3 grid squares), stroke width 2, color inherit from `.nav-icon` (currentColor)
+- Size: 20x20px viewBox
+
+**Responsive**
+- Batch view: full width on mobile, max-width 900px on desktop, margin auto
+- Rules list: full width, no grid (stack vertically)
+
+## ERRORS
+
+**Empty Query Error**
+- Trigger: executeBatchOutreach() called with empty/whitespace-only query
+- Display: `.alert.alert-error` with message "Please enter a search query to filter contacts"
+- Position: above batch input card
+- Auto-dismiss: after 4 seconds
+
+**No Contacts Match Error**
+- Trigger: filtered contacts array length === 0 after applying filters
+- Display: `.alert.alert-warning` with message "No contacts match your search criteria. Try a different query."
+- Position: in `.batch-results` area
+- Persistent until new query
+
+**Empty Rule Error**
+- Trigger: addOutreachRule() called with empty textarea
+- Display: `.alert.alert-error` with message "Please enter a rule before adding"
+- Position: above rules input card
+- Auto-dismiss: after 3 seconds
+
+**API Failure During Batch**
+- Trigger: generateAiMessage() returns error for any contact
+- Action: mark that contact as failed in results, continue with remaining contacts
+- Display: show failed count in batch results summary, mark failed items with `.status-failed` badge
+- No halt: batch continues processing remaining contacts
+
+**LocalStorage Quota Exceeded**
+- Trigger: saving rules or queue items exceeds storage limit
+- Display: `.alert.alert-error` with message "Storage limit reached. Please delete old messages or rules."
+- Position: top of active view
+- Action: revert last operation, notify user
+
+**Invalid Contact Data**
+- Trigger: contact object missing expected fields during filtering
+- Action: skip contact, log warning to console
+- No user-facing error (silently exclude malformed contacts)
+
+## SCOPE_CHECK
+
+**Estimated Total Lines: 420**
+
+Breakdown:
+- HTML additions (batch view, settings section, nav): ~80 lines
+- CSS additions (batch styles, rules styles): ~120 lines
+- JavaScript functions (7 new + 1 modified): ~180 lines
+- Error handling and event listeners: ~40 lines
+
+**SINGLE_TASK: Proceed as one build**
+
+All additions are within 650-line limit. No external dependencies. Surgical integration into existing codebase with minimal modification to existing functions (only generateAiMessage prompt enhancement). Both features are self-contained and can be implemented in a single cohesive update.

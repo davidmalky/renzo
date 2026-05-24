@@ -1,0 +1,173 @@
+# TECHNICAL SPECIFICATION: RENZO PHASE 2
+
+## OVERVIEW
+
+Renzo Phase 2 transforms the existing relationship management app into an intelligent outreach platform with dynamic priority scoring, Gmail integration, batch operations, and comprehensive contact intelligence. The system replaces static tier-based frequency with a configurable weighted scoring system that prioritizes contacts based on contract expiry, invoice status, revenue value, relationship quality, and recency. All data remains in localStorage with no backend required, maintaining the single-file HTML architecture while adding CSV import, communication history logging, trainable AI instructions, and Gmail draft creation via URL schemes.
+
+## VIEWS
+
+- **Dashboard**: Enhanced with priority-sorted contact cards showing computed scores (0-100) with color-coded badges. Top section displays key metrics: highest priority contact, total priority score distribution, upcoming contract expiries (next 30 days), outstanding invoice totals. Quick action buttons for batch outreach and CSV import. Recent activity timeline shows communication log entries with trigger reasons.
+
+- **Contacts**: Contact list table with additional columns for Priority Score (sortable, color-coded), Contract Expiry Date, Outstanding Invoice, Revenue/Spend, Relationship Stars (1-5 visual rating). Import CSV button in header. Each row click opens Contact Detail Panel (not edit form). Inline actions: Edit, Generate Message, Delete. Filter controls for priority ranges, expiry windows, invoice status.
+
+- **Contact Detail Panel**: Full-screen overlay showing contact header (name, company, email, phone), computed priority score breakdown (visual chart showing each factor's contribution), all communication history in reverse chronological timeline (date, trigger reason, message text, sent status), contact metadata fields. Action buttons: Edit Contact, Generate Message, Close Panel.
+
+- **Contact Form Modal**: Existing fields plus Contract Expiry Date (date picker), Invoice Amount Outstanding (currency input $), Revenue/Spend Value (currency input $), Relationship Score (1-5 star selector). Priority weights configuration collapsed section at bottom showing current weights and sliders.
+
+- **Queue**: Enhanced queue items display trigger reason prominently at top ("Contract expires in 23 days", "Invoice $4,200 overdue 15 days", "$50K account not contacted in 45 days"). Shows contact name, company, computed priority score, generated message preview. Actions: Create Gmail Draft (new), Log as Sent, Regenerate Message, Remove from Queue. Filter by trigger type.
+
+- **Batch Outreach**: New sidebar nav item. Large prompt textarea with placeholder "Example: Reach out to all contacts with contracts expiring in 90 days and mention our renewal team". Submit button triggers batch generation. Progress indicator shows "Generating message 3 of 7..." with cancel option. Results preview shows all generated drafts in expandable cards before adding to queue. Batch actions: Add All to Queue, Edit Individual, Discard Batch.
+
+- **Settings**: Existing sections plus new sections: Gmail Integration (email input field, Connect Gmail info text explaining mailto: approach), Priority Weights Configuration (5 sliders: Days Since Contact, Contract Expiry, Invoice Amount, Revenue/Spend, Relationship Score - each 0-100%, must total 100%), My Outreach Rules (list of user-defined instruction strings with add/remove, textarea to add new rule, each rule displayed as removable chip).
+
+- **Login**: Unchanged from existing implementation.
+
+## FUNCTIONS
+
+- **computePriorityScore(contact, weights)**: Takes contact object and weights object. Returns 0-100 score. Calculate recency score: map daysSinceContact (0-365+) to 0-100 scale inversely (0 days = 0 points, 90+ days = 100 points). Calculate expiry score: if contractExpiry exists, compute days until expiry, map 0-365 range to 100-0 scale (expired/today = 100, 365+ days = 0). Calculate invoice score: map invoiceAmount (0-50000+) to 0-100 scale linearly. Calculate revenue score: map revenueValue (0-1000000+) to 0-100 scale linearly with logarithmic curve. Calculate relationship score: map relationshipScore (1-5) to 0-100 scale (1=0, 5=100). Multiply each score by its weight (0-1 decimal). Sum all weighted scores. Return total capped at 100.
+
+- **getPriorityWeights()**: Retrieves weights from localStorage.priorityWeights. Returns object with defaults: {recency: 0.2, contractExpiry: 0.3, invoice: 0.2, revenue: 0.15, relationship: 0.15}. If no weights stored, saves and returns defaults.
+
+- **savePriorityWeights(weights)**: Validates weights object sums to 1.0 (within 0.01 tolerance). Saves to localStorage.priorityWeights as JSON string. Triggers recalculation of all contact priority scores. Shows success toast.
+
+- **updateAllPriorityScores()**: Iterates all contacts. For each contact, calls computePriorityScore with current weights. Updates contact.priorityScore field. Saves updated contacts array to localStorage. Triggers UI refresh.
+
+- **determineOutreachTrigger(contact)**: Returns object {type: string, message: string, urgency: number}. Check contract expiry: if within 90 days, return {type: 'contract', message: 'Contract expires in X days', urgency: scale 90-0 to 0-100}. Check invoice: if invoiceAmount > 0, calculate days overdue based on lastContact + 30 days, return {type: 'invoice', message: 'Invoice $X overdue Y days', urgency: based on days}. Check high value + recency: if revenueValue > 10000 and daysSince > frequency, return {type: 'highvalue', message: '$X account not contacted in Y days', urgency: based on days}. Check standard recency: if daysSince >= frequency, return {type: 'recency', message: 'Last contact X days ago', urgency: based on days}. If no triggers, return null.
+
+- **generateMessageWithTrigger(contact, trigger, userInstructions)**: Calls Anthropic API with claude-haiku-4-5. Constructs prompt with trigger context at top: "OUTREACH TRIGGER: {trigger.message}". Includes contact details, user settings (company, products, style). Appends user's custom instructions array as bullet points. Instructs AI to reference the specific trigger naturally in message opening. Returns message text and reasoning that explains how trigger was incorporated.
+
+- **enrichContactForQueue()**: Takes contact, computes priority score, determines trigger, returns enriched object {contact, priorityScore, trigger, queuedAt: timestamp}. Used when building queue list.
+
+- **loadQueue()**: Iterates all contacts. For each, call determineOutreachTrigger. If trigger exists, call enrichContactForQueue. Collect all enriched contacts. Sort by priorityScore descending. Return array.
+
+- **generateGmailDraftUrl(contact, message, subject)**: Constructs mailto: URL. Encode subject and body with encodeURIComponent. Format: `https://mail.google.com/mail/?view=cm&fs=1&to=${contact.email}&su=${subject}&body=${body}`. Return URL string.
+
+- **openGmailDraft(contactId)**: Finds contact by ID. Gets generated message from queue item or generates new one. Creates subject line: "Following up — {contact.company}". Calls generateGmailDraftUrl. Opens URL in new window with window.open(url, '_blank'). Shows confirmation toast: "Gmail draft opened. Please send from Gmail."
+
+- **logCommunication(contactId, message, trigger, reasoning)**: Creates communication log entry object: {id: generateId(), contactId, message, trigger: trigger.message, reasoning, timestamp: Date.now(), sent: true}. Retrieves localStorage.communicationLog array (or initializes empty). Appends new entry. Saves back to localStorage. Updates contact.lastContact to current date. Triggers UI refresh.
+
+- **getContactCommunicationLog(contactId)**: Retrieves localStorage.communicationLog array. Filters by contactId. Sorts by timestamp descending. Returns array of log entries.
+
+- **openContactDetailPanel(contactId)**: Finds contact by ID. Computes priority score and breakdown. Loads communication log. Renders full-screen panel overlay with contact header, priority breakdown chart (HTML canvas or SVG bars showing each factor's contribution), communication timeline (each entry as card with timestamp, trigger, message text). Adds event listeners to Edit and Generate buttons within panel.
+
+- **closeContactDetailPanel()**: Removes panel overlay from DOM. Clears any event listeners.
+
+- **parseCSV(csvText)**: Splits by newline. First row is headers. Detects columns: searches headers (case-insensitive) for 'name', 'first', 'last', 'company', 'organization', 'email', 'phone', 'notes'. Creates mapping object. Iterates remaining rows, splits by comma (handles quoted values). For each row, creates contact object using mapping. Handles name construction from first+last if separate. Returns array of contact objects with unmapped fields.
+
+- **showCSVPreview(contacts)**: Renders modal with table showing first 5 contacts. Columns: Name, Company, Email, Phone, Notes. Shows column mapping dropdowns at top for user to confirm/adjust mapping. Import and Cancel buttons. On Import, calls importContacts.
+
+- **importContacts(contacts)**: For each contact, checks for duplicates (same name + company combination). Skips if exists. Assigns new ID with generateId(). Adds default fields: tier='B', frequency=30, lastContact=null, priorityScore=0. Appends to localStorage.contacts. After all imports, calls updateAllPriorityScores(). Shows success toast: "Imported X contacts, skipped Y duplicates". Closes preview modal and refreshes contact list.
+
+- **executeBatchOutreach(prompt)**: Parses natural language prompt to extract intent. Uses simple keyword matching: looks for 'contract expir', 'invoice', 'not contacted', 'high value', date ranges ('90 days', '3 months'), relationship score mentions. Filters contacts based on detected criteria. If no clear criteria, shows error toast. For each matching contact, determines trigger with determineOutreachTrigger. Generates message with generateMessageWithTrigger including prompt as additional context. Stores results in temporary batchResults array. Shows progress modal with cancel option. Returns array of {contact, trigger, message, reasoning}.
+
+- **renderBatchResults(batchResults)**: Displays modal with expandable cards for each generated message. Each card shows: contact name/company, trigger reason, message preview (first 100 chars), expand button. When expanded shows full message and reasoning. Actions per card: Edit Message (opens textarea), Remove from Batch. Batch actions at bottom: Add All to Queue, Discard All. On Add All, iterates results and adds each to queue (creates queue entry in memory, not sent yet).
+
+- **addToQueue(contact, message, trigger, reasoning)**: Creates queue item object: {id: generateId(), contactId: contact.id, contact, message, trigger: trigger.message, reasoning, queuedAt: Date.now(), status: 'pending'}. Appends to localStorage.queueItems array. Triggers queue view refresh. Shows toast: "Added to queue".
+
+- **removeFromQueue(queueItemId)**: Finds queue item in localStorage.queueItems. Removes from array. Saves updated array. Refreshes queue view.
+
+- **markAsSentFromQueue(queueItemId)**: Finds queue item. Extracts contactId, message, trigger, reasoning. Calls logCommunication. Updates contact.lastContact to current date. Removes queue item with removeFromQueue. Shows success toast: "Marked as sent and logged".
+
+- **getUserInstructions()**: Retrieves localStorage.userInstructions array (or empty array). Returns array of instruction strings.
+
+- **saveUserInstructions(instructions)**: Saves instructions array to localStorage.userInstructions as JSON. Triggers toast: "Outreach rules saved".
+
+- **addUserInstruction(instructionText)**: Retrieves current instructions with getUserInstructions. Appends new instruction string. Calls saveUserInstructions. Refreshes instructions UI.
+
+- **removeUserInstruction(index)**: Retrieves instructions array. Removes item at index with splice. Calls saveUserInstructions. Refreshes UI.
+
+- **renderInstructionsList()**: Gets instructions with getUserInstructions. Renders each as removable chip with text and × button. Add new instruction form with textarea and Add button at bottom.
+
+- **saveContact(contact)**: Enhanced version of existing. If no ID, generates new one and sets defaults: priorityScore=0, contractExpiry=null, invoiceAmount=0, revenueValue=0, relationshipScore=3. If updating existing, preserves ID and timestamps. Validates required fields (name, email). Computes initial priority score with computePriorityScore. Saves to localStorage.contacts array (updates existing or appends new). Calls updateAllPriorityScores to recalculate if weights affect multiple contacts. Closes form modal. Refreshes contact list. Shows success toast.
+
+- **deleteContact(id)**: Existing function enhanced. Additionally removes all communication log entries for this contact with filter. Removes any queue items for this contact. Confirms with user dialog before deletion.
+
+- **generateMessage(contact)**: Enhanced version. First determines trigger with determineOutreachTrigger. Gets user instructions with getUserInstructions. Calls generateMessageWithTrigger with contact, trigger, and instructions. Shows loading spinner. On success, displays message in modal with trigger reason at top, message text, reasoning section. Adds buttons: Copy to Clipboard, Add to Queue, Create Gmail Draft, Close. On error shows error modal.
+
+- **renderContactRow(contact)**: Renders table row with cells: Priority Score (color-coded badge: 0-30 red, 31-60 yellow, 61-100 green), Name (clickable, opens detail panel), Company, Email, Phone, Contract Expiry (formatted date or 'None'), Invoice (formatted currency or '$0'), Revenue (formatted currency), Relationship (star icons), Actions (Edit, Generate, Delete buttons).
+
+- **renderQueueItem(queueItem)**: Renders queue card with prominent trigger reason at top in colored banner (contract=orange, invoice=red, highvalue=green, recency=gray). Below shows contact name and company. Priority score badge. Message preview with expand toggle. Reasoning section (collapsed by default). Action buttons: Create Gmail Draft, Log as Sent, Regenerate, Remove.
+
+- **getPriorityScoreColor(score)**: Returns CSS color based on score: 0-30 '#DC2626' (red), 31-60 '#FBBF24' (yellow), 61-100 '#10B981' (green).
+
+- **formatCurrency(amount)**: Returns formatted string: '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}).
+
+- **formatDate(dateString)**: Parses date string, returns formatted 'MMM DD, YYYY' or 'None' if null.
+
+- **calculateDaysUntil(dateString)**: Parses date string, computes difference from today in days, returns number (negative if past).
+
+- **calculateDaysSince(dateString)**: Parses date string, returns days elapsed since that date, returns 999 if null.
+
+- **renderPriorityBreakdown(contact, weights)**: Creates visual breakdown showing how priority score is computed. Five horizontal bars (recency, contract, invoice, revenue, relationship) each showing factor score (0-100) × weight = contribution. Each bar colored differently. Total at bottom. Renders as HTML div structure or canvas chart.
+
+- **renderStarRating(score)**: Returns HTML string with 5 star icons (★ ☆) where filled stars = score (1-5).
+
+- **renderDashboardStats()**: Computes: total contacts, average priority score, count by priority tier (high/med/low), contracts expiring in 30 days, total outstanding invoices, total revenue. Renders stat cards in grid layout.
+
+- **initializeApp()**: Called on page load. Checks authentication with getCurrentUser. If not logged in, shows login view. If logged in, initializes default data if not exists (priorityWeights, userInstructions, communicationLog array). Calls updateAllPriorityScores on startup to ensure all scores current. Loads initial view (dashboard). Sets up navigation event listeners. Loads Inter font.
+
+- **navigate(viewName)**: Updates active nav item. Hides all view divs. Shows target view div. Triggers view-specific load function: loadDashboard(), loadContacts(), loadQueue(), loadSettings(). Updates URL hash without reload.
+
+- **loadDashboard()**: Calls renderDashboardStats. Loads high priority contacts (top 10 by score). Renders recent communication log (last 20 entries). Renders upcoming expiries list (next 30 days). Each section clickable to navigate to relevant view with filters applied.
+
+- **loadContacts()**: Retrieves all contacts from localStorage. Sorts by priorityScore descending by default. Renders contact table with renderContactRow for each. Sets up filter controls event listeners. Sets up sort column click handlers. Adds Import CSV button handler.
+
+- **loadQueue()**: Calls loadQueue() function to get enriched queue array. Renders each queue item with renderQueueItem. Groups by trigger type with collapsible sections. Shows empty state if no queue items: "All caught up! No contacts need outreach right now."
+
+- **loadSettings()**: Renders settings form with all existing fields plus new sections. Priority weights section renders 5 range sliders with live sum validator (shows error if not 100%). Gmail section shows info text about mailto: approach. Outreach rules section calls renderInstructionsList. Sets up form submit handler to save all settings. Loads current settings values into form.
+
+- **showModal(contentHtml, options)**: Creates modal overlay div. Inserts contentHtml. Adds close button unless options.hideClose. Centers on screen. Adds to body. Sets up close handlers (X button, overlay click, ESC key). Returns modal element for further manipulation.
+
+- **closeModal()**: Removes active modal from DOM. Clears modal-related event listeners.
+
+- **showToast(message, type)**: Creates toast notification div. Styles based on type (success=green, error=red, info=blue). Positions fixed at top-right. Adds to body. Auto-removes after 3 seconds with fade animation.
+
+- **generateId()**: Returns unique ID string: 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).
+
+- **login(username, password)**: Existing function unchanged. Hardcoded demo/password check.
+
+- **logout()**: Existing function unchanged. Clears currentUser, returns to login.
+
+- **getCurrentUser()**: Existing function unchanged. Returns localStorage.currentUser.
+
+## DATA
+
+- **localStorage.currentUser**: String. Username of logged in user ('demo').
+
+- **localStorage.contacts**: JSON array of contact objects. Each object: {id: string, name: string, email: string, company: string, phone: string, tier: string (deprecated but kept for compatibility), frequency: number (deprecated but kept), lastContact: string (ISO date) or null, notes: string, contractExpiry: string (ISO date) or null, invoiceAmount: number (dollars), revenueValue: number (dollars), relationshipScore: number (1-5), priorityScore: number (0-100 computed)}.
+
+- **localStorage.priorityWeights**: JSON object. {recency: number (0-1), contractExpiry: number (0-1), invoice: number (0-1), revenue: number (0-1), relationship: number (0-1)}. Must sum to 1.0.
+
+- **localStorage.communicationLog**: JSON array of log entries. Each object: {id: string, contactId: string, message: string, trigger: string (trigger reason text), reasoning: string (AI reasoning), timestamp: number (milliseconds), sent: boolean}.
+
+- **localStorage.queueItems**: JSON array of queue items. Each object: {id: string, contactId: string, contact: object (full contact copy), message: string, trigger: string, reasoning: string, queuedAt: number (milliseconds), status: string ('pending')}.
+
+- **localStorage.userSettings**: JSON object. Existing fields: {companyName: string, businessDescription: string, products: string, communicationStyle: string, openRouterApiKey: string (deprecated), anthropicApiKey: string}. Note: API key field updated for Anthropic.
+
+- **localStorage.userInstructions**: JSON array of strings. Each string is a custom instruction rule. Example: ['Always mention our Q3 pricing program', 'For finance contacts reference invoice numbers'].
+
+- **localStorage.onboardingComplete**: String 'true' or 'false'. Tracks if initial setup done.
+
+- **Temporary state (not persisted)**: batchResults array (holds batch generation results before adding to queue), activeModal reference (currently displayed modal element), activeDetailPanel reference (currently displayed contact detail panel).
+
+## API
+
+- **anthropicAPI**: Endpoint https://api.anthropic.com/v1/messages. Method POST. Headers: {'x-api-key': userSettings.anthropicApiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', 'content-type': 'application/json'}. Payload: {model: 'claude-haiku-4-5', max_tokens: 1024, messages: [{role: 'user', content: promptString}]}. Response: Extract content[0].text for message. Error handling: catch network errors, 401 unauthorized (invalid key), 429 rate limit, 500 server errors. Display user-friendly error messages. Retry logic: none (user manually retries). Timeout: 30 seconds. Used in generateMessageWithTrigger.
+
+## DESIGN
+
+- **Color Palette**: Background #F7F4EF (warm off-white). Sidebar #1E3A2F (dark forest green). Primary green #2D6A4F. Secondary green #52B788 (accents). Error red #DC2626. Warning orange #F59E0B. Warning yellow #FBBF24. Success green #10B981. Text dark #1F2937. Text light #6B7280. Border #E5E7EB. White #FFFFFF. Priority score badges: red 0-30, yellow 31-60, green 61-100.
+
+- **Typography**: Font family Inter from Google Fonts (weights 400, 500, 600, 700). Headings: 600 weight, dark text. Body: 400 weight, dark text. Labels: 500 weight, light text. Button text: 600 weight. Font sizes: h1 24px, h2 20px, h3 16px, body 14px, small 12px.
+
+- **Layout**: Fixed sidebar 240px wide on left, dark green background, white text. Main content area fills remaining width with 32px padding. Max-width 1400px centered. Dashboard uses 3-column grid for stat cards. Contact list is full-width table. Queue items are cards in single column, max-width 800px. Modals are centered overlays with max-width 600px (forms) or 900px (detail panels) with semi-transparent backdrop #000000 opacity 0.5.
+
+- **Components**: Buttons: rounded-lg (8px), px-4 py-2 padding, font-weight 600, primary buttons green background white text, secondary buttons white background green border green text, danger buttons red background white text, all have hover state (darken 10%). Inputs: rounded-md (6px), border gray, px-3 py-2 padding, focus state green border and ring. Tables: white background, borders between rows, hover state light gray background on rows, header row with gray background. Cards: white background, rounded-lg, shadow-sm, padding 16px, border subtle gray. Badges: rounded-full, px-2 py-1, small text, colored by type. Star rating: gold stars (★) #FBBF24, empty stars (☆) #D1D5DB.
+
+- **Spacing**: Section margins 24px. Card gaps 16px. Form field margins 12px. Button groups gap 8px. Table cell padding 12px. Modal padding 24px.
+
+- **Animations**: Toasts slide in from top-right with 0.3s ease. Modals fade in backdrop 0.2s, content slides down 0.3s. Hover states transition 0.15s. Loading spinners rotate 360deg 1s linear infinite.
+
+- **Responsive**: Desktop default (1024px+). Tablet (768-1023px): sidebar collapses to icons only, main content full width. Mobile (<768px): sidebar becomes bottom nav bar, stacked layout, tables become card list, modals full screen, reduce padding to 16px.
+
+- **Icons**: Use Unicode symbols: ✓ checkmark, × close, ★ star filled, ☆ star empty, ↻ refresh, + plus, − minus, ⋮ menu, → arrow

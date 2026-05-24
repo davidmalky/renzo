@@ -1,0 +1,57 @@
+# TECHNICAL SPECIFICATION
+
+## OVERVIEW
+Add a minimal version footer to the Renzo app sidebar displaying "Renzo v1.0 – Built by Agent Pipeline". The footer will be placed below the existing logout button in the sidebar, using the existing dark color scheme with muted, small text. This is a single-component addition requiring only HTML structure and CSS styling within the existing sidebar framework.
+
+## VIEWS
+- Sidebar Footer: Extend existing `.sidebar-footer` section to include a new version display element below the logout button. The version element will be a simple `<div>` with text content, styled to be subtle and non-intrusive.
+
+## FUNCTIONS
+- No JavaScript functions required for this task
+- Static HTML/CSS only implementation
+
+## DATA
+- version_text: "Renzo v1.0 – Built by Agent Pipeline" (hardcoded string)
+- No dynamic data or state management needed
+
+## API
+- No API calls required for this task
+
+## DESIGN
+- **Colors:**
+  - Background: inherit from `.sidebar` (`--sidebar: #141410`)
+  - Text color: `rgba(232, 228, 220, 0.4)` (muted version of `--sidebar-text`)
+  
+- **Typography:**
+  - Font family: 'DM Sans', system-ui, sans-serif (inherited)
+  - Font size: 10px (smaller than `.sidebar-user` 11px)
+  - Font weight: 400 (normal)
+  - Letter spacing: 0.3px
+  - Line height: 1.4
+
+- **Layout:**
+  - Display: block
+  - Text align: center
+  - Padding: 12px 22px (top padding reduced from standard 16px)
+  - Border top: 1px solid rgba(255, 255, 255, 0.05) (more subtle than existing 0.07)
+  - Margin: 0
+
+- **Position:**
+  - Located at absolute bottom of `.sidebar-footer`
+  - Below `.btn-ghost.logout` button
+  - Follows existing sidebar structure hierarchy
+
+## ERRORS
+- No error states for static display element
+- Browser compatibility: Uses standard CSS, no fallbacks needed
+- If text overflows on narrow screens: text will wrap naturally due to small font size
+
+## SCOPE_CHECK
+- Estimated total lines: ~15 lines (8 HTML + 7 CSS)
+- SINGLE_TASK: This is well under 650 lines and can be completed in one build
+- Changes required:
+  - Add 1 `<div>` element in HTML (inside `.sidebar-footer`)
+  - Add 1 CSS class definition (`.version-footer`)
+  - Total modification: ~8 lines HTML, ~7 lines CSS = ~15 lines total
+
+**FILE TO MODIFY:** `index.html` (both HTML structure and embedded CSS)

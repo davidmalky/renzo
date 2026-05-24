@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Copy-Item \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\logs\\\\output_20260524_095439.html\" \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\logs\\\\index.html\" -Force)",
+      "PowerShell(Copy-Item \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\logs\\\\output_20260524_095439.html\" \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\logs\\\\index.html\" -Force)",
+      "Bash(vercel whoami *)",
+      "Bash(git -C \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\" remote -v)",
+      "Bash(powershell -Command \"\\(Get-Item 'F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\renzo_complete.html'\\).Length / 1KB; \\(Get-Content 'F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\renzo_complete.html'\\).Count\")",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git config *)",
+      "Bash(vercel --prod --yes)",
+      "Bash(vercel project *)",
+      "Bash(curl -s \"https://renzo-j5c9c0ogm-davidlgenuth-6527s-projects.vercel.app/api/health\")",
+      "Bash(curl -s \"https://renzo-beige.vercel.app/\")",
+      "Bash(npm install *)",
+      "Bash(vercel env *)",
+      "Bash(vercel curl *)",
+      "Bash(node --input-type=commonjs --check)",
+      "Bash(Remove-Item \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\_check_tmp.js\" -ErrorAction SilentlyContinue)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s https://renzo-beige.vercel.app/api/health)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);console.log\\('HEALTH:',JSON.parse\\(d\\)\\)\")",
+      "Bash(curl -s -X POST https://renzo-beige.vercel.app/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"test@renzo.dev\",\"password\":\"Test1234!\"}')",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('queue id:',d.get\\('id'\\),'co:',d.get\\('co'\\)\\)\")",
+      "Bash(grep -v \"^logs$\")",
+      "Bash(git branch *)",
+      "Bash(git add *)"
+    ]
+  }
+}
