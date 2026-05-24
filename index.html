@@ -758,11 +758,17 @@ let selectedModel='standard';
 
 async function initStripe(){
   if(stripe) return;
-  if(!window.Stripe) return;
+  // Stripe.js loads at bottom of body — wait up to 5s for it
+  for(let i=0;i<50;i++){
+    if(window.Stripe) break;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  if(!window.Stripe){console.error('Stripe.js did not load');return;}
   try{
     const r=await fetch('/api/billing?action=config');
     const d=await r.json();
     if(d.publishableKey) stripe=window.Stripe(d.publishableKey);
+    else console.error('No publishableKey in config response');
   }catch(e){console.error('Stripe init failed:',e);}
 }
 
@@ -830,6 +836,8 @@ async function processPayment(){
   btn.disabled=true;btn.textContent='Processing...';
   document.getElementById('cardErrors').textContent='';
   try{
+    if(!stripe){await initStripe();}
+    if(!stripe){throw new Error('Payment system not ready — please refresh and try again.');}
     const r=await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({type:currentPayType})});
     if(!r.ok){const e=await r.json();throw new Error(e.error||'Payment setup failed');}
     const {clientSecret,credits}=await r.json();
@@ -1162,7 +1170,7 @@ async function doSignup(){
     }
     afterPayCallback=proceedToApp;
     document.getElementById('paySkipLink').onclick=proceedToApp;
-    openPaymentModal('signup',true);
+    await openPaymentModal('signup',true);
   }catch(e){
     err.textContent='Network error. Please try again.';
     err.classList.remove('hidden');
