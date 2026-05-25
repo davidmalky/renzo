@@ -156,7 +156,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .queue-actions{display:flex;gap:7px;flex-wrap:wrap}
 
 /* TOAST */
-.toast-container{position:fixed;bottom:24px;left:24px;z-index:4000;display:flex;flex-direction:column;gap:8px}
+.toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:4000;display:flex;flex-direction:column;align-items:center;gap:8px}
 .toast{background:var(--dark);color:#fff;padding:12px 18px;border-radius:var(--radius-sm);font-size:14px;box-shadow:var(--shadow-lg);max-width:320px;animation:slideUp .2s ease}
 .toast.success{background:var(--green)}.toast.error{background:var(--red)}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -1719,26 +1719,38 @@ async function saveDraft(){
   }catch(e){toast('Failed to save draft: '+e.message,'error');}
 }
 
-function openGmail(){
+async function openGmail(){
   const msg=document.getElementById('aiMsg').value.trim();
   if(!msg||!aiContact) return;
   const sub='Following up - '+aiContact.company;
-  openEmailCompose(aiContact.email||'',sub,msg);
+  const emails=gEmails();
+  const sel=document.getElementById('queueEmailSel');
+  const fromEmail=sel&&sel.value!==''?emails[parseInt(sel.value)]?.addr:(emails[0]?.addr||'');
+  openEmailCompose(aiContact.email||'',sub,msg,fromEmail);
+  const today=new Date().toISOString().split('T')[0];
+  try{
+    const ar=await fetch('/api/activity',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+      contactId:aiContact.id,c_name:aiContact.name,co:aiContact.company,
+      msg,trigger:'Email draft prepared',reason:'Prepared email draft'
+    })});
+    if(ar.ok) _cache.activity.unshift(normalizeActivity(await ar.json()));
+    if(aiContact.id){
+      const cr=await fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:aiContact.id,last_contact:today})});
+      if(cr.ok){const ci=_cache.contacts.findIndex(c=>c.id===aiContact.id);if(ci>-1)_cache.contacts[ci]=normalizeContact(await cr.json());}
+    }
+  }catch(e){}
 }
 
 function openEmailCompose(toAddr,subject,body,fromAddr){
-  // Use Gmail or Outlook web compose based on chosen account
+  if(!toAddr) toast('No email address on file for this contact — add one in their profile.','error');
   if(fromAddr&&fromAddr.includes('gmail')){
-    // Gmail web compose
-    const url='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    const url='https://mail.google.com/mail/?view=cm&fs=1'+(toAddr?'&to='+encodeURIComponent(toAddr):'')+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
     window.open(url,'_blank');
   } else if(fromAddr&&(fromAddr.includes('outlook')||fromAddr.includes('hotmail')||fromAddr.includes('live')||fromAddr.includes('microsoft'))){
-    // Outlook web compose
-    const url='https://outlook.live.com/mail/0/deeplink/compose?to='+encodeURIComponent(toAddr)+'&subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    const url='https://outlook.live.com/mail/0/deeplink/compose?'+(toAddr?'to='+encodeURIComponent(toAddr)+'&':'')+'subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
     window.open(url,'_blank');
   } else {
-    // Fall back to mailto which opens default client
-    window.open('mailto:'+toAddr+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+    window.open('mailto:'+(toAddr||'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
   }
 }
 
@@ -2374,23 +2386,19 @@ function bulkSendAll(){
   const fromEmail=sel&&sel.value!==''?emails[parseInt(sel.value)]?.addr:'';
   if(!fromEmail&&emails.length>0){toast('Select an email account first','error');return;}
 
-  let opened=0;
+  if(!confirm('This will open '+q.length+' email'+(q.length!==1?'s':'')+' in your mail client. Continue?')) return;
+
   q.forEach((item,i)=>{
     setTimeout(()=>{
       const c=gc().find(x=>x.id===item.contact_id);
-      const toEmail=c&&c.email?c.email:'';
+      const toEmail=c&&c.email?c.email:(item.email||'');
       const subject='Following up - '+item.co+(item.trigger?' ('+item.trigger+')':'');
-      const body=item.msg;
-      // Build mailto -- include from if specified
-      let mailto='mailto:'+toEmail+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-      window.open(mailto,'_blank');
-      opened++;
-    }, i*800); // Stagger opens 800ms apart so browser doesn't block them
+      openEmailCompose(toEmail,subject,item.msg,fromEmail);
+    }, i*800);
   });
 
-  // After all opened, ask to mark all sent
   setTimeout(()=>{
-    if(confirm('Opened '+q.length+' email drafts. Mark all as sent in Renzo?')){
+    if(confirm('Opened '+q.length+' email draft'+(q.length!==1?'s':'')+'. Mark all as sent in Renzo?')){
       markAllSent();
     }
   }, q.length*800+500);
