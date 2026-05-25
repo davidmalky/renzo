@@ -630,10 +630,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div class="field"><label>Contract Expiry</label><input type="date" id="ctExpiry"></div>
     </div>
     <div class="form-row">
+      <div class="field"><label>Annual Spend / Contract Value ($)</label><input type="number" id="ctAnnual" min="0"></div>
       <div class="field"><label>Outstanding Invoice ($)</label><input type="number" id="ctInvoice" min="0"></div>
+    </div>
+    <div class="form-row">
       <div class="field"><label>Account Size</label>
         <select id="ctSize"><option value="">Select...</option><option>Small</option><option>Mid-Market</option><option>Large</option><option>Enterprise</option></select>
       </div>
+      <div class="field"></div>
     </div>
     <div class="field"><label>Products / Services They Use</label><textarea id="ctProds"></textarea></div>
     <div class="field"><label>Relationship History</label><textarea id="ctHist"></textarea></div>
@@ -758,7 +762,6 @@ let selectedModel='standard';
 
 async function initStripe(){
   if(stripe) return;
-  // Stripe.js loads at bottom of body — wait up to 5s for it
   for(let i=0;i<50;i++){
     if(window.Stripe) break;
     await new Promise(r=>setTimeout(r,100));
@@ -838,15 +841,25 @@ async function processPayment(){
   try{
     if(!stripe){await initStripe();}
     if(!stripe){throw new Error('Payment system not ready — please refresh and try again.');}
+
+    // Step 1: get clientSecret from server (PaymentIntent created, not confirmed)
     const r=await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({type:currentPayType})});
     if(!r.ok){const e=await r.json();throw new Error(e.error||'Payment setup failed');}
-    const {clientSecret,credits}=await r.json();
+    const {clientSecret,credits:expectedCredits}=await r.json();
     if(!clientSecret)throw new Error('No client secret returned');
-    const {error}=await stripe.confirmCardPayment(clientSecret,{payment_method:{card:cardElement}});
-    if(error){document.getElementById('cardErrors').textContent=error.message;btn.disabled=false;btn.textContent='Try Again';return;}
+
+    // Step 2: Stripe.js confirms the card — handles 3DS automatically
+    const {paymentIntent,error:piError}=await stripe.confirmCardPayment(clientSecret,{payment_method:{card:cardElement}});
+    if(piError)throw new Error(piError.message);
+    if(paymentIntent.status!=='succeeded')throw new Error('Payment did not complete');
+
+    // Step 3: tell server to credit the account
+    const cr=await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'confirm-credits',paymentIntentId:paymentIntent.id})});
+    const cData=cr.ok?await cr.json():{};
+    const credits=cData.credits??expectedCredits??0;
     document.getElementById('payFormArea').classList.add('hidden');
     document.getElementById('paySuccess').classList.remove('hidden');
-    document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits are being added to your account.':'Card verified successfully. You\'re all set!';
+    document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits have been added to your account.':'Card verified successfully. You\'re all set!';
     setTimeout(async()=>{
       await updateCreditDisplay();
       if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
@@ -940,9 +953,32 @@ function normalizeContact(r){
   };
 }
 
+function normalizeProfile(r){
+  if(!r) return {};
+  return {
+    website:r.website||'',company:r.company||'',sell:r.sell||'',
+    customer:r.customer||'',role:r.role||'',tone:r.tone||'Professional',
+    repName:r.rep_name||r.repName||''
+  };
+}
+
+function sanitizeTrigger(val){
+  if(!val) return '';
+  const s=typeof val==='string'?val:JSON.stringify(val);
+  if(s.charAt(0)==='{' || s.charAt(0)==='['){
+    try{
+      const p=JSON.parse(s);
+      if(typeof p==='string') return p;
+      const first=Object.values(p).find(v=>typeof v==='string'&&v.length>2);
+      return first||'';
+    }catch{return '';}
+  }
+  return s;
+}
+
 function normalizeActivity(r){
-  const c=(_cache.contacts||[]).find(x=>x.id===r.contact_id)||{};
-  return {id:r.id,contact_id:r.contact_id,cName:c.name||r.c_name||'',co:c.company||r.co||'',msg:r.msg,reason:r.reason,trigger:r.trigger,ts:r.ts};
+  const c=(_cache.contacts||[]).find(x=>String(x.id)===String(r.contact_id))||{};
+  return {id:r.id,contact_id:r.contact_id,cName:c.name||r.c_name||'',co:c.company||r.co||'',msg:r.msg,reason:r.reason,trigger:sanitizeTrigger(r.trigger),ts:r.ts};
 }
 
 function normalizeQueueItem(r){
@@ -970,7 +1006,7 @@ async function loadProfileData(){
   _cache.activity=Array.isArray(activity)?activity.map(normalizeActivity):[];
   _cache.queue=Array.isArray(queue)?queue.map(normalizeQueueItem):[];
   _cache.drafts=Array.isArray(drafts)?drafts.map(normalizeDraft):[];
-  _cache.profile=profile||{};
+  _cache.profile=normalizeProfile(profile);
   _cache.rules=Array.isArray(rules)?rules.map(r=>r.rule_text):[];
 }
 
@@ -1237,7 +1273,7 @@ async function saveOnboarding(){
     repName:document.getElementById('obRep').value.trim()
   };
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
-  _cache.profile=r.ok?(await r.json()):profileData;
+  _cache.profile=normalizeProfile(r.ok?(await r.json()):profileData);
   localStorage.setItem(profileKey('renzo_onboarded'),'1');
   renderProfileSelector();
   document.getElementById('onboardModal').classList.add('hidden');
@@ -1271,7 +1307,9 @@ function updateQueueBadge(){
 function renderDashboard(){
   const h=new Date().getHours();
   const p=gp();
-  document.getElementById('greeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+(p.repName||'there');
+  const _u=(()=>{try{return JSON.parse(sessionStorage.getItem('renzo_user'));}catch{return null;}})();
+  const _displayName=p.repName||(_u&&_u.name?_u.name.split(' ')[0]:'there');
+  document.getElementById('greeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+_displayName;
   document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const contacts=gc(),activity=ga(),wk=new Date(Date.now()-7*86400000);
   const totalCount=contacts.length;
@@ -1328,7 +1366,7 @@ function renderDashboard(){
     const aid='act-'+a.id;
     return '<li class="activity-item" style="cursor:pointer" onclick="toggleActivity(\''+aid+'\')">'
       +'<div class="activity-time">'+new Date(a.ts).toLocaleString()+'</div>'
-      +'<div class="activity-who">'+esc(a.cName)+' -- '+esc(a.co||'')+'</div>'
+      +'<div class="activity-who">'+esc(a.cName)+(a.co?'<span style="font-weight:400;color:var(--gray)"> · '+esc(a.co)+'</span>':'')+'</div>'
       +'<div class="activity-trigger">'+esc(a.trigger||a.reason||'')+'</div>'
       +'<div class="activity-preview" id="'+aid+'-short">'+esc(short)+'</div>'
       +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:4px;white-space:pre-wrap">'+esc(full)+'</div>'
@@ -1387,7 +1425,7 @@ function renderContacts(){
 function clearCtForm(){
   ['ctName','ctCo','ctTitle','ctEmail','ctPhone','ctLoc','ctProds','ctHist','ctNotes'].forEach(x=>document.getElementById(x).value='');
   ['ctTier','ctSize'].forEach(x=>document.getElementById(x).value='');
-  ['ctFreq','ctInvoice'].forEach(x=>document.getElementById(x).value='');
+  ['ctFreq','ctInvoice','ctAnnual'].forEach(x=>document.getElementById(x).value='');
   ['ctLast','ctExpiry'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('ctId').value='';
   document.getElementById('ctErr').classList.add('hidden');
@@ -1421,6 +1459,7 @@ function openEditContact(id){
   document.getElementById('ctNotes').value=c.notes||'';
   document.getElementById('ctExpiry').value=c.contractExpiry||'';
   document.getElementById('ctInvoice').value=c.invoiceAmount||'';
+  document.getElementById('ctAnnual').value=c.annualSpend||c.annual_spend||'';
   document.getElementById('ctDelBtn').classList.remove('hidden');
   document.getElementById('ctModal').classList.remove('hidden');
 }
@@ -1443,7 +1482,8 @@ async function saveContact(){
     history:document.getElementById('ctHist').value.trim(),
     notes:document.getElementById('ctNotes').value.trim(),
     contract_expiry:document.getElementById('ctExpiry').value||null,
-    invoice_amount:parseFloat(document.getElementById('ctInvoice').value)||0
+    invoice_amount:parseFloat(document.getElementById('ctInvoice').value)||0,
+    annual_spend:parseFloat(document.getElementById('ctAnnual').value)||0
   };
   const id=document.getElementById('ctId').value;
   try{
@@ -2055,7 +2095,7 @@ async function runBatch(){
           let txt=data.content[0].text.trim();
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
-          const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:batchContext})});
+          const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:typeof batchContext==='string'?batchContext:query})});
           if(qr.ok) _cache.queue.unshift(normalizeQueueItem(await qr.json()));
           generated++;
         } else {failed++;}
@@ -2264,7 +2304,7 @@ function loadSettings(){
 async function saveSettings(){
   const profileData={website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim()};
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
-  _cache.profile=r.ok?(await r.json()):profileData;
+  _cache.profile=normalizeProfile(r.ok?(await r.json()):profileData);
   toast('Settings saved','success');
 }
 

@@ -46,57 +46,99 @@ async function handleStatus(req, res) {
   });
 }
 
-// ── POST /api/billing (no stripe-signature) — create PaymentIntent ────────────
+// ── POST /api/billing — create PaymentIntent (returns clientSecret only) ────────
 async function handleCreatePaymentIntent(req, body, res) {
   let userId;
   try { ({ userId } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   const { type } = body;
+  console.log('[billing] create-payment-intent userId:', userId, 'type:', type);
+
   const pack = PACKS[type];
   if (!pack) return res.status(400).json({ error: 'Invalid pack type' });
 
-  let { data: billing } = await supabase
-    .from('billing').select('*').eq('user_id', userId).maybeSingle();
-  if (!billing) {
-    const { data: ins } = await supabase
-      .from('billing').insert({ user_id: userId, credits: 0 }).select().single();
-    billing = ins;
-  }
+  try {
+    let { data: billing } = await supabase
+      .from('billing').select('*').eq('user_id', userId).maybeSingle();
+    if (!billing) {
+      const { data: ins } = await supabase
+        .from('billing').insert({ user_id: userId, credits: 0 }).select().single();
+      billing = ins;
+    }
 
-  const { data: user } = await supabase
-    .from('users').select('email, name').eq('id', userId).single();
+    const { data: user } = await supabase
+      .from('users').select('email, name').eq('id', userId).single();
 
-  let customerId = billing?.stripe_customer_id;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user?.email,
-      name: user?.name,
-      metadata: { userId }
+    let customerId = billing?.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user?.email,
+        name: user?.name,
+        metadata: { userId }
+      });
+      customerId = customer.id;
+      await supabase.from('billing').update({ stripe_customer_id: customerId })
+        .eq('user_id', userId);
+    }
+
+    let creditsToAdd = pack.credits;
+    if (type !== 'signup' && !billing?.first_pack_purchased && pack.credits > 0) {
+      creditsToAdd = Math.floor(pack.credits * 1.2);
+    }
+
+    // Create PaymentIntent — do NOT confirm server-side, let Stripe.js handle it
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: pack.amount,
+      currency: 'usd',
+      customer: customerId,
+      payment_method_types: ['card'],
+      metadata: { userId, creditsToAdd: String(creditsToAdd), packType: type },
+      description: `Renzo ${type} pack`
     });
-    customerId = customer.id;
-    await supabase.from('billing').update({ stripe_customer_id: customerId })
-      .eq('user_id', userId);
+
+    console.log('[billing] PaymentIntent created:', paymentIntent.id, 'status:', paymentIntent.status);
+    return res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      credits: creditsToAdd
+    });
+  } catch (e) {
+    console.error('[billing] create-payment-intent error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── POST /api/billing — confirm credits after successful client-side payment ────
+async function handleConfirmCredits(req, body, res) {
+  let userId;
+  try { ({ userId } = await validateRequest(req)); }
+  catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+  const { paymentIntentId } = body;
+  if (!paymentIntentId) return res.status(400).json({ error: 'Missing paymentIntentId' });
+
+  const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (!pi || pi.metadata?.userId !== userId) {
+    return res.status(403).json({ error: 'PaymentIntent does not belong to this user' });
+  }
+  if (pi.status !== 'succeeded') {
+    return res.status(400).json({ error: `Payment not succeeded: ${pi.status}` });
   }
 
-  let creditsToAdd = pack.credits;
-  if (type !== 'signup' && !billing?.first_pack_purchased && pack.credits > 0) {
-    creditsToAdd = Math.floor(pack.credits * 1.2);
+  const creditsToAdd = parseInt(pi.metadata?.creditsToAdd || '0', 10);
+  if (creditsToAdd > 0) {
+    const { data: fresh } = await supabase
+      .from('billing').select('credits').eq('user_id', userId).single();
+    if (fresh) {
+      await supabase.from('billing').update({
+        credits: fresh.credits + creditsToAdd,
+        first_pack_purchased: true,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', userId);
+    }
   }
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: pack.amount,
-    currency: 'usd',
-    customer: customerId,
-    metadata: { userId, creditsToAdd: String(creditsToAdd), packType: type },
-    description: `Renzo ${type} pack`
-  });
-
-  return res.status(200).json({
-    clientSecret: paymentIntent.client_secret,
-    amount: pack.amount,
-    credits: creditsToAdd
-  });
+  return res.status(200).json({ success: true, credits: creditsToAdd });
 }
 
 // ── POST /api/billing (with stripe-signature) — webhook ──────────────────────
@@ -154,8 +196,8 @@ export default async function handler(req, res) {
     // Regular POST — parse JSON body
     let body = {};
     try { body = JSON.parse(rawBody.toString()); } catch {}
-    // Attach parsed body so validateRequest can work (reads req.headers only)
     req.body = body;
+    if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
     return handleCreatePaymentIntent(req, body, res);
   }
 

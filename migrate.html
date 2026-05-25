@@ -21,7 +21,15 @@ button:hover:not(:disabled){background:#237A52}
 </style>
 </head>
 <body>
-<div class="card">
+<div id="gateCard" class="card">
+  <h1>Renzo Data Migration</h1>
+  <p class="sub">This tool is password protected.</p>
+  <label>Password</label>
+  <input type="password" id="gatePass" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkGate()">
+  <div id="gateErr" style="color:#DC2626;font-size:13px;margin-top:-14px;margin-bottom:12px;display:none">Access denied</div>
+  <button onclick="checkGate()">Continue</button>
+</div>
+<div id="mainCard" class="card" style="display:none">
   <h1>Renzo Data Migration</h1>
   <p class="sub">One-time tool to migrate your local Renzo data into your account. Open browser DevTools → Application → Session Storage → find <strong>renzo_jwt</strong> and paste its value below, then click Run Migration.</p>
   <label>JWT Token</label>
@@ -32,6 +40,17 @@ button:hover:not(:disabled){background:#237A52}
   <button id="runBtn" onclick="runMigration()">Run Migration</button>
 </div>
 <script>
+function checkGate(){
+  const pw=document.getElementById('gatePass').value;
+  if(pw==='renzo-migrate-2026'){
+    document.getElementById('gateCard').style.display='none';
+    document.getElementById('mainCard').style.display='block';
+  } else {
+    document.getElementById('gateErr').style.display='block';
+    document.getElementById('gatePass').value='';
+    document.getElementById('gatePass').focus();
+  }
+}
 function addLog(msg){
   const el=document.getElementById('log');
   el.value+=(el.value?'\n':'')+new Date().toLocaleTimeString()+' '+msg;
