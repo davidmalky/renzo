@@ -2065,6 +2065,10 @@ async function runBatch(){
         +(c.notes?' [notes: '+c.notes.slice(0,80)+']':'');
     }).join('\n');
 
+    // [DIAG] temp — remove after
+    console.log('[BATCH DIAG] raw lastContact (first 5):', contacts.slice(0,5).map(c=>({name:c.name,lastContact:c.lastContact})));
+    console.log('[BATCH DIAG] summaries (first 3):\n'+contactSummaries.split('\n').slice(0,3).join('\n'));
+
     const filterPrompt='You are a smart outreach assistant for '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
       +'\n\nUser role: '+(p.role||'relationship manager')
       +'\n\nThe user wants to: "'+query+'"'
