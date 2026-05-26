@@ -315,6 +315,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <button class="nav-item" data-view="queue">Queue <span class="nav-badge hidden" id="queueBadge">0</span></button>
       <button class="nav-item" data-view="drafts">Drafts</button>
       <button class="nav-item" data-view="batch">Batch Outreach</button>
+      <button class="nav-item" data-view="activity">Activity</button>
       <button class="nav-item" data-view="integrations">Integrations</button>
       <button class="nav-item" data-view="settings">Settings</button>
     </nav>
@@ -416,6 +417,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
         <div id="batchResults" class="hidden" style="margin-top:16px"></div>
       </div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div id="view-activity" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Activity Log</h1></div>
+      <div id="activityLogList"></div>
     </div>
 
     <!-- INTEGRATIONS -->
@@ -1292,6 +1299,7 @@ function showView(name){
   if(name==='contacts') renderContacts();
   if(name==='queue'){renderQueue();renderEmailAccounts();}
   if(name==='drafts') renderDrafts();
+  if(name==='activity') renderActivity();
   if(name==='settings') loadSettings();
   updateQueueBadge();
 }
@@ -1342,7 +1350,7 @@ function renderDashboard(){
         +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
         +'<span style="font-weight:600;cursor:pointer;color:var(--green)" onclick="openHistory(\''+a.contact_id+'\')">'
         +esc(a.cName)+'</span>'
-        +'<span style="font-size:11px;color:var(--gray)">'+new Date(a.ts).toLocaleDateString()+'</span>'
+        +'<span style="font-size:11px;color:var(--gray)">'+new Date(a.ts).toLocaleString()+'</span>'
         +'</div>'
         +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px">'+esc(a.co||'')+'</div>'
         +'<div style="font-size:13px;cursor:pointer;color:var(--dark);line-height:1.5" onclick="toggleActivity(\''+aid+'\')"><span id="'+aid+'-short">'+esc(a.msg.slice(0,100))+(a.msg.length>100?' <span style=\"color:var(--green);font-size:11px\">[tap to expand]</span>':'')+'</span>'
@@ -1358,7 +1366,7 @@ function renderDashboard(){
   if(!sorted.length){dueEl.innerHTML='<div class="empty-state"><strong>All caught up!</strong>No contacts need attention right now.</div>';}
   else dueEl.innerHTML=sorted.map(c=>'<div class="due-item"><div class="due-info"><div class="due-name"><span style="cursor:pointer;color:var(--green);font-weight:600" onclick="openHistory(\''+c.id+'\')" >'+esc(c.name)+'</span> '+priorityBadge(computePriority(c))+'</div><div class="due-meta">'+esc(c.company)+' &middot; <em style="color:var(--green)">'+esc(computeTrigger(c))+'</em></div></div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openHistory(\''+c.id+'\')" >View</button><button class="btn btn-primary btn-xs" onclick="openAi(\''+c.id+'\')" >Generate</button></div></div>').join('');;
 
-  const acts=[...activity].reverse().slice(0,8);
+  const acts=activity.slice(0,8);
   const actEl=document.getElementById('actList');
   actEl.innerHTML=acts.length?'<ul class="activity-list">'+acts.map(a=>{
     const short=a.msg.slice(0,100)+(a.msg.length>100?'...':'');
@@ -1373,6 +1381,30 @@ function renderDashboard(){
       +'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>'
       +'</li>';
   }).join('')+'</ul>':'<div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div>';
+}
+
+// ACTIVITY LOG VIEW
+function renderActivity(){
+  const activity=ga();
+  const el=document.getElementById('activityLogList');
+  if(!activity.length){
+    el.innerHTML='<div class="card"><div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div></div>';
+    return;
+  }
+  el.innerHTML='<ul class="activity-list card" style="padding:0 24px">'+activity.map(a=>{
+    const aid='alog-'+a.id;
+    const short=a.msg.slice(0,120)+(a.msg.length>120?'...':'');
+    return '<li class="activity-item" style="cursor:pointer;padding:14px 0" onclick="toggleActivity(\''+aid+'\')">'
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
+      +'<span class="activity-who" style="cursor:pointer;color:var(--green)" onclick="event.stopPropagation();openHistory(\''+a.contact_id+'\')">'+esc(a.cName)+(a.co?'<span style="font-weight:400;color:var(--gray)"> · '+esc(a.co)+'</span>':'')+'</span>'
+      +'<span class="activity-time">'+new Date(a.ts).toLocaleString()+'</span>'
+      +'</div>'
+      +(a.trigger?'<div class="activity-trigger">'+esc(a.trigger)+'</div>':'')
+      +'<div class="activity-preview" id="'+aid+'-short">'+esc(short)+'</div>'
+      +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:6px;white-space:pre-wrap">'+esc(a.msg)+'</div>'
+      +'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>'
+      +'</li>';
+  }).join('')+'</ul>';
 }
 
 // CONTACTS
@@ -1534,7 +1566,7 @@ function openHistory(id){
     +'</div>';
 
   // Communication history from activity log
-  const activity=ga().filter(a=>a.contact_id===id).reverse();
+  const activity=ga().filter(a=>a.contact_id===id);
   const histList=document.getElementById('histList');
   // Show queued messages for this contact
   const queued=gq().filter(x=>x.contact_id===id);
@@ -2108,7 +2140,14 @@ async function runBatch(){
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
           const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:typeof batchContext==='string'?batchContext:query})});
-          if(qr.ok) _cache.queue.unshift(normalizeQueueItem(await qr.json()));
+          if(qr.ok){
+            _cache.queue.unshift(normalizeQueueItem(await qr.json()));
+            // Update last_contact so this contact isn't re-selected in future batch runs
+            const today=new Date().toISOString().split('T')[0];
+            const ci=_cache.contacts.findIndex(x=>x.id===c.id);
+            if(ci>-1) _cache.contacts[ci]={..._cache.contacts[ci],lastContact:today};
+            fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:c.id,last_contact:today})}).catch(()=>{});
+          }
           generated++;
         } else {failed++;}
       }catch{failed++;}
@@ -2120,6 +2159,13 @@ async function runBatch(){
     document.getElementById('batchResults').innerHTML+='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:14px 16px;border-radius:4px;font-size:14px;color:#1B4332"><strong>Done:</strong> Generated '+generated+' message'+(generated!==1?'s':'')+' added to queue.'+(failed?' '+failed+' failed.':'')+'</div>';
     updateQueueBadge();
     toast(generated+' messages added to queue','success');
+    // Auto-reset after 4s to prevent accidental re-runs creating duplicates
+    setTimeout(()=>{
+      document.getElementById('batchPrompt').value='';
+      document.getElementById('batchProgress').classList.add('hidden');
+      document.getElementById('batchResults').classList.add('hidden');
+      document.getElementById('batchFill').style.width='0%';
+    },4000);
   }catch(e){
     toast('Batch failed: '+e.message,'error');
     document.getElementById('batchProgress').classList.add('hidden');
