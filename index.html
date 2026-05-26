@@ -2036,38 +2036,60 @@ async function removeDraft(did){
   renderDrafts();
 }
 
+// BATCH -- contact summary helper for AI filter
+function getContactSummary(c, i){
+  const daysSince=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000):null;
+  const daysToExpiry=c.contractExpiry?Math.floor((new Date(c.contractExpiry)-Date.now())/86400000):null;
+  // Most recent activity for this contact (_cache.activity is newest-first)
+  const recentAct=(_cache.activity||[]).find(a=>String(a.contact_id)===String(c.id)||a.c_name===c.name);
+  const lastMsg=recentAct?recentAct.msg.slice(0,150).replace(/"/g,"'"):null;
+  return i+'. '+c.name+' at '+c.company
+    +(c.tier?' [Tier '+c.tier+']':'')
+    +(c.annualSpend>0?' [$'+Number(c.annualSpend).toLocaleString()+' annual]':'')
+    +(daysSince!==null?' [last contact: '+daysSince+'d ago]':' [never contacted]')
+    +(daysToExpiry!==null?' [contract expires in: '+daysToExpiry+'d]':'')
+    +(c.invoiceAmount>0?' [invoice: $'+Number(c.invoiceAmount).toLocaleString()+']':'')
+    +(lastMsg?' [last message: "'+lastMsg+(recentAct&&recentAct.msg.length>150?'...':'')+'"]:':'')
+    +(c.products?' [products: '+c.products+']':'')
+    +(c.notes?' [notes: '+c.notes.slice(0,120)+']':'')
+    +(c.history?' [history: '+c.history.slice(0,120)+']':'');
+}
+
 // BATCH -- AI-driven filtering
 async function runBatch(){
   const query=document.getElementById('batchPrompt').value.trim();
   if(!query){toast('Enter a prompt first','error');return;}
-  const contacts=gc();
-  if(!contacts.length){toast('No contacts found -- import contacts first','error');return;}
+  if(!gc().length){toast('No contacts found — import contacts first','error');return;}
   const p=gp();
   document.getElementById('batchProgress').classList.remove('hidden');
   document.getElementById('batchResults').classList.add('hidden');
   document.getElementById('runBatchBtn').disabled=true;
-  document.getElementById('batchLabel').textContent='Analyzing contacts...';
-  document.getElementById('batchFill').style.width='5%';
+  document.getElementById('batchLabel').textContent='Refreshing contacts...';
+  document.getElementById('batchFill').style.width='3%';
 
   try{
-    // Step 1: Ask AI which contacts match the criteria
-    const contactSummaries=contacts.map((c,i)=>{
-      const daysSince=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000):null;
-      const daysToExpiry=c.contractExpiry?Math.floor((new Date(c.contractExpiry)-Date.now())/86400000):null;
-      return i+'. '+c.name+' at '+c.company
-        +(c.tier?' [Tier '+c.tier+']':'')
-        +(c.annualSpend>0?' [$'+Number(c.annualSpend).toLocaleString()+' annual]':'')
-        +(daysSince!==null?' [last contact: '+daysSince+'d ago]':' [never contacted]')
-        +(daysToExpiry!==null?' [contract expires: '+daysToExpiry+'d]':'')
-        +(c.invoiceAmount>0?' [invoice: $'+Number(c.invoiceAmount).toLocaleString()+']':'')
-        +(c.products?' ['+c.products+']':'')
-        +(c.history?' [history: '+c.history.slice(0,80)+']':'')
-        +(c.notes?' [notes: '+c.notes.slice(0,80)+']':'');
-    }).join('\n');
+    // Fresh fetch — ensures lastContact and activity are current before filtering
+    const h=getAuthHeaders();
+    const [cRes,aRes]=await Promise.all([
+      fetch('/api/contacts',{headers:h}),
+      fetch('/api/activity',{headers:h})
+    ]);
+    if(cRes.ok) _cache.contacts=(await cRes.json()).map(normalizeContact);
+    if(aRes.ok) _cache.activity=(await aRes.json()).map(normalizeActivity);
 
-    // [DIAG] temp — remove after
-    console.log('[BATCH DIAG] raw lastContact (first 5):', contacts.slice(0,5).map(c=>({name:c.name,lastContact:c.lastContact})));
-    console.log('[BATCH DIAG] summaries (first 3):\n'+contactSummaries.split('\n').slice(0,3).join('\n'));
+    const contacts=gc();
+    if(!contacts.length){
+      document.getElementById('batchProgress').classList.add('hidden');
+      document.getElementById('runBatchBtn').disabled=false;
+      toast('No contacts found — import contacts first','error');
+      return;
+    }
+
+    document.getElementById('batchLabel').textContent='Analyzing contacts...';
+    document.getElementById('batchFill').style.width='10%';
+
+    // Step 1: Ask AI which contacts match the criteria
+    const contactSummaries=contacts.map((c,i)=>getContactSummary(c,i)).join('\n');
 
     const filterPrompt='You are a smart outreach assistant for '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
       +'\n\nUser role: '+(p.role||'relationship manager')
