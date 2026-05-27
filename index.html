@@ -172,6 +172,17 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .progress-bar{height:6px;background:var(--gray-pale);border-radius:3px;overflow:hidden;margin:16px 0}
 .progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
 
+/* BATCH REVIEW */
+.batch-review-item{background:#fff;border:1.5px solid var(--gray-light);border-radius:10px;padding:16px;margin-bottom:10px;transition:opacity .2s}
+.batch-review-item.br-added{opacity:.45;pointer-events:none}
+.batch-review-item.br-skipped{display:none}
+.batch-review-name{font-weight:700;font-size:15px;color:var(--dark);margin-bottom:2px}
+.batch-review-trigger{font-size:11px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px}
+.batch-review-preview{font-size:13.5px;color:#374151;line-height:1.6;margin-bottom:10px;border-left:3px solid var(--gray-light);padding-left:10px;white-space:pre-wrap;cursor:pointer}
+.batch-review-edit{margin-bottom:10px;display:none}
+.batch-review-edit textarea{width:100%;min-height:110px;padding:10px;border:1.5px solid var(--green);border-radius:6px;font-size:13.5px;line-height:1.6;outline:none;resize:vertical;font-family:inherit}
+.batch-review-actions{display:flex;gap:8px;flex-wrap:wrap}
+
 /* CSV */
 .csv-preview-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
 .csv-preview-table th{background:var(--gray-pale);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--gray-light)}
@@ -2036,6 +2047,146 @@ async function removeDraft(did){
   renderDrafts();
 }
 
+// BATCH -- date pre-filter parser
+function getDatePreFilter(query){
+  const q=query.toLowerCase();
+  if(/last day|today|24 hour/.test(q))
+    return {fn:c=>!c.lastContact||Math.floor((Date.now()-new Date(c.lastContact))/86400000)>=1, label:'contacts not reached in 24h'};
+  if(/last week|this week/.test(q))
+    return {fn:c=>!c.lastContact||Math.floor((Date.now()-new Date(c.lastContact))/86400000)>=7, label:'contacts not reached in 7 days'};
+  if(/last month/.test(q))
+    return {fn:c=>!c.lastContact||Math.floor((Date.now()-new Date(c.lastContact))/86400000)>=30, label:'contacts not reached in 30 days'};
+  return {fn:null,label:''};
+}
+
+// BATCH -- credit balance from DOM
+function getCurrentCredits(){
+  const el=document.getElementById('creditBalance');
+  if(!el) return null;
+  const m=(el.textContent||'').match(/[\d,]+/);
+  return m?parseInt(m[0].replace(/,/g,''),10):null;
+}
+
+// BATCH -- confirm modal (Promise-based)
+function showBatchConfirmModal(estCredits,contactCount,currentCredits,filterLabel){
+  return new Promise(resolve=>{
+    const low=currentCredits!==null&&currentCredits<estCredits;
+    let body=`This batch will use approximately <strong>${estCredits} credit${estCredits!==1?'s':''}</strong>`
+      +` (1 for filtering + up to ${contactCount} for message generation).`;
+    if(filterLabel) body+=`<br><span style="color:var(--green);font-size:12px">Date filter: ${filterLabel}</span>`;
+    if(currentCredits!==null) body+=`<br><br>You currently have <strong style="color:${low?'var(--red)':'var(--dark)'}">${currentCredits.toLocaleString()} credit${currentCredits!==1?'s':''}</strong>.`;
+    if(low) body+=`<br><span style="color:var(--red);font-size:13px">⚠ You may run out of credits before all messages are generated.</span>`;
+    document.getElementById('batchConfirmBody').innerHTML=body;
+    document.getElementById('batchConfirmModal').classList.remove('hidden');
+    document.getElementById('batchConfirmOk').onclick=()=>{document.getElementById('batchConfirmModal').classList.add('hidden');resolve(true);};
+    document.getElementById('batchConfirmCancel').onclick=()=>{document.getElementById('batchConfirmModal').classList.add('hidden');resolve(false);};
+  });
+}
+
+// BATCH -- review step state
+let _pendingBatch=[];
+function showBatchReview(items,trigger){
+  _pendingBatch=items;
+  const res=document.getElementById('batchResults');
+  if(!items.length){
+    res.innerHTML+='<div style="padding:12px;color:var(--gray);font-size:14px">No messages were generated.</div>';
+    return;
+  }
+  const reviewHtml=items.map(it=>`
+    <div class="batch-review-item" id="br-${it.uid}">
+      <div class="batch-review-name">${esc(it.c_name)} <span style="font-weight:400;color:var(--gray);font-size:13px">at ${esc(it.co)}</span></div>
+      ${it.trigger?`<div class="batch-review-trigger">${esc(it.trigger)}</div>`:''}
+      <div class="batch-review-preview" id="brp-${it.uid}" onclick="toggleBatchFull('${it.uid}')">${esc(it.msg.slice(0,160)+(it.msg.length>160?'…':''))}<span id="brf-${it.uid}" style="display:none;white-space:pre-wrap">${esc(it.msg)}</span></div>
+      <div class="batch-review-edit" id="bre-${it.uid}">
+        <textarea id="brt-${it.uid}">${esc(it.msg)}</textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn btn-primary btn-xs" onclick="saveBatchEdit('${it.uid}')">Save</button>
+          <button class="btn btn-ghost btn-xs" onclick="cancelBatchEdit('${it.uid}')">Cancel</button>
+        </div>
+      </div>
+      <div class="batch-review-actions">
+        <button class="btn btn-primary btn-xs" onclick="addBatchItem('${it.uid}')">Add to Queue</button>
+        <button class="btn btn-ghost btn-xs" onclick="editBatchItem('${it.uid}')">Edit First</button>
+        <button class="btn btn-ghost btn-xs" onclick="skipBatchItem('${it.uid}')">Skip</button>
+      </div>
+    </div>`).join('');
+  res.innerHTML+='<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:10px">Review '+items.length+' generated message'+(items.length!==1?'s':'')+' — add or skip each:</div>'
+    +reviewHtml
+    +'<div style="display:flex;gap:10px;margin-top:12px">'
+    +'<button class="btn btn-primary btn-sm" onclick="addAllBatchItems()">Add All to Queue</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
+    +'</div></div>';
+}
+function toggleBatchFull(uid){
+  const short=document.getElementById('brp-'+uid);
+  const full=document.getElementById('brf-'+uid);
+  if(!short||!full) return;
+  const isExpanded=full.style.display!=='none';
+  short.textContent=isExpanded?_pendingBatch.find(x=>x.uid===uid)?.msg.slice(0,160)+'…':'';
+  full.style.display=isExpanded?'none':'inline';
+}
+function editBatchItem(uid){
+  const editDiv=document.getElementById('bre-'+uid);
+  const previewDiv=document.getElementById('brp-'+uid);
+  if(!editDiv||!previewDiv) return;
+  const item=_pendingBatch.find(x=>x.uid===uid);
+  if(item) document.getElementById('brt-'+uid).value=item.msg;
+  editDiv.style.display='block';
+  previewDiv.style.display='none';
+}
+function saveBatchEdit(uid){
+  const ta=document.getElementById('brt-'+uid);
+  if(!ta) return;
+  const item=_pendingBatch.find(x=>x.uid===uid);
+  if(item) item.msg=ta.value;
+  document.getElementById('bre-'+uid).style.display='none';
+  const prev=document.getElementById('brp-'+uid);
+  if(prev){prev.style.display='';prev.textContent=ta.value.slice(0,160)+(ta.value.length>160?'…':'');}
+}
+function cancelBatchEdit(uid){
+  document.getElementById('bre-'+uid).style.display='none';
+  document.getElementById('brp-'+uid).style.display='';
+}
+async function addBatchItem(uid){
+  const item=_pendingBatch.find(x=>x.uid===uid);
+  if(!item) return;
+  const el=document.getElementById('br-'+uid);
+  const btn=el.querySelector('button');
+  if(btn){btn.disabled=true;btn.textContent='Adding...';}
+  try{
+    const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:item.contactId,c_name:item.c_name,co:item.co,email:item.email,msg:item.msg,reason:item.reason,trigger:item.trigger})});
+    if(qr.ok){
+      _cache.queue.unshift(normalizeQueueItem(await qr.json()));
+      const today=new Date().toISOString().split('T')[0];
+      const ci=_cache.contacts.findIndex(x=>x.id===item.contactId);
+      if(ci>-1) _cache.contacts[ci]={..._cache.contacts[ci],lastContact:today};
+      fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:item.contactId,last_contact:today})}).catch(()=>{});
+      if(el) el.classList.add('br-added');
+      const acts=el.querySelectorAll('.batch-review-actions button');
+      acts.forEach(b=>{b.disabled=true;});
+      el.querySelector('.batch-review-actions').innerHTML='<span style="font-size:13px;color:var(--green);font-weight:600">✓ Added to queue</span>';
+      updateQueueBadge();
+    } else { toast('Failed to add to queue','error'); if(btn){btn.disabled=false;btn.textContent='Add to Queue';} }
+  }catch(e){ toast('Error: '+e.message,'error'); if(btn){btn.disabled=false;btn.textContent='Add to Queue';} }
+}
+function skipBatchItem(uid){
+  const el=document.getElementById('br-'+uid);
+  if(el) el.classList.add('br-skipped');
+}
+async function addAllBatchItems(){
+  const pending=_pendingBatch.filter(it=>{
+    const el=document.getElementById('br-'+it.uid);
+    return el&&!el.classList.contains('br-added')&&!el.classList.contains('br-skipped');
+  });
+  for(const it of pending) await addBatchItem(it.uid);
+  toast(pending.length+' messages added to queue','success');
+}
+function cancelBatchReview(){
+  _pendingBatch=[];
+  document.getElementById('batchResults').classList.add('hidden');
+  document.getElementById('batchProgress').classList.add('hidden');
+}
+
 // BATCH -- contact summary helper for AI filter
 function getContactSummary(c, i){
   const daysSince=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact))/86400000):null;
@@ -2060,6 +2211,18 @@ async function runBatch(){
   const query=document.getElementById('batchPrompt').value.trim();
   if(!query){toast('Enter a prompt first','error');return;}
   if(!gc().length){toast('No contacts found — import contacts first','error');return;}
+
+  // [FIX 1] Parse date pre-filter from prompt keywords
+  const preFilter=getDatePreFilter(query);
+  const staleContacts=gc();
+  const preFilteredEstimate=preFilter.fn?staleContacts.filter(preFilter.fn):staleContacts;
+  const estCount=Math.min(preFilteredEstimate.length,15);
+  const estCredits=1+estCount;
+
+  // [FIX 2] Credit warning confirm
+  const confirmed=await showBatchConfirmModal(estCredits,estCount,getCurrentCredits(),preFilter.label);
+  if(!confirmed) return;
+
   const p=gp();
   document.getElementById('batchProgress').classList.remove('hidden');
   document.getElementById('batchResults').classList.add('hidden');
@@ -2077,21 +2240,35 @@ async function runBatch(){
     if(cRes.ok) _cache.contacts=(await cRes.json()).map(normalizeContact);
     if(aRes.ok) _cache.activity=(await aRes.json()).map(normalizeActivity);
 
-    const contacts=gc();
-    if(!contacts.length){
+    const allContacts=gc();
+    if(!allContacts.length){
       document.getElementById('batchProgress').classList.add('hidden');
       document.getElementById('runBatchBtn').disabled=false;
       toast('No contacts found — import contacts first','error');
       return;
     }
 
-    document.getElementById('batchLabel').textContent='Analyzing contacts...';
+    // [FIX 1] Apply date pre-filter to fresh contacts
+    const contacts=preFilter.fn?allContacts.filter(preFilter.fn):allContacts;
+    if(preFilter.fn){
+      document.getElementById('batchLabel').textContent='Pre-filtered to '+contacts.length+' contacts based on date criteria, asking AI to refine further...';
+    } else {
+      document.getElementById('batchLabel').textContent='Analyzing contacts...';
+    }
     document.getElementById('batchFill').style.width='10%';
 
-    // Step 1: Ask AI which contacts match the criteria
+    if(!contacts.length){
+      document.getElementById('batchProgress').classList.add('hidden');
+      document.getElementById('batchResults').classList.remove('hidden');
+      document.getElementById('batchResults').innerHTML='<div style="background:var(--amber-pale);border-left:4px solid var(--amber);padding:14px 16px;border-radius:4px;font-size:14px;color:#92400e"><strong>No contacts match the date criteria.</strong> All contacts were reached out to recently.</div>';
+      document.getElementById('runBatchBtn').disabled=false;
+      return;
+    }
+
+    // Step 1: Ask AI which contacts match the criteria (using pre-filtered list)
     const contactSummaries=contacts.map((c,i)=>getContactSummary(c,i)).join('\n');
 
-    const filterPrompt='You are a smart outreach assistant for '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
+    const filterPrompt='You are a smart outreach assistant for '+(p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
       +'\n\nUser role: '+(p.role||'relationship manager')
       +'\n\nThe user wants to: "'+query+'"'
       +'\n\nHere are all contacts:\n'+contactSummaries
@@ -2114,9 +2291,10 @@ async function runBatch(){
     const filterResult=JSON.parse(filterTxt);
     const matchedIndices=filterResult.matched||[];
     const batchContext=filterResult.context||query;
-    const filtered=matchedIndices.map(i=>contacts[i]).filter(Boolean).slice(0,15);
+    // matchedIndices index into `contacts` (the pre-filtered list)
+    const matched=matchedIndices.map(i=>contacts[i]).filter(Boolean).slice(0,15);
 
-    if(!filtered.length){
+    if(!matched.length){
       document.getElementById('batchProgress').classList.add('hidden');
       document.getElementById('batchResults').classList.remove('hidden');
       document.getElementById('batchResults').innerHTML='<div style="background:var(--amber-pale);border-left:4px solid var(--amber);padding:14px 16px;border-radius:4px;font-size:14px;color:#92400e"><strong>No matches found.</strong> '+esc(filterResult.reasoning||'None of your contacts match that criteria.')+'</div>';
@@ -2126,20 +2304,20 @@ async function runBatch(){
 
     // Show who was selected and why
     document.getElementById('batchResults').classList.remove('hidden');
-    document.getElementById('batchResults').innerHTML='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:12px 14px;border-radius:4px;font-size:13px;color:#1B4332;margin-bottom:12px"><strong>Selected '+filtered.length+' contact'+(filtered.length!==1?'s':'')+':</strong> '+esc(filterResult.reasoning||'')+'</div>';
+    document.getElementById('batchResults').innerHTML='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:12px 14px;border-radius:4px;font-size:13px;color:#1B4332;margin-bottom:12px"><strong>Selected '+matched.length+' contact'+(matched.length!==1?'s':'')+':</strong> '+esc(filterResult.reasoning||'')+'</div>';
 
-    // Step 2: Generate messages for each matched contact
-    let generated=0,failed=0;
-    for(let i=0;i<filtered.length;i++){
-      const c=filtered[i];
-      document.getElementById('batchLabel').textContent='Generating '+(i+1)+' of '+filtered.length+': '+c.name+'...';
-      document.getElementById('batchFill').style.width=(((i+1)/filtered.length)*100)+'%';
+    // Step 2: Generate messages — collect into review list instead of adding directly to queue
+    let pendingItems=[],failed=0;
+    for(let i=0;i<matched.length;i++){
+      const c=matched[i];
+      document.getElementById('batchLabel').textContent='Generating '+(i+1)+' of '+matched.length+': '+c.name+'...';
+      document.getElementById('batchFill').style.width=(((i+1)/matched.length)*90+10)+'%';
       try{
         const rules=gr();
         const hasRel=!!(c.history||c.notes||c.lastContact||c.annualSpend);
         const relCtx=hasRel?'We have an existing relationship. Do not introduce yourself.':'Initial outreach.';
         const spendLine=c.annualSpend>0?'\nContract value: $'+Number(c.annualSpend).toLocaleString():'';
-        const batchPromptMsg='You are '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
+        const batchPromptMsg='You are '+(p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
           +'\n'+relCtx
           +'\nTone: '+(p.tone||'Professional')
           +'\nContact: '+c.name+', '+c.company+(c.title?', '+c.title:'')
@@ -2165,33 +2343,19 @@ async function runBatch(){
           let txt=data.content[0].text.trim();
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
-          const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:typeof batchContext==='string'?batchContext:query})});
-          if(qr.ok){
-            _cache.queue.unshift(normalizeQueueItem(await qr.json()));
-            // Update last_contact so this contact isn't re-selected in future batch runs
-            const today=new Date().toISOString().split('T')[0];
-            const ci=_cache.contacts.findIndex(x=>x.id===c.id);
-            if(ci>-1) _cache.contacts[ci]={..._cache.contacts[ci],lastContact:today};
-            fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:c.id,last_contact:today})}).catch(()=>{});
-          }
-          generated++;
+          pendingItems.push({uid:uid(),contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:typeof batchContext==='string'?batchContext:query});
         } else {failed++;}
       }catch{failed++;}
       await new Promise(r=>setTimeout(r,300));
     }
 
     document.getElementById('batchFill').style.width='100%';
-    document.getElementById('batchLabel').textContent='Complete!';
-    document.getElementById('batchResults').innerHTML+='<div style="background:var(--green-pale);border-left:4px solid var(--green);padding:14px 16px;border-radius:4px;font-size:14px;color:#1B4332"><strong>Done:</strong> Generated '+generated+' message'+(generated!==1?'s':'')+' added to queue.'+(failed?' '+failed+' failed.':'')+'</div>';
-    updateQueueBadge();
-    toast(generated+' messages added to queue','success');
-    // Auto-reset after 4s to prevent accidental re-runs creating duplicates
-    setTimeout(()=>{
-      document.getElementById('batchPrompt').value='';
-      document.getElementById('batchProgress').classList.add('hidden');
-      document.getElementById('batchResults').classList.add('hidden');
-      document.getElementById('batchFill').style.width='0%';
-    },4000);
+    document.getElementById('batchLabel').textContent='Done — review your messages below.';
+
+    // [FIX 3] Show review step
+    showBatchReview(pendingItems,batchContext);
+    if(failed) document.getElementById('batchResults').innerHTML+='<div style="font-size:12px;color:var(--gray);margin-top:6px">'+failed+' message'+(failed!==1?'s':'')+' failed to generate.</div>';
+
   }catch(e){
     toast('Batch failed: '+e.message,'error');
     document.getElementById('batchProgress').classList.add('hidden');
@@ -2616,11 +2780,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal'].forEach(function(id){
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal'].forEach(function(id){document.getElementById(id).classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal'].forEach(function(id){document.getElementById(id).classList.add('hidden');});}
 });
 
 // INIT
@@ -2706,6 +2870,20 @@ async function sendGuideMsg(){
   <div style="padding:10px 12px;border-top:1px solid var(--gray-pale);display:flex;gap:8px">
     <input id="guideInput" type="text" placeholder="Ask anything..." style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:8px;outline:none;font-size:13px" onkeydown="if(event.key==='Enter')sendGuideMsg()">
     <button onclick="sendGuideMsg()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer">Send</button>
+  </div>
+</div>
+
+<!-- BATCH CONFIRM MODAL -->
+<div id="batchConfirmModal" class="modal-overlay hidden" style="z-index:2500">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Confirm Batch</h2>
+    </div>
+    <div id="batchConfirmBody" style="font-size:14px;color:var(--gray);line-height:1.7;margin-bottom:24px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" id="batchConfirmOk" style="flex:1">Continue</button>
+      <button class="btn btn-ghost" id="batchConfirmCancel" style="flex:1">Cancel</button>
+    </div>
   </div>
 </div>
 
