@@ -38,7 +38,31 @@
       "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\status.js\")",
       "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\create-payment-intent.js\")",
       "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\webhook.js\")",
-      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\deduct.js\")"
+      "Bash(del \"F:\\\\davidmalky\\\\Files\\\\Ai\\\\Claude\\\\agent_pipeline\\\\api\\\\billing\\\\deduct.js\")",
+      "Bash(curl -s \"https://renzo-beige.vercel.app/api/billing?action=config\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('publishableKey present:',!!j.publishableKey,'prefix:',j.publishableKey?.slice\\(0,15\\)+'...'\\)\")",
+      "Bash(node -e \"fetch\\('https://renzo-beige.vercel.app/api/billing?action=config'\\).then\\(r=>r.json\\(\\)\\).then\\(d=>console.log\\('publishableKey present:',!!d.publishableKey,'prefix:',d.publishableKey?.slice\\(0,20\\)+'...'\\)\\).catch\\(console.error\\)\")",
+      "Bash(node -e \"fetch\\('https://renzo-beige.vercel.app/api/billing?action=config'\\).then\\(r=>r.json\\(\\)\\).then\\(d=>console.log\\('publishableKey present:',!!d.publishableKey,'starts with:',d.publishableKey?.slice\\(0,18\\)\\)\\).catch\\(console.error\\)\")",
+      "Bash(node -e \"fetch\\('https://renzo-beige.vercel.app/api/billing?action=config'\\).then\\(r=>r.json\\(\\)\\).then\\(d=>console.log\\(JSON.stringify\\(d,null,2\\)\\)\\).catch\\(console.error\\)\")",
+      "Bash(vercel --prod)",
+      "Bash(del .env.local)",
+      "WebFetch(domain:renzo-beige.vercel.app)",
+      "Bash(git commit *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\david\\\\AppData\\\\Local\" -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match -join\\('vercel','com'\\) } | Select-Object FullName; Get-ChildItem \"C:\\\\Users\\\\david\\\\AppData\\\\Roaming\" -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match -join\\('vercel','com'\\) } | Select-Object FullName)",
+      "PowerShell($paths = @\\(\"C:\\\\Users\\\\david\\\\.vercel\", \"$env:USERPROFILE\\\\.vercel\", \"$env:APPDATA\\\\com.vercel.cli\", \"$env:LOCALAPPDATA\\\\com.vercel.cli\"\\); foreach\\($p in $paths\\){ if\\(Test-Path $p\\){ Get-ChildItem $p -Force; break } })",
+      "PowerShell($xdg = \"$env:APPDATA\\\\vercel\"; if\\(Test-Path $xdg\\){ Get-ChildItem $xdg -Force }; $xdg2 = \"$env:LOCALAPPDATA\\\\vercel\"; if\\(Test-Path $xdg2\\){ Get-ChildItem $xdg2 -Force }; Get-Content \"$env:LOCALAPPDATA\\\\com.vercel.cli\\\\Cache\\\\..\\\\..\\\\..\\\\..\\\\Roaming\\\\com.vercel.cli\\\\auth.json\" -ErrorAction SilentlyContinue)",
+      "mcp__102386bc-5cbe-4a8e-9ac7-82cfc4e3b9fd__search_files",
+      "Bash(xargs -I{} cat {})",
+      "mcp__102386bc-5cbe-4a8e-9ac7-82cfc4e3b9fd__read_file_content",
+      "Bash(VERCEL_TOKEN=\"\" vercel --prod --yes)",
+      "Bash(vercel --version)",
+      "Bash(node /c/Users/david/AppData/Roaming/npm/node_modules/vercel/dist/vc.js --help)",
+      "Bash(node /c/Users/david/AppData/Roaming/npm/node_modules/vercel/dist/vc.js --prod)",
+      "mcp__102386bc-5cbe-4a8e-9ac7-82cfc4e3b9fd__create_file",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__102386bc-5cbe-4a8e-9ac7-82cfc4e3b9fd__download_file_content"
     ]
   }
 }

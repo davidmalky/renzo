@@ -1067,7 +1067,7 @@ async function loadProfileData(){
 }
 
 async function loadEmails(){
-  const r=await fetch('/api/emails',{headers:getAuthHeaders()});
+  const r=await fetch('/api/profile?r=emails',{headers:getAuthHeaders()});
   const data=await r.json();
   _cache.emails=Array.isArray(data)?data:[];
 }
@@ -1271,7 +1271,7 @@ async function doForgotReset(){
   if(newPassword.length<8){err.textContent='Password must be at least 8 characters.';err.classList.remove('hidden');return;}
   btn.disabled=true;btn.textContent='Updating...';
   try{
-    const r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})});
+    const r=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Invalid or expired code.';err.classList.remove('hidden');return;}
     document.getElementById('forgotStep2').classList.add('hidden');
@@ -2717,7 +2717,7 @@ async function addEmail(){
   const emails=gEmails();
   if(emails.find(e=>e.addr===addr)){toast('That email is already added','error');return;}
   const updated=[...emails,{addr,label}].map((e,i)=>({addr:e.addr,label:e.label,sort_order:i}));
-  const r=await fetch('/api/emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
+  const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   document.getElementById('newEmailAddr').value='';
   document.getElementById('newEmailLabel').value='';
@@ -2727,7 +2727,7 @@ async function addEmail(){
 
 async function deleteEmail(idx){
   const updated=gEmails().filter((_,i)=>i!==idx).map((e,i)=>({addr:e.addr,label:e.label,sort_order:i}));
-  const r=await fetch('/api/emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
+  const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   renderEmailAccounts();
 }

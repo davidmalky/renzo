@@ -1,52 +1,69 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import supabase from '../_supabase.js';
 
+/**
+ * POST {email}                          → initiate reset (send code)
+ * POST {email, code, newPassword}       → complete reset (verify code + update pw)
+ */
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email } = req.body || {};
+  const { email, code, newPassword } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
-  // Look up user by email
+  // ── COMPLETE RESET (code + newPassword present) ──────────────────────────
+  if (code && newPassword) {
+    if (newPassword.length < 8)
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    const { data: user } = await supabase
+      .from('users').select('id').eq('email', email.toLowerCase().trim()).maybeSingle();
+    if (!user) return res.status(400).json({ error: 'Invalid or expired reset code' });
+
+    const { data: reset } = await supabase
+      .from('password_resets')
+      .select('id, expires_at, used')
+      .eq('user_id', user.id)
+      .eq('code', code.toLowerCase().trim())
+      .eq('used', false)
+      .maybeSingle();
+
+    if (!reset) return res.status(400).json({ error: 'Invalid or expired reset code' });
+    if (new Date(reset.expires_at) < new Date())
+      return res.status(400).json({ error: 'Reset code has expired — please request a new one' });
+
+    const password_hash = await bcrypt.hash(newPassword, 12);
+    const { error: updateErr } = await supabase
+      .from('users').update({ password_hash }).eq('id', user.id);
+    if (updateErr) return res.status(500).json({ error: 'Failed to update password' });
+
+    await supabase.from('password_resets').update({ used: true }).eq('id', reset.id);
+    return res.status(200).json({ success: true });
+  }
+
+  // ── INITIATE RESET (email only) ──────────────────────────────────────────
   const { data: user } = await supabase
-    .from('users')
-    .select('id, email, name')
-    .eq('email', email.toLowerCase().trim())
-    .maybeSingle();
+    .from('users').select('id, email').eq('email', email.toLowerCase().trim()).maybeSingle();
 
-  // Always return success to avoid email enumeration
-  if (!user) {
-    return res.status(200).json({ success: true, message: 'If that email exists, a reset code has been sent.' });
-  }
+  // Always respond success to avoid email enumeration
+  if (!user) return res.status(200).json({ success: true, message: 'If that email exists, a reset code has been sent.' });
 
-  // Generate 6-char hex reset code
-  const code = crypto.randomBytes(3).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+  const code2 = crypto.randomBytes(3).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
-  // Invalidate any existing unused codes for this user
-  await supabase
-    .from('password_resets')
-    .update({ used: true })
-    .eq('user_id', user.id)
-    .eq('used', false);
+  // Invalidate old codes
+  await supabase.from('password_resets').update({ used: true }).eq('user_id', user.id).eq('used', false);
 
-  // Store new reset code
   const { error } = await supabase
-    .from('password_resets')
-    .insert({ user_id: user.id, code, expires_at: expiresAt, used: false });
+    .from('password_resets').insert({ user_id: user.id, code: code2, expires_at: expiresAt, used: false });
+  if (error) return res.status(500).json({ error: 'Failed to create reset code' });
 
-  if (error) {
-    console.error('[forgot-password] insert error:', error.message);
-    return res.status(500).json({ error: 'Failed to create reset code' });
-  }
-
-  // TODO: send real email here. For now, log and return code in response.
-  console.log(`[forgot-password] Reset code for ${email}: ${code}`);
+  console.log(`[forgot-password] Reset code for ${email}: ${code2}`);
 
   return res.status(200).json({
     success: true,
     message: 'If that email exists, a reset code has been sent.',
-    // Remove the line below once real email sending is wired up:
-    _dev_code: code
+    _dev_code: code2   // Remove once real email sending is wired up
   });
 }
