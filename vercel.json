@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/app", "destination": "/index.html" },
-    { "source": "/migrate", "destination": "/migrate.html" },
-    { "source": "/", "destination": "/landing.html" }
+  "routes": [
+    { "src": "^/api/(.*)", "dest": "/api/$1" },
+    { "src": "^/app$", "dest": "/index.html" },
+    { "src": "^/migrate$", "dest": "/migrate.html" },
+    { "src": "^/$", "dest": "/landing.html" }
   ]
 }
