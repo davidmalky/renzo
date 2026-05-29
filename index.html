@@ -2202,11 +2202,18 @@ function showBatchReview(items,trigger){
     +'<button class="btn btn-primary btn-sm" onclick="addAllBatchItems()">Add All to Queue</button>'
     +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
     +'</div>';
-  const reviewHtml=items.map(it=>`
+  const reviewHtml=items.map(it=>{
+    const short=it.msg.slice(0,160)+(it.msg.length>160?'…':'');
+    const needsToggle=it.msg.length>160;
+    return `
     <div class="batch-review-item" id="br-${it.uid}">
       <div class="batch-review-name">${esc(it.c_name)} <span style="font-weight:400;color:var(--gray);font-size:13px">at ${esc(it.co)}</span></div>
       ${it.reason?`<div style="font-size:12px;color:var(--gray);font-style:italic;margin-bottom:8px">Why now: ${esc(it.reason)}</div>`:''}
-      <div class="batch-review-preview" id="brp-${it.uid}"><div id="brs-${it.uid}">${esc(it.msg.slice(0,160)+(it.msg.length>160?'…':''))}</div><div id="brf-${it.uid}" style="display:none;white-space:pre-wrap">${esc(it.msg)}</div>${it.msg.length>160?'<span id="brtog-'+it.uid+'" style="font-size:11px;color:var(--green);cursor:pointer;margin-top:4px;display:inline-block" onclick="toggleBatchFull(\''+it.uid+'\')">Show more</span>':''}</div>
+      <div class="batch-review-preview" id="brp-${it.uid}"${needsToggle?' onclick="toggleBatchFull(\''+it.uid+'\')" title="Click to expand/collapse"':''}>
+        <div id="brs-${it.uid}">${esc(short)}</div>
+        ${needsToggle?'<div id="brf-'+it.uid+'" style="display:none;white-space:pre-wrap;margin-top:6px">'+esc(it.msg)+'</div>':''}
+      </div>
+      ${needsToggle?'<span id="brtog-'+it.uid+'" style="font-size:11px;color:var(--green);cursor:pointer;display:inline-block;margin-bottom:8px" onclick="toggleBatchFull(\''+it.uid+'\')">Show more</span>':''}
       <div class="batch-review-edit" id="bre-${it.uid}">
         <textarea id="brt-${it.uid}">${esc(it.msg)}</textarea>
         <div style="display:flex;gap:6px;margin-top:6px">
@@ -2219,7 +2226,8 @@ function showBatchReview(items,trigger){
         <button class="btn btn-ghost btn-xs" onclick="editBatchItem('${it.uid}')">Edit First</button>
         <button class="btn btn-ghost btn-xs" onclick="skipBatchItem('${it.uid}')">Skip</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   res.innerHTML+='<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:12px">Review '+items.length+' generated message'+(items.length!==1?'s':'')+' — add or skip each:</div>'
     +bulkBtns
     +reviewHtml
@@ -2232,7 +2240,10 @@ function toggleBatchFull(uid){
   const togEl=document.getElementById('brtog-'+uid);
   if(!shortEl||!fullEl) return;
   const isExpanded=fullEl.style.display!=='none';
-  shortEl.style.display=isExpanded?'':'none';
+  // Collapsed → expanded: hide short, show full
+  // Expanded → collapsed: show short, hide full
+  // Short text always present as minimum; never truly collapse the card
+  shortEl.style.display=isExpanded?'block':'none';
   fullEl.style.display=isExpanded?'none':'block';
   if(togEl) togEl.textContent=isExpanded?'Show more':'Show less';
 }
