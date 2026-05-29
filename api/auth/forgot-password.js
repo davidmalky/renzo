@@ -59,11 +59,8 @@ export default async function handler(req, res) {
     .from('password_resets').insert({ user_id: user.id, code: code2, expires_at: expiresAt, used: false });
   if (error) return res.status(500).json({ error: 'Failed to create reset code' });
 
-  console.log(`[forgot-password] Reset code for ${email}: ${code2}`);
-
   return res.status(200).json({
     success: true,
-    message: 'If that email exists, a reset code has been sent.',
-    _dev_code: code2   // Remove once real email sending is wired up
+    message: 'If that email exists, a reset code has been sent.'
   });
 }
