@@ -2071,8 +2071,8 @@ function getCurrentCredits(){
 function showBatchConfirmModal(estCredits,contactCount,currentCredits,filterLabel){
   return new Promise(resolve=>{
     const low=currentCredits!==null&&currentCredits<estCredits;
-    let body=`This batch will use approximately <strong>${estCredits} credit${estCredits!==1?'s':''}</strong>`
-      +` (1 for filtering + up to ${contactCount} for message generation).`;
+    let body=`This batch will use up to <strong>${estCredits} credit${estCredits!==1?'s':''}</strong>`
+      +` (1 for filtering + up to ${contactCount} for message generation). Actual cost is often lower — you'll only be charged for contacts that match your criteria.`;
     if(filterLabel) body+=`<br><span style="color:var(--green);font-size:12px">Date filter: ${filterLabel}</span>`;
     if(currentCredits!==null) body+=`<br><br>You currently have <strong style="color:${low?'var(--red)':'var(--dark)'}">${currentCredits.toLocaleString()} credit${currentCredits!==1?'s':''}</strong>.`;
     if(low) body+=`<br><span style="color:var(--red);font-size:13px">⚠ You may run out of credits before all messages are generated.</span>`;
@@ -2092,10 +2092,14 @@ function showBatchReview(items,trigger){
     res.innerHTML+='<div style="padding:12px;color:var(--gray);font-size:14px">No messages were generated.</div>';
     return;
   }
+  const bulkBtns='<div style="display:flex;gap:10px;margin-bottom:12px">'
+    +'<button class="btn btn-primary btn-sm" onclick="addAllBatchItems()">Add All to Queue</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
+    +'</div>';
   const reviewHtml=items.map(it=>`
     <div class="batch-review-item" id="br-${it.uid}">
       <div class="batch-review-name">${esc(it.c_name)} <span style="font-weight:400;color:var(--gray);font-size:13px">at ${esc(it.co)}</span></div>
-      ${it.trigger?`<div class="batch-review-trigger">${esc(it.trigger)}</div>`:''}
+      ${it.reason?`<div style="font-size:12px;color:var(--gray);font-style:italic;margin-bottom:8px">Why now: ${esc(it.reason)}</div>`:''}
       <div class="batch-review-preview" id="brp-${it.uid}" onclick="toggleBatchFull('${it.uid}')">${esc(it.msg.slice(0,160)+(it.msg.length>160?'…':''))}<span id="brf-${it.uid}" style="display:none;white-space:pre-wrap">${esc(it.msg)}</span></div>
       <div class="batch-review-edit" id="bre-${it.uid}">
         <textarea id="brt-${it.uid}">${esc(it.msg)}</textarea>
@@ -2110,12 +2114,11 @@ function showBatchReview(items,trigger){
         <button class="btn btn-ghost btn-xs" onclick="skipBatchItem('${it.uid}')">Skip</button>
       </div>
     </div>`).join('');
-  res.innerHTML+='<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:10px">Review '+items.length+' generated message'+(items.length!==1?'s':'')+' — add or skip each:</div>'
+  res.innerHTML+='<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:12px">Review '+items.length+' generated message'+(items.length!==1?'s':'')+' — add or skip each:</div>'
+    +bulkBtns
     +reviewHtml
-    +'<div style="display:flex;gap:10px;margin-top:12px">'
-    +'<button class="btn btn-primary btn-sm" onclick="addAllBatchItems()">Add All to Queue</button>'
-    +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
-    +'</div></div>';
+    +bulkBtns.replace('margin-bottom:12px','margin-top:4px')
+    +'</div>';
 }
 function toggleBatchFull(uid){
   const short=document.getElementById('brp-'+uid);
@@ -2343,7 +2346,7 @@ async function runBatch(){
           let txt=data.content[0].text.trim();
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
-          pendingItems.push({uid:uid(),contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:typeof batchContext==='string'?batchContext:query});
+          pendingItems.push({uid:uid(),contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:query});
         } else {failed++;}
       }catch{failed++;}
       await new Promise(r=>setTimeout(r,300));
