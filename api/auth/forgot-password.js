@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: 'Failed to create reset code' });
 
   // Send reset email via Resend
-  await resend.emails.send({
+  const { data: emailData, error: emailError } = await resend.emails.send({
     from: 'Renzo <onboarding@resend.dev>',
     to: user.email,
     subject: 'Your Renzo password reset code',
@@ -78,6 +78,13 @@ export default async function handler(req, res) {
       </div>
     `
   });
+
+  if (emailError) {
+    console.error('[forgot-password] Resend error:', JSON.stringify(emailError));
+    return res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
+  }
+
+  console.log('[forgot-password] Email sent:', emailData?.id, '→', user.email);
 
   return res.status(200).json({
     success: true,
