@@ -30,6 +30,10 @@
   .nav-cta { background: var(--green) !important; color: var(--white) !important; padding: 10px 22px; border-radius: 6px; font-weight: 500 !important; }
   .nav-cta:hover { background: var(--green-light) !important; }
 
+  /* MOBILE NAV */
+  .mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .mobile-nav-cta { background: var(--green); color: var(--white); padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
+
   /* HERO — centered */
   .hero { padding: 140px 48px 56px; position: relative; overflow: hidden; text-align: center; }
   .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(45,90,61,0.08) 0%, transparent 70%); pointer-events: none; }
@@ -154,8 +158,8 @@
 
   /* RESPONSIVE */
   @media (max-width: 900px) {
-    nav { padding: 16px 24px; }
-    .nav-links { display: none; }
+    nav { display: none; }
+    .mobile-nav { display: flex; }
     .hero { padding: 100px 24px 48px; }
     .app-showcase { padding: 0 24px 60px; }
     .features, .pricing, .cta { padding: 60px 24px; }
@@ -182,6 +186,11 @@
     <a href="/app" class="nav-cta">Sign in</a>
   </div>
 </nav>
+
+<div class="mobile-nav">
+  <a href="#" class="nav-logo">Renz<span>o</span></a>
+  <a href="/app" class="mobile-nav-cta">Sign in</a>
+</div>
 
 <section class="hero">
   <div class="hero-inner">

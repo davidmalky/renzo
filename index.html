@@ -915,7 +915,7 @@ async function openPaymentModal(type,skipAllowed=false,onSuccess=null){
   currentPayType=type;
   if(onSuccess)afterPayCallback=onSuccess;
   const meta={
-    signup: {label:'Card Verification',price:'$0.99',desc:'One-time charge to activate your account. This amount goes toward your first credit purchase.'},
+    signup: {label:'Card Verification',price:'$0.99',desc:'One-time $0.99 card verification to activate your account.'},
     starter:{label:'Starter Pack',price:'$5',desc:'100 credits (first purchase: 120 credits with 20% bonus)'},
     growth: {label:'Growth Pack',price:'$20',desc:'500 credits (first purchase: 600 credits with 20% bonus)'},
     pro:    {label:'Pro Pack',price:'$50',desc:'1,500 credits (first purchase: 1,800 credits with 20% bonus)'}
