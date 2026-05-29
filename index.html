@@ -232,12 +232,49 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <div id="loginErr" class="error-text hidden">Incorrect credentials</div>
       </div>
       <button class="btn btn-primary btn-full" id="loginBtn">Log In</button>
+      <div style="text-align:center;margin-top:12px">
+        <span id="showForgotBtn" style="font-size:13px;color:var(--green);cursor:pointer;text-decoration:underline">Forgot password?</span>
+      </div>
       <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
         <hr style="flex:1;border:none;border-top:1px solid var(--gray-light)">
         <span style="font-size:13px;color:var(--gray)">or</span>
         <hr style="flex:1;border:none;border-top:1px solid var(--gray-light)">
       </div>
       <button class="btn btn-ghost btn-full" id="showSignupBtn">Create account</button>
+    </div>
+    <div id="forgotForm" class="hidden">
+      <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
+      <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px;text-align:center">Reset your password</div>
+      <div id="forgotStep1">
+        <p style="font-size:13px;color:var(--gray);margin-bottom:20px;text-align:center">Enter your email and we'll send you a reset code.</p>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="forgotEmail" placeholder="you@company.com" autocomplete="email">
+        </div>
+        <div id="forgotErr" class="error-text hidden"></div>
+        <button class="btn btn-primary btn-full" id="forgotSendBtn">Send Reset Code</button>
+      </div>
+      <div id="forgotStep2" class="hidden">
+        <p style="font-size:13px;color:var(--gray);margin-bottom:20px;text-align:center">Check your email for a reset code. Enter it below along with your new password.</p>
+        <div class="field">
+          <label>Reset Code</label>
+          <input type="text" id="forgotCode" placeholder="6-character code" autocomplete="off" style="letter-spacing:2px;text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label>New Password</label>
+          <input type="password" id="forgotNewPass" placeholder="Min 8 characters" autocomplete="new-password">
+        </div>
+        <div id="forgotStep2Err" class="error-text hidden"></div>
+        <button class="btn btn-primary btn-full" id="forgotResetBtn">Update Password</button>
+      </div>
+      <div id="forgotSuccess" class="hidden" style="text-align:center;padding:12px 0">
+        <div style="font-size:32px;margin-bottom:12px">✓</div>
+        <div style="font-size:15px;font-weight:600;color:var(--dark);margin-bottom:6px">Password updated</div>
+        <div style="font-size:13px;color:var(--gray);margin-bottom:20px">Please log in with your new password.</div>
+      </div>
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--gray)">
+        <span id="showLoginFromForgotBtn" style="color:var(--green);cursor:pointer;text-decoration:underline">Back to sign in</span>
+      </div>
     </div>
     <div id="signupForm" class="hidden">
       <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
@@ -1186,8 +1223,62 @@ function showSignup(){
 
 function showLogin(){
   document.getElementById('signupForm').classList.add('hidden');
+  document.getElementById('forgotForm').classList.add('hidden');
   document.getElementById('loginForm').classList.remove('hidden');
   document.getElementById('loginErr').classList.add('hidden');
+}
+
+function showForgot(){
+  document.getElementById('loginForm').classList.add('hidden');
+  document.getElementById('signupForm').classList.add('hidden');
+  document.getElementById('forgotForm').classList.remove('hidden');
+  document.getElementById('forgotStep1').classList.remove('hidden');
+  document.getElementById('forgotStep2').classList.add('hidden');
+  document.getElementById('forgotSuccess').classList.add('hidden');
+  document.getElementById('forgotErr').classList.add('hidden');
+  document.getElementById('forgotEmail').value='';
+  document.getElementById('forgotCode').value='';
+  document.getElementById('forgotNewPass').value='';
+}
+
+async function doForgotSend(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  const err=document.getElementById('forgotErr');
+  const btn=document.getElementById('forgotSendBtn');
+  err.classList.add('hidden');
+  if(!email){err.textContent='Please enter your email.';err.classList.remove('hidden');return;}
+  btn.disabled=true;btn.textContent='Sending...';
+  try{
+    const r=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(!r.ok){err.textContent=d.error||'Something went wrong.';err.classList.remove('hidden');return;}
+    // Pre-fill code field if dev_code present (remove once real email is wired)
+    if(d._dev_code) document.getElementById('forgotCode').value=d._dev_code;
+    document.getElementById('forgotStep1').classList.add('hidden');
+    document.getElementById('forgotStep2').classList.remove('hidden');
+  }catch(e){err.textContent='Network error — please try again.';err.classList.remove('hidden');}
+  finally{btn.disabled=false;btn.textContent='Send Reset Code';}
+}
+
+async function doForgotReset(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  const code=document.getElementById('forgotCode').value.trim().toLowerCase();
+  const newPassword=document.getElementById('forgotNewPass').value;
+  const err=document.getElementById('forgotStep2Err');
+  const btn=document.getElementById('forgotResetBtn');
+  err.classList.add('hidden');
+  if(!code||!newPassword){err.textContent='Please fill in all fields.';err.classList.remove('hidden');return;}
+  if(newPassword.length<8){err.textContent='Password must be at least 8 characters.';err.classList.remove('hidden');return;}
+  btn.disabled=true;btn.textContent='Updating...';
+  try{
+    const r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})});
+    const d=await r.json();
+    if(!r.ok){err.textContent=d.error||'Invalid or expired code.';err.classList.remove('hidden');return;}
+    document.getElementById('forgotStep2').classList.add('hidden');
+    document.getElementById('forgotSuccess').classList.remove('hidden');
+    setTimeout(()=>showLogin(),2500);
+  }catch(e){err.textContent='Network error — please try again.';err.classList.remove('hidden');}
+  finally{btn.disabled=false;btn.textContent='Update Password';}
 }
 
 async function doSignup(){
@@ -2694,6 +2785,13 @@ document.getElementById('loginPass').addEventListener('keydown',function(e){if(e
 document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.getElementById('showSignupBtn').addEventListener('click',showSignup);
 document.getElementById('showLoginBtn').addEventListener('click',showLogin);
+document.getElementById('showForgotBtn').addEventListener('click',showForgot);
+document.getElementById('showLoginFromForgotBtn').addEventListener('click',showLogin);
+document.getElementById('forgotSendBtn').addEventListener('click',doForgotSend);
+document.getElementById('forgotResetBtn').addEventListener('click',doForgotReset);
+document.getElementById('forgotEmail').addEventListener('keydown',function(e){if(e.key==='Enter')doForgotSend();});
+document.getElementById('forgotCode').addEventListener('keydown',function(e){if(e.key==='Enter')doForgotReset();});
+document.getElementById('forgotNewPass').addEventListener('keydown',function(e){if(e.key==='Enter')doForgotReset();});
 document.getElementById('signupBtn').addEventListener('click',doSignup);
 document.getElementById('signupPass').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
 document.getElementById('signupPass2').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
