@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renzo — Know who to reach out to. Know what to say. Every time.</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1a14;
+    --cream: #f5f0e8;
+    --warm: #e8e0d0;
+    --green: #2d5a3d;
+    --green-light: #3d7a52;
+    --gold: #c8963c;
+    --muted: #8a8070;
+    --white: #fffef9;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(245,240,232,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); }
+  .nav-logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.5px; }
+  .nav-logo span { color: var(--green); }
+  .nav-links { display: flex; align-items: center; gap: 32px; }
+  .nav-links a { font-size: 14px; font-weight: 400; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { background: var(--green) !important; color: var(--white) !important; padding: 10px 22px; border-radius: 6px; font-weight: 500 !important; }
+  .nav-cta:hover { background: var(--green-light) !important; }
+
+  /* HERO — centered */
+  .hero { padding: 140px 48px 56px; position: relative; overflow: hidden; text-align: center; }
+  .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(45,90,61,0.08) 0%, transparent 70%); pointer-events: none; }
+  .hero::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(200,150,60,0.06) 0%, transparent 70%); pointer-events: none; }
+  .hero-inner { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-eyebrow { display: block; font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--green); margin-bottom: 20px; opacity: 0; animation: fadeUp 0.6s ease 0.1s forwards; }
+  .hero-headline { font-family: 'Playfair Display', serif; font-size: clamp(40px, 5.5vw, 68px); font-weight: 600; line-height: 1.1; letter-spacing: -1.5px; color: var(--ink); margin-bottom: 24px; opacity: 0; animation: fadeUp 0.6s ease 0.2s forwards; }
+  .hero-headline em { font-style: italic; color: var(--green); }
+  .hero-sub { font-size: 18px; font-weight: 300; line-height: 1.65; color: var(--muted); margin-bottom: 40px; max-width: 560px; margin-left: auto; margin-right: auto; opacity: 0; animation: fadeUp 0.6s ease 0.3s forwards; }
+  .hero-actions { display: flex; align-items: center; justify-content: center; gap: 16px; opacity: 0; animation: fadeUp 0.6s ease 0.4s forwards; }
+  .hero-note { margin-top: 16px; font-size: 12px; color: var(--muted); opacity: 0; animation: fadeUp 0.6s ease 0.5s forwards; }
+
+  /* BUTTONS */
+  .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--green); color: var(--white); padding: 14px 28px; border-radius: 8px; font-size: 15px; font-weight: 500; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 20px rgba(45,90,61,0.25); }
+  .btn-primary:hover { background: var(--green-light); transform: translateY(-1px); box-shadow: 0 6px 28px rgba(45,90,61,0.3); }
+  .btn-secondary { font-size: 14px; font-weight: 400; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--warm); padding-bottom: 2px; transition: color 0.2s, border-color 0.2s; }
+  .btn-secondary:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* APP SHOWCASE */
+  .app-showcase { padding: 0 48px 80px; }
+  .app-showcase-inner { max-width: 920px; margin: 0 auto; opacity: 0; animation: fadeUp 0.8s ease 0.7s forwards; }
+  .app-preview { background: var(--white); border-radius: 16px; box-shadow: 0 32px 100px rgba(26,26,20,0.18), 0 4px 20px rgba(26,26,20,0.08); overflow: hidden; border: 1px solid rgba(26,26,20,0.06); }
+  .app-header { background: #1a2e22; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .app-header-logo { font-family: 'Playfair Display', serif; font-size: 16px; color: rgba(255,255,255,0.9); font-weight: 600; letter-spacing: -0.3px; }
+  .app-header-logo span { color: #3d7a52; }
+  .app-header-sub { font-size: 11px; color: rgba(255,255,255,0.35); }
+  .app-body { padding: 24px; }
+  .app-greeting { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--ink); margin-bottom: 4px; }
+  .app-date { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .app-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .app-card { background: var(--cream); border-radius: 8px; padding: 12px; border: 1px solid var(--warm); }
+  .app-card-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+  .app-card-num { font-size: 26px; font-weight: 600; color: var(--ink); }
+  .app-card-num.red { color: #c0392b; }
+  .app-card-num.amber { color: #c8963c; }
+  .app-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
+  .app-contact { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--white); border: 1px solid var(--warm); border-radius: 8px; margin-bottom: 8px; }
+  .app-contact-name { font-size: 14px; font-weight: 500; color: var(--green); }
+  .app-contact-co { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .app-contact-score { font-size: 11px; font-weight: 600; background: var(--green); color: white; padding: 3px 8px; border-radius: 20px; }
+  .app-generate-btn { font-size: 11px; background: var(--green); color: white; border: none; padding: 6px 14px; border-radius: 5px; margin-left: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+  /* SOCIAL PROOF */
+  .social-proof { padding: 24px 48px; background: var(--white); border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
+  .social-proof-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 48px; }
+  .social-proof-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .social-proof-items { display: flex; gap: 48px; flex-wrap: wrap; }
+  .social-proof-item { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* FEATURES */
+  .features { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .section-label { font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--green); text-align: center; margin-bottom: 16px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: clamp(32px, 4vw, 48px); font-weight: 600; text-align: center; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 16px; }
+  .section-sub { font-size: 17px; color: var(--muted); text-align: center; max-width: 520px; margin: 0 auto 64px; line-height: 1.6; font-weight: 300; }
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .feature-card { background: var(--white); border-radius: 16px; padding: 36px 32px; border: 1px solid var(--warm); transition: all 0.25s; position: relative; overflow: hidden; }
+  .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--green); transform: scaleX(0); transition: transform 0.3s; transform-origin: left; }
+  .feature-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(26,26,20,0.1); }
+  .feature-card:hover::before { transform: scaleX(1); }
+  .feature-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+  .feature-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; margin-bottom: 10px; color: var(--ink); }
+  .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; font-weight: 300; }
+
+  /* HOW */
+  .how { background: var(--white); padding: 100px 48px; }
+  .how-inner { max-width: 1200px; margin: 0 auto; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 64px; position: relative; }
+  .steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 1px; background: var(--warm); }
+  .step { text-align: center; padding: 0 16px; }
+  .step-num { width: 56px; height: 56px; background: var(--green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; margin: 0 auto 20px; position: relative; z-index: 1; }
+  .step-title { font-size: 15px; font-weight: 500; margin-bottom: 8px; color: var(--ink); }
+  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; font-weight: 300; }
+
+  /* PRICING */
+  .pricing { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
+  .pricing-card { background: var(--white); border: 1px solid var(--warm); border-radius: 16px; padding: 40px 32px; text-align: center; transition: all 0.25s; }
+  .pricing-card.featured { background: var(--green); border-color: var(--green); transform: translateY(-8px); box-shadow: 0 24px 64px rgba(45,90,61,0.3); }
+  .pricing-card:not(.featured):hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,26,20,0.08); }
+  .pricing-name { font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .pricing-card.featured .pricing-name { color: rgba(255,255,255,0.7); }
+  .pricing-price { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 600; color: var(--ink); line-height: 1; margin-bottom: 4px; }
+  .pricing-card.featured .pricing-price { color: white; }
+  .pricing-credits { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+  .pricing-card.featured .pricing-credits { color: rgba(255,255,255,0.7); }
+  .pricing-divider { height: 1px; background: var(--warm); margin: 24px 0; }
+  .pricing-card.featured .pricing-divider { background: rgba(255,255,255,0.2); }
+  .pricing-features { list-style: none; text-align: left; }
+  .pricing-features li { font-size: 13px; color: var(--muted); padding: 6px 0; display: flex; align-items: center; gap: 8px; font-weight: 300; }
+  .pricing-card.featured .pricing-features li { color: rgba(255,255,255,0.85); }
+  .pricing-features li::before { content: '✓'; color: var(--green); font-weight: 600; font-size: 12px; }
+  .pricing-card.featured .pricing-features li::before { color: rgba(255,255,255,0.9); }
+  .pricing-btn { display: block; margin-top: 28px; padding: 13px; border-radius: 8px; font-size: 14px; font-weight: 500; text-decoration: none; text-align: center; transition: all 0.2s; background: var(--cream); color: var(--ink); border: 1px solid var(--warm); }
+  .pricing-card.featured .pricing-btn { background: white; color: var(--green); border-color: white; }
+  .pricing-btn:hover { opacity: 0.85; }
+  .pricing-note { text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); font-weight: 300; }
+
+  /* TESTIMONIAL */
+  .testimonial { background: var(--ink); padding: 100px 48px; text-align: center; }
+  .testimonial-inner { max-width: 720px; margin: 0 auto; }
+  .testimonial-quote { font-family: 'Playfair Display', serif; font-size: clamp(22px, 3vw, 34px); font-weight: 400; font-style: italic; color: var(--cream); line-height: 1.5; margin-bottom: 32px; }
+  .testimonial-attr { font-size: 13px; color: rgba(245,240,232,0.4); letter-spacing: 1px; }
+
+  /* CTA */
+  .cta { padding: 100px 48px; text-align: center; background: var(--cream); }
+  .cta-inner { max-width: 600px; margin: 0 auto; }
+  .cta-title { font-family: 'Playfair Display', serif; font-size: clamp(36px, 4vw, 52px); font-weight: 600; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 20px; color: var(--ink); }
+  .cta-title em { font-style: italic; color: var(--green); }
+  .cta-sub { font-size: 16px; color: var(--muted); margin-bottom: 36px; font-weight: 300; line-height: 1.6; }
+
+  /* FOOTER */
+  footer { background: var(--ink); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; }
+  .footer-logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--cream); font-weight: 600; }
+  .footer-logo span { color: #3d7a52; }
+  .footer-links { display: flex; gap: 32px; }
+  .footer-links a { font-size: 13px; color: rgba(245,240,232,0.4); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--cream); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 24px 48px; }
+    .app-showcase { padding: 0 24px 60px; }
+    .features, .pricing, .cta { padding: 60px 24px; }
+    .how { padding: 60px 24px; }
+    .features-grid, .pricing-cards { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    .steps::before { display: none; }
+    .pricing-card.featured { transform: none; }
+    .app-cards { grid-template-columns: repeat(2, 1fr); }
+    .social-proof { padding: 20px 24px; }
+    .social-proof-inner { flex-direction: column; gap: 16px; align-items: flex-start; }
+    footer { flex-direction: column; gap: 20px; padding: 32px 24px; }
+    .testimonial { padding: 60px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">Renz<span>o</span></a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/app" class="nav-cta">Sign in</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Relationship Outreach Intelligence</p>
+    <h1 class="hero-headline">Know who to reach out to.<br><em>Know what to say.</em><br>Every time.</h1>
+    <p class="hero-sub">Renzo tracks your vendor, client, and account relationships — and generates personalized, human-sounding outreach at exactly the right moment. No sequences. No cold email. Just relationships that don't slip.</p>
+    <div class="hero-actions">
+      <a href="/app" class="btn-primary">Get started — $0.99 →</a>
+      <a href="#how" class="btn-secondary">See how it works</a>
+    </div>
+    <p class="hero-note">Pay only for what you use. No monthly subscription.</p>
+  </div>
+</section>
+
+<div class="app-showcase">
+  <div class="app-showcase-inner">
+    <div class="app-preview">
+      <div class="app-header">
+        <div class="app-header-logo">Renz<span>o</span></div>
+        <div class="app-header-sub">Relationship Outreach</div>
+      </div>
+      <div class="app-body">
+        <div class="app-greeting">Good morning, DG</div>
+        <div class="app-date">Monday, May 26, 2026</div>
+        <div class="app-cards">
+          <div class="app-card"><div class="app-card-label">Contacts</div><div class="app-card-num">24</div></div>
+          <div class="app-card"><div class="app-card-label">Due Today</div><div class="app-card-num amber">3</div></div>
+          <div class="app-card"><div class="app-card-label">Overdue</div><div class="app-card-num red">7</div></div>
+          <div class="app-card"><div class="app-card-label">Sent</div><div class="app-card-num">12</div></div>
+        </div>
+        <div class="app-section-label">Due for outreach</div>
+        <div class="app-contact">
+          <div><div class="app-contact-name">Michael Torres</div><div class="app-contact-co">Baldor Specialty Foods · $620k account · Not contacted in 54 days</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">41</span><button class="app-generate-btn">Generate</button></div>
+        </div>
+        <div class="app-contact">
+          <div><div class="app-contact-name">James Whitfield</div><div class="app-contact-co">Imperial Dade · Contract expires in 46 days</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">38</span><button class="app-generate-btn">Generate</button></div>
+        </div>
+        <div class="app-contact">
+          <div><div class="app-contact-name">Sarah Chen</div><div class="app-contact-co">Sysco Metro New York · Regular check-in</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">33</span><button class="app-generate-btn">Generate</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="social-proof">
+  <div class="social-proof-inner">
+    <span class="social-proof-label">Built for teams at</span>
+    <div class="social-proof-items">
+      <span class="social-proof-item">Food service distributors</span>
+      <span class="social-proof-item">GPO vendor managers</span>
+      <span class="social-proof-item">Account management teams</span>
+      <span class="social-proof-item">Collections professionals</span>
+    </div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <p class="section-label">Why Renzo</p>
+  <h2 class="section-title">Not another cold email tool</h2>
+  <p class="section-sub">Renzo is built for relationships you already have — not prospects you've never met.</p>
+  <div class="features-grid">
+    <div class="feature-card"><span class="feature-icon">🎯</span><h3 class="feature-title">Priority Scoring</h3><p class="feature-desc">Renzo scores every contact based on days since last touch, contract expiry, account size, and outreach frequency. You always know who needs attention first.</p></div>
+    <div class="feature-card"><span class="feature-icon">✍️</span><h3 class="feature-title">Relationship-Aware AI</h3><p class="feature-desc">Messages that sound like you wrote them — because Renzo knows your history with each person. No "I hope this email finds you well." Ever.</p></div>
+    <div class="feature-card"><span class="feature-icon">⚡</span><h3 class="feature-title">Batch Outreach</h3><p class="feature-desc">Tell Renzo who to reach out to in plain English. It finds the right contacts, generates personalized messages for each, and lets you review before sending.</p></div>
+    <div class="feature-card"><span class="feature-icon">📋</span><h3 class="feature-title">Works With Any CRM</h3><p class="feature-desc">Import from Salesforce, HubSpot, or any spreadsheet with a CSV export. No IT required. You're up and running in minutes.</p></div>
+    <div class="feature-card"><span class="feature-icon">📬</span><h3 class="feature-title">Sends Via Your Email</h3><p class="feature-desc">Messages open directly in Gmail or Outlook as a draft — ready to review and send. You're always in control. Nothing goes out automatically.</p></div>
+    <div class="feature-card"><span class="feature-icon">📊</span><h3 class="feature-title">Full History Tracking</h3><p class="feature-desc">Every message, every touchpoint, every interaction — logged automatically. Next time you write, Renzo already knows what came before.</p></div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="how-inner">
+    <p class="section-label">How it works</p>
+    <h2 class="section-title">From import to inbox in minutes</h2>
+    <p class="section-sub">No complex setup. No training required. Just your contacts and a few clicks.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><h3 class="step-title">Import your contacts</h3><p class="step-desc">Upload a CSV from any CRM or spreadsheet. Renzo maps your columns automatically.</p></div>
+      <div class="step"><div class="step-num">2</div><h3 class="step-title">Renzo scores & prioritizes</h3><p class="step-desc">Instantly see who needs outreach based on time, spend, and contract cycles.</p></div>
+      <div class="step"><div class="step-num">3</div><h3 class="step-title">Generate your message</h3><p class="step-desc">One click. AI writes a personalized, relationship-aware message in your voice.</p></div>
+      <div class="step"><div class="step-num">4</div><h3 class="step-title">Review and send</h3><p class="step-desc">Message opens in Gmail or Outlook as a draft. Review, adjust if needed, and hit send.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing" id="pricing">
+  <p class="section-label">Pricing</p>
+  <h2 class="section-title">Pay for what you use</h2>
+  <p class="section-sub">No subscriptions. No per-seat fees. Buy credits when you need them.</p>
+  <div class="pricing-cards">
+    <div class="pricing-card">
+      <p class="pricing-name">Starter</p>
+      <div class="pricing-price">$5</div>
+      <p class="pricing-credits">100 credits · first purchase: 120</p>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>~100 AI messages</li>
+        <li>All features included</li>
+        <li>Standard AI model</li>
+        <li>Credits never expire</li>
+      </ul>
+      <a href="/app" class="pricing-btn">Get started</a>
+    </div>
+    <div class="pricing-card featured">
+      <p class="pricing-name">Growth</p>
+      <div class="pricing-price">$20</div>
+      <p class="pricing-credits">500 credits · first purchase: 600</p>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>~500 AI messages</li>
+        <li>All features included</li>
+        <li>Standard + Enhanced AI</li>
+        <li>Credits never expire</li>
+      </ul>
+      <a href="/app" class="pricing-btn">Get started</a>
+    </div>
+    <div class="pricing-card">
+      <p class="pricing-name">Pro</p>
+      <div class="pricing-price">$50</div>
+      <p class="pricing-credits">1,500 credits · first purchase: 1,800</p>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>~1,500 AI messages</li>
+        <li>All features included</li>
+        <li>Standard + Enhanced AI</li>
+        <li>Credits never expire</li>
+      </ul>
+      <a href="/app" class="pricing-btn">Get started</a>
+    </div>
+  </div>
+  <p class="pricing-note">Every new account starts with a $0.99 card verification. Credits never expire.</p>
+</section>
+
+<section class="testimonial">
+  <div class="testimonial-inner">
+    <p class="testimonial-quote">"The relationships that drive our business aren't with strangers — they're with the people we already know. Renzo makes sure we never let those slip."</p>
+    <p class="testimonial-attr">VENDOR RELATIONSHIP MANAGER · FOOD SERVICE INDUSTRY</p>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="cta-inner">
+    <h2 class="cta-title">Your relationships are your business.<br><em>Treat them that way.</em></h2>
+    <p class="cta-sub">Join Renzo and start reaching out to the right people with the right message — today.</p>
+    <a href="/app" class="btn-primary" style="font-size:16px;padding:16px 36px">Get started for $0.99 →</a>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted)">No subscription. Cancel anytime. Credits never expire.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">Renz<span>o</span></div>
+  <div class="footer-links">
+    <a href="#">Privacy Policy</a>
+    <a href="#">Terms of Service</a>
+    <a href="mailto:support@renzo.app">Support</a>
+  </div>
+</footer>
+
+</body>
+</html>

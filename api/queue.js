@@ -27,8 +27,18 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'DELETE') {
-    const { id } = req.body || {};
-    if (!id) return res.status(400).json({ error: 'id is required' });
+    const { id, deleteAll } = req.body || {};
+
+    if (deleteAll) {
+      const { data, error } = await supabase
+        .from('queue').delete()
+        .eq('user_id', userId).eq('profile_name', profileName)
+        .select('id');
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ success: true, deleted: data?.length ?? 0 });
+    }
+
+    if (!id) return res.status(400).json({ error: 'id or deleteAll is required' });
     const { error } = await supabase
       .from('queue').delete().eq('id', id).eq('user_id', userId);
     if (error) return res.status(500).json({ error: error.message });

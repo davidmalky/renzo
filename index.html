@@ -395,6 +395,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </select>
           <button class="btn btn-ghost btn-sm" id="bulkSendBtn">Send All as Drafts</button>
           <button class="btn btn-primary btn-sm" id="markAllBtn">Mark All Sent</button>
+          <button class="btn btn-ghost btn-sm" id="clearQueueBtn" style="color:var(--red);border-color:var(--red)">Clear Queue</button>
         </div>
       </div>
       <div id="emailSetupBanner" class="hidden" style="background:var(--amber-pale);border:1px solid var(--amber);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -1922,6 +1923,20 @@ async function markSent(qid){
 
 async function markAllSent(){for(const item of gq().slice()) await markSent(item.id);}
 
+async function clearQueue(){
+  const q=gq();
+  if(!q.length){toast('Queue is already empty');return;}
+  if(!confirm('Remove all '+q.length+' item'+(q.length!==1?'s':'')+' from queue? This will not mark them as sent.')) return;
+  try{
+    const r=await fetch('/api/queue',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({deleteAll:true})});
+    if(!r.ok) throw new Error(await r.text());
+    _cache.queue=[];
+    renderQueue();
+    updateQueueBadge();
+    toast('Queue cleared');
+  }catch(e){toast('Failed to clear queue: '+e.message,'error');}
+}
+
 async function editQ(qid){
   const item=gq().find(x=>x.id===qid);
   if(!item) return;
@@ -2100,7 +2115,7 @@ function showBatchReview(items,trigger){
     <div class="batch-review-item" id="br-${it.uid}">
       <div class="batch-review-name">${esc(it.c_name)} <span style="font-weight:400;color:var(--gray);font-size:13px">at ${esc(it.co)}</span></div>
       ${it.reason?`<div style="font-size:12px;color:var(--gray);font-style:italic;margin-bottom:8px">Why now: ${esc(it.reason)}</div>`:''}
-      <div class="batch-review-preview" id="brp-${it.uid}" onclick="toggleBatchFull('${it.uid}')">${esc(it.msg.slice(0,160)+(it.msg.length>160?'…':''))}<span id="brf-${it.uid}" style="display:none;white-space:pre-wrap">${esc(it.msg)}</span></div>
+      <div class="batch-review-preview" id="brp-${it.uid}"><div id="brs-${it.uid}">${esc(it.msg.slice(0,160)+(it.msg.length>160?'…':''))}</div><div id="brf-${it.uid}" style="display:none;white-space:pre-wrap">${esc(it.msg)}</div>${it.msg.length>160?'<span id="brtog-'+it.uid+'" style="font-size:11px;color:var(--green);cursor:pointer;margin-top:4px;display:inline-block" onclick="toggleBatchFull(\''+it.uid+'\')">Show more</span>':''}</div>
       <div class="batch-review-edit" id="bre-${it.uid}">
         <textarea id="brt-${it.uid}">${esc(it.msg)}</textarea>
         <div style="display:flex;gap:6px;margin-top:6px">
@@ -2121,12 +2136,14 @@ function showBatchReview(items,trigger){
     +'</div>';
 }
 function toggleBatchFull(uid){
-  const short=document.getElementById('brp-'+uid);
-  const full=document.getElementById('brf-'+uid);
-  if(!short||!full) return;
-  const isExpanded=full.style.display!=='none';
-  short.textContent=isExpanded?_pendingBatch.find(x=>x.uid===uid)?.msg.slice(0,160)+'…':'';
-  full.style.display=isExpanded?'none':'inline';
+  const shortEl=document.getElementById('brs-'+uid);
+  const fullEl=document.getElementById('brf-'+uid);
+  const togEl=document.getElementById('brtog-'+uid);
+  if(!shortEl||!fullEl) return;
+  const isExpanded=fullEl.style.display!=='none';
+  shortEl.style.display=isExpanded?'':'none';
+  fullEl.style.display=isExpanded?'none':'block';
+  if(togEl) togEl.textContent=isExpanded?'Show more':'Show less';
 }
 function editBatchItem(uid){
   const editDiv=document.getElementById('bre-'+uid);
@@ -2144,7 +2161,15 @@ function saveBatchEdit(uid){
   if(item) item.msg=ta.value;
   document.getElementById('bre-'+uid).style.display='none';
   const prev=document.getElementById('brp-'+uid);
-  if(prev){prev.style.display='';prev.textContent=ta.value.slice(0,160)+(ta.value.length>160?'…':'');}
+  if(prev){
+    prev.style.display='';
+    const shortEl=document.getElementById('brs-'+uid);
+    const fullEl=document.getElementById('brf-'+uid);
+    const togEl=document.getElementById('brtog-'+uid);
+    if(shortEl) shortEl.textContent=ta.value.slice(0,160)+(ta.value.length>160?'…':'');
+    if(fullEl){fullEl.textContent=ta.value;fullEl.style.display='none';}
+    if(togEl){togEl.textContent='Show more';togEl.style.display=ta.value.length>160?'inline-block':'none';}
+  }
 }
 function cancelBatchEdit(uid){
   document.getElementById('bre-'+uid).style.display='none';
@@ -2740,6 +2765,7 @@ document.getElementById('aiRefineBtn') && document.getElementById('aiRefineBtn')
   this.disabled=false;this.textContent='Rewrite';
 });
 document.getElementById('markAllBtn').addEventListener('click',markAllSent);
+document.getElementById('clearQueueBtn').addEventListener('click',clearQueue);
 document.getElementById('saveSettingsBtn').addEventListener('click',saveSettings);
 document.getElementById('addRuleBtn').addEventListener('click',addRule);
 document.getElementById('addEmailBtn') && document.getElementById('addEmailBtn').addEventListener('click',addEmail);
