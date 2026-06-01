@@ -74,6 +74,7 @@ export default async function handler(req, res) {
 
   // ── GENERATE (API key or JWT, no session required) ────────────────────────
   if (req.body?.action === 'generate') {
+    console.error('[generate] auth header:', req.headers['authorization']?.slice(0,20));
     const identity = await resolveAuth(req);
     if (!identity) return res.status(401).json({ error: 'Unauthorized' });
 
