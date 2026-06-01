@@ -65,6 +65,18 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
+  // POST {action:'complete_onboarding'}
+  if (req.method === 'POST' && req.body?.action === 'complete_onboarding') {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(
+        { user_id: userId, profile_name: profileName, onboarding_completed: true },
+        { onConflict: 'user_id,profile_name' }
+      );
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ success: true });
+  }
+
   // ── PROFILE ──────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const { data, error } = await supabase

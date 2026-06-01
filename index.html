@@ -244,6 +244,25 @@ tbody tr.clickable:hover td{background:#FAF7F2}
   /* AI guide button floats above bottom nav */
   #guideBtn{bottom:72px}
 }
+
+/* ── ONBOARDING TOUR ───────────────────────────────────────────────────── */
+#tourBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9800;pointer-events:none}
+.tour-hl{position:relative!important;z-index:9900!important;border-radius:8px!important;outline:3px solid #3d7a52!important;outline-offset:4px!important;pointer-events:auto!important}
+#tourCard{position:fixed;z-index:9901;background:#fffef9;border-radius:14px;padding:24px 24px 18px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:320px;width:calc(100% - 40px);pointer-events:auto}
+#tourCard h3{font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:7px;color:#1a1a14}
+#tourCard p{font-size:13px;color:#4a4840;line-height:1.55;margin-bottom:16px;font-weight:300}
+.tour-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tour-skip-btn{font-size:12px;color:#8a8070;cursor:pointer;text-decoration:underline;background:none;border:none;padding:0;flex-shrink:0}
+.tour-skip-btn:hover{color:#1a1a14}
+.tour-next-btn{font-size:13px;font-weight:500;padding:9px 20px;background:#2d5a3d;color:#fff;border:none;border-radius:7px;cursor:pointer;margin-left:auto}
+.tour-next-btn:hover{background:#3d7a52}
+.tour-step-lbl{font-size:11px;color:#8a8070;letter-spacing:.5px;flex-shrink:0}
+.tour-dots{display:flex;gap:5px;margin-bottom:12px}
+.tour-dot{width:6px;height:6px;border-radius:50%;background:#e8e0d0;display:inline-block}
+.tour-dot.active{background:#2d5a3d}
+@media(max-width:768px){
+  #tourCard{left:16px!important;right:16px!important;bottom:76px!important;top:auto!important;transform:none!important;max-width:none;width:auto}
+}
 </style>
 </head>
 <body>
@@ -1086,7 +1105,8 @@ function normalizeProfile(r){
   return {
     website:r.website||'',company:r.company||'',sell:r.sell||'',
     customer:r.customer||'',role:r.role||'',tone:r.tone||'Professional',
-    repName:r.rep_name||r.repName||''
+    repName:r.rep_name||r.repName||'',
+    onboarding_completed:!!r.onboarding_completed
   };
 }
 
@@ -1270,6 +1290,7 @@ async function doLogin(){
     updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
+    setTimeout(tourStart,600);
   }catch(e){
     err.textContent='Network error. Please try again.';
     err.classList.remove('hidden');
@@ -1385,6 +1406,7 @@ async function doSignup(){
       renderProfileSelector();
       updateCreditDisplay();
       document.getElementById('onboardModal').classList.remove('hidden');
+      setTimeout(tourStart,600);
     }
     afterPayCallback=proceedToApp;
     document.getElementById('paySkipLink').onclick=proceedToApp;
@@ -3000,6 +3022,89 @@ document.getElementById('aiRefineBtn') && document.getElementById('aiRefineBtn')
   }catch(e){toast('Rewrite failed: '+e.message,'error');}
   this.disabled=false;this.textContent='Rewrite';
 });
+// ── ONBOARDING TOUR ──────────────────────────────────────────────────────────
+var _tourStep=0,_tourPoll=null;
+var TOUR=[
+  {title:'Welcome to Renzo',
+   body:'Renzo helps you maintain warm relationships with your existing contacts. Let\'s get you set up in under 2 minutes.',
+   hl:null,next:'Get Started',
+   onEnter:function(){showView('contacts');}},
+  {title:'Add your first contact',
+   body:'Add a contact manually using the button below, or import a CSV file. Renzo will write personalised outreach for each relationship.',
+   hl:function(){return document.getElementById('addContactBtn');},
+   next:'Skip for now',wait:true,
+   onEnter:function(){showView('contacts');}},
+  {title:'Generate your first message',
+   body:'Click the Message button on any contact to get an AI-written outreach draft tailored to your relationship and history.',
+   hl:function(){return document.querySelector('.msg-btn');},
+   next:'Got it',
+   onEnter:function(){showView('contacts');}},
+  {title:'You\'re all set!',
+   body:'Your Renzo workspace is ready. Check the Dashboard for your outreach queue. Connect external systems via API Keys in Settings.',
+   hl:function(){return document.querySelector('[data-view="dashboard"]');},
+   next:'Go to Dashboard',last:true,
+   onEnter:function(){showView('dashboard');}}
+];
+function tourShouldShow(){return gc().length===0&&!gp().onboarding_completed;}
+function tourStart(){if(!tourShouldShow())return;_tourStep=0;document.getElementById('tourBackdrop').style.display='block';document.getElementById('tourCard').style.display='block';tourGo(0);}
+function tourGo(n){
+  _tourStep=n;
+  tourStopPoll();
+  tourUnHL();
+  var s=TOUR[n],total=TOUR.length;
+  document.getElementById('tourTitle').textContent=s.title;
+  document.getElementById('tourBody').textContent=s.body;
+  document.getElementById('tourStepLbl').textContent=(n+1)+' of '+total;
+  document.getElementById('tourNextBtn').textContent=s.next||'Continue';
+  var dots='';
+  for(var i=0;i<total;i++) dots+='<span class="tour-dot'+(i===n?' active':'')+'"></span>';
+  document.getElementById('tourDots').innerHTML=dots;
+  if(s.onEnter) s.onEnter();
+  var tgt=s.hl?s.hl():null;
+  if(tgt){tgt.classList.add('tour-hl');tourPosition(tgt);}
+  else tourCenter();
+  if(s.wait){
+    _tourPoll=setInterval(function(){
+      if(gc().length>0){tourStopPoll();tourGo(_tourStep+1);}
+    },800);
+  }
+}
+function tourCenter(){
+  var c=document.getElementById('tourCard');
+  c.style.top='50%';c.style.left='50%';c.style.transform='translate(-50%,-50%)';
+  c.style.bottom='';c.style.right='';
+}
+function tourPosition(tgt){
+  if(window.innerWidth<=768)return;
+  var r=tgt.getBoundingClientRect(),c=document.getElementById('tourCard'),pad=14,cw=330,ch=210;
+  c.style.transform='';c.style.bottom='';c.style.right='';
+  if(r.right+cw+pad<window.innerWidth){
+    c.style.left=(r.right+pad)+'px';
+    c.style.top=Math.max(pad,Math.min(r.top,window.innerHeight-ch-pad))+'px';
+  } else if(r.left-cw-pad>0){
+    c.style.left=(r.left-cw-pad)+'px';
+    c.style.top=Math.max(pad,Math.min(r.top,window.innerHeight-ch-pad))+'px';
+  } else {
+    c.style.left=pad+'px';
+    c.style.top=Math.min(r.bottom+pad,window.innerHeight-ch-pad)+'px';
+  }
+}
+function tourUnHL(){document.querySelectorAll('.tour-hl').forEach(function(e){e.classList.remove('tour-hl');});}
+function tourStopPoll(){if(_tourPoll){clearInterval(_tourPoll);_tourPoll=null;}}
+function tourNext(){var s=TOUR[_tourStep];if(s.last||_tourStep>=TOUR.length-1)tourDone();else tourGo(_tourStep+1);}
+function tourSkip(){tourDone();}
+function tourDone(){
+  tourStopPoll();tourUnHL();
+  document.getElementById('tourBackdrop').style.display='none';
+  document.getElementById('tourCard').style.display='none';
+  showView('dashboard');
+  if(_cache.profile) _cache.profile.onboarding_completed=true;
+  fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
+}
+document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
+document.getElementById('tourNextBtn').addEventListener('click',tourNext);
+// ─────────────────────────────────────────────────────────────────────────────
+
 document.getElementById('markAllBtn').addEventListener('click',markAllSent);
 document.getElementById('clearQueueBtn').addEventListener('click',clearQueue);
 document.getElementById('saveSettingsBtn').addEventListener('click',saveSettings);
@@ -3110,6 +3215,7 @@ async function sendGuideMsg(){
     updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
+    setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
 </script>
@@ -3196,5 +3302,18 @@ async function sendGuideMsg(){
 </div>
 
 <script src="https://js.stripe.com/v3/"></script>
+
+<!-- ONBOARDING TOUR -->
+<div id="tourBackdrop" style="display:none"></div>
+<div id="tourCard" style="display:none">
+  <div class="tour-dots" id="tourDots"></div>
+  <h3 id="tourTitle"></h3>
+  <p id="tourBody"></p>
+  <div class="tour-actions">
+    <button class="tour-skip-btn" id="tourSkipBtn">Skip tour</button>
+    <span class="tour-step-lbl" id="tourStepLbl"></span>
+    <button class="tour-next-btn" id="tourNextBtn">Continue</button>
+  </div>
+</div>
 </body>
 </html>
