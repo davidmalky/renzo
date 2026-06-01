@@ -27,10 +27,8 @@ export async function resolveAuth(req) {
   const auth = req.headers['authorization'] || '';
   if (!auth.startsWith('Bearer ')) return null;
   const hash = crypto.createHash('sha256').update(auth.slice(7)).digest('hex');
-  console.error('[resolveAuth] computed hash:', hash);
   const { data } = await supabase
     .from('api_keys').select('user_id').eq('key_hash', hash).maybeSingle();
-  console.error('[resolveAuth] supabase result:', JSON.stringify(data), 'error not shown');
   if (!data) return null;
   await supabase.from('api_keys')
     .update({ last_used_at: new Date().toISOString() }).eq('key_hash', hash);
