@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
   // Send reset email via Resend
   const { data: emailData, error: emailError } = await resend.emails.send({
-    from: 'Renzo <onboarding@resend.dev>',
+    from: 'Renzo <noreply@meetrenzo.com>',
     to: user.email,
     subject: 'Your Renzo password reset code',
     html: `
