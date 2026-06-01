@@ -697,6 +697,27 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
         </div>
       </div>
+
+      <!-- API KEYS CARD -->
+      <div class="card" style="padding:28px;max-width:560px;margin-top:20px">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">API Keys</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Use API keys to push contacts and generate messages from external systems. Keys are shown only once — store them securely.</p>
+        <div id="apiKeysList" style="margin-bottom:16px"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="field" style="margin-bottom:0;flex:1">
+            <label>Key Label (optional)</label>
+            <input type="text" id="newApiKeyLabel" placeholder="e.g. VCS Integration">
+          </div>
+          <button class="btn btn-ghost btn-sm" id="genApiKeyBtn" style="align-self:flex-end">Generate Key</button>
+        </div>
+        <div id="newApiKeyBox" class="hidden" style="margin-top:16px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px">Copy this key now — it will not be shown again.</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <code id="newApiKeyValue" style="font-size:12px;word-break:break-all;flex:1;background:none"></code>
+            <button class="btn btn-ghost btn-sm" onclick="copyApiKey()">Copy</button>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -2730,6 +2751,59 @@ function loadSettings(){
   document.getElementById('sRep').value=p.repName||'';
   renderRules();
   renderEmailAccounts();
+  loadApiKeys();
+}
+
+// ── API KEYS ──────────────────────────────────────────────────────────────────
+async function loadApiKeys(){
+  const el=document.getElementById('apiKeysList');
+  if(!el) return;
+  try{
+    const r=await fetch('/api/profile?action=list_api_keys',{headers:getAuthHeaders()});
+    if(!r.ok){el.innerHTML='<p style="font-size:13px;color:var(--red)">Could not load keys.</p>';return;}
+    const keys=await r.json();
+    if(!keys.length){el.innerHTML='<p style="font-size:13px;color:var(--gray)">No API keys yet.</p>';return;}
+    el.innerHTML=keys.map(k=>{
+      const created=new Date(k.created_at).toLocaleDateString();
+      const used=k.last_used_at?new Date(k.last_used_at).toLocaleDateString():'never';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-light)">'
+        +'<div><div style="font-size:13px;font-weight:500">'+(k.label||'Unnamed key')+'</div>'
+        +'<div style="font-size:11px;color:var(--gray)">Created '+created+' &middot; Last used '+used+'</div></div>'
+        +'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="revokeApiKey(\''+k.id+'\')">Revoke</button>'
+        +'</div>';
+    }).join('');
+  }catch(e){el.innerHTML='<p style="font-size:13px;color:var(--red)">Error loading keys.</p>';}
+}
+
+async function generateApiKey(){
+  const label=document.getElementById('newApiKeyLabel').value.trim();
+  const btn=document.getElementById('genApiKeyBtn');
+  btn.disabled=true;btn.textContent='Generating...';
+  try{
+    const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),
+      body:JSON.stringify({action:'generate_api_key',label})});
+    if(!r.ok){const d=await r.json();toast(d.error||'Failed to generate key','error');return;}
+    const d=await r.json();
+    document.getElementById('newApiKeyValue').textContent=d.key;
+    document.getElementById('newApiKeyBox').classList.remove('hidden');
+    document.getElementById('newApiKeyLabel').value='';
+    await loadApiKeys();
+  }catch(e){toast('Network error','error');}
+  finally{btn.disabled=false;btn.textContent='Generate Key';}
+}
+
+async function revokeApiKey(id){
+  if(!confirm('Revoke this API key? Any integrations using it will stop working.')) return;
+  const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),
+    body:JSON.stringify({action:'revoke_api_key',id})});
+  if(r.ok){await loadApiKeys();toast('Key revoked','success');}
+  else{const d=await r.json();toast(d.error||'Failed to revoke key','error');}
+}
+
+function copyApiKey(){
+  const val=document.getElementById('newApiKeyValue').textContent;
+  navigator.clipboard.writeText(val).then(()=>toast('API key copied','success'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=val;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('API key copied','success');});
 }
 
 async function saveSettings(){
@@ -2931,6 +3005,7 @@ document.getElementById('clearQueueBtn').addEventListener('click',clearQueue);
 document.getElementById('saveSettingsBtn').addEventListener('click',saveSettings);
 document.getElementById('addRuleBtn').addEventListener('click',addRule);
 document.getElementById('addEmailBtn') && document.getElementById('addEmailBtn').addEventListener('click',addEmail);
+document.getElementById('genApiKeyBtn').addEventListener('click',generateApiKey);
 document.getElementById('bulkSendBtn') && document.getElementById('bulkSendBtn').addEventListener('click',bulkSendAll);
 document.getElementById('newEmailAddr') && document.getElementById('newEmailAddr').addEventListener('keydown',function(e){if(e.key==='Enter')addEmail();});
 document.getElementById('newRule').addEventListener('keydown',function(e){if(e.key==='Enter')addRule();});

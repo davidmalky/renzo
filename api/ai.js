@@ -1,4 +1,4 @@
-import { validateRequest } from './_validate.js';
+import { validateRequest, resolveAuth } from './_validate.js';
 import supabase from './_supabase.js';
 
 const MODEL_MAP = {
@@ -28,7 +28,6 @@ async function deductCredits(userId, tokensUsed, model) {
     .single();
 
   if (error || !updated) {
-    // Retry once on race condition
     const { data: refetch } = await supabase
       .from('billing').select('credits').eq('user_id', userId).single();
     const fresh = refetch?.credits ?? 0;
@@ -42,17 +41,77 @@ async function deductCredits(userId, tokensUsed, model) {
   return { creditsDeducted: creditsToDeduct, creditsRemaining: updated.credits };
 }
 
+// Build a structured prompt from a canonical relationship record
+function buildGeneratePrompt(record, context) {
+  const daysSince = record.last_contact_date
+    ? Math.floor((Date.now() - new Date(record.last_contact_date).getTime()) / 86400000)
+    : null;
+  const renewalDays = record.renewal_or_contract_date
+    ? Math.floor((new Date(record.renewal_or_contract_date).getTime() - Date.now()) / 86400000)
+    : null;
+
+  const lines = [
+    'Write a concise, professional outreach message for the following relationship.',
+    'Contact: ' + (record.contact_name || 'Unknown'),
+    'Company: ' + (record.company_name || 'Unknown'),
+    record.relationship_status ? 'Status: ' + record.relationship_status : '',
+    record.entity_type ? 'Type: ' + record.entity_type : '',
+    daysSince != null ? 'Last contact: ' + daysSince + ' days ago' : '',
+    record.annual_value != null ? 'Annual value: $' + record.annual_value : '',
+    renewalDays != null && renewalDays <= 90
+      ? 'IMPORTANT: Contract/renewal in ' + renewalDays + ' days' : '',
+    record.context_notes ? 'Context: ' + record.context_notes : '',
+    context ? 'Additional context: ' + context : '',
+    '',
+    'Return only the message body. Be warm, specific, and professional. 3-4 sentences maximum.'
+  ];
+
+  return lines.filter(Boolean).join('\n');
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // ── GENERATE (API key or JWT, no session required) ────────────────────────
+  if (req.body?.action === 'generate') {
+    const identity = await resolveAuth(req);
+    if (!identity) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { record = {}, context = '' } = req.body;
+    const prompt = buildGeneratePrompt(record, context);
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 512,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.error?.message || 'AI error' });
+      }
+      const draft = data.content?.[0]?.text || '';
+      return res.status(200).json({ draft });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── All other AI requests require JWT + credit deduction ──────────────────
   let userId;
   try { ({ userId } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
-  // Extract model selection from request; don't forward it to Anthropic
   const { model: modelKey = 'standard', ...anthropicBody } = req.body || {};
   const anthropicModel = MODEL_MAP[modelKey] || MODEL_MAP.standard;
-
-  // Override model in the body sent to Anthropic
   const payload = { ...anthropicBody, model: anthropicModel };
 
   try {
@@ -74,7 +133,6 @@ export default async function handler(req, res) {
       if (deductResult.error === 'insufficient_credits') {
         return res.status(402).json({ error: 'insufficient_credits', credits: deductResult.credits });
       }
-      // Attach credit info to response so frontend can update display
       data._credits = deductResult;
     }
 

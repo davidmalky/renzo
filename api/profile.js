@@ -1,5 +1,6 @@
 import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
+import crypto from 'crypto';
 
 export default async function handler(req, res) {
   let userId, profileName;
@@ -30,6 +31,38 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // ── API KEY MANAGEMENT ───────────────────────────────────────────────────
+
+  // GET ?action=list_api_keys
+  if (req.method === 'GET' && req.query?.action === 'list_api_keys') {
+    const { data, error } = await supabase
+      .from('api_keys').select('id, label, created_at, last_used_at')
+      .eq('user_id', userId).order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
+  }
+
+  // POST {action:'generate_api_key', label?:'...'}
+  if (req.method === 'POST' && req.body?.action === 'generate_api_key') {
+    const label = (req.body.label || '').trim() || null;
+    const rawKey = crypto.randomBytes(32).toString('hex');
+    const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+    const { error } = await supabase.from('api_keys')
+      .insert({ user_id: userId, key_hash: keyHash, label });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(201).json({ key: rawKey, label });
+  }
+
+  // POST {action:'revoke_api_key', id:'...'}
+  if (req.method === 'POST' && req.body?.action === 'revoke_api_key') {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'id is required' });
+    const { error } = await supabase.from('api_keys')
+      .delete().eq('id', id).eq('user_id', userId);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ success: true });
   }
 
   // ── PROFILE ──────────────────────────────────────────────────────────────
