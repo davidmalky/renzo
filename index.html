@@ -3189,8 +3189,8 @@ function tourDone(){
   if(_cache.profile) _cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
 }
-document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
-document.getElementById('tourNextBtn').addEventListener('click',tourNext);
+document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
+document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
 // ─────────────────────────────────────────────────────────────────────────────
 
 document.getElementById('markAllBtn').addEventListener('click',markAllSent);
