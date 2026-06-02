@@ -3190,8 +3190,6 @@ function tourDone(){
   if(_cache.profile) _cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
 }
-document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
-document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
 // ─────────────────────────────────────────────────────────────────────────────
 
 document.getElementById('markAllBtn').addEventListener('click',markAllSent);
@@ -3403,7 +3401,12 @@ async function sendGuideMsg(){
   </div>
 </div>
 
-<script src="https://js.stripe.com/v3/">});
+<script src="https://js.stripe.com/v3/">  // Tour button listeners - attached after DOM ready
+  var skipBtn=document.getElementById('tourSkipBtn');
+  if(skipBtn) skipBtn.addEventListener('click',tourSkip);
+  var nextBtn=document.getElementById('tourNextBtn');
+  if(nextBtn) nextBtn.addEventListener('click',tourNext);
+});
 </script>
 
 <!-- ONBOARDING TOUR -->
