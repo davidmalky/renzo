@@ -2996,6 +2996,7 @@ async function deleteRule(idx){
 }
 
 // EVENT LISTENERS
+document.addEventListener("DOMContentLoaded", function() {
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -3402,7 +3403,8 @@ async function sendGuideMsg(){
   </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
+<script src="https://js.stripe.com/v3/">});
+</script>
 
 <!-- ONBOARDING TOUR -->
 <div id="tourBackdrop" style="display:none"></div>
