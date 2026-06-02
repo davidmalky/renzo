@@ -2996,7 +2996,6 @@ async function deleteRule(idx){
 }
 
 // EVENT LISTENERS
-document.addEventListener("DOMContentLoaded", function() {
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -3307,7 +3306,6 @@ async function sendGuideMsg(){
     setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
-}); // end DOMContentLoaded
 </script>
 
 <!-- AI GUIDE ASSISTANT -->
