@@ -3309,6 +3309,8 @@ async function sendGuideMsg(){
     setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
+</script>
+
 <!-- ONBOARDING TOUR -->
 <div id="tourBackdrop" style="display:none"></div>
 <div id="tourCard" style="display:none">
@@ -3321,7 +3323,9 @@ async function sendGuideMsg(){
     <button class="tour-next-btn" id="tourNextBtn">Continue</button>
   </div>
 </div>
-
+<script>
+document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
+document.getElementById('tourNextBtn').addEventListener('click',tourNext);
 </script>
 
 <!-- AI GUIDE ASSISTANT -->
