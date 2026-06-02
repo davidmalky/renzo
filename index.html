@@ -248,7 +248,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 /* ── SIDEBAR AVATAR ────────────────────────────────────────────────────── */
 .sb-avatar-wrap{position:relative;display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);user-select:none}
 .sb-avatar-wrap:hover{background:rgba(255,255,255,.04)}
-.sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;letter-spacing:.5px}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.5px;box-shadow:0 0 0 2px rgba(31,107,71,.4)}
 .sb-avatar-name{font-size:12px;color:rgba(232,228,220,.75);font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-avatar-chevron{font-size:9px;color:rgba(232,228,220,.35)}
 .sb-dropdown{display:none;position:absolute;top:calc(100% + 2px);left:8px;right:8px;background:#263330;border:1px solid rgba(255,255,255,.1);border-radius:8px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden}
@@ -262,9 +262,9 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .sb-dd-btn.danger:hover{color:#f87171;background:rgba(232,70,70,.08)}
 
 /* ── ONBOARDING TOUR ───────────────────────────────────────────────────── */
-#tourBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9800;pointer-events:none}
-.tour-hl{position:relative!important;z-index:9900!important;border-radius:8px!important;outline:3px solid #3d7a52!important;outline-offset:4px!important;pointer-events:auto!important}
-#tourCard{position:fixed;z-index:9901;background:#fffef9;border-radius:14px;padding:24px 24px 18px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:320px;width:calc(100% - 40px);pointer-events:auto}
+#tourBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9800;pointer-events:all}
+.tour-hl{position:relative!important;z-index:9850!important;border-radius:8px!important;outline:3px solid #3d7a52!important;outline-offset:4px!important;pointer-events:auto!important}
+#tourCard{position:fixed;z-index:9900;background:#fffef9;border-radius:14px;padding:24px 24px 18px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:320px;width:calc(100% - 40px);pointer-events:all}
 #tourCard h3{font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:7px;color:#1a1a14}
 #tourCard p{font-size:13px;color:#4a4840;line-height:1.55;margin-bottom:16px;font-weight:300}
 .tour-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -435,7 +435,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="sb-dd-email" id="avatarEmail"></div>
           <div id="avatarCredits">⚡ -- credits</div>
         </div>
-        <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showView('settings')">Settings</button>
         <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
       </div>
     </div>
