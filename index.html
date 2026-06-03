@@ -1056,6 +1056,10 @@ function tourDone(){
   if(_cache.profile)_cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
 }
+// Tour button listeners (here so tourSkip/tourNext are in scope)
+document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
+document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
+
 (async()=>{
       await updateCreditDisplay();
       if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
@@ -3117,7 +3121,7 @@ document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
 ['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal'].forEach(function(id){
-  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
+  var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal'].forEach(function(id){document.getElementById(id).classList.add('hidden');});}
@@ -3281,9 +3285,6 @@ async function sendGuideMsg(){
     <button class="tour-next-btn" id="tourNextBtn">Continue</button>
   </div>
 </div>
-<script>
-document.getElementById('tourSkipBtn').addEventListener('click', tourSkip);
-document.getElementById('tourNextBtn').addEventListener('click', tourNext);
-</script>
+
 </body>
 </html>
