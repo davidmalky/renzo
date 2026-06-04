@@ -1003,7 +1003,19 @@ async function processPayment(){
     document.getElementById('payFormArea').classList.add('hidden');
     document.getElementById('paySuccess').classList.remove('hidden');
     document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits have been added to your account.':'Card verified successfully. You\'re all set!';
-    setTimeout
+    setTimeout(async()=>{
+      await updateCreditDisplay();
+      if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
+    },1500);
+    if(currentPayType!=='signup'){
+      setTimeout(()=>{document.getElementById('paymentModal').classList.add('hidden');document.getElementById('creditsModal').classList.add('hidden');},2500);
+    }
+  }catch(e){
+    document.getElementById('cardErrors').textContent=e.message;
+    btn.disabled=false;btn.textContent='Pay';
+  }
+}
+
 // ONBOARDING TOUR
 var _tourStep=0,_tourPoll=null;
 var TOUR=[
