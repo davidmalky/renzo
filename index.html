@@ -1068,18 +1068,6 @@ function tourDone(){
   if(_cache.profile)_cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
 }
-(async()=>{
-      await updateCreditDisplay();
-      if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
-    },1500);
-    if(currentPayType!=='signup'){
-      setTimeout(()=>{document.getElementById('paymentModal').classList.add('hidden');document.getElementById('creditsModal').classList.add('hidden');},2500);
-    }
-  }catch(e){
-    document.getElementById('cardErrors').textContent=e.message;
-    btn.disabled=false;btn.textContent='Pay';
-  }
-}
 
 // Active profile prefix -- supports multiple use-case profiles
 let PROFILE = localStorage.getItem('renzo_active_profile') || 'default';
