@@ -1056,10 +1056,6 @@ function tourDone(){
   if(_cache.profile)_cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
 }
-// Tour button listeners (here so tourSkip/tourNext are in scope)
-document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
-document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
-
 (async()=>{
       await updateCreditDisplay();
       if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
@@ -3188,6 +3184,8 @@ async function sendGuideMsg(){
   setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
+document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
+document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
 </script>
 
 <!-- AI GUIDE ASSISTANT -->
