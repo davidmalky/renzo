@@ -836,6 +836,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <div id="aiLoading" class="loading-box hidden"><div class="spinner"></div><p id="aiLoadingText">Analyzing context...</p></div>
     <div id="aiResult" class="hidden">
       <div class="trigger-box"><div class="trigger-label">Why this message</div><p id="aiReason"></p></div>
+      <div id="aiAttachBanner" class="hidden" style="background:var(--amber-pale);border:1px solid var(--amber);border-radius:8px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:18px">📎</span>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:#92400e;margin-bottom:3px">Attachment may be needed</div>
+          <div style="font-size:12px;color:#92400e;line-height:1.5">This message references a document. Remember to attach the relevant file when you send — Renzo can't attach files automatically.</div>
+        </div>
+      </div>
       <div class="field"><label>Message — edit before sending</label><textarea class="msg-textarea" id="aiMsg"></textarea></div>
       <div class="modal-actions">
         <button class="btn btn-ghost btn-sm" id="aiDraft">Save Draft</button>
@@ -2023,6 +2030,12 @@ async function generateMsg(c, customInstruction){
     const parsed=JSON.parse(txt);
     document.getElementById('aiReason').textContent=parsed.reason;
     document.getElementById('aiMsg').value=parsed.message;
+    // Detect if attachment might be needed
+    var attachKeywords = ['nda','non-disclosure','contract','agreement','proposal','invoice','quote','pricing','terms','amendment','renewal','addendum','statement of work','sow'];
+    var msgLower = (parsed.message + ' ' + (parsed.reason||'')).toLowerCase();
+    var needsAttachment = attachKeywords.some(function(k){ return msgLower.includes(k); });
+    var attachBanner = document.getElementById('aiAttachBanner');
+    if(attachBanner) attachBanner.classList.toggle('hidden', !needsAttachment);
     document.getElementById('aiLoading').classList.add('hidden');
     document.getElementById('aiResult').classList.remove('hidden');
   }catch(e){
