@@ -101,6 +101,11 @@ export default async function handler(req, res) {
         errors.push({ source_record_id: null, error: 'missing source_record_id' });
         continue;
       }
+      const safeDate = (val) => {
+        if (!val) return null;
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+      };
       const vcsTier = r.vcs_tier ? String(r.vcs_tier).toUpperCase() : null;
       const tier    = tierMap[vcsTier] || 'C';
       const mapped = {
@@ -112,8 +117,8 @@ export default async function handler(req, res) {
         email:               r.contact_email || null,
         phone:               r.contact_phone || null,
         notes:               r.context_notes || null,
-        last_contact:        r.last_contact_date || null,
-        contract_expiry:     r.renewal_or_contract_date || null,
+        last_contact:        safeDate(r.last_contact_date),
+        contract_expiry:     safeDate(r.renewal_or_contract_date),
         relationship_status: r.relationship_status || 'Active',
         priority_score:      priorityMap[String(r.priority || '').toLowerCase()] ?? 50,
         tags:                Array.isArray(r.tags) ? r.tags : [],
