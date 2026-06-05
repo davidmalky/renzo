@@ -97,8 +97,24 @@
   .feature-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; margin-bottom: 10px; color: var(--ink); }
   .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; font-weight: 300; }
 
+  /* INTEGRATIONS */
+  .integrations { background: var(--white); padding: 80px 48px; border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
+  .integrations-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+  .integrations-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; margin: 48px 0 32px; }
+  .int-badge { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .int-icon { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; font-family: 'DM Sans', sans-serif; letter-spacing: -0.5px; border: 1px solid rgba(0,0,0,0.06); }
+  .int-label { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .int-icon.csv    { background: #4a5568; }
+  .int-icon.sf     { background: #00a1e0; }
+  .int-icon.hs     { background: #ff7a59; }
+  .int-icon.qb     { background: #2ca01c; }
+  .int-icon.gmail  { background: #ea4335; }
+  .int-icon.outlook{ background: #0078d4; }
+  .integrations-api { font-size: 14px; color: var(--muted); font-weight: 300; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+  .integrations-api strong { color: var(--ink); font-weight: 500; }
+
   /* HOW */
-  .how { background: var(--white); padding: 100px 48px; }
+  .how { background: var(--cream); padding: 100px 48px; }
   .how-inner { max-width: 1200px; margin: 0 auto; }
   .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 64px; position: relative; }
   .steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 1px; background: var(--warm); }
@@ -109,7 +125,14 @@
 
   /* PRICING */
   .pricing { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
-  .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
+  .pricing-activate { background: var(--green); color: white; border-radius: 12px; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; gap: 24px; }
+  .pricing-activate-left { display: flex; align-items: center; gap: 20px; }
+  .pricing-activate-price { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 600; color: white; }
+  .pricing-activate-text h4 { font-size: 15px; font-weight: 500; color: white; margin-bottom: 4px; }
+  .pricing-activate-text p { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 300; }
+  .pricing-activate-btn { background: white; color: var(--green); padding: 11px 24px; border-radius: 7px; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: opacity 0.2s; }
+  .pricing-activate-btn:hover { opacity: 0.9; }
+  .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   .pricing-card { background: var(--white); border: 1px solid var(--warm); border-radius: 16px; padding: 40px 32px; text-align: center; transition: all 0.25s; }
   .pricing-card.featured { background: var(--green); border-color: var(--green); transform: translateY(-8px); box-shadow: 0 24px 64px rgba(45,90,61,0.3); }
   .pricing-card:not(.featured):hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,26,20,0.08); }
@@ -164,6 +187,7 @@
     .app-showcase { padding: 0 24px 60px; }
     .features, .pricing, .cta { padding: 60px 24px; }
     .how { padding: 60px 24px; }
+    .integrations { padding: 60px 24px; }
     .features-grid, .pricing-cards { grid-template-columns: 1fr; }
     .steps { grid-template-columns: repeat(2, 1fr); }
     .steps::before { display: none; }
@@ -173,6 +197,7 @@
     .social-proof-inner { flex-direction: column; gap: 16px; align-items: flex-start; }
     footer { flex-direction: column; gap: 20px; padding: 32px 24px; }
     .testimonial { padding: 60px 24px; }
+    .pricing-activate { flex-direction: column; align-items: flex-start; text-align: left; }
   }
 </style>
 </head>
@@ -201,7 +226,7 @@
       <a href="/app" class="btn-primary">Get started — $0.99 →</a>
       <a href="#how" class="btn-secondary">See how it works</a>
     </div>
-    <p class="hero-note">Pay only for what you use. No monthly subscription.</p>
+    <p class="hero-note">Card verification only. No subscription. Pay only for what you use.</p>
   </div>
 </section>
 
@@ -214,7 +239,7 @@
       </div>
       <div class="app-body">
         <div class="app-greeting">Good morning, Jason</div>
-        <div class="app-date">Monday, May 26, 2026</div>
+        <div class="app-date">Monday, June 2, 2026</div>
         <div class="app-cards">
           <div class="app-card"><div class="app-card-label">Contacts</div><div class="app-card-num">24</div></div>
           <div class="app-card"><div class="app-card-label">Due Today</div><div class="app-card-num amber">3</div></div>
@@ -223,15 +248,15 @@
         </div>
         <div class="app-section-label">Due for outreach</div>
         <div class="app-contact">
-          <div><div class="app-contact-name">Michael Torres</div><div class="app-contact-co">Baldor Specialty Foods · $620k account · Not contacted in 54 days</div></div>
+          <div><div class="app-contact-name">Michael Torres</div><div class="app-contact-co">Summit Foods Co. · $620k account · Not contacted in 54 days</div></div>
           <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">41</span><button class="app-generate-btn">Generate</button></div>
         </div>
         <div class="app-contact">
-          <div><div class="app-contact-name">James Whitfield</div><div class="app-contact-co">Imperial Dade · Contract expires in 46 days</div></div>
+          <div><div class="app-contact-name">James Whitfield</div><div class="app-contact-co">Meridian Supply Group · Contract expires in 46 days</div></div>
           <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">38</span><button class="app-generate-btn">Generate</button></div>
         </div>
         <div class="app-contact">
-          <div><div class="app-contact-name">Sarah Chen</div><div class="app-contact-co">Sysco Metro New York · Regular check-in</div></div>
+          <div><div class="app-contact-name">Sarah Chen</div><div class="app-contact-co">Northeast Distribution Inc. · Regular check-in</div></div>
           <div style="display:flex;align-items:center;gap:6px"><span class="app-contact-score">33</span><button class="app-generate-btn">Generate</button></div>
         </div>
       </div>
@@ -256,12 +281,71 @@
   <h2 class="section-title">Not another cold email tool</h2>
   <p class="section-sub">Renzo is built for relationships you already have — not prospects you've never met.</p>
   <div class="features-grid">
-    <div class="feature-card"><span class="feature-icon">🎯</span><h3 class="feature-title">Priority Scoring</h3><p class="feature-desc">Renzo scores every contact based on days since last touch, contract expiry, account size, and outreach frequency. You always know who needs attention first.</p></div>
-    <div class="feature-card"><span class="feature-icon">✍️</span><h3 class="feature-title">Relationship-Aware AI</h3><p class="feature-desc">Messages that sound like you wrote them — because Renzo knows your history with each person. No "I hope this email finds you well." Ever.</p></div>
-    <div class="feature-card"><span class="feature-icon">⚡</span><h3 class="feature-title">Batch Outreach</h3><p class="feature-desc">Tell Renzo who to reach out to in plain English. It finds the right contacts, generates personalized messages for each, and lets you review before sending.</p></div>
-    <div class="feature-card"><span class="feature-icon">📋</span><h3 class="feature-title">Works With Any CRM</h3><p class="feature-desc">Import from Salesforce, HubSpot, or any spreadsheet with a CSV export. No IT required. You're up and running in minutes.</p></div>
-    <div class="feature-card"><span class="feature-icon">📬</span><h3 class="feature-title">Sends Via Your Email</h3><p class="feature-desc">Messages open directly in Gmail or Outlook as a draft — ready to review and send. You're always in control. Nothing goes out automatically.</p></div>
-    <div class="feature-card"><span class="feature-icon">📊</span><h3 class="feature-title">Full History Tracking</h3><p class="feature-desc">Every message, every touchpoint, every interaction — logged automatically. Next time you write, Renzo already knows what came before.</p></div>
+    <div class="feature-card">
+      <span class="feature-icon">✍️</span>
+      <h3 class="feature-title">AI-Generated Outreach</h3>
+      <p class="feature-desc">Messages written from your relationship history and context — not generic templates. Renzo knows what you've discussed, when you last spoke, and what's at stake. Every draft sounds like you.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎯</span>
+      <h3 class="feature-title">Priority Scoring</h3>
+      <p class="feature-desc">Renzo scores every contact based on days since last touch, contract expiry, account size, and outreach frequency. You always know who needs attention first — and who can wait.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <h3 class="feature-title">Batch Outreach</h3>
+      <p class="feature-desc">Reach 20 contacts at once. Describe what you want in plain English — "follow up with vendors whose contracts expire in 90 days" — and Renzo finds the right contacts and drafts a personalized message for each.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔗</span>
+      <h3 class="feature-title">Connects to Any CRM</h3>
+      <p class="feature-desc">Import from Salesforce, HubSpot, QuickBooks, or any spreadsheet via CSV. Or connect directly via API — any system that exposes an endpoint works with Renzo. No IT required.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📬</span>
+      <h3 class="feature-title">Works With Gmail and Outlook</h3>
+      <p class="feature-desc">Approved messages open directly in Gmail or Outlook as a pre-filled draft — ready to review and send from your own inbox. You're always in control. Nothing goes out automatically.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📋</span>
+      <h3 class="feature-title">Full Activity History</h3>
+      <p class="feature-desc">Every message, every touchpoint, every interaction — logged per contact. Next time you reach out, Renzo already knows the full history. No more digging through email threads.</p>
+    </div>
+  </div>
+</section>
+
+<section class="integrations" id="integrations">
+  <div class="integrations-inner">
+    <p class="section-label">Integrations</p>
+    <h2 class="section-title">Works where your data lives</h2>
+    <p class="section-sub">Import from any source. Connect any system. Renzo fits into your existing workflow.</p>
+    <div class="integrations-grid">
+      <div class="int-badge">
+        <div class="int-icon csv">CSV</div>
+        <span class="int-label">CSV / Excel</span>
+      </div>
+      <div class="int-badge">
+        <div class="int-icon sf">SF</div>
+        <span class="int-label">Salesforce</span>
+      </div>
+      <div class="int-badge">
+        <div class="int-icon hs">HS</div>
+        <span class="int-label">HubSpot</span>
+      </div>
+      <div class="int-badge">
+        <div class="int-icon qb">QB</div>
+        <span class="int-label">QuickBooks</span>
+      </div>
+      <div class="int-badge">
+        <div class="int-icon gmail">G</div>
+        <span class="int-label">Gmail</span>
+      </div>
+      <div class="int-badge">
+        <div class="int-icon outlook">O</div>
+        <span class="int-label">Outlook</span>
+      </div>
+    </div>
+    <p class="integrations-api"><strong>Connect via API —</strong> any system that exposes an endpoint works with Renzo. Your API key is in Settings. See the integrations guide for setup instructions.</p>
   </div>
 </section>
 
@@ -271,9 +355,9 @@
     <h2 class="section-title">From import to inbox in minutes</h2>
     <p class="section-sub">No complex setup. No training required. Just your contacts and a few clicks.</p>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><h3 class="step-title">Import your contacts</h3><p class="step-desc">Upload a CSV from any CRM or spreadsheet. Renzo maps your columns automatically.</p></div>
+      <div class="step"><div class="step-num">1</div><h3 class="step-title">Import your contacts</h3><p class="step-desc">Upload a CSV from any CRM or spreadsheet, or connect via API. Renzo maps your columns automatically.</p></div>
       <div class="step"><div class="step-num">2</div><h3 class="step-title">Renzo scores & prioritizes</h3><p class="step-desc">Instantly see who needs outreach based on time, spend, and contract cycles.</p></div>
-      <div class="step"><div class="step-num">3</div><h3 class="step-title">Generate your message</h3><p class="step-desc">One click. AI writes a personalized, relationship-aware message in your voice.</p></div>
+      <div class="step"><div class="step-num">3</div><h3 class="step-title">Generate your message</h3><p class="step-desc">One click. AI writes a personalized, relationship-aware message using your contact history and context.</p></div>
       <div class="step"><div class="step-num">4</div><h3 class="step-title">Review and send</h3><p class="step-desc">Message opens in Gmail or Outlook as a draft. Review, adjust if needed, and hit send.</p></div>
     </div>
   </div>
@@ -282,49 +366,61 @@
 <section class="pricing" id="pricing">
   <p class="section-label">Pricing</p>
   <h2 class="section-title">Pay for what you use</h2>
-  <p class="section-sub">No subscriptions. No per-seat fees. Buy credits when you need them.</p>
+  <p class="section-sub">No subscriptions. No per-seat fees. Verify once, then buy credits when you need them.</p>
+
+  <div class="pricing-activate">
+    <div class="pricing-activate-left">
+      <div class="pricing-activate-price">$0.99</div>
+      <div class="pricing-activate-text">
+        <h4>Account Activation</h4>
+        <p>One-time card verification to activate AI features. No credits included — this just confirms your payment method.</p>
+      </div>
+    </div>
+    <a href="/app" class="pricing-activate-btn">Get started →</a>
+  </div>
+
   <div class="pricing-cards">
     <div class="pricing-card">
       <p class="pricing-name">Starter</p>
       <div class="pricing-price">$5</div>
-      <p class="pricing-credits">100 credits · first purchase: 120</p>
+      <p class="pricing-credits">100 credits</p>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
-        <li>~100 AI messages</li>
+        <li>~100 AI-generated messages</li>
         <li>All features included</li>
         <li>Standard AI model</li>
         <li>Credits never expire</li>
       </ul>
-      <a href="/app" class="pricing-btn">Get started</a>
+      <a href="/app" class="pricing-btn">Buy credits</a>
     </div>
     <div class="pricing-card featured">
       <p class="pricing-name">Growth</p>
       <div class="pricing-price">$20</div>
-      <p class="pricing-credits">500 credits · first purchase: 600</p>
+      <p class="pricing-credits">500 credits</p>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
-        <li>~500 AI messages</li>
+        <li>~500 AI-generated messages</li>
         <li>All features included</li>
         <li>Standard + Enhanced AI</li>
         <li>Credits never expire</li>
       </ul>
-      <a href="/app" class="pricing-btn">Get started</a>
+      <a href="/app" class="pricing-btn">Buy credits</a>
     </div>
     <div class="pricing-card">
       <p class="pricing-name">Pro</p>
       <div class="pricing-price">$50</div>
-      <p class="pricing-credits">1,500 credits · first purchase: 1,800</p>
+      <p class="pricing-credits">1,500 credits</p>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
-        <li>~1,500 AI messages</li>
+        <li>~1,500 AI-generated messages</li>
         <li>All features included</li>
         <li>Standard + Enhanced AI</li>
         <li>Credits never expire</li>
       </ul>
-      <a href="/app" class="pricing-btn">Get started</a>
+      <a href="/app" class="pricing-btn">Buy credits</a>
     </div>
   </div>
-  <p class="pricing-note">Every new account starts with a $0.99 card verification. Credits never expire.</p>
+  <p class="pricing-note">Credits are used only when AI generates content. Unused credits never expire.</p>
 </section>
 
 <section class="testimonial">
@@ -339,7 +435,7 @@
     <h2 class="cta-title">Your relationships are your business.<br><em>Treat them that way.</em></h2>
     <p class="cta-sub">Join Renzo and start reaching out to the right people with the right message — today.</p>
     <a href="/app" class="btn-primary" style="font-size:16px;padding:16px 36px">Get started for $0.99 →</a>
-    <p style="margin-top:16px;font-size:13px;color:var(--muted)">No subscription. Cancel anytime. Credits never expire.</p>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted)">Card verification only. No subscription. Credits never expire.</p>
   </div>
 </section>
 
