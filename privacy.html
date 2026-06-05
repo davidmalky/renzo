@@ -65,46 +65,72 @@
 <div class="page">
   <p class="page-eyebrow">Legal</p>
   <h1 class="page-title">Privacy Policy</h1>
-  <p class="page-date">Last updated: May 2026</p>
+  <p class="page-date">Effective date: June 2026</p>
 
-  <p>Renzo ("we," "us," or "our") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights regarding that data.</p>
+  <p>Renzo ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy describes what personal data we collect when you use the Renzo platform, how we use it, who we share it with, and the rights you have over your data.</p>
 
-  <h2>What We Collect</h2>
-  <p>When you use Renzo, we collect the following:</p>
+  <h2>1. Data We Collect</h2>
+  <p>We collect only the data necessary to provide the service:</p>
   <ul>
-    <li><strong>Account information</strong> — your name and email address when you sign up.</li>
-    <li><strong>Contact data you import</strong> — names, companies, email addresses, notes, and other fields from CSV files you upload. This data is yours; we store it only to provide the service.</li>
-    <li><strong>Message history</strong> — outreach messages you generate or log through Renzo, stored so the AI can write contextually relevant follow-ups.</li>
-    <li><strong>Usage data</strong> — basic activity logs (e.g., when outreach was sent) used to power the dashboard and contact scoring.</li>
+    <li><strong>Account information</strong> — your name and business email address when you register.</li>
+    <li><strong>Company profile</strong> — your company name, website, product or service description, and representative name, used to personalise AI-generated messages.</li>
+    <li><strong>Contact data you import</strong> — names, companies, email addresses, phone numbers, contract dates, notes, and any other fields in CSV files you upload or records you create manually. This data belongs to you; we store it solely to deliver the service.</li>
+    <li><strong>Message and outreach history</strong> — outreach messages you generate, approve, or log, stored to provide contextually relevant follow-ups and activity tracking.</li>
+    <li><strong>Usage data</strong> — activity logs such as sync timestamps and credit consumption, used to power your dashboard and priority scores.</li>
+    <li><strong>Billing information</strong> — credit balance and payment status. Full payment card details are handled exclusively by Stripe; we never see or store card numbers.</li>
   </ul>
-  <p>We do not collect any data passively through tracking pixels, third-party analytics, or advertising networks.</p>
+  <p>We do not use tracking pixels, advertising networks, or third-party analytics tools. We do not collect data passively.</p>
 
-  <h2>How It Is Stored</h2>
-  <p>All data is stored in a PostgreSQL database hosted on <strong>Supabase</strong>, a managed database platform with servers located in the <strong>United States</strong>. Data is encrypted at rest and in transit. We use row-level security so your data is logically isolated from other users.</p>
-
-  <h2>How We Use Your Data</h2>
-  <p>We use your data exclusively to provide the Renzo service:</p>
+  <h2>2. How We Use Your Data</h2>
+  <p>We use your data exclusively to provide and improve the Renzo service:</p>
   <ul>
-    <li>Generating AI-powered outreach messages personalized to your contacts and history.</li>
-    <li>Calculating contact priority scores and outreach schedules.</li>
-    <li>Displaying your activity log and dashboard statistics.</li>
+    <li>Generating AI-powered outreach messages personalised to your contacts and relationship history.</li>
+    <li>Calculating contact priority scores and suggesting outreach timing.</li>
+    <li>Displaying your activity dashboard and outreach queue.</li>
+    <li>Processing payments and managing your credit balance.</li>
+    <li>Sending transactional emails (account confirmation, billing receipts) via our email provider.</li>
+    <li>Diagnosing bugs and improving platform reliability.</li>
   </ul>
-  <p><strong>We never sell, rent, or share your data with third parties</strong> for marketing or any other purpose. We do not use your contact data or message content to train AI models.</p>
+  <p><strong>We never sell, rent, or share your data for marketing purposes.</strong> We do not use your contact data or message content to train AI models.</p>
 
-  <h2>Credit Card Data</h2>
-  <p>Payments are processed by <strong>Stripe</strong>, a PCI-compliant payment processor. Renzo never sees, stores, or has access to your full credit card number. All payment data is handled exclusively by Stripe under their own privacy and security policies.</p>
+  <h2>3. Third-Party Service Providers</h2>
+  <p>We share data only with the following infrastructure providers, strictly to operate the platform:</p>
+  <ul>
+    <li><strong>Supabase</strong> — cloud database and authentication provider. All user data is stored on Supabase-managed PostgreSQL servers in the United States. Data is encrypted at rest and in transit, with row-level security enforced per user. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase Privacy Policy</a>.</li>
+    <li><strong>Stripe</strong> — PCI-compliant payment processor. Stripe handles all credit card transactions. We receive only a payment status and customer identifier. <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe Privacy Policy</a>.</li>
+    <li><strong>Anthropic</strong> — AI model provider powering message generation. When you generate a message, relevant relationship context (contact name, company, notes, history) is sent to Anthropic's API to produce a draft. Anthropic does not retain this data to train models under their API usage policy. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic Privacy Policy</a>.</li>
+    <li><strong>Resend</strong> — transactional email delivery. Used to send account and billing emails. <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend Privacy Policy</a>.</li>
+  </ul>
+  <p>We do not share data with any other third parties.</p>
 
-  <h2>Cookies and Tracking</h2>
-  <p>Renzo does not use cookies beyond what is strictly necessary to maintain your login session (a short-lived token stored in browser session storage). We do not use advertising cookies, cross-site tracking, or third-party analytics.</p>
+  <h2>4. Data Storage and Security</h2>
+  <p>All data is stored in a PostgreSQL database hosted on Supabase in the United States. We use row-level security so your data is logically isolated from all other users. Data is encrypted at rest using AES-256 and in transit using TLS 1.2 or higher. Access to the production database is restricted to authenticated service accounts.</p>
+  <p>No security measure is 100% foolproof. If you become aware of a security issue, please report it immediately to <a href="mailto:privacy@meetrenzo.com">privacy@meetrenzo.com</a>.</p>
 
-  <h2>Data Deletion</h2>
-  <p>You may request deletion of your account and all associated data at any time by emailing <a href="mailto:davidlgenuth@gmail.com">davidlgenuth@gmail.com</a>. We will delete your data within 30 days of receiving your request. Note that contact data you imported belongs to you — we retain no copies after deletion.</p>
+  <h2>5. Cookies and Session Storage</h2>
+  <p>Renzo does not use advertising cookies or cross-site tracking. We store a short-lived authentication token in your browser's session storage to maintain your login. This token is cleared when you close the tab or log out. No persistent cookies are set for tracking or analytics purposes.</p>
 
-  <h2>Changes to This Policy</h2>
-  <p>If we make material changes to this policy, we will update the "Last updated" date above. Continued use of Renzo after changes constitutes acceptance of the revised policy.</p>
+  <h2>6. Your Rights</h2>
+  <p>You have the following rights over your data:</p>
+  <ul>
+    <li><strong>Access</strong> — you may request a copy of the personal data we hold about you.</li>
+    <li><strong>Correction</strong> — you may update your account information at any time through the Settings panel.</li>
+    <li><strong>Export</strong> — contact data can be reviewed within the platform. You may request a full data export by emailing us.</li>
+    <li><strong>Deletion</strong> — you may request deletion of your account and all associated data at any time. We will complete deletion within 30 days of receiving your written request. Contact data you imported is yours; we retain no copies after deletion.</li>
+  </ul>
+  <p>To exercise any of these rights, email <a href="mailto:privacy@meetrenzo.com">privacy@meetrenzo.com</a>.</p>
 
-  <h2>Contact</h2>
-  <p>Questions about this policy? Email us at <a href="mailto:davidlgenuth@gmail.com">davidlgenuth@gmail.com</a>.</p>
+  <h2>7. Data Retention</h2>
+  <p>We retain your data for as long as your account is active. When you close your account, all associated data — including contacts, message history, and profile information — is permanently deleted within 30 days. Anonymised, aggregated usage statistics (no personal data) may be retained for service improvement.</p>
+
+  <h2>8. Children's Privacy</h2>
+  <p>Renzo is a B2B platform intended for business professionals. We do not knowingly collect data from anyone under the age of 18. If you believe a minor has provided us with personal data, contact us at <a href="mailto:privacy@meetrenzo.com">privacy@meetrenzo.com</a> and we will delete it promptly.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. If we make material changes, we will update the effective date at the top of this page. Continued use of Renzo after changes take effect constitutes your acceptance of the revised policy. We will not materially reduce your privacy rights without providing notice.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions, concerns, or data requests? Email us at <a href="mailto:privacy@meetrenzo.com">privacy@meetrenzo.com</a>. We aim to respond within 5 business days.</p>
 </div>
 
 <footer>
@@ -112,7 +138,7 @@
   <div class="footer-links">
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
-    <a href="mailto:davidlgenuth@gmail.com">Support</a>
+    <a href="mailto:support@meetrenzo.com">Support</a>
   </div>
 </footer>
 
