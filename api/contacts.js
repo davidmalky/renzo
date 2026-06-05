@@ -103,8 +103,7 @@ export default async function handler(req, res) {
       }
       const vcsTier = r.vcs_tier ? String(r.vcs_tier).toUpperCase() : null;
       const tier    = tierMap[vcsTier] || 'C';
-      const row = {
-        user_id:             userId,
+      const mapped = {
         profile_name:        profileName,
         source_system:       'VCS',
         source_record_id:    String(r.source_record_id),
@@ -121,11 +120,27 @@ export default async function handler(req, res) {
         tier,
         frequency:           freqMap[tier]
       };
-      const { error } = await supabase
-        .from('contacts')
-        .upsert(row, { onConflict: 'user_id,source_system,source_record_id' });
-      if (error) errors.push({ source_record_id: r.source_record_id, error: error.message });
-      else synced++;
+
+      try {
+        const { data: existing } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('source_system', 'VCS')
+          .eq('source_record_id', String(r.source_record_id))
+          .maybeSingle();
+
+        if (existing) {
+          const { error } = await supabase.from('contacts').update(mapped).eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('contacts').insert({ ...mapped, user_id: userId });
+          if (error) throw error;
+        }
+        synced++;
+      } catch (e) {
+        errors.push({ source_record_id: r.source_record_id, error: e.message });
+      }
     }
 
     return res.status(200).json({ success: true, synced, errors });
