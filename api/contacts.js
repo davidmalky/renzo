@@ -74,6 +74,86 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
+  // ── VCS SYNC (POST {action:'vcs_sync'}) ─────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'vcs_sync') {
+    const VCS_URL = 'https://script.google.com/macros/s/AKfycbzjSZX_QmdQ9voaWbOOSYpAE39y9S7SwNstCPJTjjKrcZyzA7fS1jQR6ORryQoAuVxJ/exec';
+    const VCS_KEY = '63a1448f-9f89-4565-83b2-1509abe74064-6bfb6be9-3de9-47c4-b072-c96d7b203f9a';
+
+    let records;
+    try {
+      const r = await fetch(`${VCS_URL}?action=renzoGetRecords&renzoKey=${VCS_KEY}`);
+      if (!r.ok) return res.status(502).json({ error: `VCS proxy error: ${r.status}` });
+      const body = await r.json();
+      records = Array.isArray(body) ? body : (body.records || []);
+    } catch (e) {
+      return res.status(502).json({ error: `VCS fetch failed: ${e.message}` });
+    }
+
+    const priorityMap = { high: 90, medium: 60, low: 30 };
+    const tierMap     = { CALL: 'A', EMAIL: 'B' };
+    const freqMap     = { A: 14, B: 30, C: 60 };
+
+    let synced = 0;
+    const errors = [];
+
+    for (const r of records) {
+      if (!r.source_record_id) {
+        errors.push({ source_record_id: null, error: 'missing source_record_id' });
+        continue;
+      }
+      const vcsTier = r.vcs_tier ? String(r.vcs_tier).toUpperCase() : null;
+      const tier    = tierMap[vcsTier] || 'C';
+      const row = {
+        user_id:             userId,
+        profile_name:        profileName,
+        source_system:       'VCS',
+        source_record_id:    String(r.source_record_id),
+        name:                r.contact_name || r.company_name || null,
+        company:             r.company_name || null,
+        email:               r.contact_email || null,
+        phone:               r.contact_phone || null,
+        notes:               r.context_notes || null,
+        last_contact:        r.last_contact_date || null,
+        contract_expiry:     r.renewal_or_contract_date || null,
+        relationship_status: r.relationship_status || 'Active',
+        priority_score:      priorityMap[String(r.priority || '').toLowerCase()] ?? 50,
+        tags:                Array.isArray(r.tags) ? r.tags : [],
+        tier,
+        frequency:           freqMap[tier]
+      };
+      const { error } = await supabase
+        .from('contacts')
+        .upsert(row, { onConflict: 'user_id,source_system,source_record_id' });
+      if (error) errors.push({ source_record_id: r.source_record_id, error: error.message });
+      else synced++;
+    }
+
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── VCS WRITEBACK (POST {action:'vcs_writeback'}) ────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'vcs_writeback') {
+    const VCS_URL = 'https://script.google.com/macros/s/AKfycbzjSZX_QmdQ9voaWbOOSYpAE39y9S7SwNstCPJTjjKrcZyzA7fS1jQR6ORryQoAuVxJ/exec';
+    const VCS_KEY = '63a1448f-9f89-4565-83b2-1509abe74064-6bfb6be9-3de9-47c4-b072-c96d7b203f9a';
+
+    const { records = [] } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records array is required and must not be empty' });
+    }
+
+    try {
+      const r = await fetch(VCS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'renzoWriteUpdate', renzoKey: VCS_KEY, records })
+      });
+      const data = await r.json();
+      return res.status(r.ok ? 200 : 502).json(data);
+    } catch (e) {
+      return res.status(502).json({ error: `VCS writeback failed: ${e.message}` });
+    }
+  }
+
   if (req.method === 'POST') {
     const { name, company, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
