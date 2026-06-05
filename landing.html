@@ -27,7 +27,9 @@
   .nav-links { display: flex; align-items: center; gap: 32px; }
   .nav-links a { font-size: 14px; font-weight: 400; color: var(--muted); text-decoration: none; transition: color 0.2s; }
   .nav-links a:hover { color: var(--ink); }
-  .nav-cta { background: var(--green) !important; color: var(--white) !important; padding: 10px 22px; border-radius: 6px; font-weight: 500 !important; }
+  .nav-signin { color: var(--muted) !important; }
+  .nav-signin:hover { color: var(--ink) !important; }
+  .nav-cta { background: var(--green) !important; color: var(--white) !important; padding: 8px 16px; border-radius: 6px; font-weight: 500 !important; }
   .nav-cta:hover { background: var(--green-light) !important; }
 
   /* MOBILE NAV */
@@ -80,8 +82,8 @@
   .social-proof { padding: 24px 48px; background: var(--white); border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
   .social-proof-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 48px; }
   .social-proof-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .social-proof-items { display: flex; gap: 48px; flex-wrap: wrap; }
-  .social-proof-item { font-size: 13px; color: var(--muted); font-style: italic; }
+  .social-proof-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; flex: 1; }
+  .social-proof-item { font-size: 13px; color: var(--muted); font-style: italic; background: var(--cream); border: 1px solid var(--warm); border-radius: 8px; padding: 10px 16px; min-height: 40px; display: flex; align-items: center; }
 
   /* FEATURES */
   .features { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
@@ -100,16 +102,12 @@
   /* INTEGRATIONS */
   .integrations { background: var(--white); padding: 80px 48px; border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
   .integrations-inner { max-width: 900px; margin: 0 auto; text-align: center; }
-  .integrations-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; margin: 48px 0 32px; }
+  .integrations-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 28px; margin: 48px 0 32px; }
   .int-badge { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .int-icon { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; font-family: 'DM Sans', sans-serif; letter-spacing: -0.5px; border: 1px solid rgba(0,0,0,0.06); }
+  .int-card { width: 80px; height: 80px; border-radius: 16px; background: white; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 2px 10px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: center; transition: box-shadow 0.2s, transform 0.2s; }
+  .int-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
+  .int-card svg { width: 44px; height: 44px; }
   .int-label { font-size: 12px; color: var(--muted); font-weight: 400; }
-  .int-icon.csv    { background: #4a5568; }
-  .int-icon.sf     { background: #00a1e0; }
-  .int-icon.hs     { background: #ff7a59; }
-  .int-icon.qb     { background: #2ca01c; }
-  .int-icon.gmail  { background: #ea4335; }
-  .int-icon.outlook{ background: #0078d4; }
   .integrations-api { font-size: 14px; color: var(--muted); font-weight: 300; max-width: 480px; margin: 0 auto; line-height: 1.6; }
   .integrations-api strong { color: var(--ink); font-weight: 500; }
 
@@ -208,7 +206,8 @@
   <div class="nav-links">
     <a href="#how">How it works</a>
     <a href="#pricing">Pricing</a>
-    <a href="/app" class="nav-cta">Sign in</a>
+    <a href="/app" class="nav-signin">Sign in</a>
+    <a href="/app" class="nav-cta">Get started</a>
   </div>
 </nav>
 
@@ -320,28 +319,76 @@
     <h2 class="section-title">Works where your data lives</h2>
     <p class="section-sub">Import from any source. Connect any system. Renzo fits into your existing workflow.</p>
     <div class="integrations-grid">
+      <!-- CSV / Excel -->
       <div class="int-badge">
-        <div class="int-icon csv">CSV</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="44" height="44" rx="8" fill="#217346"/>
+            <rect x="6" y="10" width="14" height="10" rx="1.5" fill="white" opacity="0.85"/>
+            <rect x="24" y="10" width="14" height="10" rx="1.5" fill="white" opacity="0.45"/>
+            <rect x="6" y="24" width="14" height="10" rx="1.5" fill="white" opacity="0.45"/>
+            <rect x="24" y="24" width="14" height="10" rx="1.5" fill="white" opacity="0.85"/>
+            <line x1="22" y1="8" x2="22" y2="36" stroke="white" stroke-width="1.5" opacity="0.3"/>
+            <line x1="4" y1="22" x2="40" y2="22" stroke="white" stroke-width="1.5" opacity="0.3"/>
+          </svg>
+        </div>
         <span class="int-label">CSV / Excel</span>
       </div>
+      <!-- Salesforce -->
       <div class="int-badge">
-        <div class="int-icon sf">SF</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18.5 35C13.25 35 9 30.75 9 25.5c0-3.2 1.56-6.03 3.97-7.77A9.5 9.5 0 0 1 22 8.5a9.5 9.5 0 0 1 8.74 5.8A6.5 6.5 0 0 1 37.5 20.5a6.5 6.5 0 0 1-6.5 6.5h-3m-9 8H18.5z" stroke="none"/>
+            <path d="M18 35C12.48 35 8 30.52 8 25c0-3.32 1.64-6.26 4.16-8.08A10 10 0 0 1 22 8a10 10 0 0 1 9.22 6.09A7 7 0 0 1 38 21a7 7 0 0 1-7 7H18z" fill="#00A1E0"/>
+          </svg>
+        </div>
         <span class="int-label">Salesforce</span>
       </div>
+      <!-- HubSpot -->
       <div class="int-badge">
-        <div class="int-icon hs">HS</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="22" cy="22" r="7" fill="#FF7A59"/>
+            <rect x="19.5" y="4" width="5" height="12" rx="2.5" fill="#FF7A59"/>
+            <rect x="28" y="19.5" width="12" height="5" rx="2.5" fill="#FF7A59"/>
+            <rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="#FF7A59"/>
+            <rect x="4" y="19.5" width="12" height="5" rx="2.5" fill="#FF7A59"/>
+          </svg>
+        </div>
         <span class="int-label">HubSpot</span>
       </div>
+      <!-- QuickBooks -->
       <div class="int-badge">
-        <div class="int-icon qb">QB</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="22" cy="22" r="20" fill="#2CA01C"/>
+            <text x="22" y="28" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="800" fill="white">QB</text>
+          </svg>
+        </div>
         <span class="int-label">QuickBooks</span>
       </div>
+      <!-- Gmail -->
       <div class="int-badge">
-        <div class="int-icon gmail">G</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="10" width="40" height="26" rx="2.5" fill="#F2F2F2" stroke="#E0E0E0" stroke-width="1.5"/>
+            <path d="M2 13L22 26L42 13" stroke="#EA4335" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M2 13v23h8V20l12 8 12-8v16h8V13L22 26 2 13z" fill="#EA4335"/>
+          </svg>
+        </div>
         <span class="int-label">Gmail</span>
       </div>
+      <!-- Outlook -->
       <div class="int-badge">
-        <div class="int-icon outlook">O</div>
+        <div class="int-card">
+          <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="44" height="44" rx="8" fill="#0078D4"/>
+            <circle cx="17" cy="22" r="9.5" fill="white" opacity="0.95"/>
+            <circle cx="17" cy="22" r="5.5" fill="#0078D4"/>
+            <rect x="26" y="14" width="14" height="11" rx="2" fill="white" opacity="0.75"/>
+            <path d="M26 15.5l7 4.5 7-4.5" stroke="#0078D4" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <span class="int-label">Outlook</span>
       </div>
     </div>
