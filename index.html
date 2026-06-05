@@ -415,7 +415,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <button class="nav-item" data-view="drafts">Drafts</button>
       <button class="nav-item" data-view="batch">Batch Outreach</button>
       <button class="nav-item" data-view="activity">Activity</button>
-      <button class="nav-item" data-view="integrations">Integrations</button>
+      <button class="nav-item" data-view="connections">Connections</button>
       <button class="nav-item" data-view="settings">Settings</button>
     </nav>
     <div class="sidebar-footer">
@@ -542,10 +542,21 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div id="activityLogList"></div>
     </div>
 
-    <!-- INTEGRATIONS -->
-    <div id="view-integrations" class="view hidden">
-      <div class="view-header"><h1 class="view-title">Integrations</h1></div>
+    <!-- CONNECTIONS -->
+    <div id="view-connections" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Connections</h1></div>
       <p style="color:var(--gray);font-size:14px;margin-bottom:24px;max-width:600px;line-height:1.6">Connect Renzo to your existing systems. Renzo reads contact and relationship data from these sources and works alongside them — it doesn't replace them.</p>
+
+      <div class="card" style="padding:24px;margin-bottom:28px;max-width:680px">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Sync Contacts</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Pull contacts directly from your connected systems into Renzo. Data syncs on demand — run it whenever you want fresh data.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="syncFromCSV()">Import CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('Salesforce sync coming soon','')">Sync Salesforce</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('HubSpot sync coming soon','')">Sync HubSpot</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('QuickBooks sync coming soon','')">Sync QuickBooks</button>
+        </div>
+      </div>
 
       <!-- INTEGRATION CARDS -->
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px">
@@ -1056,10 +1067,10 @@ var TOUR=[
    next:'Next',
    onEnter:function(){showView('batch');}},
   {title:'Connect Your Systems',
-   body:'Import contacts from any CRM via CSV, or connect via API. Go to Integrations to see guides for Salesforce, HubSpot, QuickBooks, and custom systems. Your API key is in Settings.',
-   hl:function(){return document.querySelector('[data-view="integrations"]');},
+   body:'Import contacts from any CRM via CSV, or connect via API. Go to Connections to see guides for Salesforce, HubSpot, QuickBooks, and custom systems. Your API key is in Settings.',
+   hl:function(){return document.querySelector('[data-view="connections"]');},
    next:'Next',
-   onEnter:function(){showView('integrations');}},
+   onEnter:function(){showView('connections');}},
   {title:'You\'re All Set',
    body:'Your workspace is ready. Start by adding a few contacts, then generate your first outreach message. The Dashboard shows everything that needs your attention.',
    hl:function(){return document.querySelector('[data-view="dashboard"]');},
@@ -2696,6 +2707,7 @@ async function runBatch(){
 }
 
 // CSV
+function syncFromCSV(){document.getElementById('csvFile').click();}
 function handleCsv(file){
   if(!file) return;
   const reader=new FileReader();
