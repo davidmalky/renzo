@@ -3184,8 +3184,10 @@ async function sendGuideMsg(){
   setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
-document.getElementById('tourSkipBtn') && document.getElementById('tourSkipBtn').addEventListener('click',tourSkip);
-document.getElementById('tourNextBtn') && document.getElementById('tourNextBtn').addEventListener('click',tourNext);
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.id==='tourSkipBtn') tourSkip();
+  if(e.target&&e.target.id==='tourNextBtn') tourNext();
+});
 </script>
 
 <!-- AI GUIDE ASSISTANT -->
