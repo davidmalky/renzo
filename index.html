@@ -1023,6 +1023,11 @@ var TOUR=[
    body:'Renzo helps you maintain warm relationships with your existing contacts. Generate personalised outreach, track history, and never let a relationship go cold.',
    hl:null,next:'Let\'s go',
    onEnter:function(){showView('contacts');}},
+  {title:'How Credits Work',
+   body:'AI features in Renzo — message generation, batch outreach, and auto-fill — use credits. A one-time $0.99 card verification gives you your first 50 credits. Credits are charged only when AI generates content.',
+   hl:function(){return document.getElementById('creditBalance');},
+   next:'Got it',
+   onEnter:function(){showView('dashboard');}},
   {title:'Your Contacts',
    body:'This is your contact list. Every vendor, customer, or account you manage lives here. Renzo scores each one by priority based on last contact, contract dates, and value.',
    hl:function(){return document.querySelector('[data-view="contacts"]');},
@@ -1508,7 +1513,23 @@ function showObStep(step){
   document.getElementById('obStep').textContent='Step '+step+' of 2';
 }
 
+async function requirePayment(){
+  try{
+    const r=await fetch('/api/billing',{headers:getAuthHeaders()});
+    if(!r.ok) return true;
+    const d=await r.json();
+    return !!d.firstPackPurchased;
+  }catch{return true;}
+}
+
 async function readWebsite(){
+  const paid=await requirePayment();
+  if(!paid){
+    document.getElementById('obSiteResult').classList.remove('hidden');
+    document.getElementById('obSiteResult').innerHTML='<span style="color:var(--amber)">AI auto-fill requires account verification. Complete the $0.99 card verification to unlock this feature — or click <strong>Skip</strong> and enter your details manually.</span>';
+    document.getElementById('obNextStep').disabled=false;
+    return;
+  }
   const url=document.getElementById('obUrl').value.trim();
   if(!url||!url.startsWith('http')){toast('Enter a valid URL starting with https://','error');return;}
   document.getElementById('obSiteLoading').classList.remove('hidden');
