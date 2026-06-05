@@ -104,9 +104,10 @@
   .integrations-inner { max-width: 900px; margin: 0 auto; text-align: center; }
   .integrations-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 28px; margin: 48px 0 32px; }
   .int-badge { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .int-card { width: 80px; height: 80px; border-radius: 16px; background: white; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 2px 10px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: center; transition: box-shadow 0.2s, transform 0.2s; }
+  .int-card { width: 90px; height: 90px; border-radius: 16px; background: white; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 2px 10px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: center; overflow: visible; transition: box-shadow 0.2s, transform 0.2s; }
   .int-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
   .int-card svg { width: 44px; height: 44px; }
+  .int-card img { max-width: 44px; max-height: 44px; object-fit: contain; display: block; }
   .int-label { font-size: 12px; color: var(--muted); font-weight: 400; }
   .integrations-api { font-size: 14px; color: var(--muted); font-weight: 300; max-width: 480px; margin: 0 auto; line-height: 1.6; }
   .integrations-api strong { color: var(--ink); font-weight: 500; }
