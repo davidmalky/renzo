@@ -126,6 +126,17 @@ async function handleConfirmCredits(req, body, res) {
   }
 
   const creditsToAdd = parseInt(pi.metadata?.creditsToAdd || '0', 10);
+  const packType = pi.metadata?.packType;
+
+  if (packType === 'signup') {
+    // Card verification only — mark account verified, award no credits
+    await supabase.from('billing')
+      .upsert({ user_id: userId, first_pack_purchased: true, updated_at: new Date().toISOString() },
+               { onConflict: 'user_id' });
+    return res.status(200).json({ success: true, credits: 0,
+      message: 'Card verified — you\'re ready to purchase credits' });
+  }
+
   if (creditsToAdd > 0) {
     const { data: fresh } = await supabase
       .from('billing').select('credits').eq('user_id', userId).single();

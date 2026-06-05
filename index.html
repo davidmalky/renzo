@@ -1002,7 +1002,7 @@ async function processPayment(){
     const credits=cData.credits??expectedCredits??0;
     document.getElementById('payFormArea').classList.add('hidden');
     document.getElementById('paySuccess').classList.remove('hidden');
-    document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits have been added to your account.':'Card verified successfully. You\'re all set!';
+    document.getElementById('paySuccessMsg').textContent=credits>0?credits+' credits have been added to your account.':'Card verified — you\'re ready to purchase credits';
     setTimeout(async()=>{
       await updateCreditDisplay();
       if(afterPayCallback){const cb=afterPayCallback;afterPayCallback=null;cb();}
@@ -1024,7 +1024,7 @@ var TOUR=[
    hl:null,next:'Let\'s go',
    onEnter:function(){showView('contacts');}},
   {title:'How Credits Work',
-   body:'AI features in Renzo — message generation, batch outreach, and auto-fill — use credits. A one-time $0.99 card verification gives you your first 50 credits. Credits are charged only when AI generates content.',
+   body:'AI features use credits. Verify your account for $0.99 to activate, then purchase a credit pack to start generating messages. Credits are only charged when AI creates content.',
    hl:function(){return document.getElementById('creditBalance');},
    next:'Got it',
    onEnter:function(){showView('dashboard');}},
