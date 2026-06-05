@@ -79,11 +79,11 @@
   .app-generate-btn { font-size: 11px; background: var(--green); color: white; border: none; padding: 6px 14px; border-radius: 5px; margin-left: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 
   /* SOCIAL PROOF */
-  .social-proof { padding: 24px 48px; background: var(--white); border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
-  .social-proof-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 48px; }
-  .social-proof-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .social-proof-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; flex: 1; }
-  .social-proof-item { font-size: 13px; color: var(--muted); font-style: italic; background: var(--cream); border: 1px solid var(--warm); border-radius: 8px; padding: 10px 16px; min-height: 40px; display: flex; align-items: center; }
+  .social-proof { padding: 20px 48px; background: var(--white); border-top: 1px solid var(--warm); border-bottom: 1px solid var(--warm); }
+  .social-proof-inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .social-proof-label { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .social-proof-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; align-items: center; }
+  .social-proof-item { background: var(--cream); border: 1px solid rgba(0,0,0,.1); border-radius: 20px; padding: 8px 20px; font-size: 14px; font-style: italic; color: var(--muted); white-space: nowrap; }
 
   /* FEATURES */
   .features { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
@@ -337,9 +337,10 @@
       <!-- Salesforce -->
       <div class="int-badge">
         <div class="int-card">
+          <!-- Proper cumulus cloud: wide rounded base + 3 bumps across top -->
           <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18.5 35C13.25 35 9 30.75 9 25.5c0-3.2 1.56-6.03 3.97-7.77A9.5 9.5 0 0 1 22 8.5a9.5 9.5 0 0 1 8.74 5.8A6.5 6.5 0 0 1 37.5 20.5a6.5 6.5 0 0 1-6.5 6.5h-3m-9 8H18.5z" stroke="none"/>
-            <path d="M18 35C12.48 35 8 30.52 8 25c0-3.32 1.64-6.26 4.16-8.08A10 10 0 0 1 22 8a10 10 0 0 1 9.22 6.09A7 7 0 0 1 38 21a7 7 0 0 1-7 7H18z" fill="#00A1E0"/>
+            <path d="M10 32c-3.31 0-6-2.69-6-6 0-2.9 2.06-5.32 4.8-5.87A6.5 6.5 0 0 1 15 12a6.5 6.5 0 0 1 5.98 4.04A5 5 0 0 1 25 14a5 5 0 0 1 4.9 4.03A4.5 4.5 0 0 1 34 22.5c0 2.49-2.01 4.5-4.5 4.5L10 32z" fill="none"/>
+            <path d="M11 31c-3.87 0-7-3.13-7-7 0-3.31 2.3-6.09 5.41-6.8A7 7 0 0 1 16 10a7 7 0 0 1 6.54 4.47A5.5 5.5 0 0 1 27 13a5.5 5.5 0 0 1 5.3 4A5 5 0 0 1 37 22a5 5 0 0 1-5 5H11z" fill="#00A1E0"/>
           </svg>
         </div>
         <span class="int-label">Salesforce</span>
@@ -347,12 +348,20 @@
       <!-- HubSpot -->
       <div class="int-badge">
         <div class="int-card">
+          <!-- Orange circle bg + white asterisk with dot tips (6-point sprocket) -->
           <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="22" cy="22" r="7" fill="#FF7A59"/>
-            <rect x="19.5" y="4" width="5" height="12" rx="2.5" fill="#FF7A59"/>
-            <rect x="28" y="19.5" width="12" height="5" rx="2.5" fill="#FF7A59"/>
-            <rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="#FF7A59"/>
-            <rect x="4" y="19.5" width="12" height="5" rx="2.5" fill="#FF7A59"/>
+            <circle cx="22" cy="22" r="20" fill="#FF7A59"/>
+            <!-- 4 arms: top, right, bottom, left — each a rounded rect ending in a circle -->
+            <rect x="20" y="8" width="4" height="10" rx="2" fill="white"/>
+            <circle cx="22" cy="8" r="3" fill="white"/>
+            <rect x="26" y="20" width="10" height="4" rx="2" fill="white"/>
+            <circle cx="36" cy="22" r="3" fill="white"/>
+            <rect x="20" y="26" width="4" height="10" rx="2" fill="white"/>
+            <circle cx="22" cy="36" r="3" fill="white"/>
+            <rect x="8" y="20" width="10" height="4" rx="2" fill="white"/>
+            <circle cx="8" cy="22" r="3" fill="white"/>
+            <!-- center circle -->
+            <circle cx="22" cy="22" r="5" fill="white"/>
           </svg>
         </div>
         <span class="int-label">HubSpot</span>
@@ -370,10 +379,19 @@
       <!-- Gmail -->
       <div class="int-badge">
         <div class="int-card">
+          <!-- White envelope + classic multicolor M letterform -->
           <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="10" width="40" height="26" rx="2.5" fill="#F2F2F2" stroke="#E0E0E0" stroke-width="1.5"/>
-            <path d="M2 13L22 26L42 13" stroke="#EA4335" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M2 13v23h8V20l12 8 12-8v16h8V13L22 26 2 13z" fill="#EA4335"/>
+            <!-- envelope body -->
+            <rect x="2" y="10" width="40" height="26" rx="2" fill="white" stroke="#DADCE0" stroke-width="1.5"/>
+            <!-- left flap (red) -->
+            <path d="M2 10L22 24L2 36V10z" fill="#EA4335"/>
+            <!-- right flap (blue) -->
+            <path d="M42 10L22 24L42 36V10z" fill="#4285F4"/>
+            <!-- bottom flap (yellow) -->
+            <path d="M2 36L16 26l6 4 6-4 14 10H2z" fill="#FBBC04"/>
+            <!-- top M shape (green left, red right) -->
+            <path d="M2 10L22 24 42 10H2z" fill="#34A853"/>
+            <path d="M22 24L42 10h-20v14z" fill="#EA4335"/>
           </svg>
         </div>
         <span class="int-label">Gmail</span>
