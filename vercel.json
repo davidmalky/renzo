@@ -4,7 +4,7 @@
     { "src": "^/api/(.*)", "dest": "/api/$1" },
     { "src": "^/app$", "dest": "/index.html" },
     { "src": "^/migrate$", "dest": "/migrate.html" },
-    { "src": "^/help$", "dest": "/help.html" },
+    { "src": "^/faq$", "dest": "/help.html" },
     { "src": "^/privacy$", "dest": "/privacy.html" },
     { "src": "^/terms$", "dest": "/terms.html" },
     { "src": "^/$", "dest": "/landing.html" }
