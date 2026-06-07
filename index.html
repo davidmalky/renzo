@@ -71,12 +71,12 @@ nav{flex:1;padding:10px 0;overflow-y:auto}
 .sidebar-logout{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:rgba(232,228,220,.8);padding:8px 14px;border-radius:var(--radius-xs);font-size:12px;width:100%;cursor:pointer;transition:all .12s;font-weight:500}
 .sidebar-logout:hover{background:rgba(255,255,255,.1);color:#fff}
 /* SIDEBAR AVATAR */
-.sb-avatar-wrap{position:relative;display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);user-select:none}
+.sb-avatar-wrap{position:relative;display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-top:1px solid rgba(255,255,255,.06);user-select:none;margin-top:4px}
 .sb-avatar-wrap:hover{background:rgba(255,255,255,.04)}
 .sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.5px;box-shadow:0 0 0 2px rgba(31,107,71,.4)}
 .sb-avatar-name{font-size:12px;color:rgba(232,228,220,.75);font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-avatar-chevron{font-size:9px;color:rgba(232,228,220,.35)}
-.sb-dropdown{display:none;position:absolute;top:calc(100% + 2px);left:8px;right:8px;background:#263330;border:1px solid rgba(255,255,255,.1);border-radius:8px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden}
+.sb-dropdown{display:none;position:absolute;bottom:calc(100% + 2px);left:0;right:0;background:#263330;border:1px solid rgba(255,255,255,.1);border-radius:8px;z-index:500;box-shadow:0 -8px 24px rgba(0,0,0,.45);overflow:hidden}
 .sb-dropdown.open{display:block}
 .sb-dd-meta{padding:12px 14px 10px}
 .sb-dd-email{font-size:11px;color:rgba(232,228,220,.45);word-break:break-all}
@@ -248,16 +248,18 @@ tbody tr.clickable:hover td{background:#FAF7F2}
   #view-contacts tbody{display:block;width:100%}
   #view-contacts tr.clickable{display:flex;flex-wrap:wrap;align-items:center;padding:12px 14px;border:1px solid var(--gray-light);border-radius:8px;margin-bottom:8px;background:var(--white);box-shadow:var(--shadow-card);width:100%}
   #view-contacts td{border:none;padding:0;vertical-align:middle}
-  /* Name: full row */
-  #view-contacts td:nth-child(1){width:100%;font-size:14px;padding-bottom:5px}
+  /* Checkbox column */
+  #view-contacts td:nth-child(1){flex-shrink:0;padding-right:10px;display:flex;align-items:center}
+  /* Name: full row on mobile */
+  #view-contacts td:nth-child(2){width:100%;font-size:14px;padding-bottom:5px}
   /* Company: left flex */
-  #view-contacts td:nth-child(2){flex:1;font-size:12px;color:var(--gray)}
+  #view-contacts td:nth-child(3){flex:1;font-size:12px;color:var(--gray)}
   /* Tier, Priority, Last Contact: hide */
-  #view-contacts td:nth-child(3),#view-contacts td:nth-child(4),#view-contacts td:nth-child(5){display:none}
+  #view-contacts td:nth-child(4),#view-contacts td:nth-child(5),#view-contacts td:nth-child(6){display:none}
   /* Status badge */
-  #view-contacts td:nth-child(6){padding-right:8px}
-  /* Message button */
-  #view-contacts td:nth-child(7){margin-left:auto}
+  #view-contacts td:nth-child(7){padding-right:8px}
+  /* Action buttons */
+  #view-contacts td:nth-child(8){margin-left:auto}
   /* AI guide button floats above bottom nav */
   #guideBtn{bottom:72px}
 }
@@ -423,18 +425,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 <div id="appView" class="hidden">
   <aside class="sidebar">
     <div class="sidebar-logo">Renz<em>o</em><span>Relationship Outreach</span></div>
-    <div class="sb-avatar-wrap" id="avatarWrap" onclick="toggleAvatarDD()">
-      <div class="sb-avatar" id="sidebarAvatar">?</div>
-      <div class="sb-avatar-name" id="avatarDisplayName"></div>
-      <span class="sb-avatar-chevron">▾</span>
-      <div class="sb-dropdown" id="avatarDropdown">
-        <div class="sb-dd-meta">
-          <div class="sb-dd-email" id="avatarEmail"></div>
-          <div id="avatarCredits">⚡ -- credits</div>
-        </div>
-        <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
-      </div>
-    </div>
     <nav id="mainNav">
       <button class="nav-item active" data-view="dashboard">Dashboard</button>
       <button class="nav-item" data-view="contacts">Contacts</button>
@@ -453,7 +443,19 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </select>
       </div>
       <div id="creditBalance" style="font-size:11px;color:rgba(232,228,220,.5);padding:4px 0 8px;text-align:center">⚡ -- credits</div>
-      <button class="sidebar-logout" id="logoutBtn">Logout</button>
+      <div class="sb-avatar-wrap" id="avatarWrap" onclick="toggleAvatarDD()">
+        <div class="sb-avatar" id="sidebarAvatar">?</div>
+        <div class="sb-avatar-name" id="avatarDisplayName"></div>
+        <span class="sb-avatar-chevron">▴</span>
+        <div class="sb-dropdown" id="avatarDropdown">
+          <div class="sb-dd-meta">
+            <div class="sb-dd-email" id="avatarEmail"></div>
+            <div id="avatarCredits">⚡ -- credits</div>
+          </div>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
+          <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
+        </div>
+      </div>
     </div>
   </aside>
 
@@ -511,8 +513,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <option value="">All Tiers</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="C">Tier C</option>
         </select>
       </div>
+      <div id="ctBatchBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--green-pale);border:1px solid var(--green);border-radius:8px;margin-bottom:12px">
+        <span id="ctBatchCount" style="font-size:13px;font-weight:600;color:var(--green)">0 selected</span>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteSelectedContacts()">Delete Selected</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearContactSelection()" style="margin-left:auto">Clear</button>
+      </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Company</th><th>Tier</th><th>Priority</th><th>Last Contact</th><th>Status</th><th></th></tr></thead>
+        <table><thead><tr><th><input type="checkbox" id="ctSelectAll" onclick="toggleSelectAllContacts(this)"></th><th>Name</th><th>Company</th><th>Tier</th><th>Priority</th><th>Last Contact</th><th>Status</th><th></th></tr></thead>
         <tbody id="ctBody"></tbody></table>
       </div>
       <div id="ctEmpty" class="empty-state hidden"><strong>No contacts yet</strong>Add your first contact to get started.</div>
@@ -1802,13 +1809,14 @@ function renderContacts(){
     var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>';
     var lc=c.lastContact?new Date(c.lastContact).toLocaleDateString():'Never';
     var row='<tr class="clickable">';
+    row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
     row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong></td>';
     row+='<td>'+esc(c.company)+'</td>';
     row+='<td>'+tb+'</td>';
     row+='<td>'+pb+'</td>';
     row+='<td>'+lc+'</td>';
     row+='<td><span class="priority-badge '+st.cls+'">'+st.label+'</span></td>';
-    row+='<td><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
+    row+='<td style="display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')">✏</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')">×</button><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
     row+='</tr>';
     return row;
   }).join('');
@@ -1825,6 +1833,51 @@ function renderContacts(){
       if(nameEl) openEditContact(nameEl.dataset.id);
     });
   });
+}
+
+function updateContactBatchBar(){
+  var checked=document.querySelectorAll('.ct-chk:checked');
+  var bar=document.getElementById('ctBatchBar');
+  var cnt=document.getElementById('ctBatchCount');
+  if(bar) bar.classList.toggle('hidden',checked.length===0);
+  if(bar&&checked.length>0) bar.style.display='flex'; else if(bar) bar.style.display='';
+  if(cnt) cnt.textContent=checked.length+' selected';
+}
+function toggleSelectAllContacts(master){
+  document.querySelectorAll('.ct-chk').forEach(function(cb){cb.checked=master.checked;});
+  updateContactBatchBar();
+}
+function clearContactSelection(){
+  document.querySelectorAll('.ct-chk').forEach(function(cb){cb.checked=false;});
+  var sa=document.getElementById('ctSelectAll');if(sa)sa.checked=false;
+  updateContactBatchBar();
+}
+async function deleteSelectedContacts(){
+  var ids=Array.from(document.querySelectorAll('.ct-chk:checked')).map(function(cb){return cb.dataset.id;});
+  if(!ids.length) return;
+  if(!confirm('Delete '+ids.length+' contact'+(ids.length>1?'s':'')+'? This cannot be undone.')) return;
+  var failed=0;
+  for(var i=0;i<ids.length;i++){
+    try{
+      var r=await fetch('/api/contacts',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({id:ids[i]})});
+      if(r.ok) _cache.contacts=_cache.contacts.filter(function(x){return x.id!==ids[i];});
+      else failed++;
+    }catch(e){failed++;}
+  }
+  renderContacts();
+  toast(failed?('Deleted '+(ids.length-failed)+', '+failed+' failed'):'Deleted '+ids.length+' contact'+(ids.length>1?'s':''));
+}
+async function quickDeleteContact(id){
+  var c=gc().find(function(x){return x.id===id;});
+  if(!c) return;
+  if(!confirm('Delete '+c.name+'?')) return;
+  try{
+    var r=await fetch('/api/contacts',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({id:id})});
+    if(!r.ok) throw new Error(await r.text());
+    _cache.contacts=_cache.contacts.filter(function(x){return x.id!==id;});
+    renderContacts();
+    toast('Contact deleted');
+  }catch(e){toast('Delete failed: '+e.message,'error');}
 }
 
 // CONTACT FORM
