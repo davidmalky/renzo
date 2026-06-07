@@ -421,7 +421,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div class="field"><label>Company Name</label><input type="text" id="obCo" placeholder="Acme Corp"></div>
       <div class="field"><label>What you sell</label><textarea id="obSell" placeholder="Describe your products or services..."></textarea></div>
       <div class="field"><label>Typical customer</label><textarea id="obCust" placeholder="Who are they and what do they care about?"></textarea></div>
-      <div class="field"><label>Your role &amp; how you use Renzo</label><textarea id="obRole" placeholder="e.g. I manage vendor relationships and renewals. I reach out to negotiate contracts and follow up on deliveries."></textarea></div>
+      <div class="field"><label>Your role &amp; how you use Renzo</label><textarea id="obRole" placeholder="e.g. I manage client relationships and follow up to keep accounts engaged."></textarea></div>
       <div class="form-row">
         <div class="field"><label>Tone</label>
           <select id="obTone"><option>Professional</option><option>Conversational</option><option>Direct</option><option>Warm</option></select>
@@ -470,7 +470,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
-          <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();tourForce()">Replay Tour</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();tourForce()">Replay Tour</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
       </div>
@@ -897,7 +897,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <div class="help-faq-item" data-hfaq>
             <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I run a batch? <span class="help-faq-chevron">▾</span></div>
-            <div class="help-faq-a"><p>Go to <strong>Batch Outreach</strong> in the sidebar. Describe what you want in the text field — for example: "Follow up with vendors whose contracts expire in the next 90 days" or "Check in with Tier A accounts I haven't contacted in 30 days." Renzo will filter your contacts, show you who matched, and let you confirm before generating messages.</p></div>
+            <div class="help-faq-a"><p>Go to <strong>Batch Outreach</strong> in the sidebar. Describe what you want in the text field — for example: "Follow up with clients I haven't contacted in 30 days" or "Check in with Tier A accounts before end of quarter." Renzo will filter your contacts, show you who matched, and let you confirm before generating messages.</p></div>
           </div>
           <div class="help-faq-item" data-hfaq>
             <div class="help-faq-q" onclick="toggleHelpFaq(this)">How many contacts can I reach at once? <span class="help-faq-chevron">▾</span></div>
@@ -1396,7 +1396,13 @@ function tourDone(){
 }
 function tourForce(){
   localStorage.removeItem('renzo_tour_seen');
-  tourStart();
+  var ob=document.getElementById('onboardModal');
+  if(ob&&!ob.classList.contains('hidden')) return;
+  _tourStep=0;
+  document.getElementById('tourBackdrop').style.display='block';
+  document.getElementById('tourCard').style.display='block';
+  tourGo(0);
+  toggleAvatarDD();
 }
 
 // Active profile prefix -- supports multiple use-case profiles
