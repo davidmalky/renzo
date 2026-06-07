@@ -468,6 +468,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <div id="avatarCredits">⚡ -- credits</div>
           </div>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
       </div>
@@ -1175,6 +1176,46 @@ function syncCreditDisplay(d){
 }
 
 function showCreditsModal(){document.getElementById('creditsModal').classList.remove('hidden');}
+
+async function showBillingHistory(){
+  const modal=document.getElementById('billingHistoryModal');
+  const body=document.getElementById('billingHistoryBody');
+  modal.classList.remove('hidden');
+  body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--gray);font-size:14px">Loading…</div>';
+  try{
+    const r=await fetch('/api/billing?action=transactions',{headers:getAuthHeaders()});
+    if(!r.ok) throw new Error('Failed to load');
+    const txns=await r.json();
+    if(!txns.length){
+      body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--gray);font-size:14px">No purchases yet.</div>';
+      return;
+    }
+    const packLabel={starter:'Starter ($5)',growth:'Growth ($20)',pro:'Pro ($50)',signup:'Card Verification ($0.99)'};
+    const rows=txns.map(t=>{
+      const date=new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const label=packLabel[t.pack_type]||t.pack_type;
+      const credits=t.credits_added>0?`+${t.credits_added} credits`:'—';
+      const amt='$'+(t.amount_cents/100).toFixed(2);
+      return `<tr>
+        <td style="padding:11px 14px;font-size:13px;color:var(--gray)">${date}</td>
+        <td style="padding:11px 14px;font-size:13px;font-weight:500">${label}</td>
+        <td style="padding:11px 14px;font-size:13px;color:var(--green);font-weight:600">${credits}</td>
+        <td style="padding:11px 14px;font-size:13px;text-align:right">${amt}</td>
+      </tr>`;
+    }).join('');
+    body.innerHTML=`<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:1.5px solid var(--gray-pale)">
+        <th style="padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);text-align:left;font-weight:600">Date</th>
+        <th style="padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);text-align:left;font-weight:600">Pack</th>
+        <th style="padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);text-align:left;font-weight:600">Credits</th>
+        <th style="padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);text-align:right;font-weight:600">Amount</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }catch(e){
+    body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--red);font-size:14px">${e.message}</div>`;
+  }
+}
 
 function handleAi402(res){
   if(res.status===402){showCreditsModal();return true;}
@@ -3571,6 +3612,19 @@ document.addEventListener('click',function(e){
     <div style="display:flex;gap:10px">
       <button class="btn btn-primary" id="batchConfirmOk" style="flex:1">Continue</button>
       <button class="btn btn-ghost" id="batchConfirmCancel" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- BILLING HISTORY MODAL -->
+<div id="billingHistoryModal" class="modal-overlay hidden" style="z-index:3900">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2 class="modal-title">Billing History</h2>
+      <button class="modal-close" onclick="document.getElementById('billingHistoryModal').classList.add('hidden')">×</button>
+    </div>
+    <div id="billingHistoryBody" style="min-height:120px">
+      <div style="text-align:center;padding:40px 0;color:var(--gray);font-size:14px">Loading…</div>
     </div>
   </div>
 </div>

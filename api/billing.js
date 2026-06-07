@@ -82,10 +82,7 @@ async function handleCreatePaymentIntent(req, body, res) {
         .eq('user_id', userId);
     }
 
-    let creditsToAdd = pack.credits;
-    if (type !== 'signup' && !billing?.first_pack_purchased && pack.credits > 0) {
-      creditsToAdd = Math.floor(pack.credits * 1.2);
-    }
+    const creditsToAdd = pack.credits;
 
     // Build PaymentIntent params — omit customer field if no ID
     const buildPiParams = (cid) => ({
@@ -131,6 +128,21 @@ async function handleCreatePaymentIntent(req, body, res) {
   }
 }
 
+// ── GET /api/billing?action=transactions — transaction history ────────────────
+async function handleTransactions(req, res) {
+  let userId;
+  try { ({ userId } = await validateRequest(req)); }
+  catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json(data);
+}
+
 // ── POST /api/billing — confirm credits after successful client-side payment ────
 async function handleConfirmCredits(req, body, res) {
   let userId;
@@ -170,6 +182,14 @@ async function handleConfirmCredits(req, body, res) {
         updated_at: new Date().toISOString()
       }).eq('user_id', userId);
     }
+    // Record transaction
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      amount_cents: pi.amount,
+      credits_added: creditsToAdd,
+      pack_type: packType,
+      stripe_payment_intent_id: paymentIntentId
+    });
   }
 
   return res.status(200).json({ success: true, credits: creditsToAdd });
@@ -219,6 +239,7 @@ export default async function handler(req, res) {
     if (qs.get('action') === 'config') {
       return res.status(200).json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
     }
+    if (qs.get('action') === 'transactions') return handleTransactions(req, res);
     return handleStatus(req, res);
   }
 
