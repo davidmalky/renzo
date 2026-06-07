@@ -93,6 +93,7 @@ async function handleCreatePaymentIntent(req, body, res) {
       currency: 'usd',
       customer: customerId,
       payment_method_types: ['card'],
+      payment_method_options: { card: { require_cvc_recollection: false } },
       metadata: { userId, creditsToAdd: String(creditsToAdd), packType: type },
       description: `Renzo ${type} pack`
     });

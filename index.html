@@ -1212,7 +1212,7 @@ async function openPaymentModal(type,skipAllowed=false,onSuccess=null){
   if(stripe){
     if(!cardElement){
       const els=stripe.elements();
-      cardElement=els.create('card',{style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
+      cardElement=els.create('card',{hidePostalCode:true,style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
     }
     document.getElementById('cardElement').innerHTML='';
     cardElement.mount('#cardElement');
