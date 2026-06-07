@@ -276,6 +276,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .tour-dot{width:6px;height:6px;border-radius:50%;background:#e8e0d0;display:inline-block}
 .tour-dot.active{background:#2d5a3d}
 @media(max-width:768px){#tourCard{left:16px!important;right:16px!important;bottom:76px!important;top:auto!important;transform:none!important;max-width:none;width:auto}}
+@media(max-width:768px){.modal-overlay{padding-bottom:70px}.modal-box{max-height:calc(92vh - 70px)}}
 /* Help view FAQ */
 .help-faq-section{margin-bottom:32px}
 .help-faq-section-title{font-family:'DM Serif Display',serif;font-size:17px;font-weight:600;color:var(--dark);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--gray-pale)}
@@ -417,7 +418,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <!-- STEP 2: Profile details -->
     <div id="obPage2" class="hidden">
       <p style="color:var(--gray);margin-bottom:16px;font-size:13px;line-height:1.6" id="obPage2Note">Review and adjust the details below.</p>
-      <div class="field"><label>Company Name</label><input type="text" id="obCo" placeholder="Prime Source"></div>
+      <div class="field"><label>Company Name</label><input type="text" id="obCo" placeholder="Acme Corp"></div>
       <div class="field"><label>What you sell</label><textarea id="obSell" placeholder="Describe your products or services..."></textarea></div>
       <div class="field"><label>Typical customer</label><textarea id="obCust" placeholder="Who are they and what do they care about?"></textarea></div>
       <div class="field"><label>Your role &amp; how you use Renzo</label><textarea id="obRole" placeholder="e.g. I manage vendor relationships and renewals. I reach out to negotiate contracts and follow up on deliveries."></textarea></div>
@@ -425,7 +426,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <div class="field"><label>Tone</label>
           <select id="obTone"><option>Professional</option><option>Conversational</option><option>Direct</option><option>Warm</option></select>
         </div>
-        <div class="field"><label>Your name</label><input type="text" id="obRep" placeholder="David"></div>
+        <div class="field"><label>Your name</label><input type="text" id="obRep" placeholder="Your name"></div>
       </div>
       <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px">
         <button class="btn btn-ghost" id="obBack">Back</button>
@@ -469,6 +470,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();tourForce()">Replay Tour</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
       </div>
@@ -1347,7 +1349,7 @@ var TOUR=[
    next:'Go to Dashboard',last:true,
    onEnter:function(){showView('dashboard');}}
 ];
-function tourShouldShow(){return gc().length===0&&!gp().onboarding_completed;}
+function tourShouldShow(){return gc().length===0&&!gp().onboarding_completed&&!localStorage.getItem('renzo_tour_seen');}
 function tourStart(){
   if(!tourShouldShow()) return;
   var ob=document.getElementById('onboardModal');
@@ -1388,8 +1390,13 @@ function tourDone(){
   document.getElementById('tourBackdrop').style.display='none';
   document.getElementById('tourCard').style.display='none';
   showView('dashboard');
+  localStorage.setItem('renzo_tour_seen','1');
   if(_cache.profile)_cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
+}
+function tourForce(){
+  localStorage.removeItem('renzo_tour_seen');
+  tourStart();
 }
 
 // Active profile prefix -- supports multiple use-case profiles
