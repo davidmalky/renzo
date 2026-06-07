@@ -87,16 +87,38 @@ async function handleCreatePaymentIntent(req, body, res) {
       creditsToAdd = Math.floor(pack.credits * 1.2);
     }
 
-    // Create PaymentIntent — do NOT confirm server-side, let Stripe.js handle it
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Build PaymentIntent params — omit customer field if no ID
+    const buildPiParams = (cid) => ({
       amount: pack.amount,
       currency: 'usd',
-      customer: customerId,
+      ...(cid ? { customer: cid } : {}),
       payment_method_types: ['card'],
       payment_method_options: { card: { require_cvc_recollection: false } },
       metadata: { userId, creditsToAdd: String(creditsToAdd), packType: type },
       description: `Renzo ${type} pack`
     });
+
+    // Create PaymentIntent — do NOT confirm server-side, let Stripe.js handle it
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create(buildPiParams(customerId));
+    } catch (e) {
+      if (e.code === 'resource_missing' || e.message?.includes('No such customer')) {
+        // Stale customer ID (e.g. test-mode ID used against live-mode API) — reset and retry
+        console.warn('[billing] Stale Stripe customer, resetting:', customerId);
+        await supabase.from('billing').update({ stripe_customer_id: null }).eq('user_id', userId);
+        const freshCustomer = await stripe.customers.create({
+          email: user?.email,
+          name: user?.name,
+          metadata: { userId }
+        });
+        customerId = freshCustomer.id;
+        await supabase.from('billing').update({ stripe_customer_id: customerId }).eq('user_id', userId);
+        paymentIntent = await stripe.paymentIntents.create(buildPiParams(customerId));
+      } else {
+        throw e;
+      }
+    }
 
     console.log('[billing] PaymentIntent created:', paymentIntent.id, 'status:', paymentIntent.status);
     return res.status(200).json({
