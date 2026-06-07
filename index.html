@@ -260,8 +260,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
   #view-contacts td:nth-child(7){padding-right:8px}
   /* Action buttons */
   #view-contacts td:nth-child(8){margin-left:auto}
-  /* AI guide button floats above bottom nav */
-  #guideBtn{bottom:72px}
 }
 
 /* ONBOARDING TOUR */
@@ -434,6 +432,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <button class="nav-item" data-view="activity">Activity</button>
       <button class="nav-item" data-view="connections">Connections</button>
       <button class="nav-item" data-view="settings">Settings</button>
+      <a class="nav-item" href="mailto:support@meetrenzo.com" target="_blank" style="text-decoration:none">Help</a>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user" id="sidebarUser"></div>
@@ -714,7 +713,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <div id="view-settings" class="view hidden">
       <div class="view-header"><h1 class="view-title">Settings</h1></div>
       <div class="card" style="padding:28px;max-width:560px">
-        <div style="background:var(--green-pale);border-left:4px solid var(--green);padding:12px 14px;border-radius:4px;font-size:13px;color:#1B4332;margin-bottom:24px">AI features are included — no API key needed.</div>
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:0 0 24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Company Profile</div>
         <div class="field"><label>Website URL</label>
@@ -3322,45 +3320,6 @@ document.addEventListener('keydown',function(e){
 });
 
 // INIT
-// AI GUIDE
-function toggleGuide(){
-  const modal=document.getElementById('guideModal');
-  modal.classList.toggle('hidden');
-  if(!modal.classList.contains('hidden')) document.getElementById('guideInput').focus();
-}
-
-async function sendGuideMsg(){
-  const input=document.getElementById('guideInput');
-  const msg=input.value.trim();
-  if(!msg) return;
-  input.value='';
-  const msgs=document.getElementById('guideMsgs');
-
-  // Add user message
-  msgs.innerHTML+='<div style="background:var(--green);color:#fff;border-radius:10px 10px 0 10px;padding:10px 13px;font-size:13px;line-height:1.5;max-width:90%;align-self:flex-end">'+esc(msg)+'</div>';
-  msgs.scrollTop=msgs.scrollHeight;
-
-  // Loading
-  const loadId='guide-load-'+Date.now();
-  msgs.innerHTML+='<div id="'+loadId+'" style="background:var(--gray-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--gray);max-width:60%">Thinking...</div>';
-  msgs.scrollTop=msgs.scrollHeight;
-
-  const p=gp();
-  const systemPrompt='You are Renzo Guide, a helpful AI assistant built into the Renzo relationship outreach platform. You help users navigate and use Renzo effectively. Renzo is a B2B outreach tool that: imports contacts via CSV, uses AI to generate personalized outreach emails based on relationship context, manages an outreach queue, sends emails via Gmail or Outlook web compose, tracks activity history per contact, supports batch outreach with AI-powered contact filtering, and has an integrations page. The current user is '+(p.repName||'a rep')+' at '+(p.company||'their company')+'. Be concise, practical, and friendly. If they ask how to do something, give step-by-step instructions. Keep answers under 100 words.';
-
-  try{
-    const res=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,system:systemPrompt,messages:[{role:'user',content:msg}]})});
-    if(res.status===402){document.getElementById(loadId).outerHTML='<div style="background:var(--amber-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:#92400E">Out of credits. <span style="cursor:pointer;text-decoration:underline" onclick="showCreditsModal()">Purchase more</span> to continue.</div>';msgs.scrollTop=msgs.scrollHeight;return;}
-    const data=await res.json();
-    syncCreditDisplay(data);
-    const reply=res.ok?data.content[0].text.trim():'Sorry, something went wrong. Try again.';
-    document.getElementById(loadId).outerHTML='<div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">'+esc(reply)+'</div>';
-  }catch(e){
-    document.getElementById(loadId).outerHTML='<div style="background:var(--red-pale);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--red)">Error connecting. Please try again.</div>';
-  }
-  msgs.scrollTop=msgs.scrollHeight;
-}
-
 (async()=>{
   const token=sessionStorage.getItem('renzo_jwt');
   if(!token) return;
@@ -3388,31 +3347,6 @@ document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='tourNextBtn') tourNext();
 });
 </script>
-
-<!-- AI GUIDE ASSISTANT -->
-<div id="guideBtn" style="position:fixed;bottom:28px;right:28px;z-index:3000;cursor:pointer" onclick="toggleGuide()">
-  <div style="width:52px;height:52px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(31,107,71,.4);font-size:22px;transition:transform .15s" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">💬</div>
-  <div style="position:absolute;top:-8px;right:-4px;background:var(--amber);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">AI</div>
-</div>
-
-<div id="guideModal" class="hidden" style="position:fixed;bottom:90px;right:28px;z-index:3000;width:340px;background:var(--white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid var(--gray-light);display:flex;flex-direction:column;max-height:480px">
-  <div style="padding:16px 18px;border-bottom:1px solid var(--gray-pale);display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-family:'DM Serif Display',serif;font-size:16px">Renzo Guide</div>
-      <div style="font-size:11px;color:var(--green);font-weight:600">AI-powered help</div>
-    </div>
-    <button onclick="toggleGuide()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray);padding:2px 6px">x</button>
-  </div>
-  <div id="guideMsgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px">
-    <div style="background:var(--green-pale);border-radius:10px 10px 10px 0;padding:10px 13px;font-size:13px;color:#065F46;line-height:1.5;max-width:90%">
-      Hi! I'm your Renzo guide. Ask me anything about using Renzo — how to import contacts, generate messages, set up email, run batch outreach, or anything else.
-    </div>
-  </div>
-  <div style="padding:10px 12px;border-top:1px solid var(--gray-pale);display:flex;gap:8px">
-    <input id="guideInput" type="text" placeholder="Ask anything..." style="flex:1;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:8px;outline:none;font-size:13px" onkeydown="if(event.key==='Enter')sendGuideMsg()">
-    <button onclick="sendGuideMsg()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer">Send</button>
-  </div>
-</div>
 
 <!-- BATCH CONFIRM MODAL -->
 <div id="batchConfirmModal" class="modal-overlay hidden" style="z-index:2500">
