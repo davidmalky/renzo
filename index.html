@@ -3201,7 +3201,7 @@ document.getElementById('forgotNewPass').addEventListener('keydown',function(e){
 document.getElementById('signupBtn').addEventListener('click',doSignup);
 document.getElementById('signupPass').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
 document.getElementById('signupPass2').addEventListener('keydown',function(e){if(e.key==='Enter')doSignup();});
-document.getElementById('logoutBtn').addEventListener('click',doLogout);
+document.getElementById('logoutBtn') && document.getElementById('logoutBtn').addEventListener('click',doLogout);
 document.getElementById('profileSel').addEventListener('change',function(){switchProfile(this.value);});
 document.getElementById('obSave').addEventListener('click',saveOnboarding);
 document.getElementById('obReadSite').addEventListener('click',readWebsite);
