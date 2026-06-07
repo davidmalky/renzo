@@ -70,6 +70,21 @@ nav{flex:1;padding:10px 0;overflow-y:auto}
 .sidebar-user{font-size:11px;color:rgba(232,228,220,.4);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
 .sidebar-logout{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:rgba(232,228,220,.8);padding:8px 14px;border-radius:var(--radius-xs);font-size:12px;width:100%;cursor:pointer;transition:all .12s;font-weight:500}
 .sidebar-logout:hover{background:rgba(255,255,255,.1);color:#fff}
+/* SIDEBAR AVATAR */
+.sb-avatar-wrap{position:relative;display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);user-select:none}
+.sb-avatar-wrap:hover{background:rgba(255,255,255,.04)}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.5px;box-shadow:0 0 0 2px rgba(31,107,71,.4)}
+.sb-avatar-name{font-size:12px;color:rgba(232,228,220,.75);font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-avatar-chevron{font-size:9px;color:rgba(232,228,220,.35)}
+.sb-dropdown{display:none;position:absolute;top:calc(100% + 2px);left:8px;right:8px;background:#263330;border:1px solid rgba(255,255,255,.1);border-radius:8px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden}
+.sb-dropdown.open{display:block}
+.sb-dd-meta{padding:12px 14px 10px}
+.sb-dd-email{font-size:11px;color:rgba(232,228,220,.45);word-break:break-all}
+#avatarCredits{font-size:11px;color:rgba(232,228,220,.4);margin-top:3px}
+.sb-dd-btn{display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:rgba(232,228,220,.7);font-size:13px;cursor:pointer;font-family:inherit;border-top:1px solid rgba(255,255,255,.04)}
+.sb-dd-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-dd-btn.danger{color:rgba(232,70,70,.7)}
+.sb-dd-btn.danger:hover{color:#f87171;background:rgba(232,70,70,.08)}
 
 /* MAIN */
 .main{flex:1;overflow-y:auto}
@@ -408,6 +423,18 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 <div id="appView" class="hidden">
   <aside class="sidebar">
     <div class="sidebar-logo">Renz<em>o</em><span>Relationship Outreach</span></div>
+    <div class="sb-avatar-wrap" id="avatarWrap" onclick="toggleAvatarDD()">
+      <div class="sb-avatar" id="sidebarAvatar">?</div>
+      <div class="sb-avatar-name" id="avatarDisplayName"></div>
+      <span class="sb-avatar-chevron">▾</span>
+      <div class="sb-dropdown" id="avatarDropdown">
+        <div class="sb-dd-meta">
+          <div class="sb-dd-email" id="avatarEmail"></div>
+          <div id="avatarCredits">⚡ -- credits</div>
+        </div>
+        <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
+      </div>
+    </div>
     <nav id="mainNav">
       <button class="nav-item active" data-view="dashboard">Dashboard</button>
       <button class="nav-item" data-view="contacts">Contacts</button>
@@ -473,6 +500,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <div class="view-actions">
           <button class="btn btn-ghost btn-sm" id="exportCsvBtn">Export CSV</button>
           <button class="btn btn-ghost btn-sm" id="importCsvBtn">Import CSV</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteAllContacts()">Delete All</button>
           <input type="file" id="csvFile" accept=".csv" class="hidden">
           <button class="btn btn-primary btn-sm" id="addContactBtn">+ Add Contact</button>
         </div>
@@ -1395,6 +1423,7 @@ async function doLogin(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
+    renderSidebarAvatar();
     updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
@@ -1405,6 +1434,27 @@ async function doLogin(){
   }
 }
 
+function renderSidebarAvatar(){
+  if(!currentUser) return;
+  var name=(currentUser.name||currentUser.email||'?');
+  var parts=name.trim().split(/\s+/);
+  var initials=(parts.length>=2?(parts[0][0]+parts[parts.length-1][0]):name.slice(0,2)).toUpperCase();
+  var el=document.getElementById('sidebarAvatar');
+  if(el) el.textContent=initials;
+  var dn=document.getElementById('avatarDisplayName');
+  if(dn) dn.textContent=parts[0]||name;
+  var ae=document.getElementById('avatarEmail');
+  if(ae) ae.textContent=currentUser.email||'';
+}
+function toggleAvatarDD(){
+  var d=document.getElementById('avatarDropdown');
+  if(d) d.classList.toggle('open');
+}
+document.addEventListener('click',function(e){
+  var wrap=document.getElementById('avatarWrap');
+  var dd=document.getElementById('avatarDropdown');
+  if(dd&&dd.classList.contains('open')&&wrap&&!wrap.contains(e.target)) dd.classList.remove('open');
+});
 function doLogout(){
   sessionStorage.removeItem('renzo_jwt');
   currentUser=null;
@@ -1512,6 +1562,7 @@ async function doSignup(){
       document.getElementById('appView').classList.remove('hidden');
       renderEmailAccounts();
       renderProfileSelector();
+      renderSidebarAvatar();
       updateCreditDisplay();
       document.getElementById('onboardModal').classList.remove('hidden');
     }
@@ -1957,6 +2008,17 @@ async function doDelete(){
   }catch(e){
     toast('Delete failed: '+e.message,'error');
   }
+}
+
+async function deleteAllContacts(){
+  if(!confirm('Delete ALL contacts? This cannot be undone.')) return;
+  try{
+    const r=await fetch('/api/contacts',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({deleteAll:true})});
+    if(!r.ok) throw new Error(await r.text());
+    _cache.contacts=[];_cache.activity=[];_cache.queue=[];_cache.drafts=[];
+    renderContacts();
+    toast('All contacts deleted');
+  }catch(e){toast('Delete failed: '+e.message,'error');}
 }
 
 // AI
@@ -3260,6 +3322,7 @@ async function sendGuideMsg(){
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
+    renderSidebarAvatar();
     updateCreditDisplay();
     if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
