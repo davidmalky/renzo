@@ -35,6 +35,11 @@
   /* MOBILE NAV */
   .mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; }
   .mobile-nav-cta { background: var(--green); color: var(--white); padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
+  .mobile-hamburger { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--ink); padding: 4px 8px; line-height: 1; }
+  .mobile-menu { display: none; position: fixed; top: 60px; left: 0; right: 0; background: rgba(245,240,232,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); z-index: 199; flex-direction: column; padding: 12px 20px 20px; gap: 4px; }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { display: block; padding: 12px 8px; font-size: 15px; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(26,26,20,0.06); font-weight: 400; }
+  .mobile-menu a:last-child { border-bottom: none; background: var(--green); color: var(--white); text-align: center; border-radius: 8px; margin-top: 8px; font-weight: 500; padding: 12px; }
 
   /* HERO — centered */
   .hero { padding: 140px 48px 56px; position: relative; overflow: hidden; text-align: center; }
@@ -226,7 +231,12 @@
 
 <div class="mobile-nav">
   <a href="#" class="nav-logo">Renz<span>o</span></a>
-  <a href="/app" class="mobile-nav-cta">Sign in</a>
+  <button class="mobile-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
+</div>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#how" onclick="closeMobileMenu()">How it works</a>
+  <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
+  <a href="/app" onclick="closeMobileMenu()">Get started</a>
 </div>
 
 <section class="hero">
@@ -475,20 +485,35 @@
       <div class="tcard">
         <span class="tcard-mark">"</span>
         <p class="tcard-body">I used to lose track of follow-ups constantly. Now Renzo tells me exactly who to reach out to and writes the first draft for me.</p>
-        <div class="tcard-name">Alex M.</div>
-        <div class="tcard-role">Sales Manager</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+          <div style="width:38px;height:38px;border-radius:50%;background:#2d6a4f;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">A</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Alex M.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Sales Manager</div>
+          </div>
+        </div>
       </div>
       <div class="tcard">
         <span class="tcard-mark">"</span>
         <p class="tcard-body">We manage hundreds of client accounts. Renzo has become the tool our entire team uses to make sure no one slips through the cracks.</p>
-        <div class="tcard-name">Priya S.</div>
-        <div class="tcard-role">Customer Success Lead</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+          <div style="width:38px;height:38px;border-radius:50%;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">P</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Priya S.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Customer Success Lead</div>
+          </div>
+        </div>
       </div>
       <div class="tcard">
         <span class="tcard-mark">"</span>
         <p class="tcard-body">I was skeptical about AI writing emails for me, but the messages Renzo generates sound like I actually wrote them. Our response rate is up significantly.</p>
-        <div class="tcard-name">Tom R.</div>
-        <div class="tcard-role">Business Development</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+          <div style="width:38px;height:38px;border-radius:50%;background:#7c2d12;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">T</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Tom R.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Business Development</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -519,5 +544,22 @@
   </div>
 </footer>
 
+<script>
+  function toggleMobileMenu() {
+    var menu = document.getElementById('mobileMenu');
+    menu.classList.toggle('open');
+  }
+  function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+  // Close menu when clicking outside
+  document.addEventListener('click', function(e) {
+    var menu = document.getElementById('mobileMenu');
+    var hamburger = document.querySelector('.mobile-hamburger');
+    if (menu.classList.contains('open') && !menu.contains(e.target) && e.target !== hamburger) {
+      menu.classList.remove('open');
+    }
+  });
+</script>
 </body>
 </html>
