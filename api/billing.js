@@ -82,10 +82,7 @@ async function handleCreatePaymentIntent(req, body, res) {
         .eq('user_id', userId);
     }
 
-    let creditsToAdd = pack.credits;
-    if (type !== 'signup' && !billing?.first_pack_purchased && pack.credits > 0) {
-      creditsToAdd = Math.floor(pack.credits * 1.2);
-    }
+    const creditsToAdd = pack.credits;
 
     // Create PaymentIntent — do NOT confirm server-side, let Stripe.js handle it
     const paymentIntent = await stripe.paymentIntents.create({
