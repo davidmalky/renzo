@@ -1437,7 +1437,7 @@ async function switchProfile(name){
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
-  if(!localStorage.getItem(profileKey('renzo_onboarded'))) document.getElementById('onboardModal').classList.remove('hidden');
+  if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
   toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
 }
 
@@ -1667,7 +1667,7 @@ async function doLogin(){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
   }catch(e){
@@ -1894,7 +1894,6 @@ async function saveOnboarding(){
   };
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
   _cache.profile=normalizeProfile(r.ok?(await r.json()):profileData);
-  localStorage.setItem(profileKey('renzo_onboarded'),'1');
   renderProfileSelector();
   document.getElementById('onboardModal').classList.add('hidden');
   showView('dashboard');
@@ -3597,10 +3596,9 @@ document.addEventListener('keydown',function(e){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
-  setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
 document.addEventListener('click',function(e){
