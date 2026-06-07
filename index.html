@@ -276,6 +276,22 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .tour-dot{width:6px;height:6px;border-radius:50%;background:#e8e0d0;display:inline-block}
 .tour-dot.active{background:#2d5a3d}
 @media(max-width:768px){#tourCard{left:16px!important;right:16px!important;bottom:76px!important;top:auto!important;transform:none!important;max-width:none;width:auto}}
+/* Help view FAQ */
+.help-faq-section{margin-bottom:32px}
+.help-faq-section-title{font-family:'DM Serif Display',serif;font-size:17px;font-weight:600;color:var(--dark);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--gray-pale)}
+.help-faq-item{border:1px solid var(--gray-light);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--white);overflow:hidden;transition:box-shadow .15s}
+.help-faq-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.help-faq-q{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--dark);gap:12px;user-select:none}
+.help-faq-q:hover{background:var(--gray-pale)}
+.help-faq-chevron{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--gray-pale);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gray);transition:transform .2s,background .15s}
+.help-faq-item.open .help-faq-chevron{transform:rotate(180deg);background:var(--green);color:#fff}
+.help-faq-a{display:none;padding:0 16px 14px;font-size:13.5px;color:var(--gray);line-height:1.7;border-top:1px solid var(--gray-pale)}
+.help-faq-a p{margin-top:10px}
+.help-faq-a ul{margin:8px 0 0 16px}
+.help-faq-a ul li{margin-bottom:3px}
+.help-faq-a code{background:var(--gray-pale);padding:1px 5px;border-radius:3px;font-size:12px}
+.help-faq-item.open .help-faq-a{display:block}
+.help-search-empty{text-align:center;padding:40px 0;color:var(--gray);font-size:14px;display:none}
 </style>
 </head>
 <body>
@@ -432,7 +448,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <button class="nav-item" data-view="activity">Activity</button>
       <button class="nav-item" data-view="connections">Connections</button>
       <button class="nav-item" data-view="settings">Settings</button>
-      <a class="nav-item" href="/help" target="_blank" style="text-decoration:none">Help</a>
+      <button class="nav-item" data-view="help">Help</button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user" id="sidebarUser"></div>
@@ -777,6 +793,179 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <code id="newApiKeyValue" style="font-size:12px;word-break:break-all;flex:1;background:none"></code>
             <button class="btn btn-ghost btn-sm" onclick="copyApiKey()">Copy</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HELP -->
+    <div id="view-help" class="view hidden">
+      <div class="view-header"><h1 class="view-title">Help Center</h1></div>
+      <div style="max-width:720px">
+        <div class="card" style="padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:10px">
+          <input class="search-input" style="flex:1;min-width:0" type="text" id="helpSearch" placeholder="Search questions…" oninput="filterHelpFaq(this.value)" autocomplete="off">
+        </div>
+        <div class="help-search-empty" id="helpSearchEmpty">No results for that search. Try a different term or <a href="mailto:support@meetrenzo.com" style="color:var(--green)">contact support</a>.</div>
+
+        <!-- GETTING STARTED -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Getting Started</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is Renzo? How does it work? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Renzo is an AI-powered relationship outreach tool for B2B professionals. It helps you manage your existing business contacts — vendors, customers, accounts — and keeps those relationships warm by generating personalized outreach messages at the right time.</p><p>You import your contacts, Renzo scores them by priority (based on last contact, contract dates, and account size), then you click "Message" on any contact to get an AI-written draft tailored to your history with that person. You review the draft, then open it in Gmail or Outlook to send.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I create an account? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Go to meetrenzo.com/app and click Sign Up. Enter your email address and a password. Once you confirm your email, you'll set up your company profile (name, what you sell, who your customers are) — this is what Renzo uses to personalize every message it generates.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is the $0.99 charge? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>The $0.99 is a one-time card verification charge to activate your account's AI features. It confirms your payment method is valid. No credits are included — this is purely account verification.</p><p>After paying the $0.99, you can purchase credit packs to start generating messages.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What are credits and how are they used? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Credits are Renzo's currency for AI features. Every time Renzo generates a message — single message, batch outreach, or website auto-fill — a small number of credits are deducted based on how much text the AI processed.</p><p>Credits are <strong>only charged when AI creates content</strong>. Browsing your contacts, viewing history, and managing your queue costs nothing.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I get more credits? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Click your avatar in the bottom-left of the app and select "Buy Credits," or go to Settings. Credit packs available:</p><ul><li><strong>Starter — $5</strong>: 100 credits</li><li><strong>Growth — $20</strong>: 500 credits</li><li><strong>Pro — $50</strong>: 1,500 credits</li></ul><p>Unused credits never expire.</p></div>
+          </div>
+        </div>
+
+        <!-- CONTACTS -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Contacts</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I add contacts? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>In the Contacts view, click <strong>+ Add Contact</strong> in the top right. Fill in the contact's name, company, email, phone, contract dates, account value, and any relationship notes. The more context you provide, the better Renzo's generated messages will be.</p><p>You can also import multiple contacts at once using a CSV file — see "How do I import a CSV file?" below.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Can I import contacts from my CRM? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Yes. Any CRM that can export a CSV file works with Renzo — Salesforce, HubSpot, QuickBooks, Excel, Google Sheets, or any custom system. Export your contacts as CSV from your CRM, then use Import CSV in Renzo's Contacts view.</p><p>For programmatic integration, you can also use Renzo's API. See the Connections page inside the app for setup instructions.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I import a CSV file? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>In the Contacts view, click <strong>Import CSV</strong>. Select your CSV file. Renzo will preview the mapped columns and show you what it recognized. Confirm the import to add all contacts.</p><p>You can also import from the Connections page using the "Import CSV" button in the Sync Contacts section.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What columns does Renzo recognize when importing CSV? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Renzo attempts to map common column names automatically. Recognized fields include:</p><ul><li>Name / Contact Name / Full Name</li><li>Company / Account / Organization</li><li>Email / Email Address</li><li>Phone / Phone Number</li><li>Tier / Account Tier (A, B, or C)</li><li>Last Contact / Last Contacted</li><li>Contract Expiry / Renewal Date</li><li>Annual Spend / Invoice Amount</li><li>Notes / Relationship Notes</li></ul><p>Unrecognized columns are ignored. You can always edit individual contacts after import to fill in any missing fields.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I delete a contact? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>In the Contacts list, each row has a red × button. Click it and confirm to delete that contact immediately. You can also open a contact's detail view and use the delete option there.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I delete all contacts at once? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>In the Contacts view header, click <strong>Delete All</strong>. You'll be asked to confirm before anything is deleted. This removes all contacts in your current profile — it cannot be undone.</p><p>You can also use the checkbox column to select specific contacts and click "Delete Selected" in the batch bar that appears.</p></div>
+          </div>
+        </div>
+
+        <!-- AI MESSAGE GENERATION -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">AI Message Generation</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How does Renzo generate messages? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>When you click "Message" on a contact, Renzo sends a structured prompt to Claude (Anthropic's AI) that includes:</p><ul><li>Your company profile and what you sell</li><li>The contact's name, company, and account details</li><li>Days since last contact</li><li>Contract or renewal dates</li><li>Any notes you've added about the relationship</li></ul><p>The AI uses all of this to write a message that feels personal, not templated. It explains why it wrote what it wrote in the "Why this message" section.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is the difference between Standard and Enhanced AI? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p><strong>Standard</strong> uses Claude Haiku — fast and efficient, ideal for most outreach messages. It costs fewer credits per generation.</p><p><strong>Enhanced</strong> uses Claude Sonnet — more nuanced and capable for complex relationship contexts or high-value accounts. It costs roughly 2× the credits of Standard.</p><p>You can switch between models using the Standard / Enhanced toggle at the top of the message generation modal.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Why did I get an attachment prompt? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>If Renzo detects that the generated message references a document — like a contract, NDA, proposal, invoice, or pricing sheet — it shows an attachment reminder banner. This is just a prompt to help you remember; Renzo cannot attach files automatically. You'll need to attach the file yourself when you open the draft in Gmail or Outlook.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Can I edit a generated message before sending? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Yes — always. Every generated message appears in an editable text area. You should read and adjust it before sending. You can also use the Refine feature to give Renzo a specific instruction ("make it shorter," "add a reference to our last meeting") and regenerate.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Does Renzo send emails automatically? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>No. Renzo never sends anything on your behalf. When you approve a message, it opens as a pre-filled draft in Gmail or Outlook. You review it, make any final changes, and click send yourself. You are always in full control of what goes out.</p></div>
+          </div>
+        </div>
+
+        <!-- BATCH OUTREACH -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Batch Outreach</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is Batch Outreach? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Batch Outreach lets you reach multiple contacts at once with personalized messages for each. Instead of generating messages one by one, you describe who you want to reach in plain English — Renzo finds the matching contacts, generates a tailored message for each, and puts them in your queue for review.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I run a batch? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Go to <strong>Batch Outreach</strong> in the sidebar. Describe what you want in the text field — for example: "Follow up with vendors whose contracts expire in the next 90 days" or "Check in with Tier A accounts I haven't contacted in 30 days." Renzo will filter your contacts, show you who matched, and let you confirm before generating messages.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How many contacts can I reach at once? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>There's no hard limit, but Batch Outreach works best for 5–50 contacts at a time. Very large batches will take longer to generate and consume more credits. Each contact gets its own personalized message, so credit usage scales with the number of contacts.</p></div>
+          </div>
+        </div>
+
+        <!-- QUEUE & SENDING -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Queue &amp; Sending</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is the Queue? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>The Queue holds all messages that have been generated and approved but not yet sent. Think of it as your outreach staging area. When you approve a message from the generate modal, it moves to the Queue where you can send it whenever you're ready.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I send a message from the Queue? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Open the Queue from the sidebar. Each queued message shows a <strong>Prepare Email Draft</strong> button. Click it to open your email client (Gmail or Outlook) with the message pre-filled in a new compose window, including the recipient's email address and a subject line. Review, adjust if needed, and hit send.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What happens when I click "Prepare Email Draft"? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Renzo opens a <code>mailto:</code> link with the recipient address, a suggested subject line, and the message body pre-filled. This opens your system's default email client — typically Gmail in the browser or Outlook on desktop. The message is never sent until you click send in your email client.</p></div>
+          </div>
+        </div>
+
+        <!-- CONNECTIONS & INTEGRATIONS -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Connections &amp; Integrations</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What systems can I connect to Renzo? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Renzo connects to any system that can export a CSV file — which is nearly everything. For direct integrations, Renzo has guides for Salesforce, HubSpot, QuickBooks, and custom systems. You can also connect any external system programmatically using Renzo's API.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I connect Salesforce, HubSpot, or QuickBooks? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Go to <strong>Connections</strong> in the sidebar. Each integration has a setup guide with step-by-step instructions for exporting contacts and importing them into Renzo. The most reliable method is to export a CSV from your CRM and import it — this works with all systems without requiring any configuration.</p><p>For automated sync via API, see the API key section in Settings.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is an API key and how do I use it? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>An API key lets external systems push contact data directly into Renzo without CSV exports. Go to <strong>Settings → API Keys</strong> to generate a key. Share the key with your developer or integration tool, then send a POST request to <code>/api/contacts</code> with the contact data. Full documentation is available on the Connections page inside the app.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Can I sync contacts automatically? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Manual on-demand sync is available from the Connections page — click "Sync Contacts" to pull fresh data from your connected systems. Fully automated scheduled syncs are on the roadmap. For now, you can trigger syncs manually whenever you want to refresh your contact list.</p></div>
+          </div>
+        </div>
+
+        <!-- BILLING & CREDITS -->
+        <div class="help-faq-section" data-hsec>
+          <div class="help-faq-section-title">Billing &amp; Credits</div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What does $0.99 get me? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>The $0.99 is a one-time account activation charge. It verifies your card and unlocks access to all AI features. It does <strong>not</strong> include credits — you'll need to purchase a credit pack separately to start generating messages.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">When are credits charged? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Credits are deducted only when AI generates content: single message generation, batch outreach messages, and website auto-fill. Credits are <strong>not</strong> charged for browsing contacts, viewing activity history, managing your queue, or any other non-AI action.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">Do unused credits expire? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>No. Credits you purchase stay in your account indefinitely. There are no expiry dates, no monthly resets, and no "use it or lose it" policies. Credits roll over as long as your account is active.</p></div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">How do I see my credit balance? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a"><p>Your current credit balance is shown in the sidebar footer (next to the ⚡ icon) and in the account dropdown when you click your avatar. It updates automatically after each generation.</p></div>
+          </div>
+        </div>
+
+        <!-- CONTACT SUPPORT -->
+        <div class="card" style="padding:28px;text-align:center;margin-top:8px;margin-bottom:32px">
+          <div style="font-size:16px;font-weight:600;margin-bottom:6px">Still need help?</div>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Can't find what you're looking for? Our team is happy to help.</p>
+          <a href="mailto:support@meetrenzo.com?subject=Renzo Help Request" class="btn btn-primary">Email Support →</a>
         </div>
       </div>
     </div>
@@ -1679,6 +1868,30 @@ function showView(name){
   if(name==='activity') renderActivity();
   if(name==='settings') loadSettings();
   updateQueueBadge();
+}
+
+function toggleHelpFaq(el){
+  var item=el.closest('.help-faq-item');
+  item.classList.toggle('open',!item.classList.contains('open'));
+}
+function filterHelpFaq(query){
+  var q=query.trim().toLowerCase();
+  var items=document.querySelectorAll('#view-help [data-hfaq]');
+  var sections=document.querySelectorAll('#view-help [data-hsec]');
+  var anyVisible=false;
+  items.forEach(function(item){
+    var match=!q||item.textContent.toLowerCase().includes(q);
+    item.style.display=match?'':'none';
+    if(match) anyVisible=true;
+    if(q&&match) item.classList.add('open');
+    if(!q) item.classList.remove('open');
+  });
+  sections.forEach(function(sec){
+    var visible=Array.from(sec.querySelectorAll('[data-hfaq]')).some(function(i){return i.style.display!=='none';});
+    sec.style.display=visible?'':'none';
+  });
+  var empty=document.getElementById('helpSearchEmpty');
+  if(empty) empty.style.display=anyVisible?'none':'block';
 }
 
 function updateQueueBadge(){
