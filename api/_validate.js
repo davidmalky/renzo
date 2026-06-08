@@ -25,8 +25,10 @@ export async function resolveAuth(req) {
   try { return await validateRequest(req); } catch {}
   // Fall back to API key hash lookup
   const auth = req.headers['authorization'] || '';
-  if (!auth.startsWith('Bearer ')) return null;
-  const hash = crypto.createHash('sha256').update(auth.slice(7)).digest('hex');
+  const xApiKey = req.headers['x-api-key'] || '';
+  const rawKey = xApiKey || (auth.startsWith('Bearer ') ? auth.slice(7) : null);
+  if (!rawKey) return null;
+  const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
   const { data } = await supabase
     .from('api_keys').select('user_id').eq('key_hash', hash).maybeSingle();
   if (!data) return null;
