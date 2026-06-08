@@ -26,11 +26,6 @@ function canonicalToRow(r, userId, profileName) {
 
 export default async function handler(req, res) {
 
-  // ── SALESFORCE OAUTH CALLBACK — public, called by Salesforce redirect ─────
-  if (req.method === 'GET' && req.query?.action === 'salesforce_oauth_callback') {
-    return handleSfOAuthCallback(req, res);
-  }
-
   // ── INGEST (POST {action:'ingest'}) — accepts JWT or API key ──────────────
   if (req.method === 'POST' && req.body?.action === 'ingest') {
     const identity = await resolveAuth(req);
@@ -65,22 +60,54 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, upserted, errors });
   }
 
+  // ── SALESFORCE OAUTH (public — no JWT needed) ────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'salesforce_oauth_start') {
+    const clientId = process.env.SALESFORCE_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
+    const state = req.query.userId || '';
+    const authUrl = 'https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id=' + encodeURIComponent(clientId) + '&redirect_uri=' + encodeURIComponent(redirectUri) + '&scope=api+refresh_token&state=' + encodeURIComponent(state);
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.query.action === 'salesforce_oauth_callback') {
+    return handleSfOAuthCallback(req, res);
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   if (req.method === 'GET') {
-    const action = req.query?.action;
-    if (action === 'salesforce_oauth_start') return handleSfOAuthStart(req, res, userId);
-    if (action === 'salesforce_status')      return handleSfStatus(req, res, userId);
-    // Default: fetch contacts
+    if (req.query.action === 'salesforce_status') {
+      const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
+      return res.status(200).json({ connected: intData?.connected || false });
+    }
     const { data, error } = await supabase
       .from('contacts').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
+    const { data: sfInt } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
+    if (!sfInt || !sfInt.access_token) return res.status(400).json({ error: 'Salesforce not connected. Please connect first.' });
+    const sfRes = await fetch(sfInt.instance_url + '/services/data/v57.0/query?q=' + encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500'), { headers: { Authorization: 'Bearer ' + sfInt.access_token } });
+    if (sfRes.status === 401) { await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'salesforce'); return res.status(401).json({ error: 'Salesforce session expired. Please reconnect.' }); }
+    const sfData = await sfRes.json();
+    if (!sfRes.ok) return res.status(400).json({ error: sfData[0]?.message || 'Salesforce sync failed' });
+    const sfRecs = sfData.records || [];
+    let sfSynced = 0, sfErrors = [];
+    for (const r of sfRecs) {
+      try {
+        const m = { name: r.Name||'Unknown', email: r.Email||null, phone: r.Phone||null, company: r.Account?.Name||null, source_system: 'Salesforce', source_record_id: 'sf:'+r.Id, updated_at: new Date().toISOString() };
+        const { data: ex } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Salesforce').eq('source_record_id', 'sf:'+r.Id).maybeSingle();
+        if (ex) { await supabase.from('contacts').update(m).eq('id', ex.id); } else { await supabase.from('contacts').insert({ ...m, user_id: userId, profile_name: profileName }); }
+        sfSynced++;
+      } catch(e) { sfErrors.push({ id: r.Id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced: sfSynced, errors: sfErrors });
   }
 
   // ── VCS SYNC (POST {action:'vcs_sync'}) ─────────────────────────────────────
@@ -183,16 +210,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── SALESFORCE OAUTH SYNC (POST {action:'salesforce_sync'}) ────────────────
-  if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
-    return handleSfSync(req, res, userId, profileName);
-  }
-
-  // ── CRM SYNC (POST {action:'crm_sync'}) ─────────────────────────────────────
-  if (req.method === 'POST' && req.body?.action === 'crm_sync') {
-    return handleCrmSync(req, res, supabase, userId, profileName);
-  }
-
   if (req.method === 'POST') {
     const { name, company, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
@@ -238,236 +255,67 @@ export default async function handler(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-// ── SALESFORCE OAUTH HANDLERS ─────────────────────────────────────────────────
-
-async function handleSfOAuthStart(req, res, userId) {
-  const clientId = process.env.SALESFORCE_CLIENT_ID;
-  if (!clientId) return res.status(500).json({ error: 'Salesforce client ID not configured' });
-  const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
-  const authUrl = 'https://login.salesforce.com/services/oauth2/authorize'
-    + `?response_type=code`
-    + `&client_id=${encodeURIComponent(clientId)}`
-    + `&redirect_uri=${encodeURIComponent(redirectUri)}`
-    + `&scope=${encodeURIComponent('api refresh_token')}`
-    + `&state=${encodeURIComponent(userId)}`;
-  return res.redirect(authUrl);
-}
-
 async function handleSfOAuthCallback(req, res) {
   const { code, state: userId, error: sfError, error_description } = req.query;
-  if (sfError) return res.status(400).send(`Salesforce auth error: ${error_description || sfError}`);
-  if (!code)   return res.status(400).send('No authorization code received');
+  if (sfError) {
+    console.error('[sf-callback] Salesforce error:', sfError, error_description);
+    return res.redirect('https://www.meetrenzo.com/app?sf_error=1&msg=' + encodeURIComponent(error_description || sfError));
+  }
+  if (!code) {
+    console.error('[sf-callback] No code received');
+    return res.redirect('https://www.meetrenzo.com/app?sf_error=1&msg=no_code');
+  }
+  if (!userId) {
+    console.error('[sf-callback] No userId in state');
+    return res.redirect('https://www.meetrenzo.com/app?sf_error=1&msg=no_user');
+  }
 
   const clientId     = process.env.SALESFORCE_CLIENT_ID;
   const clientSecret = process.env.SALESFORCE_CLIENT_SECRET;
   const redirectUri  = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
 
   try {
+    // Exchange code for tokens
     const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code, client_id: clientId, client_secret: clientSecret,
-        redirect_uri: redirectUri
-      })
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri })
     });
     const tokens = await tokenRes.json();
     if (!tokenRes.ok || !tokens.access_token) {
-      return res.status(400).send(`Salesforce auth failed: ${tokens.error_description || tokens.error || 'Unknown error'}`);
+      console.error('[sf-callback] Token exchange failed:', tokens);
+      return res.redirect('https://www.meetrenzo.com/app?sf_error=1&msg=' + encodeURIComponent(tokens.error_description || tokens.error || 'token_exchange_failed'));
     }
 
-    await supabase.from('integrations').upsert({
-      user_id:       userId,
-      provider:      'salesforce',
+    const record = {
       access_token:  tokens.access_token,
       refresh_token: tokens.refresh_token || null,
       instance_url:  tokens.instance_url,
       connected:     true,
       connected_at:  new Date().toISOString()
-    }, { onConflict: 'user_id,provider' });
+    };
+
+    // Check-then-insert/update to avoid partial unique index issues with upsert
+    const { data: existing, error: selErr } = await supabase
+      .from('integrations')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', 'salesforce')
+      .maybeSingle();
+
+    if (selErr) console.error('[sf-callback] select error:', selErr);
+
+    if (existing) {
+      const { error: updErr } = await supabase.from('integrations').update(record).eq('id', existing.id);
+      if (updErr) console.error('[sf-callback] update error:', updErr);
+    } else {
+      const { error: insErr } = await supabase.from('integrations').insert({ user_id: userId, provider: 'salesforce', ...record });
+      if (insErr) console.error('[sf-callback] insert error:', insErr);
+    }
 
     return res.redirect('https://www.meetrenzo.com/app?sf_connected=1');
   } catch (e) {
-    return res.status(500).send(`OAuth callback error: ${e.message}`);
+    console.error('[sf-callback] unexpected error:', e.message);
+    return res.redirect('https://www.meetrenzo.com/app?sf_error=1&msg=' + encodeURIComponent(e.message));
   }
-}
-
-async function handleSfStatus(req, res, userId) {
-  const { data } = await supabase.from('integrations')
-    .select('connected, connected_at')
-    .eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
-  return res.status(200).json({ connected: !!(data?.connected) });
-}
-
-async function handleSfSync(req, res, userId, profileName) {
-  const { data: integration } = await supabase.from('integrations')
-    .select('*').eq('user_id', userId).eq('provider', 'salesforce').single();
-  if (!integration?.access_token) {
-    return res.status(400).json({ error: 'Salesforce not connected. Please connect first.' });
-  }
-
-  const query = encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name,LastModifiedDate FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500');
-  const sfRes = await fetch(`${integration.instance_url}/services/data/v57.0/query?q=${query}`, {
-    headers: { 'Authorization': `Bearer ${integration.access_token}`, 'Content-Type': 'application/json' }
-  });
-
-  if (sfRes.status === 401) {
-    await supabase.from('integrations').update({ connected: false })
-      .eq('user_id', userId).eq('provider', 'salesforce');
-    return res.status(401).json({ error: 'Salesforce session expired. Please reconnect.' });
-  }
-
-  const sfData = await sfRes.json();
-  if (!sfRes.ok) return res.status(400).json({ error: sfData[0]?.message || 'Salesforce sync failed' });
-
-  const records = sfData.records || [];
-  let synced = 0;
-  const errors = [];
-
-  for (const r of records) {
-    try {
-      const mapped = {
-        profile_name:     profileName,
-        name:             r.Name || 'Unknown',
-        email:            r.Email || null,
-        phone:            r.Phone || null,
-        company:          r.Account?.Name || null,
-        source_system:    'Salesforce',
-        source_record_id: `sf:${r.Id}`,
-        updated_at:       new Date().toISOString()
-      };
-      const { data: existing } = await supabase.from('contacts').select('id')
-        .eq('user_id', userId).eq('source_system', 'Salesforce')
-        .eq('source_record_id', `sf:${r.Id}`).maybeSingle();
-      if (existing) {
-        await supabase.from('contacts').update(mapped).eq('id', existing.id);
-      } else {
-        await supabase.from('contacts').insert({ ...mapped, user_id: userId });
-      }
-      synced++;
-    } catch (e) { errors.push({ id: r.Id, error: e.message }); }
-  }
-
-  // Update last sync time
-  await supabase.from('integrations')
-    .update({ connected_at: new Date().toISOString() })
-    .eq('user_id', userId).eq('provider', 'salesforce');
-
-  return res.status(200).json({ success: true, synced, errors });
-}
-
-// ── CRM SYNC HANDLER ─────────────────────────────────────────────────────────
-async function handleCrmSync(req, res, supabase, userId, profileName) {
-  const { provider, credentials } = req.body;
-
-  if (provider === 'salesforce') {
-    const { username, password, security_token } = credentials;
-    const loginBody = `<?xml version="1.0" encoding="utf-8"?>
-      <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
-        <env:Body>
-          <n1:login xmlns:n1="urn:partner.soap.sforce.com">
-            <n1:username>${username}</n1:username>
-            <n1:password>${password}${security_token}</n1:password>
-          </n1:login>
-        </env:Body>
-      </env:Envelope>`;
-
-    const loginRes = await fetch('https://login.salesforce.com/services/Soap/u/57.0', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml', 'SOAPAction': 'login' },
-      body: loginBody
-    });
-    const loginXml = await loginRes.text();
-
-    const sessionMatch = loginXml.match(/<sessionId>([^<]+)<\/sessionId>/);
-    const serverMatch  = loginXml.match(/<serverUrl>([^<]+)<\/serverUrl>/);
-
-    if (!sessionMatch) {
-      const faultMatch = loginXml.match(/<faultstring>([^<]+)<\/faultstring>/);
-      return res.status(400).json({ error: faultMatch ? faultMatch[1] : 'Salesforce login failed' });
-    }
-
-    const sessionId    = sessionMatch[1];
-    const sfInstanceUrl = serverMatch[1].match(/^(https:\/\/[^\/]+)/)[1];
-
-    const query = encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name,LastModifiedDate FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500');
-    const sfRes = await fetch(`${sfInstanceUrl}/services/data/v57.0/query?q=${query}`, {
-      headers: { 'Authorization': `Bearer ${sessionId}`, 'Content-Type': 'application/json' }
-    });
-    const sfData = await sfRes.json();
-
-    if (!sfRes.ok) return res.status(400).json({ error: sfData.message || 'Salesforce query failed' });
-
-    const records = sfData.records || [];
-    let synced = 0;
-    const errors = [];
-
-    for (const r of records) {
-      try {
-        const mapped = {
-          profile_name:     profileName,
-          name:             r.Name || 'Unknown',
-          email:            r.Email || null,
-          phone:            r.Phone || null,
-          company:          r.Account?.Name || null,
-          source_system:    'Salesforce',
-          source_record_id: `sf:${r.Id}`,
-          updated_at:       new Date().toISOString()
-        };
-        const { data: existing } = await supabase.from('contacts').select('id')
-          .eq('user_id', userId).eq('source_system', 'Salesforce').eq('source_record_id', `sf:${r.Id}`).maybeSingle();
-        if (existing) {
-          await supabase.from('contacts').update(mapped).eq('id', existing.id);
-        } else {
-          await supabase.from('contacts').insert({ ...mapped, user_id: userId });
-        }
-        synced++;
-      } catch (e) { errors.push({ id: r.Id, error: e.message }); }
-    }
-    return res.status(200).json({ success: true, synced, errors, provider: 'Salesforce' });
-  }
-
-  if (provider === 'hubspot') {
-    const { api_key } = credentials;
-    const hsRes = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=100&properties=firstname,lastname,email,phone,company', {
-      headers: { 'Authorization': `Bearer ${api_key}`, 'Content-Type': 'application/json' }
-    });
-    const hsData = await hsRes.json();
-
-    if (!hsRes.ok) return res.status(400).json({ error: hsData.message || 'HubSpot API error — check your API key' });
-
-    const records = hsData.results || [];
-    let synced = 0;
-    const errors = [];
-
-    for (const r of records) {
-      try {
-        const props = r.properties || {};
-        const mapped = {
-          profile_name:     profileName,
-          name:             [props.firstname, props.lastname].filter(Boolean).join(' ') || 'Unknown',
-          email:            props.email || null,
-          phone:            props.phone || null,
-          company:          props.company || null,
-          source_system:    'HubSpot',
-          source_record_id: `hs:${r.id}`,
-          updated_at:       new Date().toISOString()
-        };
-        const { data: existing } = await supabase.from('contacts').select('id')
-          .eq('user_id', userId).eq('source_system', 'HubSpot').eq('source_record_id', `hs:${r.id}`).maybeSingle();
-        if (existing) {
-          await supabase.from('contacts').update(mapped).eq('id', existing.id);
-        } else {
-          await supabase.from('contacts').insert({ ...mapped, user_id: userId });
-        }
-        synced++;
-      } catch (e) { errors.push({ id: r.id, error: e.message }); }
-    }
-    return res.status(200).json({ success: true, synced, errors, provider: 'HubSpot' });
-  }
-
-  return res.status(400).json({ error: 'Unknown provider' });
 }

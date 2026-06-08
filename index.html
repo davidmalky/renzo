@@ -3948,7 +3948,13 @@ document.addEventListener('keydown',function(e){
     else showView('dashboard');
     setTimeout(tourStart,600);
     // Handle Salesforce OAuth redirect back
-    if(window.location.search.includes('sf_connected=1')){
+    var sfParams=new URLSearchParams(window.location.search);
+    if(sfParams.get('sf_error')){
+      history.replaceState(null,'','/app');
+      var errMsg=sfParams.get('msg')||'unknown error';
+      toast('Salesforce connection failed: '+decodeURIComponent(errMsg),'error');
+    }
+    if(sfParams.get('sf_connected')==='1'){
       history.replaceState(null,'','/app');
       setTimeout(async function(){
         toast('Salesforce connected! Syncing contacts…','success');
@@ -3962,7 +3968,7 @@ document.addEventListener('keydown',function(e){
             var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
             localStorage.setItem(connKey,JSON.stringify(conns));
-            await getContacts();renderContacts();
+            await getContacts();renderContacts();renderConnectionsView();
           }
         }catch(ex){toast('Sync failed: '+ex.message,'error');}
       },800);
