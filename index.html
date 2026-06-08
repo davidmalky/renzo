@@ -407,7 +407,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- ONBOARDING -->
 <div id="onboardModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:520px">
+  <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Set up your profile</h2>
       <div style="font-size:13px;color:var(--gray)" id="obStep">Step 1 of 2</div>
@@ -1042,6 +1042,10 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     </div>
     <div style="padding:0 0 20px">
       <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">What tool would you like to connect to Renzo? Tell us the name and how you'd use it.</p>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Your email</label>
+        <input type="email" id="irEmail" readonly style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--gray-pale);color:var(--gray);cursor:not-allowed">
+      </div>
       <textarea id="integrationRequestText" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit" placeholder="e.g. Pipedrive CRM — I track all my deals there and want contacts synced automatically"></textarea>
       <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('integrationRequestModal').classList.add('hidden')">Cancel</button>
@@ -3398,6 +3402,7 @@ function filterIntegrations(query){
 }
 
 function openIntegrationRequest(){
+  document.getElementById('irEmail').value = currentUser?.email || '';
   document.getElementById('integrationRequestModal').classList.remove('hidden');
   document.getElementById('integrationRequestText').value='';
   setTimeout(function(){document.getElementById('integrationRequestText').focus();},50);
@@ -3405,7 +3410,9 @@ function openIntegrationRequest(){
 function sendIntegrationRequest(){
   var txt=(document.getElementById('integrationRequestText').value||'').trim();
   if(!txt){toast('Please describe the integration you need','error');return;}
-  window.open('mailto:support@meetrenzo.com?subject='+encodeURIComponent('Integration Request')+'&body='+encodeURIComponent(txt),'_blank');
+  var email=(document.getElementById('irEmail').value||'').trim();
+  var body=email?('From: '+email+'\n\n'+txt):txt;
+  window.open('mailto:support@meetrenzo.com?subject='+encodeURIComponent('Integration Request')+'&body='+encodeURIComponent(body),'_blank');
   document.getElementById('integrationRequestModal').classList.add('hidden');
   toast('Thanks! Your email client will open the draft.','success');
 }
@@ -3597,8 +3604,8 @@ function renderEmailAccounts(){
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Label / nickname</label><input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="e.g. Work" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'</div>'
         +'<div style="display:flex;gap:6px">'
-        +'<button class="btn btn-primary btn-sm" style="padding:6px 14px;font-size:13px" onclick="saveEmailEdit('+i+')">Save</button>'
-        +'<button class="btn btn-ghost btn-sm" style="padding:6px 14px;font-size:13px" onclick="hideEmailEdit('+i+')">Cancel</button>'
+        +'<button class="btn btn-primary btn-sm" style="padding:5px 12px;font-size:12px" onclick="saveEmailEdit('+i+')">Save</button>'
+        +'<button class="btn btn-ghost btn-sm" style="padding:5px 12px;font-size:12px" onclick="hideEmailEdit('+i+')">Cancel</button>'
         +'</div>'
         +'</div>'
         +'</div>').join('')
