@@ -174,6 +174,11 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── CRM SYNC (POST {action:'crm_sync'}) ─────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'crm_sync') {
+    return handleCrmSync(req, res, supabase, userId, profileName);
+  }
+
   if (req.method === 'POST') {
     const { name, company, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
@@ -217,4 +222,119 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+// ── CRM SYNC HANDLER ─────────────────────────────────────────────────────────
+async function handleCrmSync(req, res, supabase, userId, profileName) {
+  const { provider, credentials } = req.body;
+
+  if (provider === 'salesforce') {
+    const { username, password, security_token } = credentials;
+    const loginBody = `<?xml version="1.0" encoding="utf-8"?>
+      <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+        <env:Body>
+          <n1:login xmlns:n1="urn:partner.soap.sforce.com">
+            <n1:username>${username}</n1:username>
+            <n1:password>${password}${security_token}</n1:password>
+          </n1:login>
+        </env:Body>
+      </env:Envelope>`;
+
+    const loginRes = await fetch('https://login.salesforce.com/services/Soap/u/57.0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml', 'SOAPAction': 'login' },
+      body: loginBody
+    });
+    const loginXml = await loginRes.text();
+
+    const sessionMatch = loginXml.match(/<sessionId>([^<]+)<\/sessionId>/);
+    const serverMatch  = loginXml.match(/<serverUrl>([^<]+)<\/serverUrl>/);
+
+    if (!sessionMatch) {
+      const faultMatch = loginXml.match(/<faultstring>([^<]+)<\/faultstring>/);
+      return res.status(400).json({ error: faultMatch ? faultMatch[1] : 'Salesforce login failed' });
+    }
+
+    const sessionId    = sessionMatch[1];
+    const sfInstanceUrl = serverMatch[1].match(/^(https:\/\/[^\/]+)/)[1];
+
+    const query = encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name,LastModifiedDate FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500');
+    const sfRes = await fetch(`${sfInstanceUrl}/services/data/v57.0/query?q=${query}`, {
+      headers: { 'Authorization': `Bearer ${sessionId}`, 'Content-Type': 'application/json' }
+    });
+    const sfData = await sfRes.json();
+
+    if (!sfRes.ok) return res.status(400).json({ error: sfData.message || 'Salesforce query failed' });
+
+    const records = sfData.records || [];
+    let synced = 0;
+    const errors = [];
+
+    for (const r of records) {
+      try {
+        const mapped = {
+          profile_name:     profileName,
+          name:             r.Name || 'Unknown',
+          email:            r.Email || null,
+          phone:            r.Phone || null,
+          company:          r.Account?.Name || null,
+          source_system:    'Salesforce',
+          source_record_id: `sf:${r.Id}`,
+          updated_at:       new Date().toISOString()
+        };
+        const { data: existing } = await supabase.from('contacts').select('id')
+          .eq('user_id', userId).eq('source_system', 'Salesforce').eq('source_record_id', `sf:${r.Id}`).maybeSingle();
+        if (existing) {
+          await supabase.from('contacts').update(mapped).eq('id', existing.id);
+        } else {
+          await supabase.from('contacts').insert({ ...mapped, user_id: userId });
+        }
+        synced++;
+      } catch (e) { errors.push({ id: r.Id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced, errors, provider: 'Salesforce' });
+  }
+
+  if (provider === 'hubspot') {
+    const { api_key } = credentials;
+    const hsRes = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=100&properties=firstname,lastname,email,phone,company', {
+      headers: { 'Authorization': `Bearer ${api_key}`, 'Content-Type': 'application/json' }
+    });
+    const hsData = await hsRes.json();
+
+    if (!hsRes.ok) return res.status(400).json({ error: hsData.message || 'HubSpot API error — check your API key' });
+
+    const records = hsData.results || [];
+    let synced = 0;
+    const errors = [];
+
+    for (const r of records) {
+      try {
+        const props = r.properties || {};
+        const mapped = {
+          profile_name:     profileName,
+          name:             [props.firstname, props.lastname].filter(Boolean).join(' ') || 'Unknown',
+          email:            props.email || null,
+          phone:            props.phone || null,
+          company:          props.company || null,
+          source_system:    'HubSpot',
+          source_record_id: `hs:${r.id}`,
+          updated_at:       new Date().toISOString()
+        };
+        const { data: existing } = await supabase.from('contacts').select('id')
+          .eq('user_id', userId).eq('source_system', 'HubSpot').eq('source_record_id', `hs:${r.id}`).maybeSingle();
+        if (existing) {
+          await supabase.from('contacts').update(mapped).eq('id', existing.id);
+        } else {
+          await supabase.from('contacts').insert({ ...mapped, user_id: userId });
+        }
+        synced++;
+      } catch (e) { errors.push({ id: r.id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced, errors, provider: 'HubSpot' });
+  }
+
+  return res.status(400).json({ error: 'Unknown provider' });
 }

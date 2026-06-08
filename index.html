@@ -606,8 +606,8 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Pull contacts directly from your connected systems into Renzo. Data syncs on demand — run it whenever you want fresh data.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="syncFromCSV()">Import CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="toast('Salesforce sync coming soon','')">Sync Salesforce</button>
-          <button class="btn btn-ghost btn-sm" onclick="toast('HubSpot sync coming soon','')">Sync HubSpot</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCrmConnect('salesforce')">Sync Salesforce</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCrmConnect('hubspot')">Sync HubSpot</button>
           <button class="btn btn-ghost btn-sm" onclick="toast('QuickBooks sync coming soon','')">Sync QuickBooks</button>
         </div>
       </div>
@@ -647,7 +647,10 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <li>Import the CSV into Renzo</li>
           </ol>
           <div id="sfStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Status: Using CSV export</div>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('salesforce')">View Setup Guide</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('salesforce')">Connect Salesforce</button>
+            <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('salesforce')">View Setup Guide</button>
+          </div>
         </div>
 
         <!-- HubSpot -->
@@ -664,7 +667,10 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <li>Select: Email, Company, Last Contacted, Deal Stage, Phone</li>
             <li>Download CSV → Import into Renzo</li>
           </ol>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('hubspot')">View Setup Guide</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('hubspot')">Connect HubSpot</button>
+            <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('hubspot')">View Setup Guide</button>
+          </div>
         </div>
 
         <!-- QuickBooks -->
@@ -1006,6 +1012,29 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
     </div>
   </main>
+</div>
+
+<!-- CRM CONNECT MODAL -->
+<div class="modal-overlay hidden" id="crmModal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="crmModalTitle">Connect CRM</h2>
+      <button class="modal-close" onclick="document.getElementById('crmModal').classList.add('hidden')">×</button>
+    </div>
+    <div id="crmSalesforceFields" class="hidden" style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Enter your Salesforce credentials. Your security token can be found in Salesforce under <strong>Settings → My Personal Information → Reset My Security Token</strong>.</p>
+      <div style="margin-bottom:12px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Salesforce Username (email)</label><input type="email" id="sfUsername" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box" placeholder="you@yourcompany.com"></div>
+      <div style="margin-bottom:12px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Password</label><input type="password" id="sfPassword" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box" placeholder="Your Salesforce password"></div>
+      <div style="margin-bottom:20px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Security Token</label><input type="text" id="sfToken" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box" placeholder="25-character security token"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="runCrmSync('salesforce')">Connect and Sync Contacts</button>
+    </div>
+    <div id="crmHubspotFields" class="hidden" style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Enter your HubSpot Private App token. In HubSpot go to <strong>Settings → Integrations → Private Apps</strong> → create an app with Contacts read scope, then copy the token.</p>
+      <div style="margin-bottom:20px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">HubSpot API Token</label><input type="text" id="hsApiKey" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box" placeholder="pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="runCrmSync('hubspot')">Connect and Sync Contacts</button>
+    </div>
+    <div id="crmSyncResult" class="hidden" style="padding:20px;text-align:center"></div>
+  </div>
 </div>
 
 <!-- CONTACT MODAL -->
@@ -3312,6 +3341,51 @@ function showIntegrationDetail(key){
   document.getElementById('integrationDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// CRM SYNC
+function openCrmConnect(provider){
+  document.getElementById('crmModal').classList.remove('hidden');
+  document.getElementById('crmModalTitle').textContent=provider==='salesforce'?'Connect Salesforce':'Connect HubSpot';
+  document.getElementById('crmSalesforceFields').classList.toggle('hidden',provider!=='salesforce');
+  document.getElementById('crmHubspotFields').classList.toggle('hidden',provider!=='hubspot');
+  document.getElementById('crmSyncResult').classList.add('hidden');
+}
+
+async function runCrmSync(provider){
+  var resultDiv=document.getElementById('crmSyncResult');
+  resultDiv.classList.remove('hidden');
+  resultDiv.innerHTML='<div style="color:var(--gray)">Connecting and syncing contacts…</div>';
+  document.getElementById('crmSalesforceFields').classList.add('hidden');
+  document.getElementById('crmHubspotFields').classList.add('hidden');
+  var credentials={};
+  if(provider==='salesforce'){
+    credentials={
+      username:(document.getElementById('sfUsername')||{}).value||'',
+      password:(document.getElementById('sfPassword')||{}).value||'',
+      security_token:(document.getElementById('sfToken')||{}).value||''
+    };
+  } else {
+    credentials={api_key:(document.getElementById('hsApiKey')||{}).value||''};
+  }
+  try{
+    const r=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+      body:JSON.stringify({action:'crm_sync',provider:provider,credentials:credentials})});
+    const d=await r.json();
+    if(d.success){
+      resultDiv.innerHTML='<div style="color:var(--green);font-size:22px;margin-bottom:8px">✓</div>'
+        +'<div style="font-size:17px;font-weight:600;margin-bottom:6px">Synced '+d.synced+' contacts</div>'
+        +'<div style="font-size:13px;color:var(--gray);margin-bottom:16px">'+(d.errors&&d.errors.length?d.errors.length+' records had errors':'All records imported successfully')+'</div>'
+        +'<button class="btn btn-primary" onclick="document.getElementById(\'crmModal\').classList.add(\'hidden\');getContacts().then(renderContacts)">Done</button>';
+      toast('Synced '+d.synced+' contacts from '+d.provider,'success');
+    } else {
+      resultDiv.innerHTML='<div style="color:var(--red);margin-bottom:12px">Connection failed: '+esc(d.error||'Unknown error')+'</div>'
+        +'<button class="btn btn-ghost" onclick="openCrmConnect(\''+provider+'\')">Try again</button>';
+    }
+  }catch(e){
+    resultDiv.innerHTML='<div style="color:var(--red);margin-bottom:12px">Error: '+esc(e.message)+'</div>'
+      +'<button class="btn btn-ghost" onclick="openCrmConnect(\''+provider+'\')">Try again</button>';
+  }
+}
+
 function loadSettings(){
   const p=gp();
   document.getElementById('sWebsite').value=p.website||'';
@@ -3690,11 +3764,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
