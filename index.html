@@ -491,6 +491,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();window.open('mailto:support@meetrenzo.com?subject=Renzo%20Feedback','_blank');toggleAvatarDD()">Send Feedback</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();tourForce()">Replay Tour</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
@@ -645,7 +646,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Salesforce -->
         <div class="int-tile" data-int-name="salesforce crm contacts accounts" id="int-tile-salesforce">
-          <div class="int-icon" style="background:#E8F4FD">☁</div>
+          <div class="int-icon" style="background:#E8F4FD"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/salesforce.svg" width="28" height="28" style="filter:invert(42%) sepia(100%) saturate(500%) hue-rotate(170deg)" alt="Salesforce"></div>
           <div class="int-name">Salesforce</div>
           <div class="int-desc">Sync contacts and account data directly from Salesforce CRM.</div>
           <div id="int-action-salesforce" style="margin-top:auto">
@@ -655,7 +656,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- HubSpot -->
         <div class="int-tile" data-int-name="hubspot crm contacts deals companies marketing" id="int-tile-hubspot">
-          <div class="int-icon" style="background:#FFF0E6">🔶</div>
+          <div class="int-icon" style="background:#FFF0E6"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/hubspot.svg" width="28" height="28" style="filter:invert(45%) sepia(90%) saturate(500%) hue-rotate(350deg)" alt="HubSpot"></div>
           <div class="int-name">HubSpot</div>
           <div class="int-desc">Pull contacts, companies, and deal data from HubSpot CRM.</div>
           <div id="int-action-hubspot" style="margin-top:auto">
@@ -665,7 +666,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- QuickBooks — coming soon -->
         <div class="int-tile coming-soon" data-int-name="quickbooks accounting invoices customers">
-          <div class="int-icon" style="background:#E8F5E9">💚</div>
+          <div class="int-icon" style="background:#E8F5E9"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/quickbooks.svg" width="28" height="28" style="filter:invert(40%) sepia(80%) saturate(400%) hue-rotate(90deg)" alt="QuickBooks"></div>
           <div class="int-name">QuickBooks</div>
           <div class="int-desc">Import customers and invoice data for collections and billing follow-up.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -673,7 +674,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Monday.com — coming soon -->
         <div class="int-tile coming-soon" data-int-name="monday monday.com project management crm">
-          <div class="int-icon" style="background:#FFF0F7">📋</div>
+          <div class="int-icon" style="background:#FFF0F7"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/mondaydotcom.svg" width="28" height="28" style="filter:invert(35%) sepia(100%) saturate(300%) hue-rotate(230deg)" alt="Monday.com"></div>
           <div class="int-name">Monday.com</div>
           <div class="int-desc">Sync contacts and leads from Monday.com boards into Renzo.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -681,7 +682,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Constant Contact — coming soon -->
         <div class="int-tile coming-soon" data-int-name="constant contact email marketing list">
-          <div class="int-icon" style="background:#EFF6FF">📧</div>
+          <div class="int-icon" style="background:#EFF6FF"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/constantcontact.svg" width="28" height="28" style="filter:invert(30%) sepia(80%) saturate(400%) hue-rotate(200deg)" alt="Constant Contact"></div>
           <div class="int-name">Constant Contact</div>
           <div class="int-desc">Import your email marketing contacts and subscriber lists.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -720,6 +721,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('integrationDetail').classList.add('hidden')">Close</button>
         </div>
         <div id="integDetailContent"></div>
+      </div>
+
+      <!-- REQUEST INTEGRATION CARD -->
+      <div class="card" style="padding:24px;max-width:680px;margin-top:8px;margin-bottom:32px;text-align:center;border:1px dashed var(--gray-light)">
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">Don't see your tool?</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:14px">Tell us what you use and we'll prioritize adding it.</p>
+        <button class="btn btn-ghost btn-sm" onclick="openIntegrationRequest()">Request an Integration</button>
       </div>
     </div>
 
@@ -1022,6 +1030,24 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <button class="btn btn-primary" style="width:100%" onclick="runCrmSync('hubspot')">Connect and Sync Contacts</button>
     </div>
     <div id="crmSyncResult" class="hidden" style="padding:20px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- INTEGRATION REQUEST MODAL -->
+<div class="modal-overlay hidden" id="integrationRequestModal">
+  <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">Request an Integration</h2>
+      <button class="modal-close" onclick="document.getElementById('integrationRequestModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:0 0 20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">What tool would you like to connect to Renzo? Tell us the name and how you'd use it.</p>
+      <textarea id="integrationRequestText" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit" placeholder="e.g. Pipedrive CRM — I track all my deals there and want contacts synced automatically"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('integrationRequestModal').classList.add('hidden')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="sendIntegrationRequest()">Send Request</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3371,6 +3397,19 @@ function filterIntegrations(query){
   });
 }
 
+function openIntegrationRequest(){
+  document.getElementById('integrationRequestModal').classList.remove('hidden');
+  document.getElementById('integrationRequestText').value='';
+  setTimeout(function(){document.getElementById('integrationRequestText').focus();},50);
+}
+function sendIntegrationRequest(){
+  var txt=(document.getElementById('integrationRequestText').value||'').trim();
+  if(!txt){toast('Please describe the integration you need','error');return;}
+  window.open('mailto:support@meetrenzo.com?subject='+encodeURIComponent('Integration Request')+'&body='+encodeURIComponent(txt),'_blank');
+  document.getElementById('integrationRequestModal').classList.add('hidden');
+  toast('Thanks! Your email client will open the draft.','success');
+}
+
 // SALESFORCE OAUTH
 async function connectSalesforce(){
   var uid=currentUser&&(currentUser.userId||currentUser.id);
@@ -3549,12 +3588,14 @@ function renderEmailAccounts(){
       ?emails.map((e,i)=>'<div class="rule-item" id="emailRow-'+i+'" style="flex-wrap:wrap;gap:6px">'
         +'<span class="rule-text"><strong>'+esc(e.label||e.addr)+'</strong> — '+esc(e.addr)+'</span>'
         +'<div style="display:flex;gap:4px;margin-left:auto">'
-        +'<button class="rule-del" style="background:rgba(31,107,71,.1);color:var(--green);border-color:rgba(31,107,71,.2)" onclick="showEmailEdit('+i+')">Edit</button>'
+        +'<button class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;justify-content:center;color:var(--green)" onclick="showEmailEdit('+i+')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
         +'<button class="rule-del" onclick="deleteEmail('+i+')">✕</button>'
         +'</div>'
-        +'<div id="emailEdit-'+i+'" class="hidden" style="width:100%;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--gray-pale)">'
-        +'<input id="editAddr-'+i+'" type="email" value="'+esc(e.addr)+'" placeholder="email@example.com" style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px">'
-        +'<input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="Label (optional)" style="flex:1;min-width:120px;padding:6px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px">'
+        +'<div id="emailEdit-'+i+'" class="hidden" style="width:100%;margin-top:8px;padding-top:10px;border-top:1px solid var(--gray-pale)">'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+        +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Email address</label><input id="editAddr-'+i+'" type="email" value="'+esc(e.addr)+'" placeholder="you@example.com" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
+        +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Label / nickname</label><input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="e.g. Work" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
+        +'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button class="btn btn-sm" style="background:var(--green);color:#fff;padding:6px 14px;font-size:12px" onclick="saveEmailEdit('+i+')">Save</button>'
         +'<button class="btn btn-ghost btn-sm" style="font-size:12px" onclick="hideEmailEdit('+i+')">Cancel</button>'
@@ -3840,11 +3881,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -3915,7 +3956,7 @@ document.addEventListener('click',function(e){
 
 <!-- BILLING HISTORY MODAL -->
 <div id="billingHistoryModal" class="modal-overlay hidden" style="z-index:3900">
-  <div class="modal-box" style="max-width:520px">
+  <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Billing History</h2>
       <button class="modal-close" onclick="document.getElementById('billingHistoryModal').classList.add('hidden')">×</button>
