@@ -78,12 +78,36 @@ export default async function handler(req, res) {
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   if (req.method === 'GET') {
+    if (req.query.action === 'salesforce_status') {
+      const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
+      return res.status(200).json({ connected: intData?.connected || false });
+    }
     const { data, error } = await supabase
       .from('contacts').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
+    const { data: sfInt } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
+    if (!sfInt || !sfInt.access_token) return res.status(400).json({ error: 'Salesforce not connected. Please connect first.' });
+    const sfRes = await fetch(sfInt.instance_url + '/services/data/v57.0/query?q=' + encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500'), { headers: { Authorization: 'Bearer ' + sfInt.access_token } });
+    if (sfRes.status === 401) { await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'salesforce'); return res.status(401).json({ error: 'Salesforce session expired. Please reconnect.' }); }
+    const sfData = await sfRes.json();
+    if (!sfRes.ok) return res.status(400).json({ error: sfData[0]?.message || 'Salesforce sync failed' });
+    const sfRecs = sfData.records || [];
+    let sfSynced = 0, sfErrors = [];
+    for (const r of sfRecs) {
+      try {
+        const m = { name: r.Name||'Unknown', email: r.Email||null, phone: r.Phone||null, company: r.Account?.Name||null, source_system: 'Salesforce', source_record_id: 'sf:'+r.Id, updated_at: new Date().toISOString() };
+        const { data: ex } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Salesforce').eq('source_record_id', 'sf:'+r.Id).maybeSingle();
+        if (ex) { await supabase.from('contacts').update(m).eq('id', ex.id); } else { await supabase.from('contacts').insert({ ...m, user_id: userId, profile_name: profileName }); }
+        sfSynced++;
+      } catch(e) { sfErrors.push({ id: r.Id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced: sfSynced, errors: sfErrors });
   }
 
   // ── VCS SYNC (POST {action:'vcs_sync'}) ─────────────────────────────────────
