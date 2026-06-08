@@ -3419,42 +3419,41 @@ function sendIntegrationRequest(){
 
 // SALESFORCE OAUTH
 async function connectSalesforce(){
-  var uid=currentUser&&(currentUser.userId||currentUser.id);
-  if(!uid){toast('Please log in first','error');return;}
-  var popup=window.open(
-    '/api/contacts?action=salesforce_oauth_start&userId='+encodeURIComponent(uid),
-    'salesforce_oauth',
-    'width=620,height=720,scrollbars=yes,resizable=yes,left='+(Math.round(screen.width/2)-310)+',top='+(Math.round(screen.height/2)-360)
-  );
-  if(!popup){toast('Pop-up blocked — please allow pop-ups for this site','error');return;}
-  var poll=setInterval(async function(){
+  const uid = currentUser?.userId || currentUser?.id;
+  if(!uid){ toast('Please log in first','error'); return; }
+  const oauthUrl = '/api/contacts?action=salesforce_oauth_start&userId='+encodeURIComponent(uid);
+  const popup = window.open(oauthUrl, 'salesforce_oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+  if(!popup){ toast('Please allow popups for this site','error'); return; }
+  // Give it time to load before polling
+  await new Promise(r => setTimeout(r, 2000));
+  const poll = setInterval(async()=>{
     try{
-      if(!popup.closed) return;
-      clearInterval(poll);
-      var r=await fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()});
-      var d=await r.json();
-      if(d.connected){
-        toast('Salesforce connected! Syncing contacts…','success');
-        var sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
-          body:JSON.stringify({action:'salesforce_sync'})});
-        var sd=await sr.json();
-        if(sd.success){
-          toast('Synced '+sd.synced+' contacts from Salesforce','success');
-          // Update localStorage connection state
-          var connKey=profileKey('renzo_crm_connections');
-          var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(e){}
-          conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
-          localStorage.setItem(connKey,JSON.stringify(conns));
-          await getContacts();
-          renderContacts();
-          renderConnectionsView();
+      if(popup.closed){
+        clearInterval(poll);
+        await new Promise(r => setTimeout(r, 500));
+        const r = await fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()});
+        const d = await r.json();
+        if(d.connected){
+          toast('Salesforce connected! Syncing...','success');
+          const sr = await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'salesforce_sync'})});
+          const sd = await sr.json();
+          if(sd.success){
+            toast('Synced '+sd.synced+' contacts','success');
+            var connKey=profileKey('renzo_crm_connections');
+            var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+            conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
+            localStorage.setItem(connKey,JSON.stringify(conns));
+            await getContacts();
+            renderContacts();
+            renderConnectionsView();
+          } else {
+            toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');
+          }
         } else {
-          toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');
+          toast('Salesforce not connected — please try again','error');
         }
-      } else {
-        toast('Salesforce connection was not completed','error');
       }
-    }catch(e){clearInterval(poll);toast('Connection check failed: '+e.message,'error');}
+    }catch(e){ clearInterval(poll); console.error('SF OAuth poll error:', e); }
   },1000);
 }
 
