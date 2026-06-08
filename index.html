@@ -649,7 +649,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="int-name">Salesforce</div>
           <div class="int-desc">Sync contacts and account data directly from Salesforce CRM.</div>
           <div id="int-action-salesforce" style="margin-top:auto">
-            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('salesforce')">Connect</button>
+            <button class="btn btn-primary btn-sm" onclick="connectSalesforce()">Connect</button>
           </div>
         </div>
 
@@ -3371,6 +3371,47 @@ function filterIntegrations(query){
   });
 }
 
+// SALESFORCE OAUTH
+async function connectSalesforce(){
+  var uid=currentUser&&(currentUser.userId||currentUser.id);
+  if(!uid){toast('Please log in first','error');return;}
+  var popup=window.open(
+    '/api/contacts?action=salesforce_oauth_start&userId='+encodeURIComponent(uid),
+    'salesforce_oauth',
+    'width=620,height=720,scrollbars=yes,resizable=yes,left='+(Math.round(screen.width/2)-310)+',top='+(Math.round(screen.height/2)-360)
+  );
+  if(!popup){toast('Pop-up blocked — please allow pop-ups for this site','error');return;}
+  var poll=setInterval(async function(){
+    try{
+      if(!popup.closed) return;
+      clearInterval(poll);
+      var r=await fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()});
+      var d=await r.json();
+      if(d.connected){
+        toast('Salesforce connected! Syncing contacts…','success');
+        var sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+          body:JSON.stringify({action:'salesforce_sync'})});
+        var sd=await sr.json();
+        if(sd.success){
+          toast('Synced '+sd.synced+' contacts from Salesforce','success');
+          // Update localStorage connection state
+          var connKey=profileKey('renzo_crm_connections');
+          var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(e){}
+          conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
+          localStorage.setItem(connKey,JSON.stringify(conns));
+          await getContacts();
+          renderContacts();
+          renderConnectionsView();
+        } else {
+          toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');
+        }
+      } else {
+        toast('Salesforce connection was not completed','error');
+      }
+    }catch(e){clearInterval(poll);toast('Connection check failed: '+e.message,'error');}
+  },1000);
+}
+
 // CRM SYNC
 function openCrmConnect(provider){
   document.getElementById('crmModal').classList.remove('hidden');
@@ -3830,6 +3871,26 @@ document.addEventListener('keydown',function(e){
     if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
+    // Handle Salesforce OAuth redirect back
+    if(window.location.search.includes('sf_connected=1')){
+      history.replaceState(null,'','/app');
+      setTimeout(async function(){
+        toast('Salesforce connected! Syncing contacts…','success');
+        try{
+          var sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+            body:JSON.stringify({action:'salesforce_sync'})});
+          var sd=await sr.json();
+          if(sd.success){
+            toast('Synced '+sd.synced+' contacts from Salesforce','success');
+            var connKey=profileKey('renzo_crm_connections');
+            var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+            conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
+            localStorage.setItem(connKey,JSON.stringify(conns));
+            await getContacts();renderContacts();
+          }
+        }catch(ex){toast('Sync failed: '+ex.message,'error');}
+      },800);
+    }
   }catch(e){sessionStorage.removeItem('renzo_jwt');revealLogin();}
 })();
 document.addEventListener('click',function(e){

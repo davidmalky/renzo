@@ -26,6 +26,11 @@ function canonicalToRow(r, userId, profileName) {
 
 export default async function handler(req, res) {
 
+  // ── SALESFORCE OAUTH CALLBACK — public, called by Salesforce redirect ─────
+  if (req.method === 'GET' && req.query?.action === 'salesforce_oauth_callback') {
+    return handleSfOAuthCallback(req, res);
+  }
+
   // ── INGEST (POST {action:'ingest'}) — accepts JWT or API key ──────────────
   if (req.method === 'POST' && req.body?.action === 'ingest') {
     const identity = await resolveAuth(req);
@@ -66,6 +71,10 @@ export default async function handler(req, res) {
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   if (req.method === 'GET') {
+    const action = req.query?.action;
+    if (action === 'salesforce_oauth_start') return handleSfOAuthStart(req, res, userId);
+    if (action === 'salesforce_status')      return handleSfStatus(req, res, userId);
+    // Default: fetch contacts
     const { data, error } = await supabase
       .from('contacts').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
@@ -174,6 +183,11 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── SALESFORCE OAUTH SYNC (POST {action:'salesforce_sync'}) ────────────────
+  if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
+    return handleSfSync(req, res, userId, profileName);
+  }
+
   // ── CRM SYNC (POST {action:'crm_sync'}) ─────────────────────────────────────
   if (req.method === 'POST' && req.body?.action === 'crm_sync') {
     return handleCrmSync(req, res, supabase, userId, profileName);
@@ -222,6 +236,125 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+// ── SALESFORCE OAUTH HANDLERS ─────────────────────────────────────────────────
+
+async function handleSfOAuthStart(req, res, userId) {
+  const clientId = process.env.SALESFORCE_CLIENT_ID;
+  if (!clientId) return res.status(500).json({ error: 'Salesforce client ID not configured' });
+  const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
+  const authUrl = 'https://login.salesforce.com/services/oauth2/authorize'
+    + `?response_type=code`
+    + `&client_id=${encodeURIComponent(clientId)}`
+    + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+    + `&scope=${encodeURIComponent('api refresh_token')}`
+    + `&state=${encodeURIComponent(userId)}`;
+  return res.redirect(authUrl);
+}
+
+async function handleSfOAuthCallback(req, res) {
+  const { code, state: userId, error: sfError, error_description } = req.query;
+  if (sfError) return res.status(400).send(`Salesforce auth error: ${error_description || sfError}`);
+  if (!code)   return res.status(400).send('No authorization code received');
+
+  const clientId     = process.env.SALESFORCE_CLIENT_ID;
+  const clientSecret = process.env.SALESFORCE_CLIENT_SECRET;
+  const redirectUri  = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
+
+  try {
+    const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code, client_id: clientId, client_secret: clientSecret,
+        redirect_uri: redirectUri
+      })
+    });
+    const tokens = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.access_token) {
+      return res.status(400).send(`Salesforce auth failed: ${tokens.error_description || tokens.error || 'Unknown error'}`);
+    }
+
+    await supabase.from('integrations').upsert({
+      user_id:       userId,
+      provider:      'salesforce',
+      access_token:  tokens.access_token,
+      refresh_token: tokens.refresh_token || null,
+      instance_url:  tokens.instance_url,
+      connected:     true,
+      connected_at:  new Date().toISOString()
+    }, { onConflict: 'user_id,provider' });
+
+    return res.redirect('https://www.meetrenzo.com/app?sf_connected=1');
+  } catch (e) {
+    return res.status(500).send(`OAuth callback error: ${e.message}`);
+  }
+}
+
+async function handleSfStatus(req, res, userId) {
+  const { data } = await supabase.from('integrations')
+    .select('connected, connected_at')
+    .eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
+  return res.status(200).json({ connected: !!(data?.connected) });
+}
+
+async function handleSfSync(req, res, userId, profileName) {
+  const { data: integration } = await supabase.from('integrations')
+    .select('*').eq('user_id', userId).eq('provider', 'salesforce').single();
+  if (!integration?.access_token) {
+    return res.status(400).json({ error: 'Salesforce not connected. Please connect first.' });
+  }
+
+  const query = encodeURIComponent('SELECT Id,Name,Email,Phone,Account.Name,LastModifiedDate FROM Contact ORDER BY LastModifiedDate DESC LIMIT 500');
+  const sfRes = await fetch(`${integration.instance_url}/services/data/v57.0/query?q=${query}`, {
+    headers: { 'Authorization': `Bearer ${integration.access_token}`, 'Content-Type': 'application/json' }
+  });
+
+  if (sfRes.status === 401) {
+    await supabase.from('integrations').update({ connected: false })
+      .eq('user_id', userId).eq('provider', 'salesforce');
+    return res.status(401).json({ error: 'Salesforce session expired. Please reconnect.' });
+  }
+
+  const sfData = await sfRes.json();
+  if (!sfRes.ok) return res.status(400).json({ error: sfData[0]?.message || 'Salesforce sync failed' });
+
+  const records = sfData.records || [];
+  let synced = 0;
+  const errors = [];
+
+  for (const r of records) {
+    try {
+      const mapped = {
+        profile_name:     profileName,
+        name:             r.Name || 'Unknown',
+        email:            r.Email || null,
+        phone:            r.Phone || null,
+        company:          r.Account?.Name || null,
+        source_system:    'Salesforce',
+        source_record_id: `sf:${r.Id}`,
+        updated_at:       new Date().toISOString()
+      };
+      const { data: existing } = await supabase.from('contacts').select('id')
+        .eq('user_id', userId).eq('source_system', 'Salesforce')
+        .eq('source_record_id', `sf:${r.Id}`).maybeSingle();
+      if (existing) {
+        await supabase.from('contacts').update(mapped).eq('id', existing.id);
+      } else {
+        await supabase.from('contacts').insert({ ...mapped, user_id: userId });
+      }
+      synced++;
+    } catch (e) { errors.push({ id: r.Id, error: e.message }); }
+  }
+
+  // Update last sync time
+  await supabase.from('integrations')
+    .update({ connected_at: new Date().toISOString() })
+    .eq('user_id', userId).eq('provider', 'salesforce');
+
+  return res.status(200).json({ success: true, synced, errors });
 }
 
 // ── CRM SYNC HANDLER ─────────────────────────────────────────────────────────
