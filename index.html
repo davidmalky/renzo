@@ -982,6 +982,28 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <div class="help-faq-a"><p>An API key lets external systems push contact data directly into Renzo without CSV exports. Go to <strong>Settings → API Keys</strong> to generate a key. Share the key with your developer or integration tool, then send a POST request to <code>/api/contacts</code> with the contact data. Full documentation is available on the Connections page inside the app.</p></div>
           </div>
           <div class="help-faq-item" data-hfaq>
+            <div class="help-faq-q" onclick="toggleHelpFaq(this)">What is the correct format for the /api/ai generate endpoint? <span class="help-faq-chevron">▾</span></div>
+            <div class="help-faq-a">
+              <pre style="background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:12px;font-size:11.5px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:10px 0;font-family:monospace;line-height:1.6">POST https://www.meetrenzo.com/api/ai
+Header: X-API-Key: your_key_here
+Content-Type: application/json
+
+{
+  "action": "generate",
+  "record": {
+    "contact_name": "Jane Smith",
+    "company_name": "Acme Corp",
+    "contact_email": "jane@acme.com",
+    "context_notes": "Contract expires Jan 2027. Include your name, role, company, and any relevant context here."
+  },
+  "context": "Check in on relationship"
+}
+
+Response: { "draft": "Generated email text..." }</pre>
+              <p><strong>Important:</strong> Include all fields populated. If fields are empty, the API responds conversationally instead of generating a message. The more context in <code>context_notes</code>, the more personalized the output.</p>
+            </div>
+          </div>
+          <div class="help-faq-item" data-hfaq>
             <div class="help-faq-q" onclick="toggleHelpFaq(this)">Can I sync contacts automatically? <span class="help-faq-chevron">▾</span></div>
             <div class="help-faq-a"><p>Manual on-demand sync is available from the Connections page — click "Sync Contacts" to pull fresh data from your connected systems. Fully automated scheduled syncs are on the roadmap. For now, you can trigger syncs manually whenever you want to refresh your contact list.</p></div>
           </div>
@@ -3673,26 +3695,41 @@ function copyApiKey(){
 }
 
 async function openEmbedKit(){
-  // Fetch first API key to pre-fill the JS snippet
-  var apiKey='YOUR_API_KEY';
+  // Use cached API keys if available, otherwise fetch
+  var apiKey='YOUR_API_KEY_HERE';
   try{
-    const r=await fetch('/api/profile?action=list_api_keys',{headers:getAuthHeaders()});
-    if(r.ok){
-      const keys=await r.json();
-      if(keys&&keys.length>0) apiKey=keys[0].key||keys[0].prefix||apiKey;
+    var cached=_cache.apiKeys;
+    if(cached&&cached.length>0){
+      apiKey=cached[0].key||cached[0].prefix||apiKey;
+    } else {
+      const r=await fetch('/api/profile?action=list_api_keys',{headers:getAuthHeaders()});
+      if(r.ok){
+        const keys=await r.json();
+        if(keys&&keys.length>0){
+          _cache.apiKeys=keys;
+          apiKey=keys[0].key||keys[0].prefix||apiKey;
+        }
+      }
     }
   }catch(e){}
-  // Set JS section with actual key
+  // Set JS section with correct field names
   var jsSnippet='async function generateRenzoOutreach(contactData) {\n'
+    +'  // contactData = { contact_name, company_name, contact_email, context_notes }\n'
     +'  const response = await fetch(\'https://www.meetrenzo.com/api/ai\', {\n'
     +'    method: \'POST\',\n'
-    +'    headers: { \'Content-Type\': \'application/json\', \'X-API-Key\': \''+apiKey+'\' },\n'
-    +'    body: JSON.stringify({ action: \'generate\', contact: contactData, trigger: \'Check in on relationship\' })\n'
+    +'    headers: {\n'
+    +'      \'Content-Type\': \'application/json\',\n'
+    +'      \'X-API-Key\': \''+apiKey+'\'\n'
+    +'    },\n'
+    +'    body: JSON.stringify({\n'
+    +'      action: \'generate\',\n'
+    +'      record: contactData,\n'
+    +'      context: \'Check in on relationship\'\n'
+    +'    })\n'
     +'  });\n'
     +'  const data = await response.json();\n'
-    +'  return data.message;\n'
-    +'}\n'
-    +'// contactData = { name, company, email, notes }';
+    +'  return data.draft; // The generated email text\n'
+    +'}';
   var el=document.getElementById('ekJs');
   if(el) el.textContent=jsSnippet;
   document.getElementById('embedKitModal').classList.remove('hidden');
@@ -4200,7 +4237,8 @@ async function submitFeedback(){
       <button class="modal-close" onclick="document.getElementById('embedKitModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">
-      <p style="font-size:13px;color:var(--gray);margin-bottom:20px">Add a "Generate with Renzo" button to any internal tool or web app. Copy the snippets below.</p>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:8px">Add a "Generate with Renzo" button to any internal tool or web app. Copy the snippets below.</p>
+      <p style="font-size:12px;color:var(--gray);background:var(--gray-pale);border-radius:8px;padding:8px 12px;margin-bottom:16px">💡 Send all fields populated. The more context in <code style="font-size:11px">context_notes</code>, the better the output.</p>
 
       <!-- Section 1: Button HTML -->
       <div style="margin-bottom:20px">

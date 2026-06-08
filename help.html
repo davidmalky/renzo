@@ -270,6 +270,29 @@
     </div>
 
     <div class="faq-item" data-faq>
+      <div class="faq-q" onclick="toggleFaq(this)">What is the correct format for the /api/ai generate endpoint? <span class="faq-chevron">▾</span></div>
+      <div class="faq-a">
+        <pre style="background:#F5F0E8;border:1px solid #E2D9CC;border-radius:8px;padding:12px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:12px 0;font-family:monospace;line-height:1.6">POST https://www.meetrenzo.com/api/ai
+Header: X-API-Key: your_key_here
+Content-Type: application/json
+
+{
+  "action": "generate",
+  "record": {
+    "contact_name": "Jane Smith",
+    "company_name": "Acme Corp",
+    "contact_email": "jane@acme.com",
+    "context_notes": "Contract expires Jan 2027. Include your name, role, company, and any relevant context here."
+  },
+  "context": "Check in on relationship"
+}
+
+Response: { "draft": "Generated email text..." }</pre>
+        <p><strong>Important:</strong> Include all fields populated. If fields are empty, the API responds conversationally instead of generating a message. The more context in <code>context_notes</code>, the more personalized the output.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-faq>
       <div class="faq-q" onclick="toggleFaq(this)">Can I sync contacts automatically? <span class="faq-chevron">▾</span></div>
       <div class="faq-a"><p>Manual on-demand sync is available from the Connections page — click "Sync Contacts" to pull fresh data from your connected systems. Fully automated scheduled syncs are on the roadmap. For now, you can trigger syncs manually whenever you want to refresh your contact list.</p></div>
     </div>
