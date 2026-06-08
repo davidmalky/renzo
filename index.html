@@ -718,6 +718,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="int-name">Custom API</div>
           <div class="int-desc">Push contacts from any system using Renzo's REST API and API keys.</div>
           <button class="btn btn-ghost btn-sm" onclick="showView('settings')" style="margin-top:auto">Get API Key</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEmbedKit()" style="margin-top:8px">Get Embed Kit</button>
         </div>
 
       </div>
@@ -3671,6 +3672,40 @@ function copyApiKey(){
     .catch(()=>{const ta=document.createElement('textarea');ta.value=val;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('API key copied','success');});
 }
 
+async function openEmbedKit(){
+  // Fetch first API key to pre-fill the JS snippet
+  var apiKey='YOUR_API_KEY';
+  try{
+    const r=await fetch('/api/profile?action=list_api_keys',{headers:getAuthHeaders()});
+    if(r.ok){
+      const keys=await r.json();
+      if(keys&&keys.length>0) apiKey=keys[0].key||keys[0].prefix||apiKey;
+    }
+  }catch(e){}
+  // Set JS section with actual key
+  var jsSnippet='async function generateRenzoOutreach(contactData) {\n'
+    +'  const response = await fetch(\'https://www.meetrenzo.com/api/ai\', {\n'
+    +'    method: \'POST\',\n'
+    +'    headers: { \'Content-Type\': \'application/json\', \'X-API-Key\': \''+apiKey+'\' },\n'
+    +'    body: JSON.stringify({ action: \'generate\', contact: contactData, trigger: \'Check in on relationship\' })\n'
+    +'  });\n'
+    +'  const data = await response.json();\n'
+    +'  return data.message;\n'
+    +'}\n'
+    +'// contactData = { name, company, email, notes }';
+  var el=document.getElementById('ekJs');
+  if(el) el.textContent=jsSnippet;
+  document.getElementById('embedKitModal').classList.remove('hidden');
+}
+
+function copyEmbedSection(id){
+  var el=document.getElementById(id);
+  if(!el) return;
+  var text=el.textContent;
+  navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard','success'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Copied to clipboard','success');});
+}
+
 async function saveSettings(){
   const profileData={website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim()};
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
@@ -3984,11 +4019,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','embedKitModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','embedKitModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -4154,6 +4189,52 @@ async function submitFeedback(){
     <button class="tour-skip-btn" id="tourSkipBtn">Skip tour</button>
     <span class="tour-step-lbl" id="tourStepLbl"></span>
     <button class="tour-next-btn" id="tourNextBtn">Continue</button>
+  </div>
+</div>
+
+<!-- EMBED KIT MODAL -->
+<div class="modal-overlay hidden" id="embedKitModal" onclick="document.getElementById('embedKitModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <span>Embed Kit</span>
+      <button class="modal-close" onclick="document.getElementById('embedKitModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:20px">Add a "Generate with Renzo" button to any internal tool or web app. Copy the snippets below.</p>
+
+      <!-- Section 1: Button HTML -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:12px;font-weight:600;color:var(--dark)">Button HTML</label>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px" onclick="copyEmbedSection('ekBtn')">Copy</button>
+        </div>
+        <pre id="ekBtn" style="background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:0;font-family:monospace">&lt;button onclick="generateRenzoOutreach(contactData)" style="display:inline-flex;align-items:center;gap:8px;background:#1F6B47;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer"&gt;
+  &lt;svg width="18" height="18" viewBox="0 0 32 32" fill="none"&gt;&lt;rect width="32" height="32" rx="6" fill="white" fill-opacity="0.15"/&gt;&lt;text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="Georgia,serif" font-size="19" font-weight="700" fill="white"&gt;R&lt;/text&gt;&lt;/svg&gt;
+  Generate with Renzo
+&lt;/button&gt;</pre>
+      </div>
+
+      <!-- Section 2: JavaScript -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:12px;font-weight:600;color:var(--dark)">JavaScript</label>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px" onclick="copyEmbedSection('ekJs')">Copy</button>
+        </div>
+        <pre id="ekJs" style="background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:0;font-family:monospace"></pre>
+      </div>
+
+      <!-- Section 3: Logo SVG -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:12px;font-weight:600;color:var(--dark)">Renzo Logo SVG</label>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px" onclick="copyEmbedSection('ekSvg')">Copy</button>
+        </div>
+        <pre id="ekSvg" style="background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:0;font-family:monospace">&lt;svg width="24" height="24" viewBox="0 0 32 32" fill="none"&gt;
+  &lt;rect width="32" height="32" rx="6" fill="#1F6B47"/&gt;
+  &lt;text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="Georgia,serif" font-size="19" font-weight="700" fill="white"&gt;R&lt;/text&gt;
+&lt;/svg&gt;</pre>
+      </div>
+    </div>
   </div>
 </div>
 
