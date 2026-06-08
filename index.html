@@ -3469,7 +3469,13 @@ async function connectSalesforce(){
           const sr = await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'salesforce_sync'})});
           const sd = await sr.json();
           if(sd.success){
-            toast('Synced '+sd.synced+' contacts from Salesforce','success');
+            if(sd.synced === 0){
+              toast('Salesforce connected — no new contacts to sync','success');
+            } else if(sd.errors && sd.errors.length > 0){
+              toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped','');
+            } else {
+              toast('Synced '+sd.synced+' contacts from Salesforce','success');
+            }
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
             localStorage.setItem(connKey,JSON.stringify(conns));
             await getContacts();
@@ -3963,7 +3969,13 @@ document.addEventListener('keydown',function(e){
             body:JSON.stringify({action:'salesforce_sync'})});
           var sd=await sr.json();
           if(sd.success){
-            toast('Synced '+sd.synced+' contacts from Salesforce','success');
+            if(sd.synced===0){
+              toast('Salesforce connected — no new contacts to sync','success');
+            } else if(sd.errors&&sd.errors.length>0){
+              toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped','');
+            } else {
+              toast('Synced '+sd.synced+' contacts from Salesforce','success');
+            }
             var connKey=profileKey('renzo_crm_connections');
             var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
@@ -4014,7 +4026,7 @@ async function submitFeedback(){
 </div>
 
 <!-- BILLING HISTORY MODAL -->
-<div id="billingHistoryModal" class="modal-overlay hidden" style="z-index:3900">
+<div id="billingHistoryModal" class="modal-overlay hidden" style="z-index:3900" onclick="document.getElementById('billingHistoryModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Billing History</h2>
