@@ -3365,6 +3365,19 @@ function renderConnectionsView(){
   var key=profileKey('renzo_crm_connections');
   var conns={};
   try{conns=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  // Also live-check Salesforce status and update tile if connected server-side but not in localStorage
+  fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()}).then(function(r){return r.json();}).then(function(d){
+    if(d.connected && !conns['salesforce']){
+      conns['salesforce']={lastSync:null,count:0};
+      localStorage.setItem(key,JSON.stringify(conns));
+      renderConnectionsView();
+    } else if(!d.connected && conns['salesforce']){
+      // Server says not connected — clear stale local state
+      delete conns['salesforce'];
+      localStorage.setItem(key,JSON.stringify(conns));
+      renderConnectionsView();
+    }
+  }).catch(function(){});
   var providers=Object.keys(conns);
   var section=document.getElementById('connectedSection');
   var row=document.getElementById('connectedRow');
@@ -3423,24 +3436,40 @@ async function connectSalesforce(){
   if(!uid){ toast('Please log in first','error'); return; }
   const oauthUrl = '/api/contacts?action=salesforce_oauth_start&userId='+encodeURIComponent(uid);
   const popup = window.open(oauthUrl, 'salesforce_oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
-  if(!popup){ toast('Please allow popups for this site','error'); return; }
-  // Give it time to load before polling
-  await new Promise(r => setTimeout(r, 2000));
+  if(!popup){ toast('Please allow popups for this site to connect Salesforce','error'); return; }
+
   const poll = setInterval(async()=>{
-    try{
-      if(popup.closed){
-        clearInterval(poll);
-        await new Promise(r => setTimeout(r, 500));
-        const r = await fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()});
-        const d = await r.json();
-        if(d.connected){
-          toast('Salesforce connected! Syncing...','success');
+    if(popup.closed){
+      clearInterval(poll);
+      // Wait 3s for the OAuth callback to finish writing tokens to DB
+      toast('Verifying connection…','');
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Retry up to 3 times with 2s gaps
+      let connected = false;
+      for(let attempt = 0; attempt < 3; attempt++){
+        try{
+          const r = await fetch('/api/contacts?action=salesforce_status',{headers:getAuthHeaders()});
+          const d = await r.json();
+          if(d.connected){ connected = true; break; }
+        }catch(e){}
+        if(attempt < 2) await new Promise(r => setTimeout(r, 2000));
+      }
+
+      if(connected){
+        // Mark connected in localStorage so renderConnectionsView shows the tile immediately
+        var connKey=profileKey('renzo_crm_connections');
+        var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+        conns['salesforce']={lastSync:new Date().toISOString(),count:0};
+        localStorage.setItem(connKey,JSON.stringify(conns));
+        renderConnectionsView();
+        toast('Salesforce connected! Syncing contacts…','success');
+        // Sync contacts
+        try{
           const sr = await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'salesforce_sync'})});
           const sd = await sr.json();
           if(sd.success){
-            toast('Synced '+sd.synced+' contacts','success');
-            var connKey=profileKey('renzo_crm_connections');
-            var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+            toast('Synced '+sd.synced+' contacts from Salesforce','success');
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
             localStorage.setItem(connKey,JSON.stringify(conns));
             await getContacts();
@@ -3449,11 +3478,11 @@ async function connectSalesforce(){
           } else {
             toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');
           }
-        } else {
-          toast('Salesforce not connected — please try again','error');
-        }
+        }catch(e){ toast('Sync error: '+e.message,'error'); }
+      } else {
+        toast('Could not verify Salesforce connection — please try again','error');
       }
-    }catch(e){ clearInterval(poll); console.error('SF OAuth poll error:', e); }
+    }
   },1000);
 }
 
