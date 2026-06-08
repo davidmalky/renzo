@@ -293,14 +293,34 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .help-faq-a code{background:var(--gray-pale);padding:1px 5px;border-radius:3px;font-size:12px}
 .help-faq-item.open .help-faq-a{display:block}
 .help-search-empty{text-align:center;padding:40px 0;color:var(--gray);font-size:14px;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Integrations directory */
+.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.int-tile{background:var(--white);border:1px solid var(--gray-light);border-radius:14px;padding:22px 20px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .15s}
+.int-tile:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.int-tile.coming-soon{opacity:.5}
+.int-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.int-name{font-weight:700;font-size:14px;color:var(--dark)}
+.int-desc{font-size:12px;color:var(--gray);line-height:1.5;flex:1}
+.int-badge-connected{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--green);background:var(--green-pale);padding:4px 10px;border-radius:20px}
+.connected-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+.connected-tile{background:var(--white);border:1.5px solid rgba(31,107,71,.25);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:14px;min-width:220px}
 </style>
 </head>
 <body>
 
 <div class="toast-container" id="toastCont"></div>
 
+<!-- LOADING SCREEN (shown while session restore runs) -->
+<div id="loadingScreen" style="position:fixed;inset:0;background:#f5f0eb;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="text-align:center">
+    <div style="font-family:'DM Serif Display',serif;font-size:28px;color:#1F6B47;margin-bottom:16px">Renzo</div>
+    <div style="width:32px;height:32px;border:3px solid #e0dbd3;border-top-color:#1F6B47;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto"></div>
+  </div>
+</div>
+
 <!-- LOGIN -->
-<div id="loginView">
+<div id="loginView" style="display:none">
   <div class="login-card">
     <div id="loginForm">
       <div class="login-logo">Renz<em style="font-style:normal;color:var(--green-mid)">o</em></div>
@@ -599,134 +619,102 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <!-- CONNECTIONS -->
     <div id="view-connections" class="view hidden">
       <div class="view-header"><h1 class="view-title">Connections</h1></div>
-      <p style="color:var(--gray);font-size:14px;margin-bottom:24px;max-width:600px;line-height:1.6">Connect Renzo to your existing systems. Renzo reads contact and relationship data from these sources and works alongside them — it doesn't replace them.</p>
+      <p style="color:var(--gray);font-size:14px;margin-bottom:28px;max-width:600px;line-height:1.6">Connect Renzo to your existing tools. Renzo reads and syncs contact data from these sources — it works alongside your CRM, not as a replacement.</p>
 
-      <div class="card" style="padding:24px;margin-bottom:28px;max-width:680px">
-        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Sync Contacts</div>
-        <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Pull contacts directly from your connected systems into Renzo. Data syncs on demand — run it whenever you want fresh data.</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="syncFromCSV()">Import CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="openCrmConnect('salesforce')">Sync Salesforce</button>
-          <button class="btn btn-ghost btn-sm" onclick="openCrmConnect('hubspot')">Sync HubSpot</button>
-          <button class="btn btn-ghost btn-sm" onclick="toast('QuickBooks sync coming soon','')">Sync QuickBooks</button>
-        </div>
+      <!-- CONNECTED SECTION — only shown when at least one integration has been synced -->
+      <div id="connectedSection" class="hidden" style="margin-bottom:32px">
+        <div style="font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:14px">Connected</div>
+        <div class="connected-row" id="connectedRow"></div>
       </div>
 
-      <!-- INTEGRATION CARDS -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px">
+      <!-- SEARCH -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;max-width:420px">
+        <input class="search-input" style="flex:1" type="text" id="integrationsSearch" placeholder="Search integrations…" oninput="filterIntegrations(this.value)" autocomplete="off">
+      </div>
 
-        <!-- CSV / Universal -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:var(--green-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📄</div>
-            <div><div style="font-weight:700;font-size:15px">Any System (CSV Export)</div><div style="font-size:12px;color:var(--gray)">Universal — works with everything</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Export contacts from any CRM, ERP, or spreadsheet as a CSV file and import directly into Renzo. Works with Salesforce, HubSpot, QuickBooks, Excel, Google Sheets — anything.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to connect:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>Open your CRM or spreadsheet</li>
-            <li>Export contacts to CSV (File → Export → CSV)</li>
-            <li>Go to Contacts → Import CSV in Renzo</li>
-            <li>Renzo auto-detects your columns and imports</li>
-          </ol>
-          <button class="btn btn-primary btn-sm" onclick="showView('contacts')">Go to Import CSV</button>
+      <!-- INTEGRATIONS GRID -->
+      <div class="int-grid" id="integrationsGrid">
+
+        <!-- CSV / Excel -->
+        <div class="int-tile" data-int-name="csv excel spreadsheet universal import">
+          <div class="int-icon" style="background:#F0FDF4">📄</div>
+          <div class="int-name">CSV / Excel</div>
+          <div class="int-desc">Import contacts from any spreadsheet, CRM export, or database. Works with everything.</div>
+          <button class="btn btn-primary btn-sm" onclick="syncFromCSV()" style="margin-top:auto">Import</button>
         </div>
 
         <!-- Salesforce -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#E8F4FD;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">☁</div>
-            <div><div style="font-weight:700;font-size:15px">Salesforce</div><div style="font-size:12px;color:var(--gray)">CRM — Contacts, Accounts, Activities</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Export your Salesforce contacts with account data, activity history, and contract information into Renzo.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from Salesforce:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>In Salesforce: Reports → New Report → Contacts &amp; Accounts</li>
-            <li>Add columns: Name, Account Name, Email, Phone, Last Activity Date, Contract End Date, Account Revenue</li>
-            <li>Run report → Export → CSV</li>
-            <li>Import the CSV into Renzo</li>
-          </ol>
-          <div id="sfStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Status: Using CSV export</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('salesforce')">Connect Salesforce</button>
-            <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('salesforce')">View Setup Guide</button>
+        <div class="int-tile" data-int-name="salesforce crm contacts accounts" id="int-tile-salesforce">
+          <div class="int-icon" style="background:#E8F4FD">☁</div>
+          <div class="int-name">Salesforce</div>
+          <div class="int-desc">Sync contacts and account data directly from Salesforce CRM.</div>
+          <div id="int-action-salesforce" style="margin-top:auto">
+            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('salesforce')">Connect</button>
           </div>
         </div>
 
         <!-- HubSpot -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#FFF0E6;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🔶</div>
-            <div><div style="font-weight:700;font-size:15px">HubSpot</div><div style="font-size:12px;color:var(--gray)">CRM — Contacts, Deals, Companies</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Pull your HubSpot contacts with company data, deal stage, and last contact date into Renzo.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from HubSpot:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>HubSpot → Contacts → All Contacts</li>
-            <li>Click Actions → Export</li>
-            <li>Select: Email, Company, Last Contacted, Deal Stage, Phone</li>
-            <li>Download CSV → Import into Renzo</li>
-          </ol>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('hubspot')">Connect HubSpot</button>
-            <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('hubspot')">View Setup Guide</button>
+        <div class="int-tile" data-int-name="hubspot crm contacts deals companies marketing" id="int-tile-hubspot">
+          <div class="int-icon" style="background:#FFF0E6">🔶</div>
+          <div class="int-name">HubSpot</div>
+          <div class="int-desc">Pull contacts, companies, and deal data from HubSpot CRM.</div>
+          <div id="int-action-hubspot" style="margin-top:auto">
+            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('hubspot')">Connect</button>
           </div>
         </div>
 
-        <!-- QuickBooks -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#E8F5E9;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💚</div>
-            <div><div style="font-weight:700;font-size:15px">QuickBooks</div><div style="font-size:12px;color:var(--gray)">Accounting — Customers, Invoices</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Great for collections and invoice follow-up. Export customers with outstanding balances directly into Renzo.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from QuickBooks:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>Reports → Accounts Receivable Aging Detail</li>
-            <li>Customize: add Customer Name, Email, Balance, Due Date</li>
-            <li>Export to Excel → Save as CSV</li>
-            <li>Import into Renzo — set your role to "Collections" for smart prioritization</li>
-          </ol>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('quickbooks')">View Setup Guide</button>
+        <!-- QuickBooks — coming soon -->
+        <div class="int-tile coming-soon" data-int-name="quickbooks accounting invoices customers">
+          <div class="int-icon" style="background:#E8F5E9">💚</div>
+          <div class="int-name">QuickBooks</div>
+          <div class="int-desc">Import customers and invoice data for collections and billing follow-up.</div>
+          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
         </div>
 
-        <!-- VCS / Custom Systems -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#F3E8FF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">⚙</div>
-            <div><div style="font-weight:700;font-size:15px">Custom System / VCS</div><div style="font-size:12px;color:var(--gray)">Your own apps and databases</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">If you have a custom app like the Vendor Catalog Scheduler (VCS), you can embed Renzo directly or export data for import.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">Two ways to integrate:</div>
-          <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:16px">
-            <strong style="color:var(--dark)">Option 1 — CSV Export:</strong> Add an export button to your system that downloads contacts as CSV. Import into Renzo.<br><br>
-            <strong style="color:var(--dark)">Option 2 — Embed Renzo:</strong> Renzo can be embedded as an iframe or panel inside your custom app. Add this to any HTML page:<br>
-            <code style="display:block;background:var(--gray-pale);padding:8px 10px;border-radius:4px;margin-top:6px;font-size:11px;word-break:break-all">&lt;iframe src="https://renzo-beige.vercel.app" width="100%" height="700" frameborder="0"&gt;&lt;/iframe&gt;</code>
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('custom')">View Embed Guide</button>
+        <!-- Monday.com — coming soon -->
+        <div class="int-tile coming-soon" data-int-name="monday monday.com project management crm">
+          <div class="int-icon" style="background:#FFF0F7">📋</div>
+          <div class="int-name">Monday.com</div>
+          <div class="int-desc">Sync contacts and leads from Monday.com boards into Renzo.</div>
+          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
         </div>
 
-        <!-- Outlook / Gmail Sync -->
-        <div class="card" style="padding:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#EFF6FF;border-radius:10px;display:flex;align-items:center;justify-content:justify;font-size:20px">✉</div>
-            <div><div style="font-weight:700;font-size:15px">Email (Gmail / Outlook)</div><div style="font-size:12px;color:var(--gray)">Send outreach from your inbox</div></div>
-          </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Renzo opens email drafts directly in Gmail or Outlook web. Your messages go out from your own email — your signature, your sent folder, your reply-to.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">Setup:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>Go to Settings → Email Accounts</li>
-            <li>Add your Gmail or Outlook address with a label</li>
-            <li>Renzo detects the domain and opens the right email client</li>
-            <li>Gmail addresses → opens Gmail compose in browser<br>Outlook/Hotmail → opens Outlook web compose</li>
-          </ol>
-          <button class="btn btn-primary btn-sm" onclick="showView('settings')">Set Up Email Account</button>
+        <!-- Constant Contact — coming soon -->
+        <div class="int-tile coming-soon" data-int-name="constant contact email marketing list">
+          <div class="int-icon" style="background:#EFF6FF">📧</div>
+          <div class="int-name">Constant Contact</div>
+          <div class="int-desc">Import your email marketing contacts and subscriber lists.</div>
+          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
+        </div>
+
+        <!-- LinkedIn — coming soon -->
+        <div class="int-tile coming-soon" data-int-name="linkedin social connections network">
+          <div class="int-icon" style="background:#E8F0FB">💼</div>
+          <div class="int-name">LinkedIn</div>
+          <div class="int-desc">Import your LinkedIn connections for relationship outreach.</div>
+          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
+        </div>
+
+        <!-- Outlook — coming soon -->
+        <div class="int-tile coming-soon" data-int-name="outlook microsoft contacts calendar email">
+          <div class="int-icon" style="background:#EFF6FF">📮</div>
+          <div class="int-name">Outlook</div>
+          <div class="int-desc">Sync contacts from your Microsoft Outlook address book.</div>
+          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
+        </div>
+
+        <!-- Custom API -->
+        <div class="int-tile" data-int-name="api custom integration developer webhook">
+          <div class="int-icon" style="background:#F3E8FF">⚙</div>
+          <div class="int-name">Custom API</div>
+          <div class="int-desc">Push contacts from any system using Renzo's REST API and API keys.</div>
+          <button class="btn btn-ghost btn-sm" onclick="showView('settings')" style="margin-top:auto">Get API Key</button>
         </div>
 
       </div>
 
-      <!-- Integration detail panel -->
-      <div id="integrationDetail" class="hidden card" style="padding:28px;max-width:640px">
+      <!-- Integration detail panel (kept for setup guides) -->
+      <div id="integrationDetail" class="hidden card" style="padding:28px;max-width:640px;margin-bottom:32px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
           <h3 id="integDetailTitle" style="font-family:'DM Serif Display',serif;font-size:20px"></h3>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('integrationDetail').classList.add('hidden')">Close</button>
@@ -1736,7 +1724,7 @@ async function doLogin(){
     currentUser=data;
     await loadProfileData();
     await loadEmails();
-    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('loginView').style.display='none';
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
@@ -1777,7 +1765,7 @@ function doLogout(){
   currentUser=null;
   _cache={contacts:null,activity:null,queue:null,drafts:null,profile:null,rules:null,emails:null};
   document.getElementById('appView').classList.add('hidden');
-  document.getElementById('loginView').classList.remove('hidden');
+  document.getElementById('loginView').style.display='';
   document.getElementById('loginUser').value='';
   document.getElementById('loginPass').value='';
   showLogin();
@@ -1873,7 +1861,7 @@ async function doSignup(){
     currentUser=data;
     await loadProfileData();
     await loadEmails();
-    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('loginView').style.display='none';
     function proceedToApp(){
       document.getElementById('paymentModal').classList.add('hidden');
       document.getElementById('appView').classList.remove('hidden');
@@ -1989,6 +1977,7 @@ function showView(name){
   if(name==='drafts') renderDrafts();
   if(name==='activity') renderActivity();
   if(name==='settings') loadSettings();
+  if(name==='connections') renderConnectionsView();
   updateQueueBadge();
 }
 
@@ -3341,6 +3330,47 @@ function showIntegrationDetail(key){
   document.getElementById('integrationDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// CONNECTIONS VIEW
+function renderConnectionsView(){
+  var key=profileKey('renzo_crm_connections');
+  var conns={};
+  try{conns=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  var providers=Object.keys(conns);
+  var section=document.getElementById('connectedSection');
+  var row=document.getElementById('connectedRow');
+  if(!section||!row) return;
+  if(!providers.length){section.classList.add('hidden');return;}
+  section.classList.remove('hidden');
+  var ICONS={salesforce:'☁',hubspot:'🔶'};
+  var LABELS={salesforce:'Salesforce',hubspot:'HubSpot'};
+  row.innerHTML=providers.map(function(p){
+    var c=conns[p];
+    var dt=c.lastSync?new Date(c.lastSync).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+    return '<div class="connected-tile">'
+      +'<div style="font-size:22px">'+( ICONS[p]||'🔌')+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-weight:700;font-size:13px">'+esc(LABELS[p]||p)+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-top:2px">Last sync: '+dt+(c.count?' · '+c.count+' contacts':'')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>'
+      +'</div>';
+  }).join('');
+  // Update action areas in grid with "Connected ✓" badge
+  providers.forEach(function(p){
+    var el=document.getElementById('int-action-'+p);
+    if(el) el.innerHTML='<span class="int-badge-connected">✓ Connected</span>'
+      +'<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
+  });
+}
+
+function filterIntegrations(query){
+  var q=(query||'').toLowerCase().trim();
+  document.querySelectorAll('#integrationsGrid .int-tile').forEach(function(tile){
+    var name=(tile.getAttribute('data-int-name')||'').toLowerCase();
+    tile.style.display=(q===''||name.includes(q))?'':'none';
+  });
+}
+
 // CRM SYNC
 function openCrmConnect(provider){
   document.getElementById('crmModal').classList.remove('hidden');
@@ -3371,10 +3401,15 @@ async function runCrmSync(provider){
       body:JSON.stringify({action:'crm_sync',provider:provider,credentials:credentials})});
     const d=await r.json();
     if(d.success){
+      // Save connection state per profile
+      var connKey=profileKey('renzo_crm_connections');
+      var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(e){}
+      conns[provider]={lastSync:new Date().toISOString(),count:d.synced};
+      localStorage.setItem(connKey,JSON.stringify(conns));
       resultDiv.innerHTML='<div style="color:var(--green);font-size:22px;margin-bottom:8px">✓</div>'
         +'<div style="font-size:17px;font-weight:600;margin-bottom:6px">Synced '+d.synced+' contacts</div>'
         +'<div style="font-size:13px;color:var(--gray);margin-bottom:16px">'+(d.errors&&d.errors.length?d.errors.length+' records had errors':'All records imported successfully')+'</div>'
-        +'<button class="btn btn-primary" onclick="document.getElementById(\'crmModal\').classList.add(\'hidden\');getContacts().then(renderContacts)">Done</button>';
+        +'<button class="btn btn-primary" onclick="document.getElementById(\'crmModal\').classList.add(\'hidden\');getContacts().then(renderContacts);renderConnectionsView()">Done</button>';
       toast('Synced '+d.synced+' contacts from '+d.provider,'success');
     } else {
       resultDiv.innerHTML='<div style="color:var(--red);margin-bottom:12px">Connection failed: '+esc(d.error||'Unknown error')+'</div>'
@@ -3773,16 +3808,20 @@ document.addEventListener('keydown',function(e){
 
 // INIT
 (async()=>{
+  var loadingEl=document.getElementById('loadingScreen');
+  var loginEl=document.getElementById('loginView');
+  function revealLogin(){if(loginEl)loginEl.style.display='';if(loadingEl)loadingEl.style.display='none';}
   const token=sessionStorage.getItem('renzo_jwt');
-  if(!token) return;
+  if(!token){revealLogin();return;}
   try{
     const r=await fetch('/api/auth/validate',{headers:{'Authorization':'Bearer '+token}});
     const user=await r.json();
-    if(!user.valid){sessionStorage.removeItem('renzo_jwt');return;}
+    if(!user.valid){sessionStorage.removeItem('renzo_jwt');revealLogin();return;}
     currentUser=user;
     await loadProfileData();
     await loadEmails();
-    document.getElementById('loginView').classList.add('hidden');
+    if(loadingEl) loadingEl.style.display='none';
+    if(loginEl) loginEl.style.display='none';
     document.getElementById('appView').classList.remove('hidden');
     renderEmailAccounts();
     renderProfileSelector();
@@ -3791,7 +3830,7 @@ document.addEventListener('keydown',function(e){
     if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
-  }catch(e){sessionStorage.removeItem('renzo_jwt');}
+  }catch(e){sessionStorage.removeItem('renzo_jwt');revealLogin();}
 })();
 document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='tourSkipBtn') tourSkip();
