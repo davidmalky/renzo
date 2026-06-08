@@ -644,6 +644,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-primary btn-sm" onclick="syncFromCSV()" style="margin-top:auto">Import</button>
         </div>
 
+        <!-- VCS -->
+        <div class="int-tile" data-int-name="vcs vendor catalog scheduler internal sync">
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#1F6B47"/><text x="16" y="21" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">VCS</text></svg></div>
+          <div class="int-name">VCS</div>
+          <div class="int-desc">Sync contacts directly from the Vendor Catalog Scheduler.</div>
+          <button class="btn btn-primary btn-sm" onclick="syncVCS()" style="margin-top:auto">Sync VCS</button>
+        </div>
+
         <!-- Salesforce -->
         <div class="int-tile" data-int-name="salesforce crm contacts accounts" id="int-tile-salesforce">
           <div class="int-icon" style="background:#E8F4FD"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/salesforce.svg" width="28" height="28" style="filter:invert(42%) sepia(100%) saturate(500%) hue-rotate(170deg)" alt="Salesforce"></div>
@@ -3490,6 +3498,32 @@ async function connectSalesforce(){
       }
     }
   },1000);
+}
+
+// VCS SYNC
+async function syncVCS(){
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Syncing...';
+  try{
+    const r = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({action:'vcs_sync'})
+    });
+    const d = await r.json();
+    if(d.success){
+      toast('VCS sync complete — '+d.synced+' contacts updated','success');
+      await getContacts();
+      renderContacts();
+    } else {
+      toast('VCS sync failed: '+(d.error||'unknown error'),'error');
+    }
+  }catch(e){
+    toast('VCS sync error: '+e.message,'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sync VCS';
 }
 
 // CRM SYNC
