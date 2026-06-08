@@ -491,7 +491,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
-          <button class="sb-dd-btn" onclick="event.stopPropagation();window.open('mailto:support@meetrenzo.com?subject=Renzo%20Feedback','_blank');toggleAvatarDD()">Send Feedback</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();openFeedbackModal()">Send Feedback</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();tourForce()">Replay Tour</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
@@ -638,7 +638,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- CSV / Excel -->
         <div class="int-tile" data-int-name="csv excel spreadsheet universal import">
-          <div class="int-icon" style="background:#F0FDF4">📄</div>
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#217346"/><rect x="8" y="8" width="6" height="6" fill="white" opacity=".9"/><rect x="18" y="8" width="6" height="6" fill="white" opacity=".9"/><rect x="8" y="18" width="6" height="6" fill="white" opacity=".9"/><rect x="18" y="18" width="6" height="6" fill="white" opacity=".9"/></svg></div>
           <div class="int-name">CSV / Excel</div>
           <div class="int-desc">Import contacts from any spreadsheet, CRM export, or database. Works with everything.</div>
           <button class="btn btn-primary btn-sm" onclick="syncFromCSV()" style="margin-top:auto">Import</button>
@@ -674,7 +674,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Monday.com — coming soon -->
         <div class="int-tile coming-soon" data-int-name="monday monday.com project management crm">
-          <div class="int-icon" style="background:#FFF0F7"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/mondaydotcom.svg" width="28" height="28" style="filter:invert(35%) sepia(100%) saturate(300%) hue-rotate(230deg)" alt="Monday.com"></div>
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="8" cy="16" r="6" fill="#FF3D57"/><circle cx="16" cy="16" r="6" fill="#FFCB00"/><circle cx="24" cy="16" r="6" fill="#00CA72"/></svg></div>
           <div class="int-name">Monday.com</div>
           <div class="int-desc">Sync contacts and leads from Monday.com boards into Renzo.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -682,7 +682,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Constant Contact — coming soon -->
         <div class="int-tile coming-soon" data-int-name="constant contact email marketing list">
-          <div class="int-icon" style="background:#EFF6FF"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/constantcontact.svg" width="28" height="28" style="filter:invert(30%) sepia(80%) saturate(400%) hue-rotate(200deg)" alt="Constant Contact"></div>
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#1A73E8"/><text x="16" y="21" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">CC</text></svg></div>
           <div class="int-name">Constant Contact</div>
           <div class="int-desc">Import your email marketing contacts and subscriber lists.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -690,7 +690,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- LinkedIn — coming soon -->
         <div class="int-tile coming-soon" data-int-name="linkedin social connections network">
-          <div class="int-icon" style="background:#E8F0FB">💼</div>
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></div>
           <div class="int-name">LinkedIn</div>
           <div class="int-desc">Import your LinkedIn connections for relationship outreach.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -698,7 +698,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
         <!-- Outlook — coming soon -->
         <div class="int-tile coming-soon" data-int-name="outlook microsoft contacts calendar email">
-          <div class="int-icon" style="background:#EFF6FF">📮</div>
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#0078D4"/><path d="M6 10l10 7 10-7" stroke="white" stroke-width="1.5" fill="none"/><rect x="6" y="10" width="20" height="13" rx="1" fill="none" stroke="white" stroke-width="1.5"/></svg></div>
           <div class="int-name">Outlook</div>
           <div class="int-desc">Sync contacts from your Microsoft Outlook address book.</div>
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
@@ -1012,7 +1012,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- CRM CONNECT MODAL -->
 <div class="modal-overlay hidden" id="crmModal">
-  <div class="modal-box" style="max-width:480px">
+  <div class="modal-box" style="max-width:480px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="crmModalTitle">Connect CRM</h2>
       <button class="modal-close" onclick="document.getElementById('crmModal').classList.add('hidden')">×</button>
@@ -1053,7 +1053,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- CONTACT MODAL -->
 <div id="ctModal" class="modal-overlay hidden">
-  <div class="modal-box">
+  <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="ctModalTitle">Add Contact</h2>
       <button class="modal-close" id="ctModalClose">x</button>
@@ -1112,7 +1112,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- AI MODAL -->
 <div id="aiModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:540px">
+  <div class="modal-box" style="max-width:540px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="aiTitle">Generate Message</h2>
       <button class="modal-close" id="aiClose">x</button>
@@ -1163,7 +1163,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- CONTACT HISTORY MODAL -->
 <div id="histModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:620px">
+  <div class="modal-box" style="max-width:620px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="histTitle">Contact History</h2>
       <button class="modal-close" id="histClose">x</button>
@@ -1180,7 +1180,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- DELETE CONFIRM -->
 <div id="delModal" class="modal-overlay hidden">
-  <div class="modal-box modal-sm">
+  <div class="modal-box modal-sm" onclick="event.stopPropagation()">
     <h3 style="margin-bottom:10px;font-size:18px">Delete Contact?</h3>
     <p style="color:var(--gray);font-size:14px;margin-bottom:20px">Permanently delete <strong id="delName"></strong> and all their activity. Cannot be undone.</p>
     <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -1192,7 +1192,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- CSV MODAL -->
 <div id="csvModal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:640px">
+  <div class="modal-box" style="max-width:640px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Import CSV</h2>
       <button class="modal-close" id="csvClose">x</button>
@@ -1210,7 +1210,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 
 <!-- STAT DETAIL MODAL -->
 <div id="statModal" class="modal-overlay hidden">
-  <div class="modal-box modal-sm">
+  <div class="modal-box modal-sm" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="statModalTitle">Details</h2>
       <button class="modal-close" onclick="document.getElementById('statModal').classList.add('hidden')">x</button>
@@ -3597,8 +3597,8 @@ function renderEmailAccounts(){
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Label / nickname</label><input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="e.g. Work" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'</div>'
         +'<div style="display:flex;gap:6px">'
-        +'<button class="btn btn-sm" style="background:var(--green);color:#fff;padding:6px 14px;font-size:12px" onclick="saveEmailEdit('+i+')">Save</button>'
-        +'<button class="btn btn-ghost btn-sm" style="font-size:12px" onclick="hideEmailEdit('+i+')">Cancel</button>'
+        +'<button class="btn btn-primary btn-sm" style="padding:6px 14px;font-size:13px" onclick="saveEmailEdit('+i+')">Save</button>'
+        +'<button class="btn btn-ghost btn-sm" style="padding:6px 14px;font-size:13px" onclick="hideEmailEdit('+i+')">Cancel</button>'
         +'</div>'
         +'</div>'
         +'</div>').join('')
@@ -3881,11 +3881,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -3938,11 +3938,29 @@ document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='tourSkipBtn') tourSkip();
   if(e.target&&e.target.id==='tourNextBtn') tourNext();
 });
+
+function openFeedbackModal(){
+  toggleAvatarDD();
+  document.getElementById('fbEmail').value = currentUser?.email || '';
+  document.getElementById('fbSubject').value = '';
+  document.getElementById('fbMessage').value = '';
+  document.getElementById('feedbackModal').classList.remove('hidden');
+}
+
+async function submitFeedback(){
+  const email = document.getElementById('fbEmail').value;
+  const subject = document.getElementById('fbSubject').value.trim();
+  const message = document.getElementById('fbMessage').value.trim();
+  if(!subject || !message){ toast('Please fill in subject and message','error'); return; }
+  window.open(`mailto:support@meetrenzo.com?subject=${encodeURIComponent('[Renzo Feedback] '+subject)}&body=${encodeURIComponent('From: '+email+'\n\n'+message)}`,'_blank');
+  document.getElementById('feedbackModal').classList.add('hidden');
+  toast('Thank you for your feedback!','success');
+}
 </script>
 
 <!-- BATCH CONFIRM MODAL -->
 <div id="batchConfirmModal" class="modal-overlay hidden" style="z-index:2500">
-  <div class="modal-box modal-sm">
+  <div class="modal-box modal-sm" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Confirm Batch</h2>
     </div>
@@ -3969,7 +3987,7 @@ document.addEventListener('click',function(e){
 
 <!-- OUT OF CREDITS MODAL -->
 <div id="creditsModal" class="modal-overlay hidden" style="z-index:4000">
-  <div class="modal-box" style="max-width:420px;text-align:center">
+  <div class="modal-box" style="max-width:420px;text-align:center" onclick="event.stopPropagation()">
     <div style="font-size:40px;margin-bottom:12px">⚡</div>
     <h2 style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:8px">Out of Credits</h2>
     <p style="color:var(--gray);font-size:14px;margin-bottom:24px">You've used all your credits. Purchase more to continue generating messages.</p>
@@ -3984,7 +4002,7 @@ document.addEventListener('click',function(e){
 
 <!-- PAYMENT MODAL -->
 <div id="paymentModal" class="modal-overlay hidden" style="z-index:4100">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal-box" style="max-width:420px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title" id="payTitle">Purchase Credits</h2>
       <button class="modal-close" onclick="document.getElementById('paymentModal').classList.add('hidden')">×</button>
@@ -4021,6 +4039,31 @@ document.addEventListener('click',function(e){
     <button class="tour-skip-btn" id="tourSkipBtn">Skip tour</button>
     <span class="tour-step-lbl" id="tourStepLbl"></span>
     <button class="tour-next-btn" id="tourNextBtn">Continue</button>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay hidden" id="feedbackModal" onclick="document.getElementById('feedbackModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <span>Send Feedback</span>
+      <button class="modal-close" onclick="document.getElementById('feedbackModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:20px">
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Your email</label>
+        <input type="email" id="fbEmail" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--gray-pale);color:var(--gray);cursor:not-allowed" readonly>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Subject</label>
+        <input type="text" id="fbSubject" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none" placeholder="Feature request, bug report, general feedback...">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Message</label>
+        <textarea id="fbMessage" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;resize:vertical;font-family:inherit" placeholder="Tell us what's on your mind..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitFeedback()">Send Feedback</button>
+    </div>
   </div>
 </div>
 
