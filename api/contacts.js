@@ -230,3 +230,26 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+async function handleSfOAuthCallback(req, res) {
+  const { code, state: userId } = req.query;
+  if (!code) return res.status(400).send('No authorization code received from Salesforce');
+  const clientId = process.env.SALESFORCE_CLIENT_ID;
+  const clientSecret = process.env.SALESFORCE_CLIENT_SECRET;
+  const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
+  try {
+    const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri })
+    });
+    const tokens = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.access_token) {
+      return res.status(400).send('Salesforce auth failed: ' + (tokens.error_description || tokens.error || 'Unknown error'));
+    }
+    await supabase.from('integrations').upsert({ user_id: userId, provider: 'salesforce', access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, instance_url: tokens.instance_url, connected: true, connected_at: new Date().toISOString() }, { onConflict: 'user_id,provider' });
+    return res.redirect('https://www.meetrenzo.com/app?sf_connected=1');
+  } catch(e) {
+    return res.status(500).send('OAuth error: ' + e.message);
+  }
+}
