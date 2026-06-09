@@ -162,12 +162,49 @@ async function handleConfirmCredits(req, body, res) {
 
   const creditsToAdd = parseInt(pi.metadata?.creditsToAdd || '0', 10);
   const packType = pi.metadata?.packType;
+  const pack = PACKS[packType];
+
+  // Fetch user email for receipt
+  const { data: userRow } = await supabase.from('users').select('email').eq('id', userId).single();
+  const userEmail = userRow?.email;
+
+  const packLabels = {
+    signup:  'Account Activation',
+    starter: 'Starter Pack (100 credits)',
+    growth:  'Growth Pack (500 credits)',
+    pro:     'Pro Pack (1,500 credits)'
+  };
 
   if (packType === 'signup') {
     // Card verification only — mark account verified, award no credits
     await supabase.from('billing')
       .upsert({ user_id: userId, first_pack_purchased: true, updated_at: new Date().toISOString() },
                { onConflict: 'user_id' });
+
+    // Send activation receipt
+    if (userEmail) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Renzo <noreply@meetrenzo.com>',
+          to: userEmail,
+          subject: 'Your Renzo receipt',
+          html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1a1a1a">
+            <div style="font-family:Georgia,serif;font-size:28px;color:#1F6B47;margin-bottom:8px">Renzo</div>
+            <h2 style="font-weight:600;font-size:20px;margin:0 0 16px">Payment confirmed</h2>
+            <div style="background:#f5f0eb;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#666">Item</span><span>${packLabels[packType]}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#666">Amount charged</span><span>$${((pack?.amount || 99) / 100).toFixed(2)}</span></div>
+            </div>
+            <p style="color:#444;line-height:1.6">Your account is now verified and ready to use.</p>
+            <a href="https://www.meetrenzo.com/app" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1F6B47;color:white;text-decoration:none;border-radius:8px;font-weight:600">Open Renzo</a>
+            <p style="margin-top:32px;font-size:12px;color:#999">Questions? Contact <a href="mailto:support@meetrenzo.com" style="color:#1F6B47">support@meetrenzo.com</a></p>
+          </div>`
+        })
+      }).catch(() => {});
+    }
+
     return res.status(200).json({ success: true, credits: 0,
       message: 'Card verified — you\'re ready to purchase credits' });
   }
@@ -190,6 +227,30 @@ async function handleConfirmCredits(req, body, res) {
       pack_type: packType,
       stripe_payment_intent_id: paymentIntentId
     });
+
+    // Send credit purchase receipt
+    if (userEmail) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Renzo <noreply@meetrenzo.com>',
+          to: userEmail,
+          subject: 'Your Renzo receipt',
+          html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1a1a1a">
+            <div style="font-family:Georgia,serif;font-size:28px;color:#1F6B47;margin-bottom:8px">Renzo</div>
+            <h2 style="font-weight:600;font-size:20px;margin:0 0 16px">Payment confirmed</h2>
+            <div style="background:#f5f0eb;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#666">Item</span><span>${packLabels[packType] || packType}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#666">Amount charged</span><span>$${((pack?.amount || pi.amount) / 100).toFixed(2)}</span></div>
+            </div>
+            <p style="color:#444;line-height:1.6">${creditsToAdd} credits have been added to your account.</p>
+            <a href="https://www.meetrenzo.com/app" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1F6B47;color:white;text-decoration:none;border-radius:8px;font-weight:600">Open Renzo</a>
+            <p style="margin-top:32px;font-size:12px;color:#999">Questions? Contact <a href="mailto:support@meetrenzo.com" style="color:#1F6B47">support@meetrenzo.com</a></p>
+          </div>`
+        })
+      }).catch(() => {});
+    }
   }
 
   return res.status(200).json({ success: true, credits: creditsToAdd });
