@@ -277,6 +277,33 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .tour-dot.active{background:#2d5a3d}
 @media(max-width:768px){#tourCard{left:16px!important;right:16px!important;bottom:76px!important;top:auto!important;transform:none!important;max-width:none;width:auto}}
 @media(max-width:768px){.modal-overlay{padding-bottom:70px}.modal-box{max-height:calc(92vh - 70px)}}
+
+/* ── 480px narrow-screen refinements ───────────────────────────────────────── */
+@media(max-width:480px){
+  /* Tighter view padding */
+  .view{padding:12px 10px}
+  /* Stats: stay 2-per-row (inherited), force equal height */
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-card{padding:16px 14px}
+  /* Contacts card layout — tighten further */
+  #view-contacts td:nth-child(7),#view-contacts td:nth-child(8){flex-shrink:0}
+  /* Batch view — textarea full-width, button full-width below */
+  #view-batch .card{padding:16px}
+  .batch-prompt-area{font-size:14px;min-height:90px}
+  #runBatchBtn{width:100%;margin-top:8px}
+  /* AI modal — stack action buttons vertically */
+  .modal-box{padding:20px 16px}
+  .modal-actions{flex-direction:column;gap:8px;align-items:stretch}
+  .modal-actions .btn{width:100%;text-align:center;justify-content:center}
+  /* AI message textarea — bigger min-height for readability */
+  .msg-textarea{min-height:160px;font-size:14px}
+  /* Refine input row — stack */
+  #aiRefineBox{flex-direction:column}
+  #aiRefineBox input{width:100%}
+  /* Login card */
+  .login-card{padding:36px 24px}
+}
+
 /* Help view FAQ */
 .help-faq-section{margin-bottom:32px}
 .help-faq-section-title{font-family:'DM Serif Display',serif;font-size:17px;font-weight:600;color:var(--dark);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--gray-pale)}
@@ -3477,8 +3504,11 @@ function renderConnectionsView(){
     var disconnectBtn = p==='salesforce'
       ? '<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:11px;margin-top:4px" onclick="disconnectSalesforce()">Disconnect</button>'
       : '';
+    var syncBtn = p==='salesforce'
+      ? '<button id="sfSyncAgainBtn" class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncSalesforceAgain(this)">Sync Again</button>'
+      : '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
     el.innerHTML='<span class="int-badge-connected">✓ Connected</span>'
-      +'<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>'
+      +syncBtn
       +disconnectBtn;
   });
 }
@@ -3567,6 +3597,32 @@ async function connectSalesforce(){
       }
     }
   },1000);
+}
+
+// SALESFORCE SYNC AGAIN (from connected tile)
+async function syncSalesforceAgain(btn){
+  if(btn){ btn.disabled=true; btn.textContent='Syncing...'; }
+  try{
+    const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'salesforce_sync'})});
+    const sd=await sr.json();
+    if(sd.success){
+      var connKey=profileKey('renzo_crm_connections');
+      var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+      conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
+      localStorage.setItem(connKey,JSON.stringify(conns));
+      renderConnectionsView();
+      if(sd.synced===0){ toast('Salesforce sync complete — no new contacts','success'); }
+      else if(sd.errors&&sd.errors.length>0){ toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped',''); }
+      else { toast('Synced '+sd.synced+' contacts from Salesforce','success'); }
+      await getContacts(); renderContacts();
+    } else {
+      toast('Sync failed: '+(sd.error||'unknown error'),'error');
+      if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
+    }
+  }catch(e){
+    toast('Sync error: '+e.message,'error');
+    if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
+  }
 }
 
 // VCS SYNC

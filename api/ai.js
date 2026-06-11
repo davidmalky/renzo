@@ -41,7 +41,21 @@ async function deductCredits(userId, tokensUsed, model) {
   return { creditsDeducted: creditsToDeduct, creditsRemaining: updated.credits };
 }
 
-// Build a structured prompt from a canonical relationship record
+const GENERATE_SYSTEM_PROMPT = `You are an expert relationship outreach writer. Your job is to write warm, personalized, professional emails that sound like they were written by a real person — not a template, not AI.
+
+Rules:
+- Write in first person from the sender's perspective
+- Keep it to 3-4 short paragraphs maximum
+- Reference specific context from the contact's data (contract dates, last contact, relationship notes)
+- Sound warm and human — like a colleague checking in, not a sales pitch
+- Never use phrases like "I hope this email finds you well" or "I wanted to reach out"
+- End with a clear but low-pressure call to action
+- If contract expiry is mentioned and it's within 90 days, acknowledge it naturally
+- Do not mention Renzo or AI anywhere in the message
+- Do not include a subject line unless specifically asked
+- Return only the email body, nothing else`;
+
+// Build a structured user message from a canonical relationship record
 function buildGeneratePrompt(record, context) {
   const daysSince = record.last_contact_date
     ? Math.floor((Date.now() - new Date(record.last_contact_date).getTime()) / 86400000)
@@ -51,19 +65,17 @@ function buildGeneratePrompt(record, context) {
     : null;
 
   const lines = [
-    'Write a concise, professional outreach message for the following relationship.',
+    'Write an outreach email for the following relationship:',
     'Contact: ' + (record.contact_name || 'Unknown'),
     'Company: ' + (record.company_name || 'Unknown'),
-    record.relationship_status ? 'Status: ' + record.relationship_status : '',
-    record.entity_type ? 'Type: ' + record.entity_type : '',
-    daysSince != null ? 'Last contact: ' + daysSince + ' days ago' : '',
+    record.relationship_status ? 'Relationship status: ' + record.relationship_status : '',
+    record.entity_type ? 'Entity type: ' + record.entity_type : '',
+    daysSince != null ? 'Last contacted: ' + daysSince + ' days ago' : '',
     record.annual_value != null ? 'Annual value: $' + record.annual_value : '',
     renewalDays != null && renewalDays <= 90
-      ? 'IMPORTANT: Contract/renewal in ' + renewalDays + ' days' : '',
-    record.context_notes ? 'Context: ' + record.context_notes : '',
-    context ? 'Additional context: ' + context : '',
-    '',
-    'Return only the message body. Be warm, specific, and professional. 3-4 sentences maximum.'
+      ? 'IMPORTANT — Contract/renewal in ' + renewalDays + ' days' : '',
+    record.context_notes ? 'Context notes: ' + record.context_notes : '',
+    context ? 'Outreach goal: ' + context : '',
   ];
 
   return lines.filter(Boolean).join('\n');
@@ -96,6 +108,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 512,
+          system: GENERATE_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: prompt }]
         })
       });
