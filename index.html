@@ -1366,9 +1366,12 @@ async function showBillingHistory(){
   modal.classList.remove('hidden');
   body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--gray);font-size:14px">Loading…</div>';
   try{
+    console.log('[billing-history] fetching transactions, auth:', getAuthHeaders());
     const r=await fetch('/api/billing?action=transactions',{headers:getAuthHeaders()});
     if(!r.ok) throw new Error('Failed to load');
-    const txns=await r.json();
+    const d=await r.json();
+    console.log('[billing-history] response:', d);
+    const txns=d.transactions||d||[];
     if(!txns.length){
       body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--gray);font-size:14px">No purchases yet.</div>';
       return;
