@@ -690,13 +690,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-primary btn-sm" onclick="syncFromCSV()" style="margin-top:auto">Import</button>
         </div>
 
-        <!-- Custom System -->
-        <div class="int-tile" data-int-name="custom system internal sync database api">
-          <div class="int-icon" style="background:#F3E8FF">⚙</div>
-          <div class="int-name">Custom System</div>
-          <div class="int-desc">Sync contacts from your own internal system or database using Renzo's REST API.</div>
-          <button class="btn btn-primary btn-sm" onclick="syncVCS()" style="margin-top:auto">Sync Now</button>
-        </div>
 
         <!-- Salesforce -->
         <div class="int-tile" data-int-name="salesforce crm contacts accounts" id="int-tile-salesforce">
@@ -3661,32 +3654,6 @@ async function syncSalesforceAgain(btn){
   }
 }
 
-// VCS SYNC
-async function syncVCS(){
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Syncing...';
-  try{
-    const r = await fetch('/api/contacts', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({action:'vcs_sync'})
-    });
-    const d = await r.json();
-    if(d.success){
-      toast('Sync complete — '+d.synced+' contacts updated','success');
-      const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
-      if(cr.ok) _cache.contacts=(await cr.json()).map(normalizeContact);
-      renderContacts();
-    } else {
-      toast('VCS sync failed: '+(d.error||'unknown error'),'error');
-    }
-  }catch(e){
-    toast('VCS sync error: '+e.message,'error');
-  }
-  btn.disabled = false;
-  btn.textContent = 'Sync Now';
-}
 
 // SALESFORCE DISCONNECT
 async function disconnectSalesforce(){
