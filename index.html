@@ -3669,7 +3669,8 @@ async function syncVCS(){
     const d = await r.json();
     if(d.success){
       toast('VCS sync complete — '+d.synced+' contacts updated','success');
-      await getContacts();
+      const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+      if(cr.ok) _cache.contacts=(await cr.json()).map(normalizeContact);
       renderContacts();
     } else {
       toast('VCS sync failed: '+(d.error||'unknown error'),'error');
