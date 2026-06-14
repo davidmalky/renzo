@@ -54,6 +54,7 @@ Rules:
 - If contract expiry is mentioned and it's within 90 days, acknowledge it naturally
 - Do not mention Renzo or AI anywhere in the message
 - Do not include a subject line unless specifically asked
+- Never use em dashes (—) or double hyphens (--) as punctuation — rewrite the sentence instead
 - Return only the email body, nothing else`;
 
 // Build a structured user message from a canonical relationship record
