@@ -256,6 +256,121 @@ async function handleConfirmCredits(req, body, res) {
   return res.status(200).json({ success: true, credits: creditsToAdd });
 }
 
+// ── Auto-recharge (exported for use by api/ai.js) ────────────────────────────
+export async function checkAutoRecharge(userId) {
+  try {
+    const { data: billing } = await supabase.from('billing').select('*').eq('user_id', userId).single();
+    if (!billing?.auto_recharge_enabled) return { triggered: false, reason: 'disabled' };
+    if (billing.credits > (billing.auto_recharge_threshold ?? 50)) return { triggered: false, reason: 'credits above threshold' };
+    if (!billing.stripe_customer_id || !billing.stripe_default_pm) return { triggered: false, reason: 'no payment method' };
+
+    const packKey = billing.auto_recharge_pack || 'starter';
+    const pack = PACKS[packKey];
+    if (!pack || pack.credits === 0) return { triggered: false, reason: 'invalid pack' };
+
+    const pi = await stripe.paymentIntents.create({
+      amount: pack.amount,
+      currency: 'usd',
+      customer: billing.stripe_customer_id,
+      payment_method: billing.stripe_default_pm,
+      payment_method_types: ['card'],
+      confirm: true,
+      off_session: true,
+      description: `Renzo auto-recharge — ${packKey} pack`,
+      metadata: { userId, creditsToAdd: String(pack.credits), packType: packKey }
+    });
+
+    if (pi.status !== 'succeeded') return { triggered: false, reason: 'payment_failed:' + pi.status };
+
+    const { data: fresh } = await supabase.from('billing').select('credits').eq('user_id', userId).single();
+    const newBalance = (fresh?.credits ?? 0) + pack.credits;
+    await supabase.from('billing').update({ credits: newBalance, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    await supabase.from('transactions').insert({
+      user_id: userId, amount_cents: pack.amount, credits_added: pack.credits,
+      pack_type: packKey, stripe_payment_intent_id: pi.id
+    });
+
+    const packLabels = { signup:'Account Activation', starter:'Starter Pack (100 credits)', growth:'Growth Pack (500 credits)', pro:'Pro Pack (1,500 credits)' };
+    const { data: userRow } = await supabase.from('users').select('email').eq('id', userId).single();
+    if (userRow?.email) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Renzo <noreply@meetrenzo.com>',
+          to: userRow.email,
+          subject: 'Renzo auto-recharge — credits added',
+          html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1a1a1a">
+            <div style="font-family:Georgia,serif;font-size:28px;color:#1F6B47;margin-bottom:8px">Renzo</div>
+            <h2 style="font-weight:600;font-size:20px;margin:0 0 16px">Auto-recharge complete</h2>
+            <div style="background:#f5f0eb;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#666">Item</span><span>${packLabels[packKey] || packKey}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#666">Amount charged</span><span>$${(pack.amount / 100).toFixed(2)}</span></div>
+            </div>
+            <p style="color:#444;line-height:1.6">${pack.credits} credits added. Your new balance is ${newBalance} credits.</p>
+            <a href="https://www.meetrenzo.com/app" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1F6B47;color:white;text-decoration:none;border-radius:8px;font-weight:600">Open Renzo</a>
+            <p style="margin-top:32px;font-size:12px;color:#999">To disable auto-recharge, go to Settings in the app. Questions? <a href="mailto:support@meetrenzo.com" style="color:#1F6B47">support@meetrenzo.com</a></p>
+          </div>`
+        })
+      }).catch(() => {});
+    }
+    return { triggered: true, credits_added: pack.credits };
+  } catch (e) {
+    console.error('[auto-recharge]', e.message);
+    return { triggered: false, reason: e.message };
+  }
+}
+
+// ── POST action: check_auto_recharge ─────────────────────────────────────────
+async function handleCheckAutoRecharge(req, res) {
+  let userId;
+  try { ({ userId } = await validateRequest(req)); }
+  catch { return res.status(401).json({ error: 'Unauthorized' }); }
+  const result = await checkAutoRecharge(userId);
+  return res.status(200).json(result);
+}
+
+// ── POST action: save_auto_recharge ──────────────────────────────────────────
+async function handleSaveAutoRecharge(req, body, res) {
+  let userId;
+  try { ({ userId } = await validateRequest(req)); }
+  catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+  const { enabled, threshold, pack: packKey } = body;
+
+  // Fetch default payment method from Stripe customer
+  let defaultPm = null;
+  try {
+    const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', userId).maybeSingle();
+    if (billing?.stripe_customer_id) {
+      const customer = await stripe.customers.retrieve(billing.stripe_customer_id, { expand: ['invoice_settings.default_payment_method'] });
+      defaultPm = customer?.invoice_settings?.default_payment_method?.id
+        || customer?.default_source
+        || null;
+      // If no default PM, try listing payment methods
+      if (!defaultPm) {
+        const pms = await stripe.paymentMethods.list({ customer: billing.stripe_customer_id, type: 'card', limit: 1 });
+        defaultPm = pms.data?.[0]?.id || null;
+      }
+    }
+  } catch (e) {
+    console.warn('[save_auto_recharge] PM fetch failed:', e.message);
+  }
+
+  const update = {
+    auto_recharge_enabled: !!enabled,
+    auto_recharge_threshold: parseInt(threshold, 10) || 50,
+    auto_recharge_pack: packKey || 'starter',
+    updated_at: new Date().toISOString()
+  };
+  if (defaultPm) update.stripe_default_pm = defaultPm;
+
+  const { error } = await supabase.from('billing').update(update).eq('user_id', userId);
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.status(200).json({ success: true, has_payment_method: !!defaultPm });
+}
+
 // ── POST /api/billing (with stripe-signature) — webhook ──────────────────────
 async function handleWebhook(rawBody, sig, res) {
   let event;
@@ -300,6 +415,8 @@ export default async function handler(req, res) {
     try { body = JSON.parse(rawBody.toString()); } catch {}
     req.body = body;
     if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
+    if (body.action === 'check_auto_recharge') return handleCheckAutoRecharge(req, res);
+    if (body.action === 'save_auto_recharge') return handleSaveAutoRecharge(req, body, res);
     return handleCreatePaymentIntent(req, body, res);
   }
 

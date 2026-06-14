@@ -556,16 +556,29 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <div style="font-family:'DM Serif Display',serif;font-size:28px" id="greeting"></div>
         <div style="color:var(--gray);font-size:14px;margin-top:3px" id="todayDate"></div>
       </div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">Total Contacts</div><div class="stat-value" id="sTotal">0</div></div>
-        <div class="stat-card"><div class="stat-label">Due Today</div><div class="stat-value amber" id="sDue">0</div></div>
-        <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value red" id="sOverdue">0</div></div>
-        <div class="stat-card"><div class="stat-label">Sent This Week</div><div class="stat-value green" id="sSent">0</div></div>
+      <!-- Empty state (shown when 0 contacts) -->
+      <div id="dashEmptyState" class="hidden" style="text-align:center;padding:60px 24px;color:var(--gray)">
+        <div style="font-size:48px;margin-bottom:16px">👋</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--dark);margin-bottom:8px">Let's get started</div>
+        <p style="font-size:14px;line-height:1.6;max-width:360px;margin:0 auto 24px">Add your contacts or connect a CRM to see who needs outreach and start generating personalized messages.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="showView('contacts')">Add Contacts</button>
+          <button class="btn btn-ghost" onclick="showView('connections')">Connect a CRM</button>
+        </div>
       </div>
-      <div class="section-title">Due for Outreach</div>
-      <div id="dueList" class="card" style="margin-bottom:24px"></div>
-      <div class="section-title">Recent Activity</div>
-      <div id="actList" class="card"></div>
+      <!-- Normal dashboard content -->
+      <div id="dashMainContent">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total Contacts</div><div class="stat-value" id="sTotal">0</div></div>
+          <div class="stat-card"><div class="stat-label">Due Today</div><div class="stat-value amber" id="sDue">0</div></div>
+          <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value red" id="sOverdue">0</div></div>
+          <div class="stat-card"><div class="stat-label">Sent This Week</div><div class="stat-value green" id="sSent">0</div></div>
+        </div>
+        <div class="section-title">Due for Outreach</div>
+        <div id="dueList" class="card" style="margin-bottom:24px"></div>
+        <div class="section-title">Recent Activity</div>
+        <div id="actList" class="card"></div>
+      </div>
     </div>
 
     <!-- CONTACTS -->
@@ -2139,6 +2152,16 @@ function renderDashboard(){
   document.getElementById('greeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+_displayName;
   document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const contacts=gc(),activity=ga(),wk=new Date(Date.now()-7*86400000);
+  // Toggle empty state
+  const emptyEl=document.getElementById('dashEmptyState');
+  const mainEl=document.getElementById('dashMainContent');
+  if(contacts.length===0){
+    if(emptyEl) emptyEl.classList.remove('hidden');
+    if(mainEl) mainEl.classList.add('hidden');
+    return;
+  }
+  if(emptyEl) emptyEl.classList.add('hidden');
+  if(mainEl) mainEl.classList.remove('hidden');
   const totalCount=contacts.length;
   const dueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>-7&&d<=0;});
   const overdueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>0;});
@@ -3947,19 +3970,43 @@ async function updateEmail(idx,addr,label){
 }
 
 // AUTO-RECHARGE
-function saveAutoRecharge(){
-  var enabled=document.getElementById('autoRechargeEnabled');
-  var threshold=document.getElementById('autoRechargeThreshold');
-  var pack=document.getElementById('autoRechargePack');
+async function saveAutoRecharge(){
+  var enabledEl=document.getElementById('autoRechargeEnabled');
+  var thresholdEl=document.getElementById('autoRechargeThreshold');
+  var packEl=document.getElementById('autoRechargePack');
   var settings={
-    enabled:enabled?enabled.checked:false,
-    threshold:threshold?threshold.value:'50',
-    pack:pack?pack.value:'starter'
+    enabled:enabledEl?enabledEl.checked:false,
+    threshold:thresholdEl?thresholdEl.value:'50',
+    pack:packEl?packEl.value:'starter'
   };
   localStorage.setItem(profileKey('renzo_auto_recharge'),JSON.stringify(settings));
   var settingsEl=document.getElementById('autoRechargeSettings');
   if(settingsEl) settingsEl.classList.toggle('hidden',!settings.enabled);
-  if(settings.enabled) toast('Auto-recharge enabled','success');
+  // Persist to server
+  try{
+    const r=await fetch('/api/billing',{
+      method:'POST',
+      headers:getAuthHeaders(),
+      body:JSON.stringify({
+        action:'save_auto_recharge',
+        enabled:settings.enabled,
+        threshold:parseInt(settings.threshold,10),
+        pack:settings.pack
+      })
+    });
+    const d=await r.json();
+    if(settings.enabled){
+      if(d.has_payment_method===false){
+        toast('Auto-recharge enabled — add a payment method in Settings to activate','');
+      } else {
+        toast('Auto-recharge enabled','success');
+      }
+    } else {
+      toast('Auto-recharge disabled','');
+    }
+  }catch(e){
+    if(settings.enabled) toast('Auto-recharge enabled (offline — will sync on next load)','');
+  }
 }
 function loadAutoRecharge(){
   try{

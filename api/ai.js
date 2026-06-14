@@ -1,5 +1,6 @@
 import { validateRequest, resolveAuth } from './_validate.js';
 import supabase from './_supabase.js';
+import { checkAutoRecharge } from './billing.js';
 
 const MODEL_MAP = {
   standard: 'claude-haiku-4-5',
@@ -152,6 +153,8 @@ export default async function handler(req, res) {
         return res.status(402).json({ error: 'insufficient_credits', credits: deductResult.credits });
       }
       data._credits = deductResult;
+      // Trigger auto-recharge in the background if balance is low
+      checkAutoRecharge(userId).catch(() => {});
     }
 
     return res.status(response.status).json(data);
