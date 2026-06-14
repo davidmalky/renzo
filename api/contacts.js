@@ -269,18 +269,19 @@ export default async function handler(req, res) {
           updated_at:          new Date().toISOString()
         };
         try {
-          const { data: existing } = await supabase.from('contacts').select('id')
-            .eq('user_id', userId).eq('source_system', 'HubSpot').eq('source_record_id', 'hs:' + c.id).maybeSingle();
+          const { data: existing, error: selErr } = await supabase.from('contacts').select('id')
+            .eq('user_id', userId).eq('source_system', 'HubSpot').eq('source_record_id', `hs:${c.id}`).maybeSingle();
+          if (selErr) { console.error('[hs-sync] select error:', selErr.message, selErr.details); throw selErr; }
           if (existing) {
             const { error } = await supabase.from('contacts').update(mapped).eq('id', existing.id);
-            if (error) throw error;
+            if (error) { console.error('[hs-sync] update error:', error.message, error.details); throw error; }
           } else {
-            const { error } = await supabase.from('contacts').insert({ ...mapped, user_id: userId });
-            if (error) throw error;
+            const { error } = await supabase.from('contacts').insert({ ...mapped, user_id: userId, profile_name: profileName });
+            if (error) { console.error('[hs-sync] insert error:', error.message, error.details); throw error; }
           }
           synced++;
         } catch (e) {
-          errors.push({ id: c.id, error: e.message });
+          errors.push({ id: c.id, error: e.message, details: e.details || null });
         }
       }
       return res.status(200).json({ success: true, synced, errors });
