@@ -4518,18 +4518,18 @@ async function submitFeedback(){
 <div class="modal-overlay hidden" id="featureRequestModal" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
     <div class="modal-hdr">
-      <span>💡 Suggest a Feature</span>
+      <span>Suggest a Feature</span>
       <button class="modal-close" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">
       <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Have an idea that would make Renzo better? We read every suggestion.</p>
-      <div class="form-field" style="margin-bottom:12px">
-        <label>Your email</label>
-        <input type="email" id="frEmail" class="form-input" readonly style="background:var(--bg-muted);color:var(--gray);cursor:not-allowed">
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Your email</label>
+        <input type="email" id="frEmail" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--gray-pale);color:var(--gray);cursor:not-allowed" readonly>
       </div>
-      <div class="form-field" style="margin-bottom:12px">
-        <label>Feature category</label>
-        <select id="frCategory" class="form-input">
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Feature category</label>
+        <select id="frCategory" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit;background:var(--white);color:var(--dark)">
           <option value="">Select a category...</option>
           <option value="Integrations">Integrations / Connections</option>
           <option value="AI Generation">AI Message Generation</option>
@@ -4540,9 +4540,9 @@ async function submitFeedback(){
           <option value="Other">Other</option>
         </select>
       </div>
-      <div class="form-field" style="margin-bottom:16px">
-        <label>Your idea</label>
-        <textarea id="frMessage" class="form-input" rows="4" placeholder="Describe the feature you'd like to see..."></textarea>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Your idea</label>
+        <textarea id="frMessage" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;resize:vertical;font-family:inherit" placeholder="Describe the feature you'd like to see..."></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="submitFeatureRequest()">Send Suggestion</button>
     </div>
