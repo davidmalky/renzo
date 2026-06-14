@@ -1403,8 +1403,8 @@ async function showBillingHistory(){
       +'</tr></thead><tbody>'
       +txns.map(t=>{
         const brand=t.card_brand?t.card_brand.charAt(0).toUpperCase()+t.card_brand.slice(1):'';
-        const card=t.card_last4?`${brand} ••${t.card_last4}`:'—';
-        const date=new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'});
+        const card=t.card_last4?`${brand} ••••${t.card_last4}`:'—';
+        const date=new Date(t.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'2-digit',hour:'numeric',minute:'2-digit'});
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 4px;color:var(--gray);white-space:nowrap;font-size:12px">${date}</td>
           <td style="padding:8px 4px;font-weight:500">${packNames[t.pack_type]||t.pack_type}</td>
@@ -4479,7 +4479,7 @@ async function submitFeedback(){
 
 <!-- BILLING HISTORY MODAL -->
 <div id="billingHistoryModal" class="modal-overlay hidden" style="z-index:3900" onclick="document.getElementById('billingHistoryModal').classList.add('hidden')">
-  <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
+  <div class="modal-box" style="max-width:560px" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Billing History</h2>
       <button class="modal-close" onclick="document.getElementById('billingHistoryModal').classList.add('hidden')">×</button>
