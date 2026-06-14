@@ -690,12 +690,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-primary btn-sm" onclick="syncFromCSV()" style="margin-top:auto">Import</button>
         </div>
 
-        <!-- VCS -->
-        <div class="int-tile" data-int-name="vcs vendor catalog scheduler internal sync">
-          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#1F6B47"/><text x="16" y="21" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">VCS</text></svg></div>
-          <div class="int-name">VCS</div>
-          <div class="int-desc">Sync contacts directly from the Vendor Catalog Scheduler.</div>
-          <button class="btn btn-primary btn-sm" onclick="syncVCS()" style="margin-top:auto">Sync VCS</button>
+        <!-- Custom System -->
+        <div class="int-tile" data-int-name="custom system internal sync database api">
+          <div class="int-icon" style="background:#F3E8FF">⚙</div>
+          <div class="int-name">Custom System</div>
+          <div class="int-desc">Sync contacts from your own internal system or database using Renzo's REST API.</div>
+          <button class="btn btn-primary btn-sm" onclick="syncVCS()" style="margin-top:auto">Sync Now</button>
         </div>
 
         <!-- Salesforce -->
@@ -3675,7 +3675,7 @@ async function syncVCS(){
     });
     const d = await r.json();
     if(d.success){
-      toast('VCS sync complete — '+d.synced+' contacts updated','success');
+      toast('Sync complete — '+d.synced+' contacts updated','success');
       const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
       if(cr.ok) _cache.contacts=(await cr.json()).map(normalizeContact);
       renderContacts();
@@ -3686,7 +3686,7 @@ async function syncVCS(){
     toast('VCS sync error: '+e.message,'error');
   }
   btn.disabled = false;
-  btn.textContent = 'Sync VCS';
+  btn.textContent = 'Sync Now';
 }
 
 // SALESFORCE DISCONNECT
