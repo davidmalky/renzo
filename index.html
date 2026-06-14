@@ -519,6 +519,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showCreditsModal()">Buy Credits</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();toggleAvatarDD();showBillingHistory()">Billing</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();openFeedbackModal()">Send Feedback</button>
+          <button class="sb-dd-btn" onclick="event.stopPropagation();openFeatureRequest()">💡 Suggest a Feature</button>
           <button class="sb-dd-btn" onclick="event.stopPropagation();tourForce()">Replay Tour</button>
           <button class="sb-dd-btn danger" onclick="event.stopPropagation();doLogout()">Logout</button>
         </div>
@@ -4241,11 +4242,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','embedKitModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','embedKitModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -4317,6 +4318,26 @@ document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='tourSkipBtn') tourSkip();
   if(e.target&&e.target.id==='tourNextBtn') tourNext();
 });
+
+function openFeatureRequest(){
+  toggleAvatarDD();
+  document.getElementById('frEmail').value = currentUser?.email || '';
+  document.getElementById('frCategory').value = '';
+  document.getElementById('frMessage').value = '';
+  document.getElementById('featureRequestModal').classList.remove('hidden');
+}
+
+function submitFeatureRequest(){
+  const email = document.getElementById('frEmail').value;
+  const category = document.getElementById('frCategory').value;
+  const message = document.getElementById('frMessage').value.trim();
+  if(!message){ toast('Please describe your feature idea','error'); return; }
+  const subject = encodeURIComponent('[Feature Request] ' + (category || 'General'));
+  const body = encodeURIComponent('From: ' + email + '\nCategory: ' + (category||'General') + '\n\n' + message);
+  window.open('mailto:support@meetrenzo.com?subject=' + subject + '&body=' + body, '_blank');
+  document.getElementById('featureRequestModal').classList.add('hidden');
+  toast('Thank you for your suggestion!', 'success');
+}
 
 function openFeedbackModal(){
   toggleAvatarDD();
@@ -4489,6 +4510,41 @@ async function submitFeedback(){
         <textarea id="fbMessage" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;resize:vertical;font-family:inherit" placeholder="Tell us what's on your mind..."></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="submitFeedback()">Send Feedback</button>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURE REQUEST MODAL -->
+<div class="modal-overlay hidden" id="featureRequestModal" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <span>💡 Suggest a Feature</span>
+      <button class="modal-close" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Have an idea that would make Renzo better? We read every suggestion.</p>
+      <div class="form-field" style="margin-bottom:12px">
+        <label>Your email</label>
+        <input type="email" id="frEmail" class="form-input" readonly style="background:var(--bg-muted);color:var(--gray);cursor:not-allowed">
+      </div>
+      <div class="form-field" style="margin-bottom:12px">
+        <label>Feature category</label>
+        <select id="frCategory" class="form-input">
+          <option value="">Select a category...</option>
+          <option value="Integrations">Integrations / Connections</option>
+          <option value="AI Generation">AI Message Generation</option>
+          <option value="Contact Management">Contact Management</option>
+          <option value="Outreach">Outreach / Queue</option>
+          <option value="Billing">Billing / Credits</option>
+          <option value="Reporting">Reporting / Analytics</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-field" style="margin-bottom:16px">
+        <label>Your idea</label>
+        <textarea id="frMessage" class="form-input" rows="4" placeholder="Describe the feature you'd like to see..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitFeatureRequest()">Send Suggestion</button>
     </div>
   </div>
 </div>
