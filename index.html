@@ -4147,10 +4147,9 @@ async function openAddCardModal(){
   document.getElementById('addCardBtn').disabled=false;
   document.getElementById('addCardBtn').textContent='Save Card';
   if(stripe){
-    if(!addCardElement){
-      const els=stripe.elements();
-      addCardElement=els.create('card',{hidePostalCode:true,style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
-    }
+    if(addCardElement){ addCardElement.destroy(); addCardElement=null; }
+    const addEls=stripe.elements();
+    addCardElement=addEls.create('card',{hidePostalCode:true,style:{base:{fontFamily:'DM Sans,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
     document.getElementById('addCardElement').innerHTML='';
     addCardElement.mount('#addCardElement');
   }
