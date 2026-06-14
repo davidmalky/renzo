@@ -130,10 +130,10 @@
 let _pw = '';
 
 async function api(action, extra) {
-  const r = await fetch('/api/admin', {
+  const r = await fetch('/api/billing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: _pw, action, ...extra })
+    body: JSON.stringify({ password: _pw, action: 'admin_' + action, ...extra })
   });
   if (r.status === 401) { logout(); return null; }
   return r.json();

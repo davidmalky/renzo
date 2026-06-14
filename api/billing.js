@@ -1,6 +1,11 @@
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
+
+function getAdminClient() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -390,6 +395,50 @@ async function handleWebhook(rawBody, sig, res) {
   return res.status(200).json({ received: true });
 }
 
+// ── Admin actions (password-gated, service-role client) ──────────────────────
+async function handleAdmin(body, res) {
+  const { password, action } = body;
+  if (!password || password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const admin = getAdminClient();
+
+  if (action === 'admin_users') {
+    const { data: users } = await admin.from('users').select('id,email,name,created_at').order('created_at', { ascending: false });
+    const { data: billing } = await admin.from('billing').select('user_id,credits');
+    const creditMap = Object.fromEntries((billing || []).map(b => [b.user_id, b.credits]));
+    return res.json({ users: (users || []).map(u => ({ ...u, credits: creditMap[u.id] ?? 0 })) });
+  }
+
+  if (action === 'admin_delete_user') {
+    const { userId } = body;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    await admin.from('contacts').delete().eq('user_id', userId);
+    await admin.from('billing').delete().eq('user_id', userId);
+    await admin.from('profiles').delete().eq('user_id', userId);
+    await admin.from('activity').delete().eq('user_id', userId);
+    await admin.from('transactions').delete().eq('user_id', userId);
+    await admin.from('integrations').delete().eq('user_id', userId);
+    await admin.from('users').delete().eq('id', userId);
+    return res.json({ success: true });
+  }
+
+  if (action === 'admin_transactions') {
+    const { data } = await admin.from('transactions').select('*').order('created_at', { ascending: false }).limit(20);
+    return res.json({ transactions: data || [] });
+  }
+
+  if (action === 'admin_stats') {
+    const { count: userCount } = await admin.from('users').select('*', { count: 'exact', head: true });
+    const { data: txns } = await admin.from('transactions').select('amount_cents,credits_added');
+    const revenue = (txns || []).reduce((s, t) => s + (t.amount_cents || 0), 0) / 100;
+    const credits = (txns || []).reduce((s, t) => s + (t.credits_added || 0), 0);
+    return res.json({ userCount, revenue, credits });
+  }
+
+  return res.status(400).json({ error: 'Unknown admin action' });
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   const rawBody = await readBody(req);
@@ -417,6 +466,7 @@ export default async function handler(req, res) {
     if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
     if (body.action === 'check_auto_recharge') return handleCheckAutoRecharge(req, res);
     if (body.action === 'save_auto_recharge') return handleSaveAutoRecharge(req, body, res);
+    if (['admin_users','admin_delete_user','admin_transactions','admin_stats'].includes(body.action)) return handleAdmin(body, res);
     return handleCreatePaymentIntent(req, body, res);
   }
 
