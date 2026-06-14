@@ -2170,8 +2170,8 @@ function renderDashboard(){
   if(emptyEl) emptyEl.classList.add('hidden');
   if(mainEl) mainEl.classList.remove('hidden');
   const totalCount=contacts.length;
-  const dueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>-7&&d<=0;});
-  const overdueContacts=contacts.filter(c=>{const d=Math.floor((Date.now()-new Date(c.lastContact||0))/86400000)-(c.frequency||30);return d>0;});
+  const dueContacts=contacts.filter(c=>{if(!c.lastContact)return false;const d=Math.floor((Date.now()-new Date(c.lastContact))/86400000)-(c.frequency||30);return d>-7&&d<=0;});
+  const overdueContacts=contacts.filter(c=>{if(!c.lastContact)return false;const d=Math.floor((Date.now()-new Date(c.lastContact))/86400000)-(c.frequency||30);return d>0;});
   const sentThisWeek=activity.filter(a=>new Date(a.ts)>wk);
 
   const sTotal=document.getElementById('sTotal');
@@ -3513,13 +3513,16 @@ function renderConnectionsView(){
   if(!section||!row) return;
   if(!providers.length){section.classList.add('hidden');return;}
   section.classList.remove('hidden');
-  var ICONS={salesforce:'☁',hubspot:'🔶'};
+  var ICONS={
+    salesforce:'<div style="width:36px;height:36px;background:#E8F4FD;border-radius:8px;display:flex;align-items:center;justify-content:center"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/salesforce.svg" width="22" height="22" style="filter:invert(42%) sepia(100%) saturate(500%) hue-rotate(170deg)"></div>',
+    hubspot:'<div style="width:36px;height:36px;background:#FFF0E6;border-radius:8px;display:flex;align-items:center;justify-content:center"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/hubspot.svg" width="22" height="22" style="filter:invert(45%) sepia(90%) saturate(500%) hue-rotate(350deg)"></div>'
+  };
   var LABELS={salesforce:'Salesforce',hubspot:'HubSpot'};
   row.innerHTML=providers.map(function(p){
     var c=conns[p];
     var dt=c.lastSync?new Date(c.lastSync).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
     return '<div class="connected-tile">'
-      +'<div style="font-size:22px">'+( ICONS[p]||'🔌')+'</div>'
+      +(ICONS[p]||'<div style="font-size:22px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">🔌</div>')
       +'<div style="flex:1">'
       +'<div style="font-weight:700;font-size:13px">'+esc(LABELS[p]||p)+'</div>'
       +'<div style="font-size:11px;color:var(--gray);margin-top:2px">Last sync: '+dt+(c.count?' · '+c.count+' contacts':'')+'</div>'
@@ -3947,7 +3950,8 @@ async function addEmail(){
   document.getElementById('newEmailLabel').value='';
   renderEmailAccounts();
   toast('Email account added — check your inbox to verify','success');
-  fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(()=>{});
+  console.log('[verify_email] sending verify for',addr);
+  fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(e=>console.error('verify email error:',e));
 }
 
 async function deleteEmail(idx){
@@ -3959,7 +3963,7 @@ async function deleteEmail(idx){
 
 async function resendVerify(btn,addr){
   btn.disabled=true;btn.textContent='Sending…';
-  await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(()=>{});
+  await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(e=>console.error('resend verify error:',e));
   toast('Verification email sent','success');
   setTimeout(()=>{btn.disabled=false;btn.textContent='Resend';},3000);
 }
