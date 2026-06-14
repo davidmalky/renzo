@@ -183,6 +183,44 @@ async function handleWebhook(rawBody, sig, res) {
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
+
+// ── ADMIN ACTIONS ────────────────────────────────────────────────────────────
+async function handleAdmin(req, body, res) {
+  const pw = body.password || '';
+  if (!pw || pw !== (process.env.ADMIN_PASSWORD || '')) {
+    return res.status(401).json({ error: 'Incorrect password.' });
+  }
+  const action = body.action || '';
+
+  if (action === 'admin_users') {
+    const { data: users } = await supabase.from('users').select('id,email,name,created_at').order('created_at',{ascending:false});
+    const { data: billing } = await supabase.from('billing').select('user_id,credits');
+    const creditMap = Object.fromEntries((billing||[]).map(b=>[b.user_id,b.credits]));
+    return res.json({ users: (users||[]).map(u=>({...u, credits: creditMap[u.id]||0})) });
+  }
+  if (action === 'admin_delete_user') {
+    const { userId } = body;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    for (const tbl of ['contacts','billing','profiles','activity','transactions','integrations','queue','drafts','rules','api_keys']) {
+      await supabase.from(tbl).delete().eq('user_id', userId);
+    }
+    await supabase.from('users').delete().eq('id', userId);
+    return res.json({ success: true });
+  }
+  if (action === 'admin_transactions') {
+    const { data } = await supabase.from('transactions').select('*').order('created_at',{ascending:false}).limit(20);
+    return res.json({ transactions: data||[] });
+  }
+  if (action === 'admin_stats') {
+    const { count: userCount } = await supabase.from('users').select('*',{count:'exact',head:true});
+    const { data: txns } = await supabase.from('transactions').select('amount_cents,credits_added');
+    const revenue = (txns||[]).reduce((s,t)=>s+(t.amount_cents||0),0)/100;
+    const credits = (txns||[]).reduce((s,t)=>s+(t.credits_added||0),0);
+    return res.json({ userCount, revenue, credits });
+  }
+  return res.status(400).json({ error: 'Unknown admin action' });
+}
+
 export default async function handler(req, res) {
   const rawBody = await readBody(req);
   const sig = req.headers['stripe-signature'];
@@ -206,6 +244,7 @@ export default async function handler(req, res) {
     try { body = JSON.parse(rawBody.toString()); } catch {}
     req.body = body;
     if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
+    if ((body.action||'').startsWith('admin_') || body.action === 'admin_users' || body.action === 'admin_stats' || body.action === 'admin_transactions' || body.action === 'admin_delete_user') return handleAdmin(req, body, res);
     return handleCreatePaymentIntent(req, body, res);
   }
 
