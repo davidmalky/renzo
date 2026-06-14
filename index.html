@@ -4142,6 +4142,7 @@ async function removeCard(pmId){
 
 let addCardElement=null;
 async function openAddCardModal(){
+  await initStripe();
   document.getElementById('addCardModal').classList.remove('hidden');
   document.getElementById('addCardError').textContent='';
   document.getElementById('addCardBtn').disabled=false;
