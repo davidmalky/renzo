@@ -125,11 +125,23 @@ async function handleConfirmCredits(req, body, res) {
   const creditsToAdd = parseInt(pi.metadata?.creditsToAdd || '0', 10);
   const packType = pi.metadata?.packType;
 
+  // Retrieve card details for the transaction record
+  let card_last4 = null, card_brand = null;
+  try {
+    const pmId = pi.payment_method;
+    if (pmId) {
+      const pm = await stripe.paymentMethods.retrieve(pmId);
+      card_last4 = pm?.card?.last4 || null;
+      card_brand = pm?.card?.brand || null;
+    }
+  } catch (e) { console.error('[confirm-credits] card retrieve failed:', e.message); }
+
   if (packType === 'signup') {
     // Card verification only — mark account verified, award no credits
     await supabase.from('billing')
       .upsert({ user_id: userId, first_pack_purchased: true, updated_at: new Date().toISOString() },
                { onConflict: 'user_id' });
+    await supabase.from('transactions').insert({ user_id: userId, pack_type: 'signup', amount_cents: pi.amount, credits_added: 0, stripe_pi_id: pi.id, card_last4, card_brand });
     return res.status(200).json({ success: true, credits: 0,
       message: 'Card verified — you\'re ready to purchase credits' });
   }
@@ -144,6 +156,7 @@ async function handleConfirmCredits(req, body, res) {
         updated_at: new Date().toISOString()
       }).eq('user_id', userId);
     }
+    await supabase.from('transactions').insert({ user_id: userId, pack_type: packType, amount_cents: pi.amount, credits_added: creditsToAdd, stripe_pi_id: pi.id, card_last4, card_brand });
   }
 
   return res.status(200).json({ success: true, credits: creditsToAdd });
@@ -226,16 +239,27 @@ export default async function handler(req, res) {
   const sig = req.headers['stripe-signature'];
 
   // Public config — returns publishable key, no auth required
+  // User transaction history (JWT-protected, no admin required)
+  if (req.method === 'GET' && req.query.action === 'transactions') {
+    let uid;
+    try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+    const { data: txns } = await supabase.from('transactions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(20);
+    return res.json({ transactions: txns || [] });
+  }
+
   if (req.method === 'GET') {
     const qs = new URL(req.url, 'https://x').searchParams;
     if (qs.get('action') === 'config') {
       return res.status(200).json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
     }
-    if (qs.get('action') === 'transactions') {
-      let uid;
-      try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
-      const { data } = await supabase.from('transactions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(20);
-      return res.json({ transactions: data || [] });
+    if (qs.get('action') === 'payment_methods') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).single();
+      if (!billing?.stripe_customer_id) return res.json({ methods: [] });
+      const pms = await stripe.paymentMethods.list({ customer: billing.stripe_customer_id, type: 'card' });
+      const customer = await stripe.customers.retrieve(billing.stripe_customer_id);
+      const defaultPm = customer.invoice_settings?.default_payment_method;
+      return res.json({ methods: pms.data.map(pm => ({ id: pm.id, brand: pm.card.brand, last4: pm.card.last4, exp_month: pm.card.exp_month, exp_year: pm.card.exp_year, isDefault: pm.id === defaultPm })) });
     }
     return handleStatus(req, res);
   }
@@ -251,6 +275,32 @@ export default async function handler(req, res) {
     req.body = body;
     if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
     if ((body.action||'').startsWith('admin_') || body.action === 'admin_users' || body.action === 'admin_stats' || body.action === 'admin_transactions' || body.action === 'admin_delete_user') return handleAdmin(req, body, res);
+    if (body.action === 'set_default_card') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { pmId } = body;
+      const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).single();
+      await stripe.customers.update(billing.stripe_customer_id, { invoice_settings: { default_payment_method: pmId } });
+      await supabase.from('billing').update({ stripe_default_pm: pmId }).eq('user_id', uid);
+      return res.json({ success: true });
+    }
+    if (body.action === 'remove_card') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { pmId } = body;
+      await stripe.paymentMethods.detach(pmId);
+      return res.json({ success: true });
+    }
+    if (body.action === 'add_card') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).single();
+      let customerId = billing?.stripe_customer_id;
+      if (!customerId) {
+        const customer = await stripe.customers.create({ email: uid });
+        customerId = customer.id;
+        await supabase.from('billing').update({ stripe_customer_id: customerId }).eq('user_id', uid);
+      }
+      const setupIntent = await stripe.setupIntents.create({ customer: customerId, payment_method_types: ['card'] });
+      return res.json({ clientSecret: setupIntent.client_secret });
+    }
     return handleCreatePaymentIntent(req, body, res);
   }
 

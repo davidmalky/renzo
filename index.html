@@ -890,6 +890,16 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <p style="font-size:12px;color:var(--gray)">Your card on file will be charged automatically. You can disable this at any time.</p>
         </div>
       </div>
+
+      <!-- PAYMENT METHODS CARD -->
+      <div class="card" style="padding:28px;max-width:560px;margin-top:20px">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Payment Methods</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Cards saved for credit purchases and auto-recharge.</p>
+        <div id="paymentMethodsList" style="margin-bottom:16px">
+          <div style="color:var(--gray);font-size:13px">Loading...</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openAddCardModal()">+ Add Card</button>
+      </div>
     </div>
 
     <!-- HELP -->
@@ -1386,7 +1396,7 @@ async function showBillingHistory(){
         <td style="padding:11px 14px;font-size:12px;color:var(--gray)">${dt}</td>
         <td style="padding:11px 14px;font-size:13px;font-weight:500">${label}</td>
         <td style="padding:11px 14px;font-size:13px;color:var(--green);font-weight:600">${credits}</td>
-        <td style="padding:11px 14px;font-size:12px;color:var(--gray)">Card on file</td>
+        <td style="padding:11px 14px;font-size:12px;color:var(--gray)">${t.card_brand&&t.card_last4?(t.card_brand.charAt(0).toUpperCase()+t.card_brand.slice(1)+' ••••'+t.card_last4):'Card on file'}</td>
         <td style="padding:11px 14px;font-size:13px;text-align:right">${amt}</td>
       </tr>`;
     }).join('');
@@ -3789,6 +3799,7 @@ function loadSettings(){
   renderEmailAccounts();
   loadApiKeys();
   loadAutoRecharge();
+  loadPaymentMethods();
 }
 
 // ── API KEYS ──────────────────────────────────────────────────────────────────
@@ -4069,6 +4080,91 @@ function loadAutoRecharge(){
   }catch(e){}
 }
 
+// ── PAYMENT METHODS ───────────────────────────────────────────────────────────
+async function loadPaymentMethods(){
+  const el=document.getElementById('paymentMethodsList');
+  if(!el) return;
+  try{
+    const r=await fetch('/api/billing?action=payment_methods',{headers:getAuthHeaders()});
+    const d=await r.json();
+    renderPaymentMethods(d.methods||[]);
+  }catch(e){
+    el.innerHTML='<div style="font-size:13px;color:var(--red)">Failed to load cards.</div>';
+  }
+}
+
+function renderPaymentMethods(methods){
+  const el=document.getElementById('paymentMethodsList');
+  if(!el) return;
+  if(!methods.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--gray)">No cards saved yet.</div>';
+    return;
+  }
+  const brandIcon={visa:'💳',mastercard:'💳',amex:'💳',discover:'💳'};
+  el.innerHTML=methods.map(m=>{
+    const brand=m.brand.charAt(0).toUpperCase()+m.brand.slice(1);
+    const expiry=m.exp_month+'/'+String(m.exp_year).slice(-2);
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-light)">'
+      +'<span style="font-size:13px;min-width:140px;font-weight:500">'+brand+' ••••'+m.last4+'</span>'
+      +'<span style="font-size:12px;color:var(--gray)">Exp '+expiry+'</span>'
+      +(m.isDefault?'<span style="font-size:11px;font-weight:600;background:var(--green-pale);color:var(--green);padding:2px 8px;border-radius:20px">Default</span>'
+        :'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="setDefaultCard(\''+m.id+'\')">Set Default</button>')
+      +'<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red);margin-left:auto" onclick="removeCard(\''+m.id+'\')">Remove</button>'
+      +'</div>';
+  }).join('');
+}
+
+async function setDefaultCard(pmId){
+  try{
+    await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'set_default_card',pmId})});
+    await loadPaymentMethods();
+    toast('Default card updated','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+async function removeCard(pmId){
+  if(!confirm('Remove this card?')) return;
+  try{
+    await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'remove_card',pmId})});
+    await loadPaymentMethods();
+    toast('Card removed','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+let addCardElement=null;
+async function openAddCardModal(){
+  document.getElementById('addCardModal').classList.remove('hidden');
+  document.getElementById('addCardError').textContent='';
+  document.getElementById('addCardBtn').disabled=false;
+  document.getElementById('addCardBtn').textContent='Save Card';
+  if(stripe){
+    if(!addCardElement){
+      const els=stripe.elements();
+      addCardElement=els.create('card',{hidePostalCode:true,style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
+    }
+    document.getElementById('addCardElement').innerHTML='';
+    addCardElement.mount('#addCardElement');
+  }
+}
+
+async function submitAddCard(){
+  const btn=document.getElementById('addCardBtn');
+  btn.disabled=true; btn.textContent='Saving...';
+  try{
+    const r=await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'add_card'})});
+    const d=await r.json();
+    if(!d.clientSecret) throw new Error(d.error||'No client secret');
+    const {setupIntent,error}=await stripe.confirmCardSetup(d.clientSecret,{payment_method:{card:addCardElement}});
+    if(error) throw new Error(error.message);
+    document.getElementById('addCardModal').classList.add('hidden');
+    await loadPaymentMethods();
+    toast('Card saved successfully','success');
+  }catch(e){
+    document.getElementById('addCardError').textContent=e.message;
+    btn.disabled=false; btn.textContent='Save Card';
+  }
+}
+
 // BULK SEND
 function bulkSendAll(){
   const q=gq();
@@ -4245,11 +4341,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -4513,6 +4609,25 @@ async function submitFeedback(){
         <textarea id="fbMessage" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;resize:vertical;font-family:inherit" placeholder="Tell us what's on your mind..."></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="submitFeedback()">Send Feedback</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CARD MODAL -->
+<div class="modal-overlay hidden" id="addCardModal" onclick="document.getElementById('addCardModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:420px" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <span>Add Payment Method</span>
+      <button class="modal-close" onclick="document.getElementById('addCardModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Your card will be saved for future credit purchases and auto-recharge. No charge today.</p>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--dark)">Card Details</label>
+        <div id="addCardElement" style="padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:8px;background:var(--white);min-height:42px"></div>
+        <div id="addCardError" style="color:var(--red);font-size:12px;margin-top:6px"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" id="addCardBtn" onclick="submitAddCard()">Save Card</button>
     </div>
   </div>
 </div>
