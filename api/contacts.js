@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     const clientId = process.env.SALESFORCE_CLIENT_ID;
     const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=salesforce_oauth_callback';
     const state = req.query.userId || '';
-    const authUrl = 'https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id=' + encodeURIComponent(clientId) + '&redirect_uri=' + encodeURIComponent(redirectUri) + '&scope=api+refresh_token&state=' + encodeURIComponent(state);
+    const authUrl = `https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=api+refresh_token&state=${encodeURIComponent(state)}&prompt=login&display=popup`;
     return res.redirect(authUrl);
   }
   if (req.method === 'GET' && req.query.action === 'salesforce_oauth_callback') {
