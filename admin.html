@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Renzo Admin</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --green:#1F6B47;--green-mid:#2d7a52;--dark:#1a1a14;--gray:#6B7280;
+    --gray-light:#E2D9CC;--gray-pale:#EDE8DF;--white:#FDFAF5;
+    --red:#DC2626;--amber:#d97706;--shadow:0 4px 24px rgba(0,0,0,.10);
+    --radius:12px;--border:1px solid var(--gray-light)
+  }
+  body{font-family:Arial,sans-serif;background:#f0ece4;color:var(--dark);min-height:100vh}
+
+  /* ── Login screen ── */
+  #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .login-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:48px 40px;width:100%;max-width:380px;text-align:center;border:var(--border)}
+  .login-card h1{font-family:Georgia,serif;font-size:28px;color:var(--green);margin-bottom:4px}
+  .login-card p{font-size:13px;color:var(--gray);margin-bottom:24px}
+  .login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:14px;outline:none;margin-bottom:12px}
+  .login-input:focus{border-color:var(--green)}
+  .login-err{color:var(--red);font-size:13px;margin-bottom:12px;min-height:18px}
+
+  /* ── App shell ── */
+  #app{display:none}
+  .topbar{background:var(--green);color:#fff;padding:0 32px;height:56px;display:flex;align-items:center;gap:24px;justify-content:space-between}
+  .topbar-logo{font-family:Georgia,serif;font-size:22px;font-weight:700}
+  .topbar-title{font-size:14px;opacity:.75;letter-spacing:.5px}
+  .topbar-right{display:flex;gap:16px;align-items:center}
+  .topbar-logout{background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;transition:background .15s}
+  .topbar-logout:hover{background:rgba(255,255,255,.25)}
+
+  /* ── Stats row ── */
+  .stats-row{display:flex;gap:16px;padding:24px 32px 0;flex-wrap:wrap}
+  .stat-box{background:var(--white);border-radius:var(--radius);border:var(--border);padding:20px 24px;flex:1;min-width:160px;box-shadow:var(--shadow)}
+  .stat-box-label{font-size:12px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .stat-box-value{font-size:28px;font-weight:700;color:var(--dark)}
+  .stat-box-value.green{color:var(--green)}
+
+  /* ── Content sections ── */
+  .sections{padding:24px 32px;display:flex;flex-direction:column;gap:24px}
+  .section{background:var(--white);border-radius:var(--radius);border:var(--border);box-shadow:var(--shadow);overflow:hidden}
+  .section-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:var(--border);background:#faf8f4}
+  .section-head h2{font-family:Georgia,serif;font-size:17px;color:var(--dark)}
+  .section-count{font-size:12px;color:var(--gray);background:var(--gray-pale);padding:3px 10px;border-radius:20px}
+
+  /* ── Table ── */
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;padding:11px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);background:#faf8f4;border-bottom:var(--border)}
+  td{padding:12px 20px;font-size:13px;border-bottom:1px solid var(--gray-pale);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#faf8f4}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-green{background:#dcfce7;color:#166534}
+  .badge-gray{background:var(--gray-pale);color:var(--gray)}
+  .btn-del{background:none;border:1px solid var(--gray-light);color:var(--red);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;transition:background .15s}
+  .btn-del:hover{background:#fee2e2;border-color:var(--red)}
+  .loading{padding:32px;text-align:center;color:var(--gray);font-size:14px}
+  .empty{padding:24px;text-align:center;color:var(--gray);font-size:13px}
+
+  /* ── Buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-primary:hover:not(:disabled){background:var(--green-mid)}
+  .btn-sm{padding:7px 14px;font-size:13px}
+  .refresh-btn{background:var(--gray-pale);border:var(--border);color:var(--dark);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+  .refresh-btn:hover{background:var(--gray-light)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>Renzo</h1>
+    <p>Admin access only</p>
+    <div class="login-err" id="loginErr"></div>
+    <input class="login-input" type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="loginBtn">Sign In</button>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="app">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="topbar-logo">Renzo</div>
+      <div class="topbar-title">ADMIN</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-logout" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-box"><div class="stat-box-label">Total Users</div><div class="stat-box-value" id="statUsers">—</div></div>
+    <div class="stat-box"><div class="stat-box-label">Total Revenue</div><div class="stat-box-value green" id="statRevenue">—</div></div>
+    <div class="stat-box"><div class="stat-box-label">Credits Sold</div><div class="stat-box-value" id="statCredits">—</div></div>
+  </div>
+
+  <div class="sections">
+    <!-- Users -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Users</h2>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="section-count" id="userCount">—</span>
+          <button class="refresh-btn" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="usersTable"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Recent Transactions</h2>
+        <button class="refresh-btn" onclick="loadTransactions()">↻ Refresh</button>
+      </div>
+      <div id="txnsTable"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _pw = '';
+
+async function api(action, extra) {
+  const r = await fetch('/api/admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: _pw, action, ...extra })
+  });
+  if (r.status === 401) { logout(); return null; }
+  return r.json();
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) { err.textContent = 'Enter your password.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  _pw = pw;
+  const d = await api('stats').catch(() => null);
+  if (!d || d.error) {
+    err.textContent = 'Incorrect password.';
+    btn.disabled = false; btn.textContent = 'Sign In';
+    _pw = ''; return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderStats(d);
+  loadUsers();
+  loadTransactions();
+}
+
+function logout() {
+  _pw = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+function renderStats(d) {
+  document.getElementById('statUsers').textContent = (d.userCount ?? '—').toLocaleString();
+  document.getElementById('statRevenue').textContent = d.revenue != null ? '$' + Number(d.revenue).toFixed(2) : '—';
+  document.getElementById('statCredits').textContent = (d.credits ?? '—').toLocaleString();
+}
+
+async function loadUsers() {
+  document.getElementById('usersTable').innerHTML = '<div class="loading">Loading…</div>';
+  const d = await api('users');
+  if (!d) return;
+  const users = d.users || [];
+  document.getElementById('userCount').textContent = users.length;
+  if (!users.length) { document.getElementById('usersTable').innerHTML = '<div class="empty">No users yet.</div>'; return; }
+  const rows = users.map(u => {
+    const created = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '—';
+    const credits = Number(u.credits || 0);
+    const badge = credits > 0
+      ? `<span class="badge badge-green">${credits.toLocaleString()} cr</span>`
+      : `<span class="badge badge-gray">0 cr</span>`;
+    return `<tr>
+      <td style="font-weight:500">${esc(u.email)}</td>
+      <td>${esc(u.name||'—')}</td>
+      <td>${created}</td>
+      <td>${badge}</td>
+      <td><button class="btn-del" onclick="deleteUser('${u.id}','${esc(u.email)}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('usersTable').innerHTML = `<table>
+    <thead><tr><th>Email</th><th>Name</th><th>Joined</th><th>Credits</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+async function deleteUser(userId, email) {
+  if (!confirm(`Permanently delete ${email} and all their data? This cannot be undone.`)) return;
+  const d = await api('delete_user', { userId });
+  if (d?.success) { loadUsers(); loadTransactions(); }
+  else alert('Delete failed: ' + (d?.error || 'unknown error'));
+}
+
+async function loadTransactions() {
+  document.getElementById('txnsTable').innerHTML = '<div class="loading">Loading…</div>';
+  const d = await api('transactions');
+  if (!d) return;
+  const txns = d.transactions || [];
+  if (!txns.length) { document.getElementById('txnsTable').innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
+  const packLabel = { signup:'Account Activation', starter:'Starter (100 cr)', growth:'Growth (500 cr)', pro:'Pro (1,500 cr)' };
+  const rows = txns.map(t => {
+    const dt = t.created_at ? new Date(t.created_at).toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+    const amount = t.amount_cents != null ? '$' + (t.amount_cents / 100).toFixed(2) : '—';
+    const label = packLabel[t.pack_type] || (t.pack_type || '—');
+    const credits = t.credits_added > 0
+      ? `<span class="badge badge-green">+${t.credits_added}</span>`
+      : `<span class="badge badge-gray">—</span>`;
+    return `<tr>
+      <td style="font-size:12px;color:var(--gray)">${dt}</td>
+      <td>${label}</td>
+      <td style="font-weight:600;color:var(--green)">${amount}</td>
+      <td>${credits}</td>
+      <td style="font-size:11px;color:var(--gray);font-family:monospace">${(t.stripe_payment_intent_id||'').slice(0,24)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('txnsTable').innerHTML = `<table>
+    <thead><tr><th>Date</th><th>Pack</th><th>Amount</th><th>Credits</th><th>Payment ID</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
