@@ -3615,7 +3615,8 @@ async function connectSalesforce(){
             }
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
             localStorage.setItem(connKey,JSON.stringify(conns));
-            await getContacts();
+            const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+            _cache.contacts=(await cr.json()).map(normalizeContact);
             renderContacts();
             renderConnectionsView();
           } else {
@@ -3644,7 +3645,9 @@ async function syncSalesforceAgain(btn){
       if(sd.synced===0){ toast('Salesforce sync complete — no new contacts','success'); }
       else if(sd.errors&&sd.errors.length>0){ toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped',''); }
       else { toast('Synced '+sd.synced+' contacts from Salesforce','success'); }
-      await getContacts(); renderContacts();
+      const cr2=await fetch('/api/contacts',{headers:getAuthHeaders()});
+      _cache.contacts=(await cr2.json()).map(normalizeContact);
+      renderContacts();
     } else {
       toast('Sync failed: '+(sd.error||'unknown error'),'error');
       if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
@@ -3743,7 +3746,7 @@ async function runCrmSync(provider){
       resultDiv.innerHTML='<div style="color:var(--green);font-size:22px;margin-bottom:8px">✓</div>'
         +'<div style="font-size:17px;font-weight:600;margin-bottom:6px">Synced '+d.synced+' contacts</div>'
         +'<div style="font-size:13px;color:var(--gray);margin-bottom:16px">'+(d.errors&&d.errors.length?d.errors.length+' records had errors':'All records imported successfully')+'</div>'
-        +'<button class="btn btn-primary" onclick="document.getElementById(\'crmModal\').classList.add(\'hidden\');getContacts().then(renderContacts);renderConnectionsView()">Done</button>';
+        +'<button class="btn btn-primary" onclick="document.getElementById(\'crmModal\').classList.add(\'hidden\');fetch(\'/api/contacts\',{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{_cache.contacts=d.map(normalizeContact);renderContacts();renderConnectionsView();})">Done</button>';
       toast('Synced '+d.synced+' contacts from '+d.provider,'success');
     } else {
       resultDiv.innerHTML='<div style="color:var(--red);margin-bottom:12px">Connection failed: '+esc(d.error||'Unknown error')+'</div>'
@@ -4286,7 +4289,9 @@ document.addEventListener('keydown',function(e){
             var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
             conns['salesforce']={lastSync:new Date().toISOString(),count:sd.synced};
             localStorage.setItem(connKey,JSON.stringify(conns));
-            await getContacts();renderContacts();renderConnectionsView();
+            const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+            _cache.contacts=(await cr.json()).map(normalizeContact);
+            renderContacts();renderConnectionsView();
           }
         }catch(ex){toast('Sync failed: '+ex.message,'error');}
       },800);
