@@ -3527,9 +3527,7 @@ function renderConnectionsView(){
   providers.forEach(function(p){
     var el=document.getElementById('int-action-'+p);
     if(!el) return;
-    var disconnectBtn = p==='salesforce'
-      ? '<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:11px;margin-top:4px" onclick="disconnectSalesforce()">Disconnect</button>'
-      : '';
+    var disconnectBtn = '<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:11px;margin-top:4px" onclick="disconnectIntegration(\''+p+'\')">Disconnect</button>';
     var syncBtn = p==='salesforce'
       ? '<button id="sfSyncAgainBtn" class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncSalesforceAgain(this)">Sync Again</button>'
       : '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
@@ -3676,6 +3674,21 @@ async function disconnectSalesforce(){
       toast('Disconnect failed: '+(d.error||'unknown error'),'error');
     }
   }catch(e){ toast('Disconnect failed: '+e.message,'error'); }
+}
+
+// GENERIC DISCONNECT
+async function disconnectIntegration(provider){
+  var label=provider.charAt(0).toUpperCase()+provider.slice(1);
+  if(!confirm('Disconnect '+label+'? Your synced contacts will remain but the connection will be removed.')) return;
+  var key=profileKey('renzo_crm_connections');
+  var conns={};try{conns=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  delete conns[provider];
+  localStorage.setItem(key,JSON.stringify(conns));
+  try{
+    await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'disconnect_integration',provider})});
+  }catch(e){}
+  renderConnectionsView();
+  toast(label+' disconnected','success');
 }
 
 // CRM SYNC

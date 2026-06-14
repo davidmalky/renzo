@@ -94,6 +94,15 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
+  if (req.method === 'POST' && req.body?.action === 'disconnect_integration') {
+    const { provider } = req.body;
+    if (provider === 'salesforce') {
+      await supabase.from('integrations').update({ connected: false, access_token: null, refresh_token: null })
+        .eq('user_id', userId).eq('provider', 'salesforce');
+    }
+    return res.status(200).json({ success: true });
+  }
+
   if (req.method === 'POST' && req.body?.action === 'salesforce_disconnect') {
     await supabase.from('integrations')
       .update({ connected: false, access_token: null, refresh_token: null })
