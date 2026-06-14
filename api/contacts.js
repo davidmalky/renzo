@@ -221,6 +221,74 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── CRM SYNC (POST {action:'crm_sync', provider:'hubspot', credentials:{api_key}}) ──
+  if (req.method === 'POST' && req.body?.action === 'crm_sync') {
+    const { provider, credentials = {} } = req.body;
+
+    if (provider === 'hubspot') {
+      const { api_key } = credentials;
+      if (!api_key) return res.status(400).json({ error: 'HubSpot API key is required' });
+
+      let allContacts = [];
+      let after = null;
+      const baseUrl = 'https://api.hubapi.com/crm/v3/objects/contacts';
+      const props = 'firstname,lastname,email,phone,company,jobtitle,hs_lead_status,lastmodifieddate';
+
+      try {
+        do {
+          const url = baseUrl + '?limit=100&properties=' + props + (after ? '&after=' + after : '');
+          const hsRes = await fetch(url, { headers: { Authorization: 'Bearer ' + api_key } });
+          if (!hsRes.ok) {
+            const hsErr = await hsRes.json().catch(() => ({}));
+            return res.status(400).json({ error: 'HubSpot API error: ' + (hsErr.message || hsRes.status) });
+          }
+          const hsData = await hsRes.json();
+          allContacts = allContacts.concat(hsData.results || []);
+          after = hsData.paging?.next?.after || null;
+        } while (after);
+      } catch (e) {
+        return res.status(502).json({ error: 'HubSpot fetch failed: ' + e.message });
+      }
+
+      let synced = 0;
+      const errors = [];
+      for (const c of allContacts) {
+        const props = c.properties || {};
+        const name = [props.firstname, props.lastname].filter(Boolean).join(' ') || props.email || 'Unknown';
+        const company = props.company || props.associatedcompanyid || 'Unknown';
+        const mapped = {
+          profile_name:        profileName,
+          source_system:       'HubSpot',
+          source_record_id:    'hs:' + c.id,
+          name,
+          company,
+          email:               props.email || null,
+          phone:               props.phone || null,
+          notes:               props.jobtitle || null,
+          relationship_status: 'Active',
+          updated_at:          new Date().toISOString()
+        };
+        try {
+          const { data: existing } = await supabase.from('contacts').select('id')
+            .eq('user_id', userId).eq('source_system', 'HubSpot').eq('source_record_id', 'hs:' + c.id).maybeSingle();
+          if (existing) {
+            const { error } = await supabase.from('contacts').update(mapped).eq('id', existing.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from('contacts').insert({ ...mapped, user_id: userId });
+            if (error) throw error;
+          }
+          synced++;
+        } catch (e) {
+          errors.push({ id: c.id, error: e.message });
+        }
+      }
+      return res.status(200).json({ success: true, synced, errors });
+    }
+
+    return res.status(400).json({ error: 'Unsupported provider: ' + provider });
+  }
+
   if (req.method === 'POST') {
     const { name, company, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
