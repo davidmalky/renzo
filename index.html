@@ -1732,6 +1732,13 @@ async function loadEmails(){
   const r=await fetch('/api/profile?r=emails',{headers:getAuthHeaders()});
   const data=await r.json();
   _cache.emails=Array.isArray(data)?data:[];
+  if(_cache.emails.length===0&&currentUser?.email){
+    await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),
+      body:JSON.stringify({accounts:[{addr:currentUser.email,label:'Primary',sort_order:0,verified:true}]})});
+    const r2=await fetch('/api/profile?r=emails',{headers:getAuthHeaders()});
+    const d2=await r2.json();
+    _cache.emails=Array.isArray(d2)?d2:[];
+  }
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -3882,6 +3889,7 @@ function renderEmailAccounts(){
     el.innerHTML=emails.length
       ?emails.map((e,i)=>'<div class="rule-item" id="emailRow-'+i+'" style="flex-wrap:wrap;gap:6px">'
         +'<span class="rule-text"><strong>'+esc(e.label||e.addr)+'</strong> — '+esc(e.addr)+'</span>'
+        +(e.verified===false?'<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-weight:600;align-self:center">Unverified</span><button onclick="resendVerify(this,'+JSON.stringify(e.addr)+')" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0 2px;align-self:center">Resend</button>':'')
         +'<div style="display:flex;gap:4px;margin-left:auto">'
         +'<button class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;justify-content:center;color:var(--green)" onclick="showEmailEdit('+i+')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
         +'<button class="rule-del" onclick="deleteEmail('+i+')">✕</button>'
@@ -3927,20 +3935,29 @@ async function addEmail(){
   if(!addr||!addr.includes('@')){toast('Enter a valid email address','error');return;}
   const emails=gEmails();
   if(emails.find(e=>e.addr===addr)){toast('That email is already added','error');return;}
-  const updated=[...emails,{addr,label}].map((e,i)=>({addr:e.addr,label:e.label,sort_order:i}));
+  const updated=[...emails.map(e=>({addr:e.addr,label:e.label,verified:e.verified!==false})),{addr,label,verified:false}]
+    .map((e,i)=>({...e,sort_order:i}));
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   document.getElementById('newEmailAddr').value='';
   document.getElementById('newEmailLabel').value='';
   renderEmailAccounts();
-  toast('Email account added','success');
+  toast('Email account added — check your inbox to verify','success');
+  fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(()=>{});
 }
 
 async function deleteEmail(idx){
-  const updated=gEmails().filter((_,i)=>i!==idx).map((e,i)=>({addr:e.addr,label:e.label,sort_order:i}));
+  const updated=gEmails().filter((_,i)=>i!==idx).map((e,i)=>({addr:e.addr,label:e.label,verified:e.verified!==false,sort_order:i}));
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   renderEmailAccounts();
+}
+
+async function resendVerify(btn,addr){
+  btn.disabled=true;btn.textContent='Sending…';
+  await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(()=>{});
+  toast('Verification email sent','success');
+  setTimeout(()=>{btn.disabled=false;btn.textContent='Resend';},3000);
 }
 
 function showEmailEdit(idx){
@@ -3960,13 +3977,18 @@ function saveEmailEdit(idx){
 }
 
 async function updateEmail(idx,addr,label){
-  const updated=gEmails().map(function(e,i){return i===idx?{addr:addr,label:label}:e;})
-    .map(function(e,i){return{addr:e.addr,label:e.label,sort_order:i};});
+  const old=gEmails()[idx];
+  const addrChanged=old&&old.addr!==addr;
+  const updated=gEmails().map(function(e,i){
+    const v=i===idx?(!addrChanged&&e.verified!==false):e.verified!==false;
+    return{addr:i===idx?addr:e.addr,label:i===idx?label:e.label,verified:v,sort_order:i};
+  });
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),
     body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   renderEmailAccounts();
   toast('Email account updated','success');
+  if(addrChanged) fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'verify_email',email:addr})}).catch(()=>{});
 }
 
 // AUTO-RECHARGE
@@ -4237,6 +4259,11 @@ document.addEventListener('keydown',function(e){
       history.replaceState(null,'','/app');
       var errMsg=sfParams.get('msg')||'unknown error';
       toast('Salesforce connection failed: '+decodeURIComponent(errMsg),'error');
+    }
+    if(sfParams.get('email_verified')==='1'){
+      history.replaceState(null,'','/app');
+      toast('Email address verified!','success');
+      await loadEmails();renderEmailAccounts();
     }
     if(sfParams.get('sf_connected')==='1'){
       history.replaceState(null,'','/app');

@@ -3,6 +3,24 @@ import supabase from './_supabase.js';
 import crypto from 'crypto';
 
 export default async function handler(req, res) {
+  // Public action — no JWT required
+  if (req.method === 'GET' && req.query?.action === 'confirm_email') {
+    const { token } = req.query;
+    if (!token) { res.setHeader('Location', '/app?email_verified=error'); return res.status(302).end(); }
+    const { data: profileRow } = await supabase
+      .from('profiles').select('user_id, pending_email_verify').eq('verify_token', token).maybeSingle();
+    if (!profileRow?.user_id || !profileRow?.pending_email_verify) {
+      res.setHeader('Location', '/app?email_verified=error'); return res.status(302).end();
+    }
+    await supabase.from('email_accounts')
+      .update({ verified: true })
+      .eq('user_id', profileRow.user_id).eq('addr', profileRow.pending_email_verify);
+    await supabase.from('profiles')
+      .update({ pending_email_verify: null, verify_token: null }).eq('user_id', profileRow.user_id);
+    res.setHeader('Location', '/app?email_verified=1');
+    return res.status(302).end();
+  }
+
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
@@ -24,7 +42,8 @@ export default async function handler(req, res) {
       if (accounts.length === 0) return res.status(200).json([]);
       const rows = accounts.map(a => ({
         user_id: userId, addr: a.addr,
-        label: a.label ?? null, sort_order: a.sort_order ?? 0
+        label: a.label ?? null, sort_order: a.sort_order ?? 0,
+        verified: a.verified !== false
       }));
       const { data, error } = await supabase.from('email_accounts').insert(rows).select();
       if (error) return res.status(500).json({ error: error.message });
@@ -63,6 +82,34 @@ export default async function handler(req, res) {
       .delete().eq('id', id).eq('user_id', userId);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ success: true });
+  }
+
+  // POST {action:'verify_email', email:'...'}
+  if (req.method === 'POST' && req.body?.action === 'verify_email') {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Missing email' });
+    const token = crypto.randomBytes(32).toString('hex');
+    await supabase.from('profiles')
+      .update({ pending_email_verify: email, verify_token: token }).eq('user_id', userId);
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Renzo <noreply@meetrenzo.com>',
+        to: email,
+        subject: 'Verify your email address for Renzo',
+        html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1a1a1a">
+          <div style="font-family:Georgia,serif;font-size:24px;color:#1F6B47;margin-bottom:16px">Renzo</div>
+          <p style="margin-bottom:16px">Someone added this email to their Renzo account. Click below to verify it's yours.</p>
+          <a href="https://www.meetrenzo.com/api/profile?action=confirm_email&token=${token}"
+             style="display:inline-block;padding:12px 24px;background:#1F6B47;color:white;text-decoration:none;border-radius:8px;font-weight:600;margin:8px 0 16px">
+            Verify Email Address
+          </a>
+          <p style="font-size:12px;color:#999;margin-top:24px">If you didn't add this email to Renzo, you can ignore this message.</p>
+        </div>`
+      })
+    }).catch(() => {});
+    return res.json({ success: true });
   }
 
   // POST {action:'complete_onboarding'}
