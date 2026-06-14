@@ -226,6 +226,14 @@ export default async function handler(req, res) {
   const sig = req.headers['stripe-signature'];
 
   // Public config — returns publishable key, no auth required
+  // User transaction history (JWT-protected, no admin required)
+  if (req.method === 'GET' && req.query.action === 'transactions') {
+    let uid;
+    try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+    const { data: txns } = await supabase.from('transactions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(20);
+    return res.json({ transactions: txns || [] });
+  }
+
   if (req.method === 'GET') {
     const qs = new URL(req.url, 'https://x').searchParams;
     if (qs.get('action') === 'config') {
