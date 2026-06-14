@@ -1355,6 +1355,9 @@ async function updateCreditDisplay(){
       const n=Number(d.credits);
       if(el)el.textContent='⚡ '+n.toLocaleString()+' credits';
       updateLowCreditBanner(n);
+      if(!_cache.billing) _cache.billing={};
+      _cache.billing.credits=n.toLocaleString();
+      renderSidebarAvatar();
     }
   }catch{}
 }
@@ -1365,6 +1368,9 @@ function syncCreditDisplay(d){
     const n=Number(d._credits.creditsRemaining);
     if(el)el.textContent='⚡ '+n.toLocaleString()+' credits';
     updateLowCreditBanner(n);
+    if(!_cache.billing) _cache.billing={};
+    _cache.billing.credits=n.toLocaleString();
+    renderSidebarAvatar();
   }
 }
 
@@ -1901,6 +1907,9 @@ function renderSidebarAvatar(){
   if(dn) dn.textContent=parts[0]||name;
   var ae=document.getElementById('avatarEmail');
   if(ae) ae.textContent=currentUser.email||'';
+  var credits=_cache.billing?.credits??(document.getElementById('creditBalance')?.textContent||'--');
+  var creditsEl=document.getElementById('avatarCredits');
+  if(creditsEl) creditsEl.textContent='⚡ '+credits+' credits';
 }
 function toggleAvatarDD(){
   var d=document.getElementById('avatarDropdown');
