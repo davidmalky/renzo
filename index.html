@@ -598,6 +598,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <select class="filter-select" id="ctTierF">
           <option value="">All Tiers</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="C">Tier C</option>
         </select>
+        <select id="contactSourceFilter" onchange="filterContactsBySource(this.value)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--gray)">
+          <option value="">All sources</option>
+          <option value="Salesforce">Salesforce</option>
+          <option value="HubSpot">HubSpot</option>
+          <option value="VCS">Custom System</option>
+          <option value="manual">Manually added</option>
+          <option value="csv">CSV import</option>
+        </select>
       </div>
       <div id="ctBatchBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--green-pale);border:1px solid var(--green);border-radius:8px;margin-bottom:12px">
         <span id="ctBatchCount" style="font-size:13px;font-weight:600;color:var(--green)">0 selected</span>
@@ -2250,12 +2258,22 @@ function renderActivity(){
 }
 
 // CONTACTS
+function filterContactsBySource(source){
+  renderContacts();
+}
+
 function renderContacts(){
   const q=document.getElementById('ctSearch').value.toLowerCase();
   const tf=document.getElementById('ctTierF').value;
+  const sf=(document.getElementById('contactSourceFilter')||{}).value||'';
   let list=gc().filter(c=>{
     if(q&&!c.name.toLowerCase().includes(q)&&!c.company.toLowerCase().includes(q)) return false;
     if(tf&&c.tier!==tf) return false;
+    if(sf){
+      if(sf==='manual'){ if(c.source_system) return false; }
+      else if(sf==='csv'){ if((c.source_system||'').toLowerCase()!=='csv') return false; }
+      else { if((c.source_system||'')!==sf) return false; }
+    }
     return true;
   }).sort((a,b)=>computePriority(b)-computePriority(a));
 
@@ -3678,17 +3696,30 @@ async function disconnectSalesforce(){
 
 // GENERIC DISCONNECT
 async function disconnectIntegration(provider){
-  var label=provider.charAt(0).toUpperCase()+provider.slice(1);
-  if(!confirm('Disconnect '+label+'? Your synced contacts will remain but the connection will be removed.')) return;
-  var key=profileKey('renzo_crm_connections');
-  var conns={};try{conns=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+  const removeContacts = confirm(
+    'Disconnect ' + providerName + '?\n\nClick OK to disconnect and KEEP your synced contacts.\nClick Cancel to go back.'
+  );
+  if(!removeContacts) return;
+  const deleteContacts = confirm(
+    'Do you also want to remove all contacts that were imported from ' + providerName + '?\n\nOK = Remove ' + providerName + ' contacts\nCancel = Keep contacts'
+  );
+  const key = profileKey('renzo_crm_connections');
+  const conns = JSON.parse(localStorage.getItem(key)||'{}');
   delete conns[provider];
-  localStorage.setItem(key,JSON.stringify(conns));
+  localStorage.setItem(key, JSON.stringify(conns));
   try{
-    await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'disconnect_integration',provider})});
-  }catch(e){}
-  renderConnectionsView();
-  toast(label+' disconnected','success');
+    const r = await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'disconnect_integration',provider,deleteContacts})});
+    const d = await r.json();
+    if(d.success){
+      if(deleteContacts){
+        _cache.contacts = _cache.contacts.filter(c => (c.source_system||'').toLowerCase() !== provider.toLowerCase());
+        renderContacts();
+      }
+      renderConnectionsView();
+      toast(providerName + ' disconnected' + (deleteContacts ? ' and contacts removed' : ''), 'success');
+    }
+  }catch(e){ toast('Disconnect failed: '+e.message,'error'); }
 }
 
 // CRM SYNC
