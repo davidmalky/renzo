@@ -603,7 +603,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <option value="">All sources</option>
           <option value="Salesforce">Salesforce</option>
           <option value="HubSpot">HubSpot</option>
-          <option value="VCS">Custom System</option>
           <option value="manual">Manually added</option>
           <option value="csv">CSV import</option>
         </select>
@@ -1685,6 +1684,12 @@ function normalizeContact(r){
     accountSize:r.account_size||r.accountSize||null,
     invoiceAmount:r.invoice_amount!=null?r.invoice_amount:(r.invoiceAmount??null),
     repName:r.rep_name||r.repName||null,
+    tier:r.tier||null,
+    frequency:r.frequency||30,
+    location:r.location||'',
+    products:r.products||'',
+    history:r.history||'',
+    source_system:r.source_system||null,
     created_at:r.created_at
   };
 }
@@ -1965,8 +1970,6 @@ async function doForgotSend(){
     const r=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Something went wrong.';err.classList.remove('hidden');return;}
-    // Pre-fill code field if dev_code present (remove once real email is wired)
-    if(d._dev_code) document.getElementById('forgotCode').value=d._dev_code;
     document.getElementById('forgotStep1').classList.add('hidden');
     document.getElementById('forgotStep2').classList.remove('hidden');
   }catch(e){err.textContent='Network error — please try again.';err.classList.remove('hidden');}
@@ -2635,7 +2638,7 @@ async function generateMsg(c, customInstruction){
       headers:getAuthHeaders(),
       body:JSON.stringify({model:selectedModel,max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
-    if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiModal').classList.add('hidden');return;}
+    if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiPromptBox').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=false;document.getElementById('aiModal').classList.add('hidden');return;}
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
     const data=await res.json();
     syncCreditDisplay(data);
@@ -2651,9 +2654,13 @@ async function generateMsg(c, customInstruction){
     var attachBanner = document.getElementById('aiAttachBanner');
     if(attachBanner) attachBanner.classList.toggle('hidden', !needsAttachment);
     document.getElementById('aiLoading').classList.add('hidden');
+    document.getElementById('aiPromptBox').classList.remove('hidden');
+    document.getElementById('aiGenBtn').disabled=false;
     document.getElementById('aiResult').classList.remove('hidden');
   }catch(e){
     document.getElementById('aiLoading').classList.add('hidden');
+    document.getElementById('aiPromptBox').classList.remove('hidden');
+    document.getElementById('aiGenBtn').disabled=false;
     document.getElementById('aiErr').classList.remove('hidden');
     document.getElementById('aiErr').textContent='Error: '+e.message;
   }
@@ -3206,6 +3213,9 @@ async function runBatch(){
   const confirmed=await showBatchConfirmModal(estCredits,estCount,getCurrentCredits(),preFilter.label);
   if(!confirmed) return;
 
+  _pendingBatch=[];
+  document.getElementById('batchResults').innerHTML='';
+
   const p=gp();
   document.getElementById('batchProgress').classList.remove('hidden');
   document.getElementById('batchResults').classList.add('hidden');
@@ -3485,7 +3495,7 @@ const INTEGRATION_GUIDES = {
       +'</ol>'
       +'</div>'},
   custom:{
-    title:'Custom System / VCS -- Integration Guide',
+    title:'Custom System Integration Guide',
     content:'<div style="font-size:14px;line-height:1.7;color:var(--dark)">'
       +'<h4 style="margin-bottom:8px;color:var(--green)">Option 1: Add CSV Export to Your App</h4>'
       +'<p style="margin-bottom:12px">The easiest integration -- add an export button to your system. Example for a JavaScript app:</p>'
@@ -3506,8 +3516,8 @@ const INTEGRATION_GUIDES = {
       +'<h4 style="margin-bottom:8px;color:var(--green)">Option 2: Embed Renzo in Your App</h4>'
       +'<p style="margin-bottom:8px">Add this anywhere in your HTML to embed Renzo as a panel:</p>'
       +'<code style="display:block;background:var(--gray-pale);padding:12px;border-radius:6px;font-size:12px;margin-bottom:16px">&lt;iframe src="https://renzo-beige.vercel.app" width="100%" height="800px" frameborder="0" style="border-radius:12px"&gt;&lt;/iframe&gt;</code>'
-      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 3: For VCS specifically</h4>'
-      +'<p style="color:var(--gray)">The Vendor Catalog Scheduler already has vendor data in a structured format. The fastest path: add an export button to VCS that downloads vendor contacts as CSV matching Renzo\'s column names (Name, Company, Email, Phone, Contract Expiry, Annual Spend, Notes). Contact your VCS developer to add this -- it\'s typically a 30-minute code change.</p>'
+      +'<h4 style="margin-bottom:8px;color:var(--green)">Option 3: Direct CSV from Your System</h4>'
+      +'<p style="color:var(--gray)">If your system can export data, the fastest path is adding a CSV export button that produces a file with columns matching Renzo\'s format. Contact your developer to add this -- it typically takes under an hour.</p>'
       +'</div>'}
 };
 
@@ -3558,7 +3568,7 @@ function renderConnectionsView(){
       +'<div style="font-weight:700;font-size:13px">'+esc(LABELS[p]||p)+'</div>'
       +'<div style="font-size:11px;color:var(--gray);margin-top:2px">Last sync: '+dt+(c.count?' · '+c.count+' contacts':'')+'</div>'
       +'</div>'
-      +'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>'
+      +(p==='salesforce'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncSalesforceAgain(this)">Sync Now</button>':'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>')
       +'</div>';
   }).join('');
   // Update action areas in grid with "Connected ✓" badge
@@ -3690,29 +3700,6 @@ async function syncSalesforceAgain(btn){
   }
 }
 
-
-// SALESFORCE DISCONNECT
-async function disconnectSalesforce(){
-  if(!confirm('Disconnect Salesforce? Your synced contacts will remain but the connection will be removed.')) return;
-  try{
-    const r = await fetch('/api/contacts', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({action:'salesforce_disconnect'})
-    });
-    const d = await r.json();
-    if(d.success){
-      const key = profileKey('renzo_crm_connections');
-      const conns = JSON.parse(localStorage.getItem(key)||'{}');
-      delete conns.salesforce;
-      localStorage.setItem(key, JSON.stringify(conns));
-      renderConnectionsView();
-      toast('Salesforce disconnected','success');
-    } else {
-      toast('Disconnect failed: '+(d.error||'unknown error'),'error');
-    }
-  }catch(e){ toast('Disconnect failed: '+e.message,'error'); }
-}
 
 // GENERIC DISCONNECT
 async function disconnectIntegration(provider){
@@ -4070,19 +4057,37 @@ async function saveAutoRecharge(){
     if(settings.enabled) toast('Auto-recharge enabled (offline — will sync on next load)','');
   }
 }
-function loadAutoRecharge(){
+async function loadAutoRecharge(){
   try{
+    // Apply localStorage first for instant UI
     var raw=localStorage.getItem(profileKey('renzo_auto_recharge'));
-    if(!raw) return;
-    var s=JSON.parse(raw);
-    var enabled=document.getElementById('autoRechargeEnabled');
-    var threshold=document.getElementById('autoRechargeThreshold');
-    var pack=document.getElementById('autoRechargePack');
-    var settingsEl=document.getElementById('autoRechargeSettings');
-    if(enabled) enabled.checked=!!s.enabled;
-    if(threshold&&s.threshold) threshold.value=s.threshold;
-    if(pack&&s.pack) pack.value=s.pack;
-    if(settingsEl) settingsEl.classList.toggle('hidden',!s.enabled);
+    if(raw){
+      var s=JSON.parse(raw);
+      var enabled=document.getElementById('autoRechargeEnabled');
+      var threshold=document.getElementById('autoRechargeThreshold');
+      var pack=document.getElementById('autoRechargePack');
+      var settingsEl=document.getElementById('autoRechargeSettings');
+      if(enabled) enabled.checked=!!s.enabled;
+      if(threshold&&s.threshold) threshold.value=s.threshold;
+      if(pack&&s.pack) pack.value=s.pack;
+      if(settingsEl) settingsEl.classList.toggle('hidden',!s.enabled);
+    }
+    // Sync from server for cross-device consistency
+    const r=await fetch('/api/billing?action=auto_recharge_settings',{headers:getAuthHeaders()});
+    if(r.ok){
+      const d=await r.json();
+      if(d.settings){
+        var enabledEl=document.getElementById('autoRechargeEnabled');
+        var thresholdEl=document.getElementById('autoRechargeThreshold');
+        var packEl=document.getElementById('autoRechargePack');
+        var settingsEl2=document.getElementById('autoRechargeSettings');
+        if(enabledEl) enabledEl.checked=!!d.settings.enabled;
+        if(thresholdEl&&d.settings.threshold) thresholdEl.value=d.settings.threshold;
+        if(packEl&&d.settings.pack) packEl.value=d.settings.pack;
+        if(settingsEl2) settingsEl2.classList.toggle('hidden',!d.settings.enabled);
+        localStorage.setItem(profileKey('renzo_auto_recharge'),JSON.stringify(d.settings));
+      }
+    }
   }catch(e){}
 }
 
@@ -4270,6 +4275,9 @@ document.getElementById('aiGenBtn').addEventListener('click',function(){
   const instruction=document.getElementById('aiPromptInput').value.trim();
   document.getElementById('aiResult').classList.add('hidden');
   document.getElementById('aiErr').classList.add('hidden');
+  document.getElementById('aiPromptBox').classList.add('hidden');
+  document.getElementById('aiLoading').classList.remove('hidden');
+  document.getElementById('aiGenBtn').disabled=true;
   generateMsg(aiContact, instruction||null);
 });
 document.getElementById('aiPromptInput').addEventListener('keydown',function(e){
@@ -4280,9 +4288,12 @@ document.getElementById('aiSkipPrompt').addEventListener('click',function(){
   if(!aiContact) return;
   document.getElementById('aiResult').classList.add('hidden');
   document.getElementById('aiErr').classList.add('hidden');
+  document.getElementById('aiPromptBox').classList.add('hidden');
+  document.getElementById('aiLoading').classList.remove('hidden');
+  document.getElementById('aiGenBtn').disabled=true;
   generateMsg(aiContact, null);
 });
-document.getElementById('aiRegen').addEventListener('click',function(){if(!aiContact)return;document.getElementById('aiResult').classList.add('hidden');document.getElementById('aiErr').classList.add('hidden');generateMsg(aiContact,null);});
+document.getElementById('aiRegen').addEventListener('click',function(){if(!aiContact)return;document.getElementById('aiResult').classList.add('hidden');document.getElementById('aiErr').classList.add('hidden');document.getElementById('aiLoading').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=true;generateMsg(aiContact,null);});
 // Refine button toggle
 document.getElementById('aiRefine') && document.getElementById('aiRefine').addEventListener('click',function(){
   document.getElementById('aiRefineBox').classList.toggle('hidden');
@@ -4550,8 +4561,8 @@ async function submitFeedback(){
 <!-- EMBED KIT MODAL -->
 <div class="modal-overlay hidden" id="embedKitModal" onclick="document.getElementById('embedKitModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
-    <div class="modal-hdr">
-      <span>Embed Kit</span>
+    <div class="modal-header">
+      <h2 class="modal-title">Embed Kit</h2>
       <button class="modal-close" onclick="document.getElementById('embedKitModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">
@@ -4597,8 +4608,8 @@ async function submitFeedback(){
 <!-- FEEDBACK MODAL -->
 <div class="modal-overlay hidden" id="feedbackModal" onclick="document.getElementById('feedbackModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
-    <div class="modal-hdr">
-      <span>Send Feedback</span>
+    <div class="modal-header">
+      <h2 class="modal-title">Send Feedback</h2>
       <button class="modal-close" onclick="document.getElementById('feedbackModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">
@@ -4622,8 +4633,8 @@ async function submitFeedback(){
 <!-- ADD CARD MODAL -->
 <div class="modal-overlay hidden" id="addCardModal" onclick="document.getElementById('addCardModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:420px" onclick="event.stopPropagation()">
-    <div class="modal-hdr">
-      <span>Add Payment Method</span>
+    <div class="modal-header">
+      <h2 class="modal-title">Add Payment Method</h2>
       <button class="modal-close" onclick="document.getElementById('addCardModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">
@@ -4641,8 +4652,8 @@ async function submitFeedback(){
 <!-- FEATURE REQUEST MODAL -->
 <div class="modal-overlay hidden" id="featureRequestModal" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:440px" onclick="event.stopPropagation()">
-    <div class="modal-hdr">
-      <span>Suggest a Feature</span>
+    <div class="modal-header">
+      <h2 class="modal-title">Suggest a Feature</h2>
       <button class="modal-close" onclick="document.getElementById('featureRequestModal').classList.add('hidden')">×</button>
     </div>
     <div style="padding:20px">

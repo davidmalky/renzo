@@ -195,6 +195,55 @@ async function handleWebhook(rawBody, sig, res) {
   return res.status(200).json({ received: true });
 }
 
+// ── AUTO-RECHARGE ─────────────────────────────────────────────────────────────
+export async function checkAutoRecharge(userId) {
+  try {
+    const { data: billing } = await supabase
+      .from('billing').select('*').eq('user_id', userId).maybeSingle();
+    if (!billing?.auto_recharge_enabled) return { triggered: false };
+    if (billing.credits > billing.auto_recharge_threshold) return { triggered: false };
+    if (!billing.stripe_customer_id) return { triggered: false };
+
+    const pack = PACKS[billing.auto_recharge_pack || 'starter'];
+    if (!pack || pack.credits === 0) return { triggered: false };
+
+    const customer = await stripe.customers.retrieve(billing.stripe_customer_id);
+    const defaultPm = customer.invoice_settings?.default_payment_method;
+    if (!defaultPm) return { triggered: false };
+
+    const pi = await stripe.paymentIntents.create({
+      amount: pack.amount,
+      currency: 'usd',
+      customer: billing.stripe_customer_id,
+      payment_method: defaultPm,
+      payment_method_types: ['card'],
+      confirm: true,
+      off_session: true,
+      metadata: { userId, creditsToAdd: String(pack.credits), packType: billing.auto_recharge_pack || 'starter' }
+    });
+
+    if (pi.status === 'succeeded') {
+      const { data: fresh } = await supabase.from('billing').select('credits').eq('user_id', userId).single();
+      await supabase.from('billing').update({
+        credits: (fresh?.credits || 0) + pack.credits,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', userId);
+      await supabase.from('transactions').insert({
+        user_id: userId,
+        pack_type: billing.auto_recharge_pack || 'starter',
+        amount_cents: pack.amount,
+        credits_added: pack.credits,
+        stripe_pi_id: pi.id
+      });
+      return { triggered: true, credits_added: pack.credits };
+    }
+    return { triggered: false };
+  } catch (e) {
+    console.error('[auto-recharge] error:', e.message);
+    return { triggered: false };
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 // ── ADMIN ACTIONS ────────────────────────────────────────────────────────────
@@ -252,6 +301,15 @@ export default async function handler(req, res) {
     if (qs.get('action') === 'config') {
       return res.status(200).json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
     }
+    if (qs.get('action') === 'auto_recharge_settings') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { data: billing } = await supabase.from('billing').select('auto_recharge_enabled,auto_recharge_threshold,auto_recharge_pack').eq('user_id', uid).maybeSingle();
+      return res.json({ settings: billing ? {
+        enabled: billing.auto_recharge_enabled || false,
+        threshold: billing.auto_recharge_threshold || 50,
+        pack: billing.auto_recharge_pack || 'starter'
+      } : null });
+    }
     if (qs.get('action') === 'payment_methods') {
       let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
       const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).single();
@@ -274,6 +332,24 @@ export default async function handler(req, res) {
     try { body = JSON.parse(rawBody.toString()); } catch {}
     req.body = body;
     if (body.action === 'confirm-credits') return handleConfirmCredits(req, body, res);
+    if (body.action === 'save_auto_recharge') {
+      let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
+      const { enabled, threshold, pack } = body;
+      await supabase.from('billing').upsert({
+        user_id: uid,
+        auto_recharge_enabled: !!enabled,
+        auto_recharge_threshold: parseInt(threshold, 10) || 50,
+        auto_recharge_pack: pack || 'starter',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+      const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).maybeSingle();
+      let has_payment_method = false;
+      if (billing?.stripe_customer_id) {
+        const pms = await stripe.paymentMethods.list({ customer: billing.stripe_customer_id, type: 'card' });
+        has_payment_method = pms.data.length > 0;
+      }
+      return res.json({ success: true, has_payment_method });
+    }
     if ((body.action||'').startsWith('admin_') || body.action === 'admin_users' || body.action === 'admin_stats' || body.action === 'admin_transactions' || body.action === 'admin_delete_user') return handleAdmin(req, body, res);
     if (body.action === 'set_default_card') {
       let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
