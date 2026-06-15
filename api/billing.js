@@ -174,20 +174,8 @@ async function handleWebhook(rawBody, sig, res) {
 
   if (event.type === 'payment_intent.succeeded') {
     const pi = event.data.object;
-    const { userId, creditsToAdd } = pi.metadata || {};
-    if (userId && creditsToAdd) {
-      const credits = parseInt(creditsToAdd, 10);
-      const { data: billing } = await supabase
-        .from('billing').select('credits').eq('user_id', userId).single();
-      if (billing) {
-        await supabase.from('billing').update({
-          credits: billing.credits + credits,
-          first_pack_purchased: true,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', userId);
-        console.log(`Added ${credits} credits to ${userId}`);
-      }
-    }
+    // Credits are awarded by handleConfirmCredits on the client side — do not add them here to avoid double-crediting.
+    console.log(`[webhook] payment_intent.succeeded: ${pi.id} userId=${pi.metadata?.userId}`);
   } else if (event.type === 'payment_intent.payment_failed') {
     console.error(`Payment failed: ${event.data.object.id}`);
   }
