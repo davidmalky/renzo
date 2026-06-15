@@ -764,7 +764,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="int-icon" style="background:#F3E8FF">⚙</div>
           <div class="int-name">Custom API</div>
           <div class="int-desc">Push contacts from any system using Renzo's REST API and API keys.</div>
-          <button class="btn btn-ghost btn-sm" onclick="showView('settings')" style="margin-top:auto">Get API Key</button>
+          <button class="btn btn-ghost btn-sm" onclick="openApiKeyModal()" style="margin-top:auto">Get API Key</button>
           <button class="btn btn-ghost btn-sm" onclick="openEmbedKit()" style="margin-top:8px">Get Embed Kit</button>
         </div>
 
@@ -3806,13 +3806,17 @@ function loadSettings(){
 // ── API KEYS ──────────────────────────────────────────────────────────────────
 async function loadApiKeys(){
   const el=document.getElementById('apiKeysList');
-  if(!el) return;
+  const modalEl=document.getElementById('apiKeyModalList');
   try{
     const r=await fetch('/api/profile?action=list_api_keys',{headers:getAuthHeaders()});
-    if(!r.ok){el.innerHTML='<p style="font-size:13px;color:var(--red)">Could not load keys.</p>';return;}
+    if(!r.ok){
+      const msg='<p style="font-size:13px;color:var(--red)">Could not load keys.</p>';
+      if(el) el.innerHTML=msg;
+      if(modalEl) modalEl.innerHTML=msg;
+      return;
+    }
     const keys=await r.json();
-    if(!keys.length){el.innerHTML='<p style="font-size:13px;color:var(--gray)">No API keys yet.</p>';return;}
-    el.innerHTML=keys.map(k=>{
+    const html=keys.length?keys.map(k=>{
       const created=new Date(k.created_at).toLocaleDateString();
       const used=k.last_used_at?new Date(k.last_used_at).toLocaleDateString():'never';
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-light)">'
@@ -3820,8 +3824,19 @@ async function loadApiKeys(){
         +'<div style="font-size:11px;color:var(--gray)">Created '+created+' &middot; Last used '+used+'</div></div>'
         +'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="revokeApiKey(\''+k.id+'\')">Revoke</button>'
         +'</div>';
-    }).join('');
-  }catch(e){el.innerHTML='<p style="font-size:13px;color:var(--red)">Error loading keys.</p>';}
+    }).join(''):'<p style="font-size:13px;color:var(--gray)">No API keys yet.</p>';
+    if(el) el.innerHTML=html;
+    if(modalEl) modalEl.innerHTML=html;
+  }catch(e){
+    const msg='<p style="font-size:13px;color:var(--red)">Error loading keys.</p>';
+    if(el) el.innerHTML=msg;
+    if(modalEl) modalEl.innerHTML=msg;
+  }
+}
+
+function openApiKeyModal(){
+  document.getElementById('apiKeyModal').classList.remove('hidden');
+  loadApiKeys();
 }
 
 async function generateApiKey(){
@@ -4366,11 +4381,11 @@ document.getElementById('csvClose').addEventListener('click',function(){document
 document.getElementById('runBatchBtn').addEventListener('click',runBatch);
 
 // MODAL OVERLAY CLOSE
-['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal'].forEach(function(id){
+['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal','apiKeyModal'].forEach(function(id){
   var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
+  if(e.key==='Escape'){['ctModal','aiModal','delModal','csvModal','histModal','statModal','batchConfirmModal','billingHistoryModal','creditsModal','paymentModal','crmModal','integrationRequestModal','feedbackModal','featureRequestModal','embedKitModal','addCardModal','apiKeyModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.add('hidden');});}
 });
 
 // INIT
@@ -4609,6 +4624,21 @@ async function submitFeedback(){
   &lt;text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="Georgia,serif" font-size="19" font-weight="700" fill="white"&gt;R&lt;/text&gt;
 &lt;/svg&gt;</pre>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay hidden" id="apiKeyModal" onclick="document.getElementById('apiKeyModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:480px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">API Keys</h2>
+      <button class="modal-close" onclick="document.getElementById('apiKeyModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Use API keys to push contacts from any external system into Renzo.</p>
+      <div id="apiKeyModalList" style="margin-bottom:16px">Loading...</div>
+      <button class="btn btn-primary btn-sm" onclick="generateApiKey()">Generate New Key</button>
     </div>
   </div>
 </div>
