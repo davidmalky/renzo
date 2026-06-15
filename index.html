@@ -195,7 +195,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 .batch-review-item.br-skipped{display:none}
 .batch-review-name{font-weight:700;font-size:15px;color:var(--dark);margin-bottom:2px}
 .batch-review-trigger{font-size:11px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px}
-.batch-review-preview{font-size:13.5px;color:#374151;line-height:1.6;margin-bottom:10px;border-left:3px solid var(--gray-light);padding-left:10px;white-space:pre-wrap;cursor:pointer}
+.batch-review-preview{font-size:13.5px;color:#374151;line-height:1.6;margin-bottom:10px;border-left:3px solid var(--gray-light);padding-left:10px}
 .batch-review-edit{margin-bottom:10px;display:none}
 .batch-review-edit textarea{width:100%;min-height:110px;padding:10px;border:1.5px solid var(--green);border-radius:6px;font-size:13.5px;line-height:1.6;outline:none;resize:vertical;font-family:inherit}
 .batch-review-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -3070,15 +3070,16 @@ function showBatchReview(items,trigger){
     +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
     +'</div>';
   const reviewHtml=items.map(it=>{
-    const short=it.msg.slice(0,160)+(it.msg.length>160?'…':'');
-    const needsToggle=it.msg.length>160;
+    const msg=it.msg.trim();
+    const lineEst=msg.split('\n').reduce(function(a,l){return a+Math.max(1,Math.ceil(l.length/65));},0);
+    const needsToggle=lineEst>3;
     return `
     <div class="batch-review-item" id="br-${it.uid}">
       <div class="batch-review-name">${esc(it.c_name)} <span style="font-weight:400;color:var(--gray);font-size:13px">at ${esc(it.co)}</span></div>
       ${it.reason?`<div style="font-size:12px;color:var(--gray);font-style:italic;margin-bottom:8px">Why now: ${esc(it.reason)}</div>`:''}
       <div class="batch-review-preview" id="brp-${it.uid}"${needsToggle?' onclick="toggleBatchFull(\''+it.uid+'\')" title="Click to expand/collapse"':''}>
-        <div id="brs-${it.uid}">${esc(short)}</div>
-        ${needsToggle?'<div id="brf-'+it.uid+'" style="display:none;white-space:pre-wrap;margin-top:6px">'+esc(it.msg)+'</div>':''}
+        <div id="brs-${it.uid}" style="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;padding:4px 0;white-space:pre-wrap">${esc(msg)}</div>
+        ${needsToggle?'<div id="brf-'+it.uid+'" style="display:none;white-space:pre-wrap;padding:8px 12px">'+esc(msg)+'</div>':''}
       </div>
       ${needsToggle?'<span id="brtog-'+it.uid+'" style="font-size:11px;color:var(--green);cursor:pointer;display:inline-block;margin-bottom:8px" onclick="toggleBatchFull(\''+it.uid+'\')">Show more</span>':''}
       <div class="batch-review-edit" id="bre-${it.uid}">
@@ -3110,7 +3111,7 @@ function toggleBatchFull(uid){
   // Collapsed → expanded: hide short, show full
   // Expanded → collapsed: show short, hide full
   // Short text always present as minimum; never truly collapse the card
-  shortEl.style.display=isExpanded?'block':'none';
+  shortEl.style.display=isExpanded?'-webkit-box':'none';
   fullEl.style.display=isExpanded?'none':'block';
   if(togEl) togEl.textContent=isExpanded?'Show more':'Show less';
 }
