@@ -539,6 +539,9 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <span class="bottom-nav-icon">📬</span><span>Queue</span>
       <span class="bottom-nav-badge hidden" id="queueBadgeMobile">0</span>
     </button>
+    <button class="nav-item bottom-nav-item" data-view="drafts">
+      <span class="bottom-nav-icon">📝</span><span>Drafts</span>
+    </button>
     <button class="nav-item bottom-nav-item" data-view="settings">
       <span class="bottom-nav-icon">⚙️</span><span>Settings</span>
     </button>
@@ -612,7 +615,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <button class="btn btn-ghost btn-sm" onclick="clearContactSelection()" style="margin-left:auto">Clear</button>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th><input type="checkbox" id="ctSelectAll" onclick="toggleSelectAllContacts(this)"></th><th>Name</th><th>Company</th><th>Tier</th><th>Priority</th><th>Last Contact</th><th>Status</th><th></th></tr></thead>
+        <table><thead><tr><th><input type="checkbox" id="ctSelectAll" onclick="toggleSelectAllContacts(this)"></th><th style="cursor:pointer;white-space:nowrap" onclick="setContactSort('name')">Name <span id="csort-name"></span></th><th style="cursor:pointer;white-space:nowrap" onclick="setContactSort('company')">Company <span id="csort-company"></span></th><th style="cursor:pointer;white-space:nowrap" onclick="setContactSort('tier')">Tier <span id="csort-tier"></span></th><th style="cursor:pointer;white-space:nowrap" onclick="setContactSort('priority')">Priority <span id="csort-priority">▼</span></th><th style="cursor:pointer;white-space:nowrap" onclick="setContactSort('lastContact')">Last Contact <span id="csort-lastContact"></span></th><th>Status</th><th></th></tr></thead>
         <tbody id="ctBody"></tbody></table>
       </div>
       <div id="ctEmpty" class="empty-state hidden"><strong>No contacts yet</strong>Add your first contact to get started.</div>
@@ -629,7 +632,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <select id="queueEmailSel" class="filter-select" style="min-width:180px">
             <option value="">Select sending account...</option>
           </select>
-          <button class="btn btn-ghost btn-sm" id="bulkSendBtn">Send All as Drafts</button>
+          <button class="btn btn-ghost btn-sm" id="bulkSendBtn">Open All in Email Client</button>
           <button class="btn btn-primary btn-sm" id="markAllBtn">Mark All Sent</button>
           <button class="btn btn-ghost btn-sm" id="clearQueueBtn" style="color:var(--red);border-color:var(--red)">Clear Queue</button>
         </div>
@@ -645,6 +648,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-ghost btn-sm" style="padding:6px 14px" onclick="dismissSent()">No, keep in queue</button>
         </div>
       </div>
+      <input class="search-input" id="queueSearch" placeholder="Search by name or company…" oninput="renderQueue()" style="margin-bottom:14px;width:100%">
       <div id="queueList" class="card"></div>
       <div id="queueEmpty" class="empty-state hidden"><strong>Queue is clear</strong>Generate messages to fill it.</div>
     </div>
@@ -652,6 +656,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <!-- DRAFTS -->
     <div id="view-drafts" class="view hidden">
       <div class="view-header"><h1 class="view-title">Drafts</h1></div>
+      <input class="search-input" id="draftsSearch" placeholder="Search by name or company…" oninput="renderDrafts()" style="margin-bottom:14px;width:100%">
       <div id="draftList" class="card"></div>
       <div id="draftEmpty" class="empty-state hidden"><strong>No drafts</strong>Saved messages appear here.</div>
     </div>
@@ -927,6 +932,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
         <button class="btn btn-ghost btn-sm" onclick="openAddCardModal()">+ Add Card</button>
       </div>
+
+      <!-- DANGER ZONE CARD -->
+      <div class="card" style="padding:28px;max-width:560px;margin-top:20px;border:1px solid rgba(220,38,38,.2)">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--red);margin-bottom:6px">Danger Zone</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Permanently delete your account and all data. This cannot be undone.</p>
+        <button class="btn btn-sm" style="background:var(--red);color:white;border:none" onclick="openDeleteAccountModal()">Delete My Account</button>
+      </div>
     </div>
 
     <!-- HELP -->
@@ -1171,6 +1183,26 @@ Response: { "draft": "Generated email text..." }</pre>
   </div>
 </div>
 
+<!-- DELETE ACCOUNT MODAL -->
+<div id="deleteAccountModal" class="modal-overlay hidden" onclick="document.getElementById('deleteAccountModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:420px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title" style="color:var(--red)">Delete Account</h2>
+      <button class="modal-close" onclick="document.getElementById('deleteAccountModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:0 0 20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">This will permanently delete your account, all contacts, messages, and billing data. <strong>This cannot be undone.</strong></p>
+      <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px">Type DELETE to confirm</label>
+      <input type="text" id="deleteAccountConfirm" placeholder="DELETE" style="width:100%;padding:9px 12px;border:1.5px solid var(--red);border-radius:8px;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter')submitDeleteAccount()">
+      <div id="deleteAccountErr" class="hidden" style="color:var(--red);font-size:13px;margin-top:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('deleteAccountModal').classList.add('hidden')">Cancel</button>
+        <button class="btn btn-sm" style="background:var(--red);color:white;border:none" onclick="submitDeleteAccount()">Delete My Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- NEW PROFILE MODAL -->
 <div id="newProfileModal" class="modal-overlay hidden" onclick="document.getElementById('newProfileModal').classList.add('hidden')">
   <div class="modal-box" style="max-width:400px" onclick="event.stopPropagation()">
@@ -1288,7 +1320,9 @@ Response: { "draft": "Generated email text..." }</pre>
         </div>
       </div>
       <div id="aiSubjectDisplay" class="hidden" style="font-size:13px;color:var(--gray);margin-bottom:8px;padding:8px 12px;background:var(--gray-pale);border-radius:6px">Subject: <span id="aiSubjectText"></span></div>
-      <div class="field"><label>Message — edit before sending</label><textarea class="msg-textarea" id="aiMsg"></textarea></div>
+      <div class="field"><label>Message — edit before sending</label><textarea class="msg-textarea" id="aiMsg"></textarea>
+        <div id="aiMsgCount" style="text-align:right;font-size:11px;color:var(--gray);margin-top:4px">0 characters</div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost btn-sm" id="aiDraft">Save Draft</button>
         <button class="btn btn-ghost btn-sm" id="aiRegen">Regenerate</button>
@@ -1510,10 +1544,9 @@ async function openPaymentModal(type,skipAllowed=false,onSuccess=null){
   document.getElementById('paySkip').classList.toggle('hidden',!skipAllowed);
   document.getElementById('paymentModal').classList.remove('hidden');
   if(stripe){
-    if(!cardElement){
-      const els=stripe.elements();
-      cardElement=els.create('card',{hidePostalCode:true,style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
-    }
+    if(cardElement){ cardElement.destroy(); cardElement=null; }
+    const els=stripe.elements();
+    cardElement=els.create('card',{hidePostalCode:true,style:{base:{fontFamily:'\'DM Sans\',system-ui,sans-serif',fontSize:'14px',color:'#1C1917','::placeholder':{color:'#9CA3AF'}}}});
     document.getElementById('cardElement').innerHTML='';
     cardElement.mount('#cardElement');
   }
@@ -1720,6 +1753,49 @@ async function submitNewProfile(){
 
 // STATE
 let currentUser = null, aiContact = null, pendingDelete = null, csvData = null;
+let contactSortField = 'priority', contactSortDir = 'desc';
+
+function debounce(fn, delay){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),delay); }; }
+
+function setContactSort(field){
+  if(contactSortField===field){ contactSortDir=contactSortDir==='asc'?'desc':'asc'; }
+  else { contactSortField=field; contactSortDir=field==='priority'||field==='lastContact'?'desc':'asc'; }
+  renderContacts();
+}
+
+function updateSelectAllState(){
+  const all=[...document.querySelectorAll('.ct-chk')];
+  const checked=all.filter(c=>c.checked);
+  const sa=document.getElementById('ctSelectAll');
+  if(!sa) return;
+  sa.indeterminate=checked.length>0&&checked.length<all.length;
+  sa.checked=all.length>0&&checked.length===all.length;
+}
+
+function openDeleteAccountModal(){
+  document.getElementById('deleteAccountConfirm').value='';
+  document.getElementById('deleteAccountErr').classList.add('hidden');
+  document.getElementById('deleteAccountModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('deleteAccountConfirm').focus(),50);
+}
+
+async function submitDeleteAccount(){
+  const val=document.getElementById('deleteAccountConfirm').value.trim();
+  const errEl=document.getElementById('deleteAccountErr');
+  errEl.classList.add('hidden');
+  if(val!=='DELETE'){errEl.textContent='Type DELETE exactly to confirm';errEl.classList.remove('hidden');return;}
+  try{
+    const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'delete_account',confirmation:'DELETE'})});
+    const d=await r.json();
+    if(d.error){errEl.textContent=d.error;errEl.classList.remove('hidden');return;}
+    document.getElementById('deleteAccountModal').classList.add('hidden');
+    toast('Your account has been deleted.');
+    setTimeout(doLogout,1500);
+  }catch(e){
+    errEl.textContent='Something went wrong. Try again.';
+    errEl.classList.remove('hidden');
+  }
+}
 
 // STORAGE
 // Cache — populated async after login; sync accessors fall back to [] / {}
@@ -2327,8 +2403,12 @@ function renderDashboard(){
 
 // ACTIVITY LOG VIEW
 function renderActivity(){
-  const activity=ga();
   const el=document.getElementById('activityLogList');
+  if(_cache.activity===null){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
+    return;
+  }
+  const activity=ga();
   if(!activity.length){
     el.innerHTML='<div class="card"><div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div></div>';
     return;
@@ -2356,6 +2436,11 @@ function filterContactsBySource(source){
 }
 
 function renderContacts(){
+  const body=document.getElementById('ctBody'),empty=document.getElementById('ctEmpty');
+  if(_cache.contacts===null){
+    body.innerHTML='<tr><td colspan="8"><div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div></td></tr>';
+    empty.classList.add('hidden');return;
+  }
   const q=document.getElementById('ctSearch').value.toLowerCase();
   const tf=document.getElementById('ctTierF').value;
   const sf=(document.getElementById('contactSourceFilter')||{}).value||'';
@@ -2368,9 +2453,26 @@ function renderContacts(){
       else { if((c.source_system||'')!==sf) return false; }
     }
     return true;
-  }).sort((a,b)=>computePriority(b)-computePriority(a));
+  });
+  // Dynamic sort
+  list.sort((a,b)=>{
+    let av,bv;
+    if(contactSortField==='priority'){ av=computePriority(a);bv=computePriority(b); }
+    else if(contactSortField==='name'){ av=(a.name||'').toLowerCase();bv=(b.name||'').toLowerCase(); }
+    else if(contactSortField==='company'){ av=(a.company||'').toLowerCase();bv=(b.company||'').toLowerCase(); }
+    else if(contactSortField==='tier'){ av=a.tier||'Z';bv=b.tier||'Z'; }
+    else if(contactSortField==='lastContact'){ av=a.lastContact?new Date(a.lastContact).getTime():0;bv=b.lastContact?new Date(b.lastContact).getTime():0; }
+    else { av=computePriority(a);bv=computePriority(b); }
+    if(av<bv) return contactSortDir==='asc'?-1:1;
+    if(av>bv) return contactSortDir==='asc'?1:-1;
+    return 0;
+  });
+  // Update sort indicators
+  ['name','company','tier','priority','lastContact'].forEach(f=>{
+    const el=document.getElementById('csort-'+f);
+    if(el) el.textContent=contactSortField===f?(contactSortDir==='asc'?'▲':'▼'):'';
+  });
 
-  const body=document.getElementById('ctBody'),empty=document.getElementById('ctEmpty');
   if(!list.length){body.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
   body.innerHTML=list.map(function(c){
@@ -2404,6 +2506,9 @@ function renderContacts(){
       var nameEl=this.querySelector('.contact-name-link');
       if(nameEl) openHistory(nameEl.dataset.id);
     });
+  });
+  body.querySelectorAll('.ct-chk').forEach(function(cb){
+    cb.addEventListener('change',updateSelectAllState);
   });
 }
 
@@ -2725,6 +2830,7 @@ async function generateMsg(c, customInstruction){
     const parsed=JSON.parse(txt);
     document.getElementById('aiReason').textContent=parsed.reason;
     document.getElementById('aiMsg').value=parsed.message;
+    document.getElementById('aiMsg').dispatchEvent(new Event('input'));
     var aiSubjEl=document.getElementById('aiSubjectText');
     var aiSubjDisp=document.getElementById('aiSubjectDisplay');
     if(aiSubjEl) aiSubjEl.textContent=parsed.subject||'';
@@ -2831,22 +2937,30 @@ function openEmailCompose(toAddr,subject,body,fromAddr){
 
 // QUEUE
 function renderQueue(){
-  const q=gq(),list=document.getElementById('queueList'),empty=document.getElementById('queueEmpty');
+  const list=document.getElementById('queueList'),empty=document.getElementById('queueEmpty');
+  if(_cache.queue===null){
+    list.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
+    empty.classList.add('hidden');return;
+  }
   // Show email setup banner if no accounts configured
   const emails=gEmails();
   const emailBanner=document.getElementById('emailSetupBanner');
-  if(emailBanner){
-    emailBanner.classList.toggle('hidden', emails.length>0);
-  }
-  if(!q.length){list.innerHTML='';empty.classList.remove('hidden');return;}
+  if(emailBanner) emailBanner.classList.toggle('hidden', emails.length>0);
+  const sq=(document.getElementById('queueSearch')?.value||'').toLowerCase();
+  const items=gq().filter(i=>!sq||i.c_name?.toLowerCase().includes(sq)||i.co?.toLowerCase().includes(sq));
+  if(!items.length){list.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
-  list.innerHTML=q.map(item=>{
+  list.innerHTML=items.map(item=>{
     const c=gc().find(x=>x.id===item.contact_id);
-    const email=c&&c.email?c.email:'No email on file';
+    const hasEmail=c&&c.email;
+    const email=hasEmail?c.email:'';
     const subject=item.subject||('Following up - '+item.co+(item.trigger?' ('+item.trigger+')':''));
+    const emailDisplay=hasEmail
+      ?'<span style="color:var(--green);font-size:12px">'+esc(email)+'</span>'
+      :'<span style="color:var(--red);font-size:12px">⚠ No email — <span style="cursor:pointer;text-decoration:underline" onclick="openEditContact(\''+item.contact_id+'\')">Add email</span></span>';
     return '<div class="queue-item" id="qi-'+item.id+'">'+
       '<div class="queue-who">'+esc(item.c_name)+'</div>'+
-      '<div class="queue-co">'+esc(item.co)+' &middot; <span style="color:var(--green);font-size:12px">'+esc(email)+'</span></div>'+
+      '<div class="queue-co">'+esc(item.co)+' &middot; '+emailDisplay+'</div>'+
       '<div style="font-size:12px;color:var(--gray);margin-bottom:6px;font-style:italic">Subject: '+esc(subject.slice(0,80))+'</div>'+
       (item.trigger?'<div class="queue-trigger">'+esc(item.trigger)+'</div>':'')+
       '<div class="queue-preview" id="qmsg-'+item.id+'">'+esc(item.msg)+'</div>'+
@@ -2856,7 +2970,7 @@ function renderQueue(){
         '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.add(\'hidden\')">Cancel</button>'+
       '</div>'+
       '<div class="queue-actions">'+
-        '<button class="btn btn-primary btn-xs" onclick="sendEmail(\''+item.id+'\')">Prepare Email Draft</button>'+
+        '<button class="btn btn-primary btn-xs"'+(hasEmail?'':' disabled title="Add an email address to this contact first"')+' onclick="sendEmail(\''+item.id+'\')">Prepare Email Draft</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="markSent(\''+item.id+'\')">Mark Sent</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.toggle(\'hidden\');document.getElementById(\'qri-'+item.id+'\').focus()">Refine</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="saveDraftFromQueue(\''+item.id+'\')">Save Draft</button>'+
@@ -3021,7 +3135,13 @@ async function removeQ(qid){
 
 // DRAFTS
 function renderDrafts(){
-  const drafts=gd(),list=document.getElementById('draftList'),empty=document.getElementById('draftEmpty');
+  const list=document.getElementById('draftList'),empty=document.getElementById('draftEmpty');
+  if(_cache.drafts===null){
+    list.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
+    empty.classList.add('hidden');return;
+  }
+  const sq=(document.getElementById('draftsSearch')?.value||'').toLowerCase();
+  const drafts=gd().filter(d=>!sq||d.c_name?.toLowerCase().includes(sq)||d.co?.toLowerCase().includes(sq));
   if(!drafts.length){list.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
   list.innerHTML=drafts.map(d=>
@@ -4495,7 +4615,16 @@ document.getElementById('genApiKeyBtn').addEventListener('click',generateApiKey)
 document.getElementById('bulkSendBtn') && document.getElementById('bulkSendBtn').addEventListener('click',bulkSendAll);
 document.getElementById('newEmailAddr') && document.getElementById('newEmailAddr').addEventListener('keydown',function(e){if(e.key==='Enter')addEmail();});
 document.getElementById('newRule').addEventListener('keydown',function(e){if(e.key==='Enter')addRule();});
-document.getElementById('ctSearch').addEventListener('input',renderContacts);
+document.getElementById('ctSearch').addEventListener('input',debounce(renderContacts,250));
+document.getElementById('queueSearch') && document.getElementById('queueSearch').addEventListener('input',debounce(renderQueue,250));
+document.getElementById('draftsSearch') && document.getElementById('draftsSearch').addEventListener('input',debounce(renderDrafts,250));
+document.getElementById('aiMsg').addEventListener('input',function(){
+  const len=this.value.length;
+  const el=document.getElementById('aiMsgCount');
+  if(!el) return;
+  el.textContent=len+' character'+(len!==1?'s':'')+(len>800?' — consider shortening':'');
+  el.style.color=len>800?'var(--red)':'var(--gray)';
+});
 document.getElementById('ctTierF').addEventListener('change',renderContacts);
 document.getElementById('importCsvBtn').addEventListener('click',function(){document.getElementById('csvFile').click();});
 document.getElementById('exportCsvBtn').addEventListener('click',exportContacts);

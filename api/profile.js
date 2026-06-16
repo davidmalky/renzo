@@ -124,6 +124,19 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
+  // POST {action:'delete_account', confirmation:'DELETE'}
+  if (req.method === 'POST' && req.body?.action === 'delete_account') {
+    const { confirmation } = req.body;
+    if (confirmation !== 'DELETE') return res.status(400).json({ error: 'Invalid confirmation' });
+    const tables = ['contacts','activity','queue','drafts','rules','billing','profiles',
+                    'integrations','transactions','api_keys','email_accounts'];
+    for (const table of tables) {
+      await supabase.from(table).delete().eq('user_id', userId);
+    }
+    await supabase.from('users').delete().eq('id', userId);
+    return res.json({ success: true });
+  }
+
   // POST {action:'change_password', currentPassword:'...', newPassword:'...'}
   if (req.method === 'POST' && req.body?.action === 'change_password') {
     const { currentPassword, newPassword } = req.body;
