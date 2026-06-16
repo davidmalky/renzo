@@ -623,6 +623,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <tbody id="ctBody"></tbody></table>
       </div>
       <div id="ctEmpty" class="empty-state hidden"><strong>No contacts yet</strong>Add your first contact to get started.</div>
+      <div id="ctPagination"></div>
       <div style="text-align:center;padding:12px 0 4px;font-size:12px">
         <span style="color:var(--red);cursor:pointer;text-decoration:underline" onclick="deleteAllContacts()">Delete all contacts</span>
       </div>
@@ -654,7 +655,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
       <input class="search-input" id="queueSearch" placeholder="Search by name or company…" oninput="renderQueue()" style="margin-bottom:14px;width:100%">
       <div id="queueList" class="card"></div>
-      <div id="queueEmpty" class="empty-state hidden"><strong>Queue is clear</strong>Generate messages to fill it.</div>
+      <div id="queueEmpty" class="hidden"><div style="text-align:center;padding:60px 24px"><div style="font-size:48px;margin-bottom:16px">📭</div><div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px">Queue is empty</div><p style="color:var(--gray);font-size:13px;max-width:300px;margin:0 auto 24px">Generate messages for your contacts and add them to the queue to send later.</p><button class="btn btn-primary" onclick="showView('contacts')">Go to Contacts</button></div></div>
     </div>
 
     <!-- DRAFTS -->
@@ -662,7 +663,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div class="view-header"><h1 class="view-title">Drafts</h1></div>
       <input class="search-input" id="draftsSearch" placeholder="Search by name or company…" oninput="renderDrafts()" style="margin-bottom:14px;width:100%">
       <div id="draftList" class="card"></div>
-      <div id="draftEmpty" class="empty-state hidden"><strong>No drafts</strong>Saved messages appear here.</div>
+      <div id="draftEmpty" class="hidden"><div style="text-align:center;padding:60px 24px"><div style="font-size:48px;margin-bottom:16px">📝</div><div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px">No drafts saved</div><p style="color:var(--gray);font-size:13px;max-width:300px;margin:0 auto 24px">Save generated messages as drafts to review and send later.</p><button class="btn btn-primary" onclick="showView('contacts')">Go to Contacts</button></div></div>
     </div>
 
     <!-- BATCH -->
@@ -686,6 +687,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <!-- ACTIVITY LOG -->
     <div id="view-activity" class="view hidden">
       <div class="view-header"><h1 class="view-title">Activity Log</h1><div class="view-actions"><button class="btn btn-ghost btn-sm" onclick="exportActivity()">Export CSV</button></div></div>
+      <div style="display:flex;gap:8px;padding:0 0 16px"><button class="btn btn-ghost btn-sm" id="afBtn-all" onclick="filterActivity('all')" style="font-weight:600;color:var(--green)">All</button><button class="btn btn-ghost btn-sm" id="afBtn-sent" onclick="filterActivity('sent')">Sent</button><button class="btn btn-ghost btn-sm" id="afBtn-draft" onclick="filterActivity('draft')">Draft</button><button class="btn btn-ghost btn-sm" id="afBtn-batch" onclick="filterActivity('batch')">Batch</button></div>
       <div id="activityLogList"></div>
     </div>
 
@@ -811,6 +813,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div class="card" style="padding:28px;max-width:560px">
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:0 0 24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Company Profile</div>
+        <div class="field"><label>Profile Name</label><div style="display:flex;gap:8px"><input type="text" id="sProfileName" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none"><button class="btn btn-ghost btn-sm" onclick="renameCurrentProfile()">Rename</button></div></div>
         <div class="field"><label>Website URL</label>
           <div style="display:flex;gap:8px">
             <input type="url" id="sWebsite" placeholder="https://yourcompany.com" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none">
@@ -1746,6 +1749,33 @@ function renderProfileSelector(){
     + profiles.map(name=>'<option value="'+name+'" '+(name===PROFILE?'selected':'')+'>'+( name==='default'?'Default':name)+'</option>').join('');
 }
 
+function renameCurrentProfile(){
+  var newName=(document.getElementById('sProfileName').value||'').trim();
+  if(!newName){toast('Enter a profile name','error');return;}
+  if(newName==='Default') newName='default';
+  if(newName===PROFILE){toast('Same name — no change','error');return;}
+  var profiles=getProfiles();
+  if(profiles.includes(newName)){toast('A profile with that name already exists','error');return;}
+  // Rename all localStorage keys
+  var suffix=PROFILE==='default'?'':('__'+PROFILE);
+  var newSuffix=newName==='default'?'':('__'+newName);
+  Object.keys(localStorage).forEach(function(k){
+    if(suffix?k.endsWith(suffix):!k.includes('__')){
+      var base=suffix?k.slice(0,k.length-suffix.length):k;
+      if(base.startsWith('renzo_')&&base!=='renzo_profiles'&&base!=='renzo_active_profile'){
+        var val=localStorage.getItem(k);
+        localStorage.setItem(base+newSuffix,val);
+        localStorage.removeItem(k);
+      }
+    }
+  });
+  var idx=profiles.indexOf(PROFILE);
+  if(idx>=0) profiles[idx]=newName; else profiles.push(newName);
+  saveProfiles(profiles);
+  setProfile(newName);
+  renderProfileSelector();
+  toast('Profile renamed to "'+newName+'"','success');
+}
 async function switchProfile(name){
   if(!name){
     document.getElementById('newProfileName').value='';
@@ -1781,6 +1811,9 @@ async function submitNewProfile(){
 let currentUser = null, aiContact = null, pendingDelete = null, csvData = null;
 let contactSortField = 'priority', contactSortDir = 'desc';
 let _contactQuickFilter = null;
+let contactPage = 0;
+const CONTACTS_PER_PAGE = 50;
+let activityFilter = 'all';
 
 function debounce(fn, delay){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),delay); }; }
 
@@ -2434,13 +2467,24 @@ function viewFilteredContacts(filter){
 }
 
 // ACTIVITY LOG VIEW
+function filterActivity(f){
+  activityFilter=f;
+  ['all','sent','draft','batch'].forEach(function(k){
+    var b=document.getElementById('afBtn-'+k);
+    if(!b) return;
+    b.style.fontWeight=k===f?'600':'';
+    b.style.color=k===f?'var(--green)':'';
+  });
+  renderActivity();
+}
 function renderActivity(){
   const el=document.getElementById('activityLogList');
   if(_cache.activity===null){
     el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
     return;
   }
-  const activity=ga();
+  const all=ga();
+  const activity=activityFilter==='all'?all:all.filter(function(a){return (a.trigger||'').toLowerCase().includes(activityFilter);});
   if(!activity.length){
     el.innerHTML='<div class="card"><div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div></div>';
     return;
@@ -2485,6 +2529,7 @@ function exportActivity(){
 
 // CONTACTS
 function filterContactsBySource(source){
+  contactPage=0;
   renderContacts();
 }
 
@@ -2543,15 +2588,21 @@ function renderContacts(){
     if(el) el.textContent=contactSortField===f?(contactSortDir==='asc'?'▲':'▼'):'';
   });
 
-  if(!list.length){body.innerHTML='';empty.classList.remove('hidden');return;}
+  if(!list.length){body.innerHTML='';empty.classList.remove('hidden');renderContactPagination(0,0,0);return;}
   empty.classList.add('hidden');
+  const totalFiltered=list.length;
+  const maxPage=Math.max(0,Math.ceil(totalFiltered/CONTACTS_PER_PAGE)-1);
+  if(contactPage>maxPage) contactPage=maxPage;
+  list=list.slice(contactPage*CONTACTS_PER_PAGE,(contactPage+1)*CONTACTS_PER_PAGE);
   body.innerHTML=list.map(function(c){
     var st=statusInfo(c);
     var tierCls='tier-'+(c.tier||'c').toLowerCase();
     var score=computePriority(c);
     var pb=priorityBadge(score);
     var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>'+(c.doNotContact?'<span style="margin-left:4px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;vertical-align:middle">DNC</span>':'');
-    var lc=c.lastContact?new Date(c.lastContact).toLocaleDateString():'Never';
+    var lcDays=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact).getTime())/86400000):null;
+    var lcColor=!c.lastContact?'var(--gray)':lcDays>60?'var(--red)':lcDays>30?'var(--amber)':'var(--green)';
+    var lc=c.lastContact?'<span style="color:'+lcColor+'">'+new Date(c.lastContact).toLocaleDateString()+'</span>':'<span style="color:var(--gray)">Never</span>';
     var row='<tr class="clickable">';
     row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
     row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong>'+(c.email?'<div style="font-size:11px;color:var(--gray);margin-top:1px">'+esc(c.email)+'</div>':'<div style="font-size:11px;color:var(--red);margin-top:1px">⚠ No email</div>')+'</td>';
@@ -2560,7 +2611,7 @@ function renderContacts(){
     row+='<td>'+pb+'</td>';
     row+='<td>'+lc+'</td>';
     row+='<td><span class="priority-badge '+st.cls+'">'+st.label+'</span></td>';
-    row+='<td style="display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-xs" style="color:var(--red);display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><button class="btn btn-ghost btn-xs" title="Mark contacted today" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();markContactedToday(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></button><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
+    row+='<td style="display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-xs" style="color:var(--red);display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><button class="btn btn-ghost btn-xs" title="Mark contacted today" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();markContactedToday(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></button>'+(c.email?'<button class="btn btn-ghost btn-xs" title="Copy email" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();copyEmail(\''+esc(c.email)+'\',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>':'')+'<button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
     row+='</tr>';
     return row;
   }).join('');
@@ -2580,6 +2631,19 @@ function renderContacts(){
   body.querySelectorAll('.ct-chk').forEach(function(cb){
     cb.addEventListener('change',updateSelectAllState);
   });
+  renderContactPagination(contactPage, totalFiltered, maxPage);
+}
+
+function renderContactPagination(page, total, maxPage){
+  var el=document.getElementById('ctPagination');
+  if(!el) return;
+  if(total<=CONTACTS_PER_PAGE){el.innerHTML='';return;}
+  var start=page*CONTACTS_PER_PAGE+1, end=Math.min((page+1)*CONTACTS_PER_PAGE,total);
+  el.innerHTML='<div style="display:flex;align-items:center;gap:12px;justify-content:center;padding:12px 0;font-size:13px;color:var(--gray)">'
+    +'<button class="btn btn-ghost btn-sm" '+(page===0?'disabled':'')+' onclick="contactPage--;renderContacts()">← Previous</button>'
+    +'<span>Showing '+start+'–'+end+' of '+total+' contacts</span>'
+    +'<button class="btn btn-ghost btn-sm" '+(page>=maxPage?'disabled':'')+' onclick="contactPage++;renderContacts()">Next →</button>'
+    +'</div>';
 }
 
 function updateContactBatchBar(){
@@ -2630,6 +2694,11 @@ async function bulkUpdateTier(tier){
   toast(failed?'Updated '+(ids.length-failed)+', failed '+failed:'Updated '+ids.length+' contacts to Tier '+tier,'success');
   renderContacts();
 }
+function copyEmail(email, e){
+  if(e) e.stopPropagation();
+  navigator.clipboard.writeText(email).then(function(){toast('Email copied','success');}).catch(function(){toast('Copy failed','error');});
+}
+
 async function quickDeleteContact(id){
   var c=gc().find(function(x){return x.id===id;});
   if(!c) return;
@@ -3414,8 +3483,9 @@ function showBatchReview(items,trigger){
     res.innerHTML+='<div style="padding:12px;color:var(--gray);font-size:14px">No messages were generated.</div>';
     return;
   }
-  const bulkBtns='<div style="display:flex;gap:10px;margin-bottom:12px">'
+  const bulkBtns='<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
     +'<button class="btn btn-primary btn-sm" onclick="addAllBatchItems()">Add All to Queue</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="saveAllBatchAsDrafts()">Save All as Drafts</button>'
     +'<button class="btn btn-ghost btn-sm" onclick="cancelBatchReview()">Cancel All</button>'
     +'</div>';
   const reviewHtml=items.map(it=>{
@@ -3533,6 +3603,27 @@ async function addAllBatchItems(){
     var summary='Batch outreach: generated '+pending.length+' message'+(pending.length!==1?'s':'')+' for '+names.join(', ')+extra;
     fetch('/api/activity',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contact_id:null,c_name:'Batch',co:'',msg:summary,reason:'',trigger:'Batch outreach'})}).catch(()=>{});
   }
+}
+async function saveAllBatchAsDrafts(){
+  const pending=_pendingBatch.filter(it=>{
+    const el=document.getElementById('br-'+it.uid);
+    return el&&!el.classList.contains('br-added')&&!el.classList.contains('br-skipped');
+  });
+  if(!pending.length){toast('No messages to save','error');return;}
+  let saved=0;
+  for(const it of pending){
+    try{
+      const r=await fetch('/api/drafts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:it.contactId,c_name:it.c_name,co:it.co,email:it.email,msg:it.msg,subject:it.subject||'',reason:it.reason,trigger:it.trigger})});
+      if(r.ok){
+        const d=await r.json();
+        if(_cache.drafts) _cache.drafts.unshift(normalizeDraft(d));
+        const el=document.getElementById('br-'+it.uid);
+        if(el){el.classList.add('br-added');el.querySelector('.batch-review-actions').innerHTML='<span style="font-size:13px;color:var(--green);font-weight:600">✓ Saved as draft</span>';}
+        saved++;
+      }
+    }catch(e){}
+  }
+  toast(saved+' message'+(saved!==1?'s':'')+' saved as drafts','success');
 }
 function cancelBatchReview(){
   _pendingBatch=[];
@@ -4150,6 +4241,7 @@ async function runCrmSync(provider){
 
 function loadSettings(){
   const p=gp();
+  document.getElementById('sProfileName').value=PROFILE==='default'?'Default':PROFILE;
   document.getElementById('sWebsite').value=p.website||'';
   document.getElementById('sCo').value=p.company||'';
   document.getElementById('sSell').value=p.sell||'';
@@ -4751,7 +4843,8 @@ document.getElementById('genApiKeyBtn').addEventListener('click',generateApiKey)
 document.getElementById('bulkSendBtn') && document.getElementById('bulkSendBtn').addEventListener('click',bulkSendAll);
 document.getElementById('newEmailAddr') && document.getElementById('newEmailAddr').addEventListener('keydown',function(e){if(e.key==='Enter')addEmail();});
 document.getElementById('newRule').addEventListener('keydown',function(e){if(e.key==='Enter')addRule();});
-document.getElementById('ctSearch').addEventListener('input',debounce(renderContacts,250));
+document.getElementById('ctSearch').addEventListener('input',debounce(function(){contactPage=0;renderContacts();},250));
+document.getElementById('ctTierF').addEventListener('change',function(){contactPage=0;renderContacts();});
 document.getElementById('queueSearch') && document.getElementById('queueSearch').addEventListener('input',debounce(renderQueue,250));
 document.getElementById('draftsSearch') && document.getElementById('draftsSearch').addEventListener('input',debounce(renderDrafts,250));
 document.getElementById('aiMsg').addEventListener('input',function(){

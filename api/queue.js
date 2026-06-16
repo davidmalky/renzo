@@ -7,12 +7,19 @@ export default async function handler(req, res) {
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   if (req.method === 'GET') {
-    const { data, error } = await supabase
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const search = (req.query.search || '').toLowerCase();
+    let query = supabase
       .from('queue').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
-      .order('added', { ascending: false });
+      .order('added', { ascending: false })
+      .limit(limit);
+    const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    const result = search
+      ? data.filter(r => (r.c_name||'').toLowerCase().includes(search) || (r.co||'').toLowerCase().includes(search))
+      : data;
+    return res.status(200).json(result);
   }
 
   if (req.method === 'POST') {

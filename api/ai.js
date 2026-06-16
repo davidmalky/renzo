@@ -193,6 +193,11 @@ export default async function handler(req, res) {
         return res.status(402).json({ error: 'insufficient_credits', credits: deductResult.credits });
       }
       data._credits = deductResult;
+      // Log usage (non-blocking)
+      supabase.from('usage_logs').insert({
+        user_id: userId, action: 'generate', model: anthropicModel,
+        credits_used: deductResult.creditsDeducted || 1
+      }).then(() => {}).catch(() => {});
       // Trigger auto-recharge in the background if balance is low
       checkAutoRecharge(userId).catch(() => {});
     }

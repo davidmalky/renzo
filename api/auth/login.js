@@ -46,10 +46,10 @@ export default async function handler(req, res) {
     .eq('email', email.toLowerCase())
     .maybeSingle();
 
-  if (!user) { recordFailure(ip); return res.status(401).json({ error: 'Invalid credentials' }); }
+  if (!user) { recordFailure(ip); return res.status(401).json({ error: 'Email or password is incorrect. Please try again.' }); }
 
   const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) { recordFailure(ip); return res.status(401).json({ error: 'Invalid credentials' }); }
+  if (!match) { recordFailure(ip); return res.status(401).json({ error: 'Email or password is incorrect. Please try again.' }); }
 
   const token = jwt.sign(
     { userId: user.id, email: user.email, name: user.name },
