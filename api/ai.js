@@ -7,6 +7,23 @@ const MODEL_MAP = {
   enhanced: 'claude-sonnet-4-5'
 };
 
+// In-memory per-user rate limit: 30 AI requests per hour
+const aiUsage = new Map();
+const AI_WINDOW_MS = 60 * 60 * 1000;
+const AI_MAX = 30;
+
+function checkAiLimit(userId) {
+  const now = Date.now();
+  const entry = aiUsage.get(userId);
+  if (!entry || now >= entry.resetAt) {
+    aiUsage.set(userId, { count: 1, resetAt: now + AI_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= AI_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 async function deductCredits(userId, tokensUsed, model) {
   let creditsToDeduct = Math.ceil(tokensUsed / 1000);
   if (model === 'enhanced') creditsToDeduct = creditsToDeduct * 2;
@@ -129,6 +146,9 @@ export default async function handler(req, res) {
   let userId;
   try { ({ userId } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
+
+  if (!checkAiLimit(userId))
+    return res.status(429).json({ error: 'Generation limit reached. Try again in an hour.' });
 
   const { model: modelKey = 'standard', ...anthropicBody } = req.body || {};
   const anthropicModel = MODEL_MAP[modelKey] || MODEL_MAP.standard;

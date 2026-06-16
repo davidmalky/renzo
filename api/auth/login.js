@@ -2,8 +2,38 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import supabase from '../_supabase.js';
 
+// In-memory rate limiting: 5 failed attempts per IP within 10 minutes
+const failedAttempts = new Map();
+const WINDOW_MS = 10 * 60 * 1000;
+const MAX_FAILS = 5;
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+}
+
+function isRateLimited(ip) {
+  const entry = failedAttempts.get(ip);
+  if (!entry) return false;
+  if (Date.now() >= entry.resetAt) { failedAttempts.delete(ip); return false; }
+  return entry.count >= MAX_FAILS;
+}
+
+function recordFailure(ip) {
+  const now = Date.now();
+  const entry = failedAttempts.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    failedAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+  } else {
+    entry.count++;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const ip = getClientIp(req);
+  if (isRateLimited(ip))
+    return res.status(429).json({ error: 'Too many attempts. Try again in 10 minutes.' });
 
   const { email, password } = req.body || {};
 
@@ -16,10 +46,10 @@ export default async function handler(req, res) {
     .eq('email', email.toLowerCase())
     .maybeSingle();
 
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user) { recordFailure(ip); return res.status(401).json({ error: 'Invalid credentials' }); }
 
   const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!match) { recordFailure(ip); return res.status(401).json({ error: 'Invalid credentials' }); }
 
   const token = jwt.sign(
     { userId: user.id, email: user.email, name: user.name },

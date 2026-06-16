@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import Stripe from 'stripe';
 import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
@@ -237,7 +238,10 @@ export async function checkAutoRecharge(userId) {
 // ── ADMIN ACTIONS ────────────────────────────────────────────────────────────
 async function handleAdmin(req, body, res) {
   const pw = body.password || '';
-  if (!pw || pw !== (process.env.ADMIN_PASSWORD || '')) {
+  const adminPw = process.env.ADMIN_PASSWORD || '';
+  const pwOk = pw.length > 0 && adminPw.length > 0 && pw.length === adminPw.length
+    && crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(adminPw));
+  if (!pwOk) {
     return res.status(401).json({ error: 'Incorrect password.' });
   }
   const action = body.action || '';
