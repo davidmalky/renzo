@@ -1236,6 +1236,7 @@ Response: { "draft": "Generated email text..." }</pre>
           <div style="font-size:12px;color:#92400e;line-height:1.5">This message references a document. Remember to attach the relevant file when you send — Renzo can't attach files automatically.</div>
         </div>
       </div>
+      <div id="aiSubjectDisplay" class="hidden" style="font-size:13px;color:var(--gray);margin-bottom:8px;padding:8px 12px;background:var(--gray-pale);border-radius:6px">Subject: <span id="aiSubjectText"></span></div>
       <div class="field"><label>Message — edit before sending</label><textarea class="msg-textarea" id="aiMsg"></textarea></div>
       <div class="modal-actions">
         <button class="btn btn-ghost btn-sm" id="aiDraft">Save Draft</button>
@@ -2637,7 +2638,7 @@ async function generateMsg(c, customInstruction){
     +'8. Write the body only -- no subject line.\n'
     +(rulesStr?'9. '+rulesStr+'\n':'')
     +'\nReturn ONLY valid JSON, no markdown fences:\n'
-    +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only"}';
+    +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only","subject":"A single-line email subject, max 8 words, specific to this contact and context"}';
 
   try{
     document.getElementById('aiLoading').classList.remove('hidden');
@@ -2658,6 +2659,10 @@ async function generateMsg(c, customInstruction){
     const parsed=JSON.parse(txt);
     document.getElementById('aiReason').textContent=parsed.reason;
     document.getElementById('aiMsg').value=parsed.message;
+    var aiSubjEl=document.getElementById('aiSubjectText');
+    var aiSubjDisp=document.getElementById('aiSubjectDisplay');
+    if(aiSubjEl) aiSubjEl.textContent=parsed.subject||'';
+    if(aiSubjDisp) aiSubjDisp.classList.toggle('hidden',!parsed.subject);
     // Detect if attachment might be needed
     var attachKeywords = ['nda','non-disclosure','contract','agreement','proposal','invoice','quote','pricing','terms','amendment','renewal','addendum','statement of work','sow'];
     var msgLower = (parsed.message + ' ' + (parsed.reason||'')).toLowerCase();
@@ -2685,6 +2690,7 @@ async function addToQueue(){
   try{
     const r=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
       contactId:aiContact.id,c_name:aiContact.name,co:aiContact.company,msg,
+      subject:document.getElementById('aiSubjectText')?.textContent||'',
       reason:document.getElementById('aiReason').textContent,
       trigger:computeTrigger(aiContact)
     })});
@@ -2704,6 +2710,7 @@ async function saveDraft(){
   try{
     const r=await fetch('/api/drafts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
       contactId:aiContact.id,c_name:aiContact.name,co:aiContact.company,msg,
+      subject:document.getElementById('aiSubjectText')?.textContent||'',
       reason:document.getElementById('aiReason').textContent
     })});
     if(!r.ok) throw new Error(await r.text());
@@ -2763,7 +2770,7 @@ function renderQueue(){
   list.innerHTML=q.map(item=>{
     const c=gc().find(x=>x.id===item.contact_id);
     const email=c&&c.email?c.email:'No email on file';
-    const subject='Following up - '+item.co+(item.trigger?' ('+item.trigger+')':'');
+    const subject=item.subject||('Following up - '+item.co+(item.trigger?' ('+item.trigger+')':''));
     return '<div class="queue-item" id="qi-'+item.id+'">'+
       '<div class="queue-who">'+esc(item.c_name)+'</div>'+
       '<div class="queue-co">'+esc(item.co)+' &middot; <span style="color:var(--green);font-size:12px">'+esc(email)+'</span></div>'+
@@ -2791,7 +2798,7 @@ async function sendEmail(qid){
   if(!item) return;
   const c=gc().find(x=>x.id===item.contact_id);
   const toAddr=c&&c.email?c.email:'';
-  const subject='Following up - '+item.co+(item.trigger?' ('+item.trigger+')':'');
+  const subject=item.subject||('Following up - '+item.co+(item.trigger?' ('+item.trigger+')':''));
   const sel=document.getElementById('queueEmailSel');
   const emails=gEmails();
   const fromEmail=sel&&sel.value!==''?emails[parseInt(sel.value)]?.addr:'';
@@ -3158,7 +3165,7 @@ async function addBatchItem(uid){
   const btn=el.querySelector('button');
   if(btn){btn.disabled=true;btn.textContent='Adding...';}
   try{
-    const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:item.contactId,c_name:item.c_name,co:item.co,email:item.email,msg:item.msg,reason:item.reason,trigger:item.trigger})});
+    const qr=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:item.contactId,c_name:item.c_name,co:item.co,email:item.email,msg:item.msg,subject:item.subject||'',reason:item.reason,trigger:item.trigger})});
     if(qr.ok){
       _cache.queue.unshift(normalizeQueueItem(await qr.json()));
       const today=new Date().toISOString().split('T')[0];
@@ -3336,7 +3343,7 @@ async function runBatch(){
           +'\nWhat this outreach is about: '+batchContext
           +(rules.length?'\nRules: '+rules.join('. '):'')
           +'\n\nWrite a SHORT (3-5 sentence) email. No bullets. No dashes. No sign-off. Start with Hi [firstname]. Sound human.'
-          +'\n\nReturn JSON: {"reason":"one sentence why this contact fits","message":"email body only"}';
+          +'\n\nReturn JSON: {"reason":"one sentence why this contact fits","message":"email body only","subject":"A single-line email subject, max 8 words, specific to this contact"}';
 
         const res=await fetch('/api/ai',{
           method:'POST',
@@ -3350,7 +3357,7 @@ async function runBatch(){
           let txt=data.content[0].text.trim();
           if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
           const parsed=JSON.parse(txt);
-          pendingItems.push({uid:uid(),contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,trigger:query});
+          pendingItems.push({uid:uid(),contactId:c.id,c_name:c.name,co:c.company,email:c.email||'',msg:parsed.message,reason:parsed.reason,subject:parsed.subject||'',trigger:query});
         } else {failed++;}
       }catch{failed++;}
       await new Promise(r=>setTimeout(r,300));
@@ -4220,7 +4227,7 @@ function bulkSendAll(){
     setTimeout(()=>{
       const c=gc().find(x=>x.id===item.contact_id);
       const toEmail=c&&c.email?c.email:(item.email||'');
-      const subject='Following up - '+item.co+(item.trigger?' ('+item.trigger+')':'');
+      const subject=item.subject||('Following up - '+item.co+(item.trigger?' ('+item.trigger+')':''));
       openEmailCompose(toEmail,subject,item.msg,fromEmail);
     }, i*800);
   });
