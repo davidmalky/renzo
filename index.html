@@ -636,6 +636,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <span>No email account set up. Add one in Settings to enable sending.</span>
         <button class="btn btn-sm" style="background:#92400e;color:#fff;padding:6px 14px" onclick="showView('settings')">Go to Settings</button>
       </div>
+      <div id="sendConfirmBanner" class="hidden" style="background:var(--amber-pale);border:1px solid var(--amber);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span>Did you send that email?</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" style="background:#92400e;color:#fff;padding:6px 14px" onclick="confirmSent()">Yes, I sent it</button>
+          <button class="btn btn-ghost btn-sm" style="padding:6px 14px" onclick="dismissSent()">No, keep in queue</button>
+        </div>
+      </div>
       <div id="queueList" class="card"></div>
       <div id="queueEmpty" class="empty-state hidden"><strong>Queue is clear</strong>Generate messages to fill it.</div>
     </div>
@@ -2724,23 +2731,30 @@ async function saveDraft(){
 async function openGmail(){
   const msg=document.getElementById('aiMsg').value.trim();
   if(!msg||!aiContact) return;
-  const sub='Following up - '+aiContact.company;
+  const sub=document.getElementById('aiSubjectText')?.textContent||('Following up - '+aiContact.company);
   const emails=gEmails();
   const sel=document.getElementById('queueEmailSel');
   const fromEmail=sel&&sel.value!==''?emails[parseInt(sel.value)]?.addr:(emails[0]?.addr||'');
   openEmailCompose(aiContact.email||'',sub,msg,fromEmail);
-  const today=new Date().toISOString().split('T')[0];
-  try{
-    const ar=await fetch('/api/activity',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
-      contactId:aiContact.id,c_name:aiContact.name,co:aiContact.company,
-      msg,trigger:'Email draft prepared',reason:'Prepared email draft'
-    })});
-    if(ar.ok) _cache.activity.unshift(normalizeActivity(await ar.json()));
-    if(aiContact.id){
-      const cr=await fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:aiContact.id,last_contact:today})});
-      if(cr.ok){const ci=_cache.contacts.findIndex(c=>c.id===aiContact.id);if(ci>-1)_cache.contacts[ci]=normalizeContact(await cr.json());}
-    }
-  }catch(e){}
+  const contactSnap=aiContact;
+  const msgSnap=msg;
+  document.getElementById('aiModal').classList.add('hidden');
+  aiContact=null;
+  showView('queue');
+  showSendConfirmBanner(null,async function(){
+    const today=new Date().toISOString().split('T')[0];
+    try{
+      const ar=await fetch('/api/activity',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+        contactId:contactSnap.id,c_name:contactSnap.name,co:contactSnap.company,
+        msg:msgSnap,trigger:'Email sent',reason:'Sent email draft'
+      })});
+      if(ar.ok) _cache.activity.unshift(normalizeActivity(await ar.json()));
+      if(contactSnap.id){
+        const cr=await fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:contactSnap.id,last_contact:today})});
+        if(cr.ok){const ci=_cache.contacts.findIndex(c=>c.id===contactSnap.id);if(ci>-1)_cache.contacts[ci]=normalizeContact(await cr.json());}
+      }
+    }catch(e){}
+  });
 }
 
 function openEmailCompose(toAddr,subject,body,fromAddr){
@@ -2793,6 +2807,35 @@ function renderQueue(){
   }).join('');
 }
 
+let _pendingSentConfirm=null;
+
+function showSendConfirmBanner(qid,onConfirm){
+  if(_pendingSentConfirm?.timer) clearTimeout(_pendingSentConfirm.timer);
+  _pendingSentConfirm={qid,onConfirm,timer:null};
+  const banner=document.getElementById('sendConfirmBanner');
+  if(banner) banner.classList.remove('hidden');
+  _pendingSentConfirm.timer=setTimeout(hideSendConfirmBanner,45000);
+}
+
+function hideSendConfirmBanner(){
+  const banner=document.getElementById('sendConfirmBanner');
+  if(banner) banner.classList.add('hidden');
+  if(_pendingSentConfirm?.timer) clearTimeout(_pendingSentConfirm.timer);
+  _pendingSentConfirm=null;
+}
+
+async function confirmSent(){
+  if(!_pendingSentConfirm) return;
+  const {qid,onConfirm}=_pendingSentConfirm;
+  hideSendConfirmBanner();
+  if(onConfirm) await onConfirm();
+  else if(qid){await markSentSilent(qid);renderQueue();}
+}
+
+function dismissSent(){
+  hideSendConfirmBanner();
+}
+
 async function sendEmail(qid){
   const item=gq().find(x=>x.id===qid);
   if(!item) return;
@@ -2803,8 +2846,7 @@ async function sendEmail(qid){
   const emails=gEmails();
   const fromEmail=sel&&sel.value!==''?emails[parseInt(sel.value)]?.addr:'';
   openEmailCompose(toAddr,subject,item.msg,fromEmail);
-  await markSentSilent(qid);
-  toast('Email opened and logged as sent','success');
+  showSendConfirmBanner(qid);
 }
 
 async function saveDraftFromQueue(qid){
