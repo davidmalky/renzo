@@ -24,6 +24,8 @@ function canonicalToRow(r, userId, profileName) {
   };
 }
 
+const sanitize = s => typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim() : s;
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -86,10 +88,13 @@ export default async function handler(req, res) {
       const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
       return res.status(200).json({ connected: intData?.connected || false });
     }
+    const limit = parseInt(req.query.limit, 10) || 500;
+    const offset = parseInt(req.query.offset, 10) || 0;
     const { data, error } = await supabase
       .from('contacts').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
   }
@@ -304,15 +309,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { name, company, title, email, phone, tier, frequency, last_contact,
+    const { name: rawName, company: rawCompany, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
             products, history, notes, do_not_contact } = req.body || {};
+    const name = sanitize(rawName); const company = sanitize(rawCompany);
     if (!name || !company) return res.status(400).json({ error: 'name and company are required' });
     const { data, error } = await supabase
       .from('contacts')
-      .insert({ user_id: userId, profile_name: profileName, name, company, title, email,
-                phone, tier, frequency, last_contact, contract_expiry, invoice_amount,
-                annual_spend, location, account_size, products, history, notes, do_not_contact })
+      .insert({ user_id: userId, profile_name: profileName, name, company,
+                title: sanitize(title), email: sanitize(email), phone: sanitize(phone),
+                tier, frequency, last_contact, contract_expiry, invoice_amount,
+                annual_spend, location: sanitize(location), account_size,
+                products: sanitize(products), history: sanitize(history), notes: sanitize(notes),
+                do_not_contact })
       .select().single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json(data);
@@ -322,6 +331,9 @@ export default async function handler(req, res) {
     const { id, ...fields } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id is required' });
     delete fields.user_id; delete fields.profile_name; delete fields.created_at;
+    ['name','company','title','email','phone','notes','location','products','history'].forEach(k=>{
+      if(k in fields) fields[k]=sanitize(fields[k]);
+    });
     const { data, error } = await supabase
       .from('contacts').update(fields)
       .eq('id', id).eq('user_id', userId)
