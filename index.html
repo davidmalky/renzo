@@ -589,7 +589,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <div class="view-actions">
           <button class="btn btn-ghost btn-sm" id="exportCsvBtn">Export CSV</button>
           <button class="btn btn-ghost btn-sm" id="importCsvBtn">Import CSV</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteAllContacts()">Delete All</button>
           <input type="file" id="csvFile" accept=".csv" class="hidden">
           <button class="btn btn-primary btn-sm" id="addContactBtn">+ Add Contact</button>
         </div>
@@ -617,6 +616,9 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <tbody id="ctBody"></tbody></table>
       </div>
       <div id="ctEmpty" class="empty-state hidden"><strong>No contacts yet</strong>Add your first contact to get started.</div>
+      <div style="text-align:center;padding:12px 0 4px;font-size:12px">
+        <span style="color:var(--red);cursor:pointer;text-decoration:underline" onclick="deleteAllContacts()">Delete all contacts</span>
+      </div>
     </div>
 
     <!-- QUEUE -->
@@ -1150,6 +1152,24 @@ Response: { "draft": "Generated email text..." }</pre>
   </div>
 </div>
 
+<!-- NEW PROFILE MODAL -->
+<div id="newProfileModal" class="modal-overlay hidden" onclick="document.getElementById('newProfileModal').classList.add('hidden')">
+  <div class="modal-box" style="max-width:400px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">New Profile</h2>
+      <button class="modal-close" onclick="document.getElementById('newProfileModal').classList.add('hidden')">×</button>
+    </div>
+    <div style="padding:0 0 20px">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:14px">Give this profile a name to keep your contacts and activity separate.</p>
+      <input type="text" id="newProfileName" placeholder="e.g. Vendors, Customers, Collections" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter')submitNewProfile()">
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('newProfileModal').classList.add('hidden');renderProfileSelector()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="submitNewProfile()">Create Profile</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CONTACT MODAL -->
 <div id="ctModal" class="modal-overlay hidden">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -1649,25 +1669,32 @@ function renderProfileSelector(){
 }
 
 async function switchProfile(name){
-  var isNew=false;
   if(!name){
-    const newName=prompt('Profile name (e.g. Vendors, Customers, Collections):');
-    if(!newName||!newName.trim()) return;
-    const profiles=getProfiles();
-    if(!profiles.includes(newName.trim())){profiles.push(newName.trim());saveProfiles(profiles);isNew=true;}
-    setProfile(newName.trim());
-  } else {
-    setProfile(name);
+    document.getElementById('newProfileName').value='';
+    document.getElementById('newProfileModal').classList.remove('hidden');
+    setTimeout(function(){document.getElementById('newProfileName').focus();},50);
+    return;
   }
+  setProfile(name);
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
   if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
-  if(isNew){
-    toast('New profile created. Set up this profile\'s company info in Settings.','info');
-  } else {
-    toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
-  }
+  toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
+}
+
+async function submitNewProfile(){
+  const newName=document.getElementById('newProfileName').value.trim();
+  if(!newName){toast('Enter a profile name','error');return;}
+  document.getElementById('newProfileModal').classList.add('hidden');
+  const profiles=getProfiles();
+  if(!profiles.includes(newName)){profiles.push(newName);saveProfiles(profiles);}
+  setProfile(newName);
+  await loadProfileData();
+  renderProfileSelector();
+  showView('dashboard');
+  if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+  toast('New profile created. Set up this profile\'s company info in Settings.','info');
 }
 
 
@@ -2264,16 +2291,17 @@ function renderDashboard(){
   const acts=activity.slice(0,8);
   const actEl=document.getElementById('actList');
   actEl.innerHTML=acts.length?'<ul class="activity-list">'+acts.map(a=>{
-    const short=a.msg.slice(0,100)+(a.msg.length>100?'...':'');
+    const long=a.msg.length>100;
+    const short=long?a.msg.slice(0,100)+'...':a.msg;
     const full=a.msg;
     const aid='act-'+a.id;
-    return '<li class="activity-item" style="cursor:pointer" onclick="toggleActivity(\''+aid+'\')">'
+    return '<li class="activity-item"'+(long?' style="cursor:pointer" onclick="toggleActivity(\''+aid+'\')"':'')+' >'
       +'<div class="activity-time">'+new Date(a.ts).toLocaleString()+'</div>'
       +'<div class="activity-who">'+esc(a.cName)+(a.co?'<span style="font-weight:400;color:var(--gray)"> · '+esc(a.co)+'</span>':'')+'</div>'
       +'<div class="activity-trigger">'+esc(a.trigger||a.reason||'')+'</div>'
       +'<div class="activity-preview" id="'+aid+'-short">'+esc(short)+'</div>'
-      +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:4px;white-space:pre-wrap">'+esc(full)+'</div>'
-      +'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>'
+      +(long?'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:4px;white-space:pre-wrap">'+esc(full)+'</div>':'')
+      +(long?'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>':'')
       +'</li>';
   }).join('')+'</ul>':'<div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div>';
 }
@@ -2288,16 +2316,17 @@ function renderActivity(){
   }
   el.innerHTML='<ul class="activity-list card" style="padding:0 24px">'+activity.map(a=>{
     const aid='alog-'+a.id;
-    const short=a.msg.slice(0,120)+(a.msg.length>120?'...':'');
-    return '<li class="activity-item" style="cursor:pointer;padding:14px 0" onclick="toggleActivity(\''+aid+'\')">'
+    const long=a.msg.length>120;
+    const short=long?a.msg.slice(0,120)+'...':a.msg;
+    return '<li class="activity-item"'+(long?' style="cursor:pointer;padding:14px 0" onclick="toggleActivity(\''+aid+'\')"':' style="padding:14px 0"')+'>'
       +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
       +'<span class="activity-who" style="cursor:pointer;color:var(--green)" onclick="event.stopPropagation();openHistory(\''+a.contact_id+'\')">'+esc(a.cName)+(a.co?'<span style="font-weight:400;color:var(--gray)"> · '+esc(a.co)+'</span>':'')+'</span>'
       +'<span class="activity-time">'+new Date(a.ts).toLocaleString()+'</span>'
       +'</div>'
       +(a.trigger?'<div class="activity-trigger">'+esc(a.trigger)+'</div>':'')
       +'<div class="activity-preview" id="'+aid+'-short">'+esc(short)+'</div>'
-      +'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:6px;white-space:pre-wrap">'+esc(a.msg)+'</div>'
-      +'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>'
+      +(long?'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:6px;white-space:pre-wrap">'+esc(a.msg)+'</div>':'')
+      +(long?'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>':'')
       +'</li>';
   }).join('')+'</ul>';
 }
@@ -2334,7 +2363,7 @@ function renderContacts(){
     var lc=c.lastContact?new Date(c.lastContact).toLocaleDateString():'Never';
     var row='<tr class="clickable">';
     row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
-    row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong></td>';
+    row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong>'+(c.email?'<div style="font-size:11px;color:var(--gray);margin-top:1px">'+esc(c.email)+'</div>':'<div style="font-size:11px;color:var(--red);margin-top:1px">⚠ No email</div>')+'</td>';
     row+='<td>'+esc(c.company)+'</td>';
     row+='<td>'+tb+'</td>';
     row+='<td>'+pb+'</td>';
@@ -2354,7 +2383,7 @@ function renderContacts(){
   body.querySelectorAll('tr.clickable').forEach(function(el){
     el.addEventListener('click',function(){
       var nameEl=this.querySelector('.contact-name-link');
-      if(nameEl) openEditContact(nameEl.dataset.id);
+      if(nameEl) openHistory(nameEl.dataset.id);
     });
   });
 }
