@@ -124,6 +124,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
+  // POST {action:'change_password', currentPassword:'...', newPassword:'...'}
+  if (req.method === 'POST' && req.body?.action === 'change_password') {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const bcrypt = await import('bcryptjs');
+    const { data: user } = await supabase.from('users').select('password_hash').eq('id', userId).single();
+    if (!user) return res.status(400).json({ error: 'User not found' });
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Current password is incorrect' });
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('users').update({ password_hash: newHash }).eq('id', userId);
+    return res.json({ success: true });
+  }
+
   // ── PROFILE ──────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     const { data, error } = await supabase

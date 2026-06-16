@@ -867,6 +867,25 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
       </div>
 
+      <!-- CHANGE PASSWORD CARD -->
+      <div class="card" style="padding:28px;max-width:560px;margin-top:20px">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Change Password</div>
+        <div class="field">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px">Current Password</label>
+          <input type="password" id="sCurrentPass" class="form-input" autocomplete="current-password" placeholder="Current password">
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px">New Password</label>
+          <input type="password" id="sNewPass" class="form-input" autocomplete="new-password" placeholder="Min 8 characters">
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px">Confirm New Password</label>
+          <input type="password" id="sNewPass2" class="form-input" autocomplete="new-password" placeholder="Repeat new password">
+        </div>
+        <div id="sPassErr" class="hidden" style="color:var(--red);font-size:13px;margin:10px 0"></div>
+        <button class="btn btn-primary btn-sm" style="margin-top:16px" onclick="changePassword()">Update Password</button>
+      </div>
+
       <!-- AUTO-RECHARGE CARD -->
       <div class="card" style="padding:28px;max-width:560px;margin-top:20px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Auto-Recharge</div>
@@ -4012,6 +4031,29 @@ function copyEmbedSection(id){
   var text=el.textContent;
   navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard','success'))
     .catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Copied to clipboard','success');});
+}
+
+async function changePassword(){
+  const cur=document.getElementById('sCurrentPass').value;
+  const np=document.getElementById('sNewPass').value;
+  const np2=document.getElementById('sNewPass2').value;
+  const errEl=document.getElementById('sPassErr');
+  errEl.classList.add('hidden');
+  if(!cur||!np||!np2){errEl.textContent='All fields required';errEl.classList.remove('hidden');return;}
+  if(np!==np2){errEl.textContent='New passwords do not match';errEl.classList.remove('hidden');return;}
+  if(np.length<8){errEl.textContent='New password must be at least 8 characters';errEl.classList.remove('hidden');return;}
+  try{
+    const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'change_password',currentPassword:cur,newPassword:np})});
+    const d=await r.json();
+    if(d.error){errEl.textContent=d.error;errEl.classList.remove('hidden');return;}
+    toast('Password updated successfully','success');
+    document.getElementById('sCurrentPass').value='';
+    document.getElementById('sNewPass').value='';
+    document.getElementById('sNewPass2').value='';
+  }catch(e){
+    errEl.textContent='Something went wrong. Try again.';
+    errEl.classList.remove('hidden');
+  }
 }
 
 async function saveSettings(){
