@@ -1226,7 +1226,7 @@ Response: { "draft": "Generated email text..." }</pre>
         <button class="btn btn-ghost btn-sm" id="aiSkipPrompt">Generate Based on Context</button>
       </div>
     </div>
-    <div id="aiLoading" class="loading-box hidden"><div class="spinner"></div><p id="aiLoadingText">Analyzing context...</p></div>
+    <div id="aiLoading" class="loading-box hidden"><div class="spinner"></div><p id="aiLoadingText">Generating your message…</p></div>
     <div id="aiResult" class="hidden">
       <div class="trigger-box"><div class="trigger-label">Why this message</div><p id="aiReason"></p></div>
       <div id="aiAttachBanner" class="hidden" style="background:var(--amber-pale);border:1px solid var(--amber);border-radius:8px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">
@@ -2640,12 +2640,16 @@ async function generateMsg(c, customInstruction){
     +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only"}';
 
   try{
+    document.getElementById('aiLoading').classList.remove('hidden');
+    document.getElementById('aiPromptBox').classList.add('hidden');
+    document.getElementById('aiGenBtn').disabled=true;
+    document.getElementById('aiRegen').disabled=true;
     const res=await fetch('/api/ai',{
       method:'POST',
       headers:getAuthHeaders(),
       body:JSON.stringify({model:selectedModel,max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
-    if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiPromptBox').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=false;document.getElementById('aiModal').classList.add('hidden');return;}
+    if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiPromptBox').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=false;document.getElementById('aiRegen').disabled=false;document.getElementById('aiModal').classList.add('hidden');return;}
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
     const data=await res.json();
     syncCreditDisplay(data);
@@ -2663,11 +2667,13 @@ async function generateMsg(c, customInstruction){
     document.getElementById('aiLoading').classList.add('hidden');
     document.getElementById('aiPromptBox').classList.remove('hidden');
     document.getElementById('aiGenBtn').disabled=false;
+    document.getElementById('aiRegen').disabled=false;
     document.getElementById('aiResult').classList.remove('hidden');
   }catch(e){
     document.getElementById('aiLoading').classList.add('hidden');
     document.getElementById('aiPromptBox').classList.remove('hidden');
     document.getElementById('aiGenBtn').disabled=false;
+    document.getElementById('aiRegen').disabled=false;
     document.getElementById('aiErr').classList.remove('hidden');
     document.getElementById('aiErr').textContent='Error: '+e.message;
   }
@@ -4300,7 +4306,9 @@ document.getElementById('aiGenBtn').addEventListener('click',function(){
   document.getElementById('aiErr').classList.add('hidden');
   document.getElementById('aiPromptBox').classList.add('hidden');
   document.getElementById('aiLoading').classList.remove('hidden');
+  document.getElementById('aiLoadingText').textContent='Generating your message…';
   document.getElementById('aiGenBtn').disabled=true;
+  document.getElementById('aiRegen').disabled=true;
   generateMsg(aiContact, instruction||null);
 });
 document.getElementById('aiPromptInput').addEventListener('keydown',function(e){
@@ -4313,10 +4321,22 @@ document.getElementById('aiSkipPrompt').addEventListener('click',function(){
   document.getElementById('aiErr').classList.add('hidden');
   document.getElementById('aiPromptBox').classList.add('hidden');
   document.getElementById('aiLoading').classList.remove('hidden');
+  document.getElementById('aiLoadingText').textContent='Generating your message…';
   document.getElementById('aiGenBtn').disabled=true;
+  document.getElementById('aiRegen').disabled=true;
   generateMsg(aiContact, null);
 });
-document.getElementById('aiRegen').addEventListener('click',function(){if(!aiContact)return;document.getElementById('aiResult').classList.add('hidden');document.getElementById('aiErr').classList.add('hidden');document.getElementById('aiLoading').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=true;generateMsg(aiContact,null);});
+document.getElementById('aiRegen').addEventListener('click',function(){
+  if(!aiContact) return;
+  document.getElementById('aiResult').classList.add('hidden');
+  document.getElementById('aiErr').classList.add('hidden');
+  document.getElementById('aiPromptBox').classList.add('hidden');
+  document.getElementById('aiLoading').classList.remove('hidden');
+  document.getElementById('aiLoadingText').textContent='Generating your message…';
+  document.getElementById('aiGenBtn').disabled=true;
+  document.getElementById('aiRegen').disabled=true;
+  generateMsg(aiContact,null);
+});
 // Refine button toggle
 document.getElementById('aiRefine') && document.getElementById('aiRefine').addEventListener('click',function(){
   document.getElementById('aiRefineBox').classList.toggle('hidden');
