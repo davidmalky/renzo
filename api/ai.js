@@ -62,6 +62,7 @@ async function deductCredits(userId, tokensUsed, model) {
 const GENERATE_SYSTEM_PROMPT = `You are an expert relationship outreach writer. Your job is to write warm, personalized, professional emails that sound like they were written by a real person — not a template, not AI.
 
 Rules:
+- If context_notes begins with "INTRODUCTION:", treat this as a vendor introduction email — do NOT reference contracts, fees, or renewal dates. Write a short, warm intro connecting two parties.
 - Write in first person from the sender's perspective
 - Keep it to 3-4 short paragraphs maximum
 - Reference specific context from the contact's data (contract dates, last contact, relationship notes)
@@ -76,6 +77,24 @@ Rules:
 
 // Build a structured user message from a canonical relationship record
 function buildGeneratePrompt(record, context) {
+  if ((record.context_notes || '').trimStart().startsWith('INTRODUCTION:')) {
+    return `You are writing a vendor-to-vendor introduction email on behalf of ${record.contact_name ? 'the sender' : 'David Genuth at Prime Source Expense Experts'}.
+
+This is NOT a follow-up or check-in. This is a warm introduction connecting two vendors.
+
+Rules:
+- Do NOT mention contracts, fees, renewal dates, or admin fees
+- Do NOT reference the recipient's existing relationship with the sender
+- Keep it to 3-4 sentences maximum
+- Tone: warm, collegial, helpful — not transactional
+- Structure: (1) introduce the other party and their category, (2) explain why you see a natural fit, (3) soft ask to connect
+- Sign off as: David Genuth, Prime Source Expense Experts
+- Return ONLY the email body, no subject line, no preamble
+
+Context: ${record.context_notes}
+Recipient: ${record.contact_name} at ${record.company_name}`;
+  }
+
   const daysSince = record.last_contact_date
     ? Math.floor((Date.now() - new Date(record.last_contact_date).getTime()) / 86400000)
     : null;
