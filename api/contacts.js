@@ -306,13 +306,13 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { name, company, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
-            products, history, notes } = req.body || {};
+            products, history, notes, do_not_contact } = req.body || {};
     if (!name || !company) return res.status(400).json({ error: 'name and company are required' });
     const { data, error } = await supabase
       .from('contacts')
       .insert({ user_id: userId, profile_name: profileName, name, company, title, email,
                 phone, tier, frequency, last_contact, contract_expiry, invoice_amount,
-                annual_spend, location, account_size, products, history, notes })
+                annual_spend, location, account_size, products, history, notes, do_not_contact })
       .select().single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json(data);

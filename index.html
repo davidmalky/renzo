@@ -1198,6 +1198,11 @@ Response: { "draft": "Generated email text..." }</pre>
     <div class="field"><label>Products / Services They Use</label><textarea id="ctProds"></textarea></div>
     <div class="field"><label>Relationship History</label><textarea id="ctHist"></textarea></div>
     <div class="field"><label>Notes</label><textarea id="ctNotes"></textarea></div>
+    <div class="field" style="margin-top:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="ctDnc"> Mark as Do Not Contact
+      </label>
+    </div>
     <div id="ctErr" class="error-text hidden">Please fill in all required fields.</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:10px">
       <button class="btn btn-danger btn-sm hidden" id="ctDelBtn">Delete</button>
@@ -1705,6 +1710,7 @@ function normalizeContact(r){
     products:r.products||'',
     history:r.history||'',
     source_system:r.source_system||null,
+    doNotContact:r.do_not_contact||false,
     created_at:r.created_at
   };
 }
@@ -1806,6 +1812,7 @@ function toast(msg,type){
 
 // PRIORITY
 function computePriority(c){
+  if(c.doNotContact) return 0;
   const p=gp();
   const role=(p.role||'').toLowerCase();
   const now=Date.now();
@@ -2323,7 +2330,7 @@ function renderContacts(){
     var tierCls='tier-'+(c.tier||'c').toLowerCase();
     var score=computePriority(c);
     var pb=priorityBadge(score);
-    var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>';
+    var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>'+(c.doNotContact?'<span style="margin-left:4px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;vertical-align:middle">DNC</span>':'');
     var lc=c.lastContact?new Date(c.lastContact).toLocaleDateString():'Never';
     var row='<tr class="clickable">';
     row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
@@ -2404,6 +2411,7 @@ function clearCtForm(){
   ['ctFreq','ctInvoice','ctAnnual'].forEach(x=>document.getElementById(x).value='');
   ['ctLast','ctExpiry'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('ctId').value='';
+  document.getElementById('ctDnc').checked=false;
   document.getElementById('ctErr').classList.add('hidden');
 }
 
@@ -2433,6 +2441,7 @@ function openEditContact(id){
   document.getElementById('ctProds').value=c.products||'';
   document.getElementById('ctHist').value=c.history||'';
   document.getElementById('ctNotes').value=c.notes||'';
+  document.getElementById('ctDnc').checked=c.doNotContact||false;
   document.getElementById('ctExpiry').value=c.contractExpiry||'';
   document.getElementById('ctInvoice').value=c.invoiceAmount||'';
   document.getElementById('ctAnnual').value=c.annualSpend||c.annual_spend||'';
@@ -2459,7 +2468,8 @@ async function saveContact(){
     notes:document.getElementById('ctNotes').value.trim(),
     contract_expiry:document.getElementById('ctExpiry').value||null,
     invoice_amount:parseFloat(document.getElementById('ctInvoice').value)||0,
-    annual_spend:parseFloat(document.getElementById('ctAnnual').value)||0
+    annual_spend:parseFloat(document.getElementById('ctAnnual').value)||0,
+    do_not_contact:document.getElementById('ctDnc').checked
   };
   const id=document.getElementById('ctId').value;
   try{
@@ -2595,6 +2605,7 @@ async function deleteAllContacts(){
 function openAi(id){
   const c=gc().find(x=>x.id===id);
   if(!c) return;
+  if(c.doNotContact){toast('This contact is marked Do Not Contact','error');return;}
   aiContact=c;
   document.getElementById('aiTitle').textContent='Message for '+c.name;
   document.getElementById('aiPromptBox').classList.remove('hidden');
@@ -3304,8 +3315,8 @@ async function runBatch(){
       return;
     }
 
-    // [FIX 1] Apply date pre-filter to fresh contacts
-    const contacts=preFilter.fn?allContacts.filter(preFilter.fn):allContacts;
+    // [FIX 1] Apply date pre-filter to fresh contacts; exclude DNC contacts
+    const contacts=(preFilter.fn?allContacts.filter(preFilter.fn):allContacts).filter(c=>!c.doNotContact);
     if(preFilter.fn){
       document.getElementById('batchLabel').textContent='Pre-filtered to '+contacts.length+' contacts based on date criteria, asking AI to refine further...';
     } else {
