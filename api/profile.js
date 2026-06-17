@@ -51,8 +51,8 @@ export default async function handler(req, res) {
       if (accounts.length === 0) return res.status(200).json([]);
       const rows = accounts.map(a => ({
         user_id: userId, addr: a.addr,
-        label: a.label ?? null, sort_order: a.sort_order ?? 0,
-        verified: a.verified !== false
+        label: a.label ?? null, display_name: a.display_name ?? null,
+        sort_order: a.sort_order ?? 0, verified: a.verified !== false
       }));
       const { data, error } = await supabase.from('email_accounts').insert(rows).select();
       if (error) return res.status(500).json({ error: error.message });
@@ -75,10 +75,12 @@ export default async function handler(req, res) {
   // POST {action:'generate_api_key', label?:'...'}
   if (req.method === 'POST' && req.body?.action === 'generate_api_key') {
     const label = (req.body.label || '').trim() || null;
+    const expiresAt = req.body.expires_at || null;
     const rawKey = crypto.randomBytes(32).toString('hex');
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
-    const { error } = await supabase.from('api_keys')
-      .insert({ user_id: userId, key_hash: keyHash, label });
+    const row = { user_id: userId, key_hash: keyHash, label };
+    if (expiresAt) row.expires_at = new Date(expiresAt).toISOString();
+    const { error } = await supabase.from('api_keys').insert(row);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json({ key: rawKey, label });
   }
@@ -119,6 +121,18 @@ export default async function handler(req, res) {
       })
     }).catch(() => {});
     return res.json({ success: true });
+  }
+
+  // POST {action:'save_settings', email_signature?:'...', notify_overdue?:bool, notify_weekly?:bool, low_credit_threshold?:int}
+  if (req.method === 'POST' && req.body?.action === 'save_settings') {
+    const allowed = ['email_signature','notify_overdue','notify_weekly','low_credit_threshold'];
+    const updates = {};
+    for (const k of allowed) { if (req.body[k] !== undefined) updates[k] = req.body[k]; }
+    if (Object.keys(updates).length) {
+      await supabase.from('profiles')
+        .upsert({ user_id: userId, profile_name: profileName, ...updates }, { onConflict: 'user_id,profile_name' });
+    }
+    return res.status(200).json({ success: true });
   }
 
   // POST {action:'complete_onboarding'}
@@ -172,12 +186,13 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { company, website, sell, customer, role, tone, rep_name, repName } = req.body || {};
+    const { company, website, sell, customer, role, tone, rep_name, repName, defaultFrequency } = req.body || {};
     const { data, error } = await supabase
       .from('profiles')
       .upsert(
         { user_id: userId, profile_name: profileName, company, website, sell,
-          customer, role, tone, rep_name: rep_name ?? repName ?? null },
+          customer, role, tone, rep_name: rep_name ?? repName ?? null,
+          default_frequency: defaultFrequency ?? null },
         { onConflict: 'user_id,profile_name' }
       )
       .select().single();

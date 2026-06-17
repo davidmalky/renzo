@@ -97,6 +97,10 @@ export default async function handler(req, res) {
       const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
       return res.status(200).json({ connected: intData?.connected || false });
     }
+    if (req.query.action === 'get_integrations') {
+      const { data: ints } = await supabase.from('integrations').select('provider, connected, last_sync, instance_url').eq('user_id', userId).eq('connected', true);
+      return res.status(200).json(ints || []);
+    }
     const limit = parseInt(req.query.limit, 10) || 500;
     const offset = parseInt(req.query.offset, 10) || 0;
     const { data, error } = await supabase
@@ -126,6 +130,38 @@ export default async function handler(req, res) {
       .update({ connected: false, access_token: null, refresh_token: null })
       .eq('user_id', userId).eq('provider', 'salesforce');
     return res.status(200).json({ success: true });
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'salesforce_connect_password') {
+    const { username, password, securityToken } = req.body;
+    if (!username || !password || !securityToken) return res.status(400).json({ error: 'username, password, and securityToken are required' });
+    try {
+      const params = new URLSearchParams({
+        grant_type: 'password',
+        client_id: process.env.SALESFORCE_CLIENT_ID,
+        client_secret: process.env.SALESFORCE_CLIENT_SECRET,
+        username,
+        password: password + securityToken
+      });
+      const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenRes.ok || !tokenData.access_token) {
+        return res.status(400).json({ error: tokenData.error_description || 'Salesforce authentication failed' });
+      }
+      const { error: upsertErr } = await supabase.from('integrations').upsert(
+        { user_id: userId, provider: 'salesforce', access_token: tokenData.access_token,
+          instance_url: tokenData.instance_url, connected: true, last_sync: new Date().toISOString() },
+        { onConflict: 'user_id,provider' }
+      );
+      if (upsertErr) return res.status(500).json({ error: upsertErr.message });
+      return res.status(200).json({ success: true, instance_url: tokenData.instance_url });
+    } catch (e) {
+      return res.status(502).json({ error: 'Salesforce token request failed: ' + e.message });
+    }
   }
 
   if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
@@ -311,6 +347,10 @@ export default async function handler(req, res) {
           errors.push({ id: c.id, error: e.message, details: e.details || null });
         }
       }
+      await supabase.from('integrations').upsert(
+        { user_id: userId, provider: 'hubspot', access_token: api_key, connected: true, last_sync: new Date().toISOString() },
+        { onConflict: 'user_id,provider' }
+      );
       return res.status(200).json({ success: true, synced, errors });
     }
 
@@ -320,7 +360,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { name: rawName, company: rawCompany, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
-            products, history, notes, do_not_contact } = req.body || {};
+            products, history, notes, do_not_contact, tags } = req.body || {};
     const name = sanitize(rawName); const company = sanitize(rawCompany);
     if (!name || !company) return res.status(400).json({ error: 'name and company are required' });
     const { data, error } = await supabase
@@ -330,7 +370,7 @@ export default async function handler(req, res) {
                 tier, frequency, last_contact, contract_expiry, invoice_amount,
                 annual_spend, location: sanitize(location), account_size,
                 products: sanitize(products), history: sanitize(history), notes: sanitize(notes),
-                do_not_contact })
+                do_not_contact, tags: sanitize(tags) || null })
       .select().single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json(data);
@@ -340,7 +380,7 @@ export default async function handler(req, res) {
     const { id, ...fields } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id is required' });
     delete fields.user_id; delete fields.profile_name; delete fields.created_at;
-    ['name','company','title','email','phone','notes','location','products','history'].forEach(k=>{
+    ['name','company','title','email','phone','notes','location','products','history','tags'].forEach(k=>{
       if(k in fields) fields[k]=sanitize(fields[k]);
     });
     const { data, error } = await supabase

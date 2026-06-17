@@ -50,6 +50,8 @@ button{cursor:pointer}
 .btn-danger{background:var(--red);color:#fff;box-shadow:0 1px 3px rgba(220,38,38,.3)}.btn-danger:hover{opacity:.9}
 .btn-sm{padding:7px 16px;font-size:13px}
 .btn-xs{padding:4px 11px;font-size:12px;font-weight:500}
+.tone-btn{padding:4px 10px;font-size:12px;border:1.5px solid var(--gray-light);border-radius:20px;background:var(--white);color:var(--gray);cursor:pointer;transition:all .15s}
+.tone-btn.active,.tone-btn:hover{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-full{width:100%}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
 
@@ -279,6 +281,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
 @media(max-width:768px){.modal-overlay{padding-bottom:70px}.modal-box{max-height:calc(92vh - 70px)}}
 
 /* ── 480px narrow-screen refinements ───────────────────────────────────────── */
+@media(max-width:360px){#sidebarStats{display:none}}
 @media(max-width:480px){
   /* Tighter view padding */
   .view{padding:12px 10px}
@@ -419,11 +422,17 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" id="signupPass" placeholder="Min 8 characters" autocomplete="new-password">
+        <input type="password" id="signupPass" placeholder="Min 8 characters" autocomplete="new-password" oninput="updatePasswordStrength(this.value)">
+        <div id="pwStrengthBar" style="height:4px;border-radius:2px;background:var(--gray-light);margin-top:6px;overflow:hidden"><div id="pwStrengthFill" style="height:100%;width:0%;transition:width .25s,background .25s"></div></div>
+        <div id="pwStrengthLabel" style="font-size:11px;color:var(--gray);margin-top:3px"></div>
       </div>
       <div class="field">
         <label>Confirm Password</label>
         <input type="password" id="signupPass2" placeholder="Confirm password" autocomplete="new-password">
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;font-size:13px">
+        <input type="checkbox" id="signupTerms" style="margin-top:2px;flex-shrink:0">
+        <label for="signupTerms" style="color:var(--gray);line-height:1.5;cursor:pointer">I agree to the <a href="/terms" target="_blank" style="color:var(--green)">Terms of Service</a> and <a href="/privacy" target="_blank" style="color:var(--green)">Privacy Policy</a></label>
       </div>
       <div id="signupErr" class="error-text hidden"></div>
       <button class="btn btn-primary btn-full" id="signupBtn">Create Account</button>
@@ -513,7 +522,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <option value="">Switch profile...</option>
         </select>
       </div>
-      <div id="creditBalance" style="font-size:11px;color:rgba(232,228,220,.5);padding:4px 0 8px;text-align:center">⚡ -- credits</div>
+      <div id="creditBalance" style="font-size:11px;color:rgba(232,228,220,.5);padding:4px 0 4px;text-align:center">⚡ -- credits</div>
+      <div style="text-align:center;padding:4px 0 2px">
+        <a href="https://www.shipit.buzz/products/renzo?ref=badge" target="_blank" rel="noopener noreferrer" style="opacity:.55;transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='.55'">
+          <img src="https://www.shipit.buzz/api/products/renzo/badge?theme=dark" alt="Featured on Shipit" style="height:18px;width:auto;vertical-align:middle">
+        </a>
+      </div>
+      <div id="sidebarStats" style="font-size:10px;color:rgba(232,228,220,.35);text-align:center;padding-bottom:8px;line-height:1.8"><span id="sbContactCount">-- contacts</span> &nbsp;·&nbsp; <span id="sbOverdueCount">-- overdue</span></div>
       <div class="sb-avatar-wrap" id="avatarWrap" onclick="toggleAvatarDD()">
         <div class="sb-avatar" id="sidebarAvatar">?</div>
         <div class="sb-avatar-name" id="avatarDisplayName"></div>
@@ -580,6 +595,17 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
         <button class="btn btn-ghost btn-sm" onclick="showView('settings')" style="white-space:nowrap;flex-shrink:0">Add Company</button>
       </div>
+      <!-- Launch week banner -->
+      <div id="launchWeekBanner" style="display:none;background:linear-gradient(90deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:16px;flex-direction:row;justify-content:space-between;align-items:center">
+        <div>
+          <strong style="font-size:13px;color:#166534">🚀 Launch Week Special</strong>
+          <span style="font-size:13px;color:#166534;margin-left:6px">— Lock in $0.05/message before prices increase. Growth pack: 500 credits for $20.</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;margin-left:16px">
+          <button class="btn btn-sm" style="background:#1F6B47;color:white;border:none" onclick="openCreditsModal('buy')">Get Credits</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('launchWeekBanner').style.display='none';localStorage.setItem('launchBannerDismissed','1')">✕</button>
+        </div>
+      </div>
       <!-- Empty state (shown when 0 contacts) -->
       <div id="dashEmptyState" class="hidden" style="text-align:center;padding:60px 24px;color:var(--gray)">
         <div style="font-size:48px;margin-bottom:16px">👋</div>
@@ -633,6 +659,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <span id="ctBatchCount" style="font-size:13px;font-weight:600;color:var(--green)">0 selected</span>
         <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteSelectedContacts()">Delete Selected</button>
         <select onchange="bulkUpdateTier(this.value);this.value=''" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)"><option value="">Set Tier…</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="C">Tier C</option></select>
+        <select onchange="bulkSetFrequency(parseInt(this.value));this.value=''" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)"><option value="">Set Frequency…</option><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
         <button class="btn btn-ghost btn-sm" onclick="clearContactSelection()" style="margin-left:auto">Clear</button>
       </div>
       <div class="table-wrap">
@@ -670,14 +697,22 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-ghost btn-sm" style="padding:6px 14px" onclick="dismissSent()">No, keep in queue</button>
         </div>
       </div>
-      <input class="search-input" id="queueSearch" placeholder="Search by name or company…" oninput="renderQueue()" style="margin-bottom:14px;width:100%">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <input class="search-input" id="queueSearch" placeholder="Search by name or company…" oninput="renderQueue()" style="flex:1">
+        <select id="queueCatFilter" onchange="renderQueue()" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--gray-light);border-radius:6px;background:var(--white);outline:none"><option value="">All Categories</option><option value="Follow-up">Follow-up</option><option value="Introduction">Introduction</option><option value="Renewal">Renewal</option><option value="Invoice">Invoice</option><option value="Other">Other</option></select>
+      </div>
+      <div id="queueBatchBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--green-pale);border:1px solid var(--green);border-radius:8px;margin-bottom:12px">
+        <span id="queueBatchCount" style="font-size:13px;font-weight:600;color:var(--green)">0 selected</span>
+        <button class="btn btn-ghost btn-sm" onclick="bulkMarkSent()">Mark Sent</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearQueueSelection()" style="margin-left:auto">Clear</button>
+      </div>
       <div id="queueList" class="card"></div>
       <div id="queueEmpty" class="hidden"><div style="text-align:center;padding:60px 24px"><div style="font-size:48px;margin-bottom:16px">📭</div><div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px">Queue is empty</div><p style="color:var(--gray);font-size:13px;max-width:300px;margin:0 auto 24px">Generate messages for your contacts and add them to the queue to send later.</p><button class="btn btn-primary" onclick="showView('contacts')">Go to Contacts</button></div></div>
     </div>
 
     <!-- DRAFTS -->
     <div id="view-drafts" class="view hidden">
-      <div class="view-header"><h1 class="view-title">Drafts</h1></div>
+      <div class="view-header"><h1 class="view-title">Drafts</h1><div class="view-actions"><button class="btn btn-ghost btn-sm" onclick="sendAllDraftsToQueue()">Move All to Queue</button></div></div>
       <input class="search-input" id="draftsSearch" placeholder="Search by name or company…" oninput="renderDrafts()" style="margin-bottom:14px;width:100%">
       <div id="draftList" class="card"></div>
       <div id="draftEmpty" class="hidden"><div style="text-align:center;padding:60px 24px"><div style="font-size:48px;margin-bottom:16px">📝</div><div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px">No drafts saved</div><p style="color:var(--gray);font-size:13px;max-width:300px;margin:0 auto 24px">Save generated messages as drafts to review and send later.</p><button class="btn btn-primary" onclick="showView('contacts')">Go to Contacts</button></div></div>
@@ -692,7 +727,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <textarea class="batch-prompt-area" id="batchPrompt" placeholder="e.g. Reach out to all contacts with contracts expiring soon&#10;e.g. Follow up with high-priority accounts not contacted in 30 days&#10;e.g. Send invoice reminders to overdue accounts"></textarea>
           <div style="font-size:12px;color:var(--gray);margin-top:8px">Renzo finds matching contacts and generates personalized messages for each.</div>
         </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);margin-bottom:8px">Saved Prompts</div>
+          <div id="batchTemplateList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
         <button class="btn btn-primary" id="runBatchBtn">Generate Batch Messages</button>
+        <button class="btn btn-ghost btn-sm" id="saveBatchPromptBtn" style="margin-left:8px" onclick="saveBatchPrompt()">+ Save this prompt</button>
         <div id="batchProgress" class="hidden" style="margin-top:20px">
           <div style="font-size:13px;color:var(--gray);text-align:center;margin-bottom:8px" id="batchLabel"></div>
           <div class="progress-bar"><div class="progress-fill" id="batchFill" style="width:0%"></div></div>
@@ -742,7 +782,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="int-name">Salesforce</div>
           <div class="int-desc">Sync contacts and account data directly from Salesforce CRM.</div>
           <div id="int-action-salesforce" style="margin-top:auto">
-            <button class="btn btn-primary btn-sm" onclick="connectSalesforce()">Connect</button>
+            <button class="btn btn-primary btn-sm" onclick="openCrmConnect('salesforce')">Connect</button>
           </div>
         </div>
 
@@ -847,11 +887,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <div class="field"><label>Your name</label><input type="text" id="sRep"></div>
         </div>
+        <div class="field"><label>Default outreach frequency (days) <span style="font-size:11px;color:var(--gray);font-weight:400">— used when a contact has no frequency set</span></label><input type="number" id="sDefaultFreq" min="1" max="365" placeholder="30"></div>
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Email Accounts</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Add the email accounts you send from. Renzo uses these to pre-fill your email drafts.</p>
         <div id="emailAccountsList"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:10px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-top:10px;align-items:end">
           <div class="field" style="margin-bottom:0">
             <label>Email Address</label>
             <input type="email" id="newEmailAddr" placeholder="you@yourcompany.com">
@@ -860,8 +901,17 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <label>Label (optional)</label>
             <input type="text" id="newEmailLabel" placeholder="Work, Vendors, Personal...">
           </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Display Name (optional)</label>
+            <input type="text" id="newEmailDisplayName" placeholder="e.g. David Genuth">
+          </div>
           <button class="btn btn-ghost btn-sm" id="addEmailBtn" style="align-self:flex-end">+ Add</button>
         </div>
+        <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Email Signature</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Appended automatically to every generated message.</p>
+        <textarea id="emailSigArea" rows="3" placeholder="e.g. Best,&#10;David Genuth&#10;Prime Source | 555-1234" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit"></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="saveEmailSig()">Save Signature</button>
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">My Outreach Rules</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Added to every AI message prompt.</p>
@@ -884,6 +934,10 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div class="field" style="margin-bottom:0;flex:1">
             <label>Key Label (optional)</label>
             <input type="text" id="newApiKeyLabel" placeholder="e.g. My CRM Sync">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Expires (optional)</label>
+            <input type="date" id="newApiKeyExpiry" style="padding:8px 10px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;outline:none">
           </div>
           <button class="btn btn-ghost btn-sm" id="genApiKeyBtn" style="align-self:flex-end">Generate Key</button>
         </div>
@@ -947,6 +1001,21 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
       </div>
 
+      <!-- NOTIFICATIONS CARD -->
+      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Notifications</div>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Choose when Renzo should remind you.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="notifyOverdue" onchange="saveNotificationPrefs()"> Notify me when contacts are overdue</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="notifyWeekly" onchange="saveNotificationPrefs()"> Weekly outreach summary</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:14px;white-space:nowrap">Low credit alert at</label>
+            <input type="number" id="notifyLowCredit" min="0" max="10000" style="width:80px;padding:6px 10px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;outline:none" onchange="saveNotificationPrefs()">
+            <span style="font-size:13px;color:var(--gray)">credits</span>
+          </div>
+        </div>
+      </div>
+
       <!-- PAYMENT METHODS CARD -->
       <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Payment Methods</div>
@@ -964,6 +1033,8 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--red)">Danger Zone</div>
         </div>
         <p style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:16px">Permanently delete your account and all associated data — contacts, messages, billing history, API keys, and settings. This action is immediate and cannot be undone.</p>
+        <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="exportAllData()">Export My Data</button>
+        <br>
         <button class="btn btn-sm" style="background:var(--red);color:white;border:none;padding:8px 20px" onclick="openDeleteAccountModal()">Delete My Account</button>
       </div>
     </div>
@@ -1302,7 +1373,14 @@ Response: { "draft": "Generated email text..." }</pre>
       </div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Touch Frequency (days) *</label><input type="number" id="ctFreq" min="1"></div>
+      <div class="field"><label>Touch Frequency (days) *
+        <span id="freqSuggestTip" class="hidden" style="font-size:11px;color:var(--green);font-weight:400;margin-left:8px"></span>
+      </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="ctFreq" min="1" style="flex:1">
+          <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="suggestFrequency()" title="Auto-suggest based on tier">💡 Suggest</button>
+        </div>
+      </div>
       <div class="field"><label>Last Contact Date</label><input type="date" id="ctLast"></div>
     </div>
     <div class="form-row">
@@ -1319,6 +1397,7 @@ Response: { "draft": "Generated email text..." }</pre>
     <div class="field"><label>Products / Services They Use</label><textarea id="ctProds"></textarea></div>
     <div class="field"><label>Relationship History</label><textarea id="ctHist"></textarea></div>
     <div class="field"><label>Notes</label><textarea id="ctNotes"></textarea></div>
+    <div class="field"><label>Tags <span style="font-size:11px;font-weight:400;color:var(--gray)">comma-separated</span></label><input type="text" id="ctTags" placeholder="e.g. warm-lead, renewal, vip"></div>
 
     <!-- Section 5: Settings -->
     <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--gray-pale)">Settings</div>
@@ -1348,6 +1427,7 @@ Response: { "draft": "Generated email text..." }</pre>
       <h2 class="modal-title" id="aiTitle">Generate Message</h2>
       <button class="modal-close" id="aiClose">x</button>
     </div>
+    <div id="firstMsgBanner" class="hidden" style="background:var(--green-pale);border:1px solid var(--green);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green)">Welcome! Generate your first message to get started with Renzo.</div>
     <!-- Optional prompt before generating -->
     <div id="aiPromptBox" style="margin-bottom:16px">
       <div class="field" style="margin-bottom:8px">
@@ -1360,10 +1440,18 @@ Response: { "draft": "Generated email text..." }</pre>
         <button id="modelEnh" class="btn btn-xs btn-ghost" onclick="setModel('enhanced')">Enhanced</button>
         <span id="modelNote" class="hidden" style="font-size:12px;color:var(--amber)">~3x credits for complex relationships</span>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;color:var(--gray);font-weight:600">Tone:</span>
+        <button class="tone-btn active" id="toneProf" onclick="setAiTone('Professional',this)">Professional</button>
+        <button class="tone-btn" id="toneWarm" onclick="setAiTone('Warm',this)">Warm</button>
+        <button class="tone-btn" id="toneDirect" onclick="setAiTone('Direct',this)">Direct</button>
+        <button class="tone-btn" id="toneCasual" onclick="setAiTone('Casual',this)">Casual</button>
+      </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" id="aiGenBtn">Generate Message</button>
         <button class="btn btn-ghost btn-sm" id="aiSkipPrompt">Generate Based on Context</button>
       </div>
+      <div id="aiCreditPreview" style="font-size:11px;color:var(--gray);margin-top:8px"></div>
     </div>
     <div id="aiLoading" class="loading-box hidden"><div class="spinner"></div><p id="aiLoadingText">Generating your message…</p></div>
     <div id="aiResult" class="hidden">
@@ -1386,6 +1474,7 @@ Response: { "draft": "Generated email text..." }</pre>
         <button class="btn btn-ghost btn-sm" id="aiDraft">Save Draft</button>
         <button class="btn btn-ghost btn-sm" id="aiRegen">Regenerate</button>
         <button class="btn btn-ghost btn-sm" id="aiRefine">Refine...</button>
+        <button class="btn btn-ghost btn-sm" onclick="copySubjectAndMessage()">Copy All</button>
         <button class="btn btn-ghost btn-sm" id="aiGmail">Prepare Email Draft</button>
         <button class="btn btn-primary btn-sm" id="aiQueue">Add to Queue</button>
       </div>
@@ -1405,9 +1494,10 @@ Response: { "draft": "Generated email text..." }</pre>
       <h2 class="modal-title" id="histTitle">Contact History</h2>
       <button class="modal-close" id="histClose">x</button>
     </div>
-    <div id="histMeta" style="font-size:13px;color:var(--gray);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--gray-light)"></div>
+    <div id="histMeta" style="font-size:13px;color:var(--gray);margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-light)"></div>
+    <div id="histLastMsg" class="hidden" style="background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:8px;padding:12px 14px;margin-bottom:16px"></div>
     <div class="section-title">Communication History</div>
-    <div id="histList" style="max-height:400px;overflow-y:auto"></div>
+    <div id="histList" style="max-height:360px;overflow-y:auto"></div>
     <div style="margin-top:16px;border-top:1px solid var(--gray-light);padding-top:16px">
       <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Notes</div>
       <textarea id="ctHistNotes" rows="3" placeholder="Add notes about this relationship…" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit"></textarea>
@@ -1446,6 +1536,20 @@ Response: { "draft": "Generated email text..." }</pre>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="csvCancel">Cancel</button>
       <button class="btn btn-primary" id="csvConfirm">Import Contacts</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT REPORT MODAL -->
+<div id="importReportModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:520px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">Import Complete</h2>
+      <button class="modal-close" onclick="document.getElementById('importReportModal').classList.add('hidden')">x</button>
+    </div>
+    <div id="importReportBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="document.getElementById('importReportModal').classList.add('hidden')">Done</button>
     </div>
   </div>
 </div>
@@ -1506,6 +1610,7 @@ async function updateCreditDisplay(){
       updateLowCreditBanner(n);
       if(!_cache.billing) _cache.billing={};
       _cache.billing.credits=n.toLocaleString();
+      _cache.billing.firstPackPurchased=!!(d.firstPackPurchased||d.first_pack_purchased);
       renderSidebarAvatar();
     }
   }catch{}
@@ -1747,6 +1852,14 @@ function tourDone(){
   localStorage.setItem('renzo_tour_seen','1');
   if(_cache.profile)_cache.profile.onboarding_completed=true;
   fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'complete_onboarding'})}).catch(function(){});
+  if(gc().length>0){
+    var firstId=gc()[0].id;
+    setTimeout(function(){
+      openAi(firstId);
+      var banner=document.getElementById('firstMsgBanner');
+      if(banner) banner.classList.remove('hidden');
+    },400);
+  }
 }
 function tourForce(){
   localStorage.removeItem('renzo_tour_seen');
@@ -1909,6 +2022,21 @@ function getAuthHeaders(){
     'x-profile':PROFILE
   };
 }
+// 5.5 — 401 session expiry: redirect to login
+window.fetch=(function(_f){
+  return async function(...a){
+    const r=await _f.apply(this,a);
+    if(r.status===401){
+      const url=typeof a[0]==='string'?a[0]:(a[0]?.url||'');
+      if(!url.includes('/api/auth/')){
+        sessionStorage.removeItem('renzo_jwt');
+        if(typeof toast==='function') toast('Session expired — please sign in again','error');
+        setTimeout(function(){location.href='/';},1800);
+      }
+    }
+    return r;
+  };
+})(window.fetch);
 
 function normalizeContact(r){
   return {
@@ -1928,6 +2056,7 @@ function normalizeContact(r){
     history:r.history||'',
     source_system:r.source_system||null,
     doNotContact:r.do_not_contact||false,
+    tags:r.tags||null,
     created_at:r.created_at
   };
 }
@@ -1937,7 +2066,9 @@ function normalizeProfile(r){
   return {
     website:r.website||'',company:r.company||'',sell:r.sell||'',
     customer:r.customer||'',role:r.role||'',tone:r.tone||'Professional',
-    repName:r.rep_name||r.repName||''
+    repName:r.rep_name||r.repName||'',
+    defaultFrequency:r.default_frequency||r.defaultFrequency||null,
+    emailSignature:r.email_signature||r.emailSignature||''
   };
 }
 
@@ -1961,7 +2092,7 @@ function normalizeActivity(r){
 }
 
 function normalizeQueueItem(r){
-  return {id:r.id,contact_id:r.contact_id,c_name:r.c_name,co:r.co,msg:r.msg,subject:r.subject,reason:r.reason,trigger:r.trigger,email:r.email,added:r.added};
+  return {id:r.id,contact_id:r.contact_id,c_name:r.c_name,co:r.co,msg:r.msg,subject:r.subject,reason:r.reason,trigger:r.trigger,email:r.email,added:r.added,scheduled_for:r.scheduled_for||null,category:r.category||'Follow-up'};
 }
 
 function normalizeDraft(r){
@@ -1970,23 +2101,35 @@ function normalizeDraft(r){
 
 async function loadProfileData(){
   const h=getAuthHeaders();
-  const [cRes,aRes,qRes,dRes,pRes,rRes]=await Promise.all([
-    fetch('/api/contacts',{headers:h}),
-    fetch('/api/activity',{headers:h}),
-    fetch('/api/queue',{headers:h}),
-    fetch('/api/drafts',{headers:h}),
-    fetch('/api/profile',{headers:h}),
-    fetch('/api/rules',{headers:h})
-  ]);
-  const [contacts,activity,queue,drafts,profile,rules]=await Promise.all([
-    cRes.json(),aRes.json(),qRes.json(),dRes.json(),pRes.json(),rRes.json()
-  ]);
-  _cache.contacts=Array.isArray(contacts)?contacts.map(normalizeContact):[];
-  _cache.activity=Array.isArray(activity)?activity.map(normalizeActivity):[];
-  _cache.queue=Array.isArray(queue)?queue.map(normalizeQueueItem):[];
-  _cache.drafts=Array.isArray(drafts)?drafts.map(normalizeDraft):[];
-  _cache.profile=normalizeProfile(profile);
-  _cache.rules=Array.isArray(rules)?rules.map(r=>r.rule_text):[];
+  const _ctCacheKey='renzo_contacts_cache';
+  let contactsPromise;
+  try{
+    const [cRes,aRes,qRes,dRes,pRes,rRes]=await Promise.all([
+      fetch('/api/contacts',{headers:h}),
+      fetch('/api/activity',{headers:h}),
+      fetch('/api/queue',{headers:h}),
+      fetch('/api/drafts',{headers:h}),
+      fetch('/api/profile',{headers:h}),
+      fetch('/api/rules',{headers:h})
+    ]);
+    const [contacts,activity,queue,drafts,profile,rules]=await Promise.all([
+      cRes.json(),aRes.json(),qRes.json(),dRes.json(),pRes.json(),rRes.json()
+    ]);
+    const normalizedContacts=Array.isArray(contacts)?contacts.map(normalizeContact):[];
+    try{localStorage.setItem(_ctCacheKey,JSON.stringify(normalizedContacts));}catch(_){}
+    _cache.contacts=normalizedContacts;
+    _cache.activity=Array.isArray(activity)?activity.map(normalizeActivity):[];
+    _cache.queue=Array.isArray(queue)?queue.map(normalizeQueueItem):[];
+    _cache.drafts=Array.isArray(drafts)?drafts.map(normalizeDraft):[];
+    _cache.profile=normalizeProfile(profile);
+    _cache.rules=Array.isArray(rules)?rules.map(r=>r.rule_text):[];
+  }catch(e){
+    console.warn('[loadProfileData] fetch failed, falling back to cache:',e.message);
+    try{
+      const cached=localStorage.getItem(_ctCacheKey);
+      if(cached) _cache.contacts=JSON.parse(cached);
+    }catch(_){}
+  }
 }
 
 async function loadEmails(){
@@ -2039,7 +2182,7 @@ function computePriority(c){
   // Days since last contact
   if(c.lastContact){
     const days=Math.floor((Date.now()-new Date(c.lastContact))/86400000);
-    const freq=c.frequency||30;
+    const freq=c.frequency||(gp().defaultFrequency||30);
     const overdueDays=days-freq;
     if(overdueDays>0) score+=Math.min(overdueDays,60);
     if(overdueDays>30) score+=10;
@@ -2152,6 +2295,24 @@ function renderSidebarAvatar(){
   var credits=_cache.billing?.credits??(document.getElementById('creditBalance')?.textContent||'--');
   var creditsEl=document.getElementById('avatarCredits');
   if(creditsEl) creditsEl.textContent='⚡ '+credits+' credits';
+  // C2: trial progress bar — show when credits ≤ 10 and first pack not yet purchased
+  var n=parseInt(((_cache.billing?.credits)||'').replace(/,/g,''))||0;
+  var purchased=!!(_cache.billing?.firstPackPurchased);
+  var trialBar=document.getElementById('trialProgressBar');
+  if(!trialBar){
+    trialBar=document.createElement('div');
+    trialBar.id='trialProgressBar';
+    trialBar.style.cssText='margin:4px 0 2px;padding:0 4px';
+    var cb=document.getElementById('creditBalance');
+    if(cb&&cb.parentNode) cb.parentNode.insertBefore(trialBar,cb.nextSibling);
+  }
+  if(n<=10&&!purchased){
+    var pct=Math.max(0,Math.round(n/10*100));
+    trialBar.innerHTML='<div style="height:3px;border-radius:2px;background:rgba(255,255,255,.15);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:#d97706;transition:width .3s"></div></div><div style="font-size:10px;color:#d97706;text-align:center;margin-top:2px">'+n+' trial credits left</div>';
+    trialBar.style.display='';
+  } else {
+    trialBar.style.display='none';
+  }
 }
 function toggleAvatarDD(){
   var d=document.getElementById('avatarDropdown');
@@ -2237,6 +2398,23 @@ async function doForgotReset(){
   finally{btn.disabled=false;btn.textContent='Update Password';}
 }
 
+function updatePasswordStrength(val){
+  var fill=document.getElementById('pwStrengthFill');
+  var label=document.getElementById('pwStrengthLabel');
+  if(!fill||!label) return;
+  var score=0;
+  if(val.length>=8) score++;
+  if(val.length>=12) score++;
+  if(/[A-Z]/.test(val)&&/[a-z]/.test(val)) score++;
+  if(/[0-9]/.test(val)) score++;
+  if(/[^A-Za-z0-9]/.test(val)) score++;
+  var pct=Math.min(100,score*20);
+  var color=score<=1?'#DC2626':score<=2?'#d97706':score<=3?'#d97706':'#1F6B47';
+  var text=score<=1?'Weak':score<=2?'Fair':score<=3?'Good':'Strong';
+  fill.style.width=pct+'%';fill.style.background=color;
+  label.textContent=val.length?text:'';label.style.color=color;
+}
+
 async function doSignup(){
   const name=document.getElementById('signupName').value.trim();
   const email=document.getElementById('signupEmail').value.trim();
@@ -2248,6 +2426,7 @@ async function doSignup(){
   if(!name||!email||!pass||!pass2){err.textContent='All fields are required.';err.classList.remove('hidden');return;}
   if(pass.length<8){err.textContent='Password must be at least 8 characters.';err.classList.remove('hidden');return;}
   if(pass!==pass2){err.textContent='Passwords do not match.';err.classList.remove('hidden');return;}
+  if(!document.getElementById('signupTerms')?.checked){err.textContent='Please agree to the Terms of Service to continue.';err.classList.remove('hidden');return;}
   btn.disabled=true;btn.textContent='Creating account...';
   try{
     const r=await fetch('/api/auth/signup',{
@@ -2262,18 +2441,12 @@ async function doSignup(){
     await loadProfileData();
     await loadEmails();
     document.getElementById('loginView').style.display='none';
-    function proceedToApp(){
-      document.getElementById('paymentModal').classList.add('hidden');
-      document.getElementById('appView').classList.remove('hidden');
-      renderEmailAccounts();
-      renderProfileSelector();
-      renderSidebarAvatar();
-      updateCreditDisplay();
-      document.getElementById('onboardModal').classList.remove('hidden');
-    }
-    afterPayCallback=proceedToApp;
-    document.getElementById('paySkipLink').onclick=proceedToApp;
-    await openPaymentModal('signup',true);
+    document.getElementById('appView').classList.remove('hidden');
+    renderEmailAccounts();
+    renderProfileSelector();
+    renderSidebarAvatar();
+    updateCreditDisplay();
+    document.getElementById('onboardModal').classList.remove('hidden');
   }catch(e){
     err.textContent='Network error. Please try again.';
     err.classList.remove('hidden');
@@ -2378,6 +2551,7 @@ function showView(name){
   if(name==='activity') renderActivity();
   if(name==='settings') loadSettings();
   if(name==='connections') renderConnectionsView();
+  if(name==='batch') renderBatchTemplates();
   updateQueueBadge();
 }
 
@@ -2424,6 +2598,11 @@ function renderDashboard(){
   document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const bannerEl=document.getElementById('profileCompleteBanner');
   if(bannerEl){if(!p.company){bannerEl.classList.remove('hidden');}else{bannerEl.classList.add('hidden');}}
+  const lwBanner=document.getElementById('launchWeekBanner');
+  if(lwBanner&&!localStorage.getItem('launchBannerDismissed')){
+    const credits=getCurrentCredits();
+    lwBanner.style.display=(credits<5)?'flex':'none';
+  }
   const contacts=gc(),activity=ga(),wk=new Date(Date.now()-7*86400000);
   // Toggle empty state
   const emptyEl=document.getElementById('dashEmptyState');
@@ -2517,7 +2696,7 @@ function filterActivity(f){
   renderActivity();
 }
 let activityDisplayLimit=20;
-function renderActivity(){
+function renderActivity(){try{
   const el=document.getElementById('activityLogList');
   if(_cache.activity===null){
     el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
@@ -2547,6 +2726,7 @@ function renderActivity(){
       +'</li>';
   }).join('')+'</ul>'
   +(hasMore?'<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="activityDisplayLimit+=20;renderActivity()">Load more ('+( activity.length-activityDisplayLimit+20)+' remaining)</button></div>':'');
+}catch(_e){const _el=document.getElementById('activityLogList');if(_el)_el.innerHTML='<div style="padding:32px;text-align:center;color:var(--gray)">Something went wrong loading activity. <button onclick="renderActivity()" style="color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline">Retry</button></div>';}
 }
 
 function exportActivity(){
@@ -2576,7 +2756,21 @@ function filterContactsBySource(source){
   renderContacts();
 }
 
-function renderContacts(){
+function updateSidebarStats(){
+  const contacts=gc();
+  const now=Date.now();
+  const overdue=contacts.filter(c=>{
+    if(!c.lastContact||c.doNotContact) return false;
+    const days=Math.floor((now-new Date(c.lastContact))/86400000);
+    return days>(c.frequency||(gp().defaultFrequency||30));
+  });
+  const cc=document.getElementById('sbContactCount');
+  const oc=document.getElementById('sbOverdueCount');
+  if(cc) cc.textContent=contacts.length+' contact'+(contacts.length!==1?'s':'');
+  if(oc) oc.textContent=overdue.length+' overdue';
+}
+function renderContacts(){try{
+  updateSidebarStats();
   const body=document.getElementById('ctBody'),empty=document.getElementById('ctEmpty');
   if(_cache.contacts===null){
     body.innerHTML='<tr><td colspan="8"><div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div></td></tr>';
@@ -2642,6 +2836,18 @@ function renderContacts(){
     var tierCls='tier-'+(c.tier||'c').toLowerCase();
     var score=computePriority(c);
     var pb=priorityBadge(score);
+    var strengthDots=(function(){
+      var dot='<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;';
+      var green=dot+'background:#1F6B47"></span>';
+      var amber=dot+'background:#d97706"></span>';
+      var red=dot+'background:#DC2626"></span>';
+      var empty=dot+'background:var(--gray-light)"></span>';
+      var dots,tip;
+      if(score>50){dots=green+green+green;tip='High relationship strength';}
+      else if(score>=20){dots=amber+amber+empty;tip='Moderate relationship strength';}
+      else{dots=red+empty+empty;tip='Low relationship strength';}
+      return '<span title="'+tip+' (score: '+score+'). Based on contact frequency and tier." style="margin-left:4px;vertical-align:middle;cursor:help">'+dots+'</span>';
+    })();
     var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>'+(c.doNotContact?'<span style="margin-left:4px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;vertical-align:middle">DNC</span>':'');
     var lcDays=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact).getTime())/86400000):null;
     var lcColor=!c.lastContact?'var(--gray)':lcDays>60?'var(--red)':lcDays>30?'var(--amber)':'var(--green)';
@@ -2649,9 +2855,10 @@ function renderContacts(){
     var row='<tr class="clickable">';
     row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
     row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong>'+(c.email?'<div style="font-size:11px;color:var(--gray);margin-top:1px">'+esc(c.email)+'</div>':'<div style="font-size:11px;color:var(--red);margin-top:1px">⚠ No email</div>')+'</td>';
-    row+='<td>'+esc(c.company)+'</td>';
+    var tagPills=c.tags?c.tags.split(',').map(function(t){return t.trim();}).filter(Boolean).map(function(t){return '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;background:var(--green-pale);color:var(--green);border:1px solid var(--green);margin:1px 2px 0 0">'+esc(t)+'</span>';}).join(''):'';
+    row+='<td>'+esc(c.company)+(tagPills?'<div style="margin-top:3px">'+tagPills+'</div>':'')+'</td>';
     row+='<td>'+tb+'</td>';
-    row+='<td>'+pb+'</td>';
+    row+='<td>'+pb+strengthDots+'</td>';
     row+='<td>'+lc+'</td>';
     row+='<td><span class="priority-badge '+st.cls+'">'+st.label+'</span></td>';
     row+='<td style="display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-xs" style="color:var(--red);display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><button class="btn btn-ghost btn-xs" title="Mark contacted today" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();markContactedToday(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></button>'+(c.email?'<button class="btn btn-ghost btn-xs" title="Copy email" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();copyEmail(\''+esc(c.email)+'\',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>':'')+'<button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
@@ -2675,6 +2882,7 @@ function renderContacts(){
     cb.addEventListener('change',updateSelectAllState);
   });
   renderContactPagination(contactPage, totalFiltered, maxPage);
+}catch(_e){const _b=document.getElementById('ctBody');if(_b)_b.innerHTML='<tr><td colspan="8"><div style="padding:32px;text-align:center;color:var(--gray)">Something went wrong loading contacts. <button onclick="renderContacts()" style="color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline">Retry</button></div></td></tr>';}
 }
 
 function renderContactPagination(page, total, maxPage){
@@ -2769,6 +2977,14 @@ async function markContactedToday(id){
 }
 
 // CONTACT FORM
+function suggestFrequency(){
+  const tier=document.getElementById('ctTier').value;
+  const suggested=tier==='A'?14:tier==='B'?30:tier==='C'?60:30;
+  const label=tier?'Tier '+tier+' → every '+suggested+' days':'No tier set — defaulting to 30 days';
+  document.getElementById('ctFreq').value=suggested;
+  const tip=document.getElementById('freqSuggestTip');
+  if(tip){tip.textContent='✓ '+label;tip.classList.remove('hidden');setTimeout(()=>tip.classList.add('hidden'),3000);}
+}
 function syncTierRadios(val){
   const tiers=['A','B','C',''];
   const ids={A:'ctTierALabel',B:'ctTierBLabel',C:'ctTierCLabel','':'ctTierNoneLabel'};
@@ -2795,7 +3011,7 @@ function updateTierHidden(val){
   syncTierRadios(val);
 }
 function clearCtForm(){
-  ['ctName','ctCo','ctTitle','ctEmail','ctPhone','ctLoc','ctProds','ctHist','ctNotes'].forEach(x=>document.getElementById(x).value='');
+  ['ctName','ctCo','ctTitle','ctEmail','ctPhone','ctLoc','ctProds','ctHist','ctNotes','ctTags'].forEach(x=>document.getElementById(x).value='');
   ['ctSize'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('ctTier').value='';
   syncTierRadios('');
@@ -2837,6 +3053,7 @@ function openEditContact(id){
   document.getElementById('ctExpiry').value=c.contractExpiry||'';
   document.getElementById('ctInvoice').value=c.invoiceAmount||'';
   document.getElementById('ctAnnual').value=c.annualSpend||c.annual_spend||'';
+  document.getElementById('ctTags').value=c.tags||'';
   document.getElementById('ctDelBtn').classList.remove('hidden');
   document.getElementById('ctModal').classList.remove('hidden');
 }
@@ -2847,6 +3064,7 @@ async function saveContact(){
   const tier=document.getElementById('ctTier').value;
   const freq=parseInt(document.getElementById('ctFreq').value);
   if(!name||!co||!tier||!freq){document.getElementById('ctErr').classList.remove('hidden');return;}
+  const _sb=document.getElementById('ctSave');if(_sb){_sb.disabled=true;_sb.textContent='Saving…';}
   const data={
     name,company:co,tier,frequency:freq,
     title:document.getElementById('ctTitle').value.trim(),
@@ -2861,7 +3079,8 @@ async function saveContact(){
     contract_expiry:document.getElementById('ctExpiry').value||null,
     invoice_amount:parseFloat(document.getElementById('ctInvoice').value)||0,
     annual_spend:parseFloat(document.getElementById('ctAnnual').value)||0,
-    do_not_contact:document.getElementById('ctDnc').checked
+    do_not_contact:document.getElementById('ctDnc').checked,
+    tags:document.getElementById('ctTags').value.trim()||null
   };
   const id=document.getElementById('ctId').value;
   try{
@@ -2873,6 +3092,21 @@ async function saveContact(){
       const i=_cache.contacts.findIndex(c=>c.id===id);
       if(i>-1) _cache.contacts[i]=saved;
     } else {
+      // D3: duplicate detection
+      const emailLower=(data.email||'').toLowerCase();
+      const nameLower=data.name.toLowerCase();
+      const coLower=data.company.toLowerCase();
+      const dup=gc().find(function(c){
+        if(emailLower&&c.email&&c.email.toLowerCase()===emailLower) return true;
+        if(c.name.toLowerCase()===nameLower&&c.company.toLowerCase()===coLower) return true;
+        return false;
+      });
+      if(dup){
+        if(_sb){_sb.disabled=false;_sb.textContent='Save Contact';}
+        const open=confirm('A contact named "'+dup.name+'" at '+dup.company+' already exists. Open the existing contact instead?');
+        if(open){document.getElementById('ctModal').classList.add('hidden');openEditContact(dup.id);}
+        return;
+      }
       const r=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(data)});
       if(!r.ok) throw new Error(await r.text());
       saved=normalizeContact(await r.json());
@@ -2883,6 +3117,8 @@ async function saveContact(){
     toast('Contact saved','success');
   }catch(e){
     toast('Save failed: '+e.message,'error');
+  }finally{
+    if(_sb){_sb.disabled=false;_sb.textContent='Save Contact';}
   }
 }
 
@@ -2914,6 +3150,20 @@ function openHistory(id){
   // Communication history from activity log
   const activity=ga().filter(a=>a.contact_id===id);
   const histList=document.getElementById('histList');
+  // Last message preview box
+  const lastMsgBox=document.getElementById('histLastMsg');
+  if(lastMsgBox){
+    if(activity.length){
+      const last=activity[0];
+      lastMsgBox.innerHTML='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:6px">Last Message Sent</div>'
+        +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px">'+new Date(last.ts).toLocaleString()+(last.trigger?' &middot; '+esc(last.trigger):'')+'</div>'
+        +'<div style="font-size:13px;color:var(--dark);line-height:1.5">'+esc((last.msg||'').slice(0,100))+((last.msg||'').length>100?'…':'')+'</div>';
+      lastMsgBox.classList.remove('hidden');
+    } else {
+      lastMsgBox.innerHTML='<div style="font-size:13px;color:var(--gray);font-style:italic">No messages sent yet.</div>';
+      lastMsgBox.classList.remove('hidden');
+    }
+  }
   // Show queued messages for this contact
   const queued=gq().filter(x=>x.contact_id===id);
   const drafted=gd().filter(x=>x.contact_id===id);
@@ -3026,6 +3276,12 @@ function openAi(id){
   // Show trigger so user knows context
   const trigger=computeTrigger(c);
   document.getElementById('aiReason').textContent=trigger;
+  // E3: credit preview
+  var prev=document.getElementById('aiCreditPreview');
+  if(prev){
+    var bal=_cache.billing?.credits||'--';
+    prev.textContent='Balance: ⚡ '+bal+' credits · Standard: 1 credit · Enhanced: ~3 credits';
+  }
 }
 
 async function generateMsg(c, customInstruction){
@@ -3039,10 +3295,11 @@ async function generateMsg(c, customInstruction){
   const spendLine=c.annualSpend>0?'\n- Annual spend/contract value: $'+Number(c.annualSpend).toLocaleString():'';
   const invoiceLine=c.invoiceAmount>0?'\n- Outstanding invoice: $'+Number(c.invoiceAmount).toLocaleString():'';
 
+  const aiTone=window._aiTone||(p.tone||'Professional');
   const prompt='You are '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'. Write an outreach email in your own voice.\n\n'
     +relationshipCtx+'\n\n'
     +'YOUR ROLE: '+(p.role||'Vendor relationship manager')+'\n'
-    +'TONE: '+(p.tone||'Professional')+'\n\n'
+    +'TONE: '+aiTone+'\n\n'
     +'CONTACT:\n'
     +'Name: '+c.name+', '+c.company+(c.title?', '+c.title:'')+'\n'
     +(c.annualSpend>0?'Contract value: $'+Number(c.annualSpend).toLocaleString()+'\n':'')
@@ -3084,7 +3341,8 @@ async function generateMsg(c, customInstruction){
     if(txt.charCodeAt(0)===96) txt=txt.split('\n').slice(1,-1).join('\n');
     const parsed=JSON.parse(txt);
     document.getElementById('aiReason').textContent=parsed.reason;
-    document.getElementById('aiMsg').value=parsed.message;
+    var sig=(document.getElementById('emailSigArea')||{}).value||(_cache.profile?.emailSignature)||'';
+    document.getElementById('aiMsg').value=parsed.message+(sig?'\n\n'+sig:'');
     document.getElementById('aiMsg').dispatchEvent(new Event('input'));
     var aiSubjEl=document.getElementById('aiSubjectText');
     var aiSubjDisp=document.getElementById('aiSubjectDisplay');
@@ -3107,7 +3365,8 @@ async function generateMsg(c, customInstruction){
     document.getElementById('aiGenBtn').disabled=false;
     document.getElementById('aiRegen').disabled=false;
     document.getElementById('aiErr').classList.remove('hidden');
-    document.getElementById('aiErr').textContent='Error: '+e.message;
+    const _isNet=e instanceof TypeError&&(e.message.includes('fetch')||e.message.includes('network')||e.message.includes('Failed'));
+    document.getElementById('aiErr').textContent=_isNet?'Connection error — check your internet and try again':'Error: '+e.message;
   }
 }
 
@@ -3119,7 +3378,8 @@ async function addToQueue(){
       contactId:aiContact.id,c_name:aiContact.name,co:aiContact.company,msg,
       subject:document.getElementById('aiSubjectText')?.textContent||'',
       reason:document.getElementById('aiReason').textContent,
-      trigger:computeTrigger(aiContact)
+      trigger:computeTrigger(aiContact),
+      category:'Follow-up'
     })});
     if(!r.ok) throw new Error(await r.text());
     _cache.queue.unshift(normalizeQueueItem(await r.json()));
@@ -3191,7 +3451,7 @@ function openEmailCompose(toAddr,subject,body,fromAddr){
 }
 
 // QUEUE
-function renderQueue(){
+function renderQueue(){try{
   const list=document.getElementById('queueList'),empty=document.getElementById('queueEmpty');
   if(_cache.queue===null){
     list.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
@@ -3202,10 +3462,14 @@ function renderQueue(){
   const emailBanner=document.getElementById('emailSetupBanner');
   if(emailBanner) emailBanner.classList.toggle('hidden', emails.length>0);
   const sq=(document.getElementById('queueSearch')?.value||'').toLowerCase();
-  const items=gq().filter(i=>!sq||i.c_name?.toLowerCase().includes(sq)||i.co?.toLowerCase().includes(sq));
+  const catFilter=(document.getElementById('queueCatFilter')?.value||'');
+  const items=gq().filter(i=>(!sq||i.c_name?.toLowerCase().includes(sq)||i.co?.toLowerCase().includes(sq))&&(!catFilter||i.category===catFilter));
   if(!items.length){list.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
+  var CAT_COLORS={'Follow-up':'#1F6B47','Introduction':'#1d4ed8','Renewal':'#7c3aed','Invoice':'#dc2626','Other':'#6b7280'};
   list.innerHTML=items.map(item=>{
+  var catColor=CAT_COLORS[item.category]||'#6b7280';
+  var catBadge='<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:'+catColor+'22;color:'+catColor+';border:1px solid '+catColor+'44;margin-bottom:6px">'+esc(item.category||'Follow-up')+'</span>';
     const c=gc().find(x=>x.id===item.contact_id);
     const hasEmail=c&&c.email;
     const email=hasEmail?c.email:'';
@@ -3214,6 +3478,10 @@ function renderQueue(){
       ?'<span style="color:var(--green);font-size:12px">'+esc(email)+'</span>'
       :'<span style="color:var(--red);font-size:12px">⚠ No email — <span style="cursor:pointer;text-decoration:underline" onclick="openEditContact(\''+item.contact_id+'\')">Add email</span></span>';
     return '<div class="queue-item" id="qi-'+item.id+'">'+
+      '<div style="display:flex;align-items:flex-start;gap:8px">'+
+        '<input type="checkbox" class="q-chk" data-id="'+item.id+'" onchange="updateQueueBatchBar()" style="margin-top:3px;flex-shrink:0">'+
+        '<div style="flex:1">'+
+      catBadge+
       '<div class="queue-who">'+esc(item.c_name)+'</div>'+
       '<div class="queue-co">'+esc(item.co)+' &middot; '+emailDisplay+'</div>'+
       '<div style="font-size:12px;color:var(--gray);margin-bottom:6px;font-style:italic">Subject: '+esc(subject.slice(0,80))+'</div>'+
@@ -3224,15 +3492,32 @@ function renderQueue(){
         '<button class="btn btn-primary btn-xs" onclick="refineQueueMsg(\''+item.id+'\')">Rewrite</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.add(\'hidden\')">Cancel</button>'+
       '</div>'+
-      '<div class="queue-actions">'+
+      '<div id="qschedule-'+item.id+'" class="hidden" style="margin:8px 0;display:flex;gap:8px;align-items:center">'+
+        '<input type="datetime-local" id="qdt-'+item.id+'" style="flex:1;padding:7px 10px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;outline:none"'+(item.scheduled_for?' value="'+item.scheduled_for.slice(0,16)+'"':'')+'>'+
+        '<button class="btn btn-primary btn-xs" onclick="saveSchedule(\''+item.id+'\')">Set</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="saveSchedule(\''+item.id+'\',true)">Clear</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qschedule-'+item.id+'\').classList.add(\'hidden\')">✕</button>'+
+      '</div>'+
+      (item.scheduled_for?(function(){
+        const sf=new Date(item.scheduled_for);
+        const overdue=sf<new Date();
+        return '<div style="font-size:12px;margin-bottom:6px;padding:5px 10px;background:'+(overdue?'#fef3c7':'#f0fdf4')+';border-radius:6px;display:inline-flex;align-items:center;gap:6px">'
+          +'<span>📅</span>'
+          +'<span style="color:'+(overdue?'#92400e':'#166534')+'">'+( overdue?'Scheduled for: ':'Scheduled: ')+sf.toLocaleString()+'</span>'
+          +(overdue?'<button class="btn btn-primary btn-xs" onclick="sendEmail(\''+item.id+'\')">Send Now</button>':'')
+          +'</div>';
+      })():'')
+      +'<div class="queue-actions">'+
         '<button class="btn btn-primary btn-xs"'+(hasEmail?'':' disabled title="Add an email address to this contact first"')+' onclick="sendEmail(\''+item.id+'\')">Prepare Email Draft</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="markSent(\''+item.id+'\')">Mark Sent</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qrefine-'+item.id+'\').classList.toggle(\'hidden\');document.getElementById(\'qri-'+item.id+'\').focus()">Refine</button>'+
+        '<button class="btn btn-ghost btn-xs" onclick="document.getElementById(\'qschedule-'+item.id+'\').classList.toggle(\'hidden\')">📅 Schedule</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="saveDraftFromQueue(\''+item.id+'\')">Save Draft</button>'+
         '<button class="btn btn-ghost btn-xs" onclick="removeQ(\''+item.id+'\')">Remove</button>'+
       '</div>'+
-    '</div>';
+      '</div></div>';
   }).join('');
+}catch(_e){const _l=document.getElementById('queueList');if(_l)_l.innerHTML='<div style="padding:32px;text-align:center;color:var(--gray)">Something went wrong loading queue. <button onclick="renderQueue()" style="color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline">Retry</button></div>';}
 }
 
 let _pendingSentConfirm=null;
@@ -3382,6 +3667,19 @@ async function editQ(qid){
   updateQueueBadge();
 }
 
+async function saveSchedule(qid,clear=false){
+  const scheduled_for=clear?null:(document.getElementById('qdt-'+qid)||{}).value||null;
+  try{
+    const r=await fetch('/api/queue',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:qid,scheduled_for})});
+    if(!r.ok) throw new Error(await r.text());
+    const updated=await r.json();
+    const idx=_cache.queue.findIndex(x=>x.id===qid);
+    if(idx>-1) _cache.queue[idx].scheduled_for=updated.scheduled_for||null;
+    document.getElementById('qschedule-'+qid)?.classList.add('hidden');
+    renderQueue();
+    toast(clear?'Schedule cleared':'Message scheduled','success');
+  }catch(e){toast('Failed to save schedule: '+e.message,'error');}
+}
 async function removeQ(qid){
   await fetch('/api/queue',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({id:qid})});
   _cache.queue=_cache.queue.filter(x=>x.id!==qid);
@@ -3389,7 +3687,7 @@ async function removeQ(qid){
 }
 
 // DRAFTS
-function renderDrafts(){
+function renderDrafts(){try{
   const list=document.getElementById('draftList'),empty=document.getElementById('draftEmpty');
   if(_cache.drafts===null){
     list.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px"></div>Loading…</div>';
@@ -3418,6 +3716,7 @@ function renderDrafts(){
     '</div>'+
     '</div>'
   ).join('');
+}catch(_e){const _l=document.getElementById('draftList');if(_l)_l.innerHTML='<div style="padding:32px;text-align:center;color:var(--gray)">Something went wrong loading drafts. <button onclick="renderDrafts()" style="color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline">Retry</button></div>';}
 }
 
 async function refineDraft(did){
@@ -3722,6 +4021,43 @@ function getContactSummary(c, i){
 }
 
 // BATCH -- AI-driven filtering
+const BATCH_BUILTIN_TEMPLATES=[
+  'Check in with all overdue Tier A accounts',
+  'Follow up on contracts expiring in the next 90 days',
+  'Reach out to contacts I haven\'t spoken to in 60+ days',
+  'Send a quarterly update to all active accounts',
+  'Re-engage dormant accounts with no contact in 90 days'
+];
+function getBatchTemplates(){
+  try{return JSON.parse(localStorage.getItem(profileKey('batch_templates'))||'[]');}catch{return [];}
+}
+function renderBatchTemplates(){
+  const el=document.getElementById('batchTemplateList');
+  if(!el) return;
+  const custom=getBatchTemplates();
+  const all=[...BATCH_BUILTIN_TEMPLATES,...custom];
+  el.innerHTML=all.map((t,i)=>{
+    const isCustom=i>=BATCH_BUILTIN_TEMPLATES.length;
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(t)+'">'
+      +'<span onclick="document.getElementById(\'batchPrompt\').value='+JSON.stringify(t)+'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t)+'</span>'
+      +(isCustom?'<span style="color:var(--gray);font-size:10px;cursor:pointer;flex-shrink:0" onclick="removeCustomBatchTemplate('+JSON.stringify(t)+')">✕</span>':'')
+      +'</span>';
+  }).join('');
+}
+function saveBatchPrompt(){
+  const val=(document.getElementById('batchPrompt')?.value||'').trim();
+  if(!val){toast('Enter a prompt first','error');return;}
+  const existing=getBatchTemplates();
+  if(BATCH_BUILTIN_TEMPLATES.includes(val)||existing.includes(val)){toast('Already saved','error');return;}
+  localStorage.setItem(profileKey('batch_templates'),JSON.stringify([...existing,val]));
+  renderBatchTemplates();
+  toast('Prompt saved','success');
+}
+function removeCustomBatchTemplate(t){
+  const filtered=getBatchTemplates().filter(x=>x!==t);
+  localStorage.setItem(profileKey('batch_templates'),JSON.stringify(filtered));
+  renderBatchTemplates();
+}
 async function runBatch(){
   const query=document.getElementById('batchPrompt').value.trim();
   if(!query){toast('Enter a prompt first','error');return;}
@@ -3811,7 +4147,27 @@ async function runBatch(){
     if(!matched.length){
       document.getElementById('batchProgress').classList.add('hidden');
       document.getElementById('batchResults').classList.remove('hidden');
-      document.getElementById('batchResults').innerHTML='<div style="background:var(--amber-pale);border-left:4px solid var(--amber);padding:14px 16px;border-radius:4px;font-size:14px;color:#92400e"><strong>No matches found.</strong> '+esc(filterResult.reasoning||'None of your contacts match that criteria.')+'</div>';
+      document.getElementById('batchResults').innerHTML='<div style="background:var(--amber-pale);border-left:4px solid var(--amber);padding:14px 16px;border-radius:4px;font-size:14px;color:#92400e"><strong>No contacts matched your request.</strong> '+esc(filterResult.reasoning||'None of your contacts match that criteria.')+'<div id="batchSuggestions" style="margin-top:10px;font-size:13px;color:#78350f">Finding alternatives…</div></div>';
+      try{
+        const tierCounts=contacts.reduce(function(a,c){a[c.tier||'?']=(a[c.tier||'?']||0)+1;return a;},{});
+        const tierSummary=Object.entries(tierCounts).map(function(e){return e[1]+' tier-'+e[0];}).join(', ');
+        const altRes=await fetch('/api/ai',{
+          method:'POST',
+          headers:getAuthHeaders(),
+          body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:'A user ran batch outreach with this prompt: "'+query+'"\nNo contacts matched.\nContact mix: '+tierSummary+'.\nSuggest 5 alternative short batch outreach prompts they could try given their contact mix. Return ONLY JSON: {"suggestions":["...","...","...","...","..."]}. Each 5-12 words, actionable.'}]})
+        });
+        if(altRes.ok){
+          const altData=await altRes.json();
+          syncCreditDisplay(altData);
+          let altTxt=altData.content[0].text.trim();
+          if(altTxt.charCodeAt(0)===96) altTxt=altTxt.split('\n').slice(1,-1).join('\n');
+          const sugs=(JSON.parse(altTxt).suggestions||[]).slice(0,5);
+          const sugEl=document.getElementById('batchSuggestions');
+          if(sugEl&&sugs.length){
+            sugEl.innerHTML='<strong>Try instead:</strong><div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">'+sugs.map(function(s){return '<button onclick="document.getElementById(\'batchPrompt\').value=\''+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\';" style="text-align:left;background:none;border:1px solid #d97706;border-radius:6px;padding:5px 10px;font-size:12px;color:#92400e;cursor:pointer;width:100%">'+esc(s)+'</button>';}).join('')+'</div>';
+          }
+        }
+      }catch(e){const sugEl=document.getElementById('batchSuggestions');if(sugEl)sugEl.remove();}
       document.getElementById('runBatchBtn').disabled=false;
       return;
     }
@@ -3926,12 +4282,16 @@ function handleCsv(file){
 async function confirmCsv(){
   if(!csvData) return;
   const {rows,mapping}=csvData;
-  const existing=gc();let imported=0,skipped=0;
+  const existing=gc();
+  let imported=0;
+  const duplicates=[];
+  const missingFields=[];
+  const errors=[];
   for(const row of rows){
     const get=(field)=>mapping[field]>=0?row[mapping[field]]:'';
     const name=get('name'),co=get('company');
-    if(!name&&!co){skipped++;continue;}
-    if(existing.find(c=>c.name===name&&c.company===co)){skipped++;continue;}
+    if(!name&&!co){missingFields.push({row,reason:'Missing name and company'});continue;}
+    if(existing.find(c=>c.name===name&&c.company===co)){duplicates.push({name,co});continue;}
     let tier=get('tier').toUpperCase().charAt(0);
     if(!['A','B','C'].includes(tier)) tier='C';
     const rawFreq=parseInt(get('frequency'))||0;
@@ -3961,13 +4321,28 @@ async function confirmCsv(){
         _cache.contacts.unshift(saved);
         existing.push(saved);
         imported++;
-      } else {skipped++;}
-    }catch{skipped++;}
+      } else {errors.push(name||'Unknown');}
+    }catch{errors.push(name||'Unknown');}
   }
   csvData=null;
   document.getElementById('csvModal').classList.add('hidden');
   renderContacts();
-  toast('Imported '+imported+', skipped '+skipped,'success');
+  // Show detailed report modal
+  const rpt=document.getElementById('importReportBody');
+  if(rpt){
+    rpt.innerHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">'
+      +'<div style="text-align:center;padding:16px;background:#f0fdf4;border-radius:8px"><div style="font-size:28px;font-weight:700;color:#166534">'+imported+'</div><div style="font-size:12px;color:#166534;margin-top:4px">Imported</div></div>'
+      +'<div style="text-align:center;padding:16px;background:#fef3c7;border-radius:8px"><div style="font-size:28px;font-weight:700;color:#92400e">'+duplicates.length+'</div><div style="font-size:12px;color:#92400e;margin-top:4px">Duplicates skipped</div></div>'
+      +'<div style="text-align:center;padding:16px;background:#fff5f5;border-radius:8px"><div style="font-size:28px;font-weight:700;color:#991b1b">'+(missingFields.length+errors.length)+'</div><div style="font-size:12px;color:#991b1b;margin-top:4px">Rows skipped</div></div>'
+      +'</div>'
+      +(duplicates.length?'<details style="margin-bottom:12px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--gray)">View '+duplicates.length+' duplicate'+(duplicates.length!==1?'s':'')+' skipped</summary><div style="margin-top:8px;max-height:180px;overflow-y:auto;font-size:12px;border:1px solid var(--gray-light);border-radius:6px">'+duplicates.map(d=>'<div style="padding:6px 10px;border-bottom:1px solid var(--gray-pale)">'+esc(d.name)+' — '+esc(d.co)+'</div>').join('')+'</div></details>':'')
+      +(missingFields.length?'<div style="font-size:12px;color:var(--gray);margin-top:4px">'+missingFields.length+' row'+(missingFields.length!==1?'s':'')+' skipped: missing name and company.</div>':'')
+      +(errors.length?'<div style="font-size:12px;color:var(--red);margin-top:4px">'+errors.length+' row'+(errors.length!==1?'s':'')+' failed to save.</div>':'');
+    document.getElementById('importReportModal').classList.remove('hidden');
+  } else {
+    toast('Imported '+imported+', skipped '+duplicates.length+' duplicates','success');
+  }
 }
 
 // SETTINGS
@@ -4068,6 +4443,14 @@ function renderConnectionsView(){
       localStorage.setItem(key,JSON.stringify(conns));
       renderConnectionsView();
     }
+  }).catch(function(){});
+  fetch('/api/contacts?action=get_integrations',{headers:getAuthHeaders()}).then(function(r){return r.json();}).then(function(ints){
+    if(!Array.isArray(ints)) return;
+    var changed=false;
+    ints.forEach(function(int){
+      if(!conns[int.provider]){conns[int.provider]={lastSync:int.last_sync||null,count:0};changed=true;}
+    });
+    if(changed){localStorage.setItem(key,JSON.stringify(conns));renderConnectionsView();}
   }).catch(function(){});
   var providers=Object.keys(conns);
   var section=document.getElementById('connectedSection');
@@ -4218,7 +4601,7 @@ async function syncSalesforceAgain(btn){
       _cache.contacts=(await cr2.json()).map(normalizeContact);
       renderContacts();
     } else {
-      toast('Sync failed: '+(sd.error||'unknown error'),'error');
+      toast('Sync failed: '+(sd.error||'unknown error')+' — click Sync Again to retry','error');
       if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
     }
   }catch(e){
@@ -4276,15 +4659,26 @@ async function runCrmSync(provider){
     credentials={
       username:(document.getElementById('sfUsername')||{}).value||'',
       password:(document.getElementById('sfPassword')||{}).value||'',
-      security_token:(document.getElementById('sfToken')||{}).value||''
+      securityToken:(document.getElementById('sfToken')||{}).value||''
     };
   } else {
     credentials={api_key:(document.getElementById('hsApiKey')||{}).value||''};
   }
   try{
-    const r=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
-      body:JSON.stringify({action:'crm_sync',provider:provider,credentials:credentials})});
-    const d=await r.json();
+    let d;
+    if(provider==='salesforce'){
+      const authR=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+        body:JSON.stringify({action:'salesforce_connect_password',username:credentials.username,password:credentials.password,securityToken:credentials.securityToken})});
+      const authD=await authR.json();
+      if(!authD.success) throw new Error(authD.error||'Authentication failed');
+      const syncR=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+        body:JSON.stringify({action:'salesforce_sync'})});
+      d=await syncR.json();
+    } else {
+      const r=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),
+        body:JSON.stringify({action:'crm_sync',provider:provider,credentials:credentials})});
+      d=await r.json();
+    }
     if(d.success){
       // Save connection state per profile
       var connKey=profileKey('renzo_crm_connections');
@@ -4316,6 +4710,10 @@ function loadSettings(){
   document.getElementById('sRole').value=p.role||'';
   document.getElementById('sTone').value=p.tone||'Professional';
   document.getElementById('sRep').value=p.repName||'';
+  document.getElementById('sDefaultFreq').value=p.defaultFrequency||'';
+  var sigEl=document.getElementById('emailSigArea');
+  if(sigEl) sigEl.value=p.emailSignature||localStorage.getItem('renzo_email_sig')||'';
+  loadNotificationPrefs();
   renderRules();
   renderEmailAccounts();
   loadApiKeys();
@@ -4339,9 +4737,11 @@ async function loadApiKeys(){
     const html=keys.length?keys.map(k=>{
       const created=new Date(k.created_at).toLocaleDateString();
       const used=k.last_used_at?new Date(k.last_used_at).toLocaleDateString():'never';
+      const expiry=k.expires_at?new Date(k.expires_at).toLocaleDateString():null;
+      const expired=k.expires_at&&new Date(k.expires_at)<new Date();
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-light)">'
         +'<div><div style="font-size:13px;font-weight:500">'+(k.label||'Unnamed key')+'</div>'
-        +'<div style="font-size:11px;color:var(--gray)">Created '+created+' &middot; Last used '+used+'</div></div>'
+        +'<div style="font-size:11px;color:var(--gray)">Created '+created+' &middot; Last used '+used+(expiry?' &middot; <span style="color:'+(expired?'var(--red)':'var(--gray)')+'">Expires '+expiry+(expired?' (expired)':'')+'</span>':'')+'</div></div>'
         +'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="revokeApiKey(\''+k.id+'\')">Revoke</button>'
         +'</div>';
     }).join(''):'<p style="font-size:13px;color:var(--gray)">No API keys yet.</p>';
@@ -4363,9 +4763,10 @@ async function generateApiKey(){
   const label=document.getElementById('newApiKeyLabel').value.trim();
   const btn=document.getElementById('genApiKeyBtn');
   btn.disabled=true;btn.textContent='Generating...';
+  const expiry=document.getElementById('newApiKeyExpiry')?.value||null;
   try{
     const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),
-      body:JSON.stringify({action:'generate_api_key',label})});
+      body:JSON.stringify({action:'generate_api_key',label,expires_at:expiry||undefined})});
     if(!r.ok){const d=await r.json();toast(d.error||'Failed to generate key','error');return;}
     const d=await r.json();
     document.getElementById('newApiKeyValue').textContent=d.key;
@@ -4463,7 +4864,8 @@ async function changePassword(){
 }
 
 async function saveSettings(){
-  const profileData={website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim()};
+  const _df=parseInt(document.getElementById('sDefaultFreq').value)||null;
+  const profileData={website:document.getElementById('sWebsite').value.trim(),company:document.getElementById('sCo').value.trim(),sell:document.getElementById('sSell').value.trim(),customer:document.getElementById('sCust').value.trim(),role:document.getElementById('sRole').value.trim(),tone:document.getElementById('sTone').value,repName:document.getElementById('sRep').value.trim(),defaultFrequency:_df};
   const r=await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(profileData)});
   _cache.profile=normalizeProfile(r.ok?(await r.json()):profileData);
   toast('Settings saved','success');
@@ -4480,7 +4882,7 @@ function renderEmailAccounts(){
   if(el){
     el.innerHTML=emails.length
       ?emails.map((e,i)=>'<div class="rule-item" id="emailRow-'+i+'" style="flex-wrap:wrap;gap:6px">'
-        +'<span class="rule-text"><strong>'+esc(e.label||e.addr)+'</strong> — '+esc(e.addr)+'</span>'
+        +'<span class="rule-text"><strong>'+esc(e.label||e.addr)+'</strong> — '+esc(e.addr)+(e.display_name?' <span style="color:var(--gray);font-size:12px">('+esc(e.display_name)+')</span>':'')+'</span>'
         +(i===0?'<span style="font-size:11px;background:var(--green-pale);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:600;align-self:center">Primary</span>':'<button onclick="setEmailPrimary('+i+')" style="font-size:11px;color:var(--gray);background:none;border:1px solid var(--gray-light);border-radius:4px;padding:1px 7px;cursor:pointer;align-self:center">Set Primary</button>')
         +(e.verified===false?'<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-weight:600;align-self:center">Unverified</span><button onclick="resendVerify(this,'+JSON.stringify(e.addr)+')" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0 2px;align-self:center">Resend</button>':'')
         +'<div style="display:flex;gap:4px;margin-left:auto">'
@@ -4488,9 +4890,10 @@ function renderEmailAccounts(){
         +'<button class="rule-del" onclick="deleteEmail('+i+')">✕</button>'
         +'</div>'
         +'<div id="emailEdit-'+i+'" class="hidden" style="width:100%;margin-top:8px;padding-top:10px;border-top:1px solid var(--gray-pale)">'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Email address</label><input id="editAddr-'+i+'" type="email" value="'+esc(e.addr)+'" placeholder="you@example.com" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Label / nickname</label><input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="e.g. Work" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
+        +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Display Name</label><input id="editDisplayName-'+i+'" type="text" value="'+esc(e.display_name||'')+'" placeholder="e.g. David Genuth" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button class="btn btn-primary btn-sm" style="padding:5px 12px;font-size:12px" onclick="saveEmailEdit('+i+')">Save</button>'
@@ -4511,7 +4914,7 @@ function renderEmailAccounts(){
     emails.forEach((e,i)=>{
       const opt=document.createElement('option');
       opt.value=String(i);
-      opt.textContent=(e.label?e.label+' -- ':'')+e.addr;
+      opt.textContent=(e.label?e.label+' — ':'')+e.addr+(e.display_name?' ('+e.display_name+')':'');
       sel.appendChild(opt);
     });
     // Auto-select if only one account
@@ -4528,12 +4931,14 @@ async function addEmail(){
   if(!addr||!addr.includes('@')){toast('Enter a valid email address','error');return;}
   const emails=gEmails();
   if(emails.find(e=>e.addr===addr)){toast('That email is already added','error');return;}
-  const updated=[...emails.map(e=>({addr:e.addr,label:e.label,verified:e.verified!==false})),{addr,label,verified:false}]
+  const displayName=(document.getElementById('newEmailDisplayName')||{}).value?.trim()||'';
+  const updated=[...emails.map(e=>({addr:e.addr,label:e.label,display_name:e.display_name||null,verified:e.verified!==false})),{addr,label,display_name:displayName||null,verified:false}]
     .map((e,i)=>({...e,sort_order:i}));
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   document.getElementById('newEmailAddr').value='';
   document.getElementById('newEmailLabel').value='';
+  if(document.getElementById('newEmailDisplayName')) document.getElementById('newEmailDisplayName').value='';
   renderEmailAccounts();
   toast('Email account added — check your inbox to verify','success');
   console.log('[verify_email] sending verify for',addr);
@@ -4541,7 +4946,7 @@ async function addEmail(){
 }
 
 async function deleteEmail(idx){
-  const updated=gEmails().filter((_,i)=>i!==idx).map((e,i)=>({addr:e.addr,label:e.label,verified:e.verified!==false,sort_order:i}));
+  const updated=gEmails().filter((_,i)=>i!==idx).map((e,i)=>({addr:e.addr,label:e.label,display_name:e.display_name||null,verified:e.verified!==false,sort_order:i}));
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:updated})});
   if(r.ok) _cache.emails=await r.json();
   renderEmailAccounts();
@@ -4550,7 +4955,7 @@ async function deleteEmail(idx){
 async function setEmailPrimary(idx){
   const emails=gEmails();
   if(idx===0||idx>=emails.length) return;
-  const reordered=[emails[idx],...emails.filter((_,i)=>i!==idx)].map((e,i)=>({addr:e.addr,label:e.label,verified:e.verified!==false,sort_order:i}));
+  const reordered=[emails[idx],...emails.filter((_,i)=>i!==idx)].map((e,i)=>({addr:e.addr,label:e.label,display_name:e.display_name||null,verified:e.verified!==false,sort_order:i}));
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({accounts:reordered})});
   if(r.ok){_cache.emails=await r.json();renderEmailAccounts();toast('Primary email updated','success');}
 }
@@ -4573,17 +4978,18 @@ function hideEmailEdit(idx){
 function saveEmailEdit(idx){
   var addr=(document.getElementById('editAddr-'+idx)||{}).value||'';
   var label=(document.getElementById('editLabel-'+idx)||{}).value||'';
-  addr=addr.trim();label=label.trim();
+  var displayName=(document.getElementById('editDisplayName-'+idx)||{}).value||'';
+  addr=addr.trim();label=label.trim();displayName=displayName.trim();
   if(!addr||!addr.includes('@')){toast('Enter a valid email address','error');return;}
-  updateEmail(idx,addr,label);
+  updateEmail(idx,addr,label,displayName);
 }
 
-async function updateEmail(idx,addr,label){
+async function updateEmail(idx,addr,label,displayName){
   const old=gEmails()[idx];
   const addrChanged=old&&old.addr!==addr;
   const updated=gEmails().map(function(e,i){
     const v=i===idx?(!addrChanged&&e.verified!==false):e.verified!==false;
-    return{addr:i===idx?addr:e.addr,label:i===idx?label:e.label,verified:v,sort_order:i};
+    return{addr:i===idx?addr:e.addr,label:i===idx?label:e.label,display_name:i===idx?(displayName||null):(e.display_name||null),verified:v,sort_order:i};
   });
   const r=await fetch('/api/profile?r=emails',{method:'POST',headers:getAuthHeaders(),
     body:JSON.stringify({accounts:updated})});
@@ -5050,11 +5456,180 @@ document.addEventListener('keydown',function(e){
       },800);
     }
   }catch(e){sessionStorage.removeItem('renzo_jwt');revealLogin();}
+  window.addEventListener('offline',function(){toast('You are offline — some features may be unavailable','error');});
+  window.addEventListener('online',function(){toast('Back online','success');});
 })();
 document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='tourSkipBtn') tourSkip();
   if(e.target&&e.target.id==='tourNextBtn') tourNext();
 });
+
+// ── NEW FUNCTIONS (Groups B-J) ────────────────────────────────────────────────
+
+// E1: Tone selector
+var _aiTone='Professional';
+function setAiTone(tone,btn){
+  _aiTone=tone;
+  document.querySelectorAll('.tone-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+}
+
+// E2: Copy subject + message
+function copySubjectAndMessage(){
+  var subj=document.getElementById('aiSubjectText')?.textContent||'';
+  var msg=document.getElementById('aiMsg')?.value||'';
+  var text=(subj?'Subject: '+subj+'\n\n':'')+msg;
+  navigator.clipboard.writeText(text).then(function(){toast('Copied to clipboard','success');}).catch(function(){
+    var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Copied','success');
+  });
+}
+
+// D1: Bulk set frequency
+async function bulkSetFrequency(days){
+  if(!days||isNaN(days)) return;
+  var ids=Array.from(document.querySelectorAll('.ct-chk:checked')).map(function(cb){return cb.dataset.id;});
+  if(!ids.length) return;
+  try{
+    await Promise.all(ids.map(function(id){
+      return fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id,frequency:days})}).then(function(r){return r.json();}).then(function(d){
+        var i=_cache.contacts.findIndex(function(c){return c.id===id;});
+        if(i>-1) _cache.contacts[i]=normalizeContact(d);
+      });
+    }));
+    renderContacts();
+    toast('Set frequency to '+days+' days for '+ids.length+' contacts','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+// F2: Queue batch mark sent
+async function bulkMarkSent(){
+  var ids=Array.from(document.querySelectorAll('.q-chk:checked')).map(function(cb){return cb.dataset.id;});
+  if(!ids.length) return;
+  try{
+    await Promise.all(ids.map(function(id){
+      return fetch('/api/queue',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({id})});
+    }));
+    _cache.queue=(_cache.queue||[]).filter(function(q){return !ids.includes(q.id);});
+    updateQueueBadge();renderQueue();
+    toast('Marked '+ids.length+' items as sent','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+function updateQueueBatchBar(){
+  var checked=document.querySelectorAll('.q-chk:checked');
+  var bar=document.getElementById('queueBatchBar');
+  var cnt=document.getElementById('queueBatchCount');
+  if(!bar) return;
+  if(checked.length>0){bar.classList.remove('hidden');bar.style.display='flex';}else{bar.classList.add('hidden');}
+  if(cnt) cnt.textContent=checked.length+' selected';
+}
+
+function clearQueueSelection(){
+  document.querySelectorAll('.q-chk').forEach(function(cb){cb.checked=false;});
+  updateQueueBatchBar();
+}
+
+// F3: Move all drafts to queue
+async function sendAllDraftsToQueue(){
+  var drafts=_cache.drafts||[];
+  if(!drafts.length){toast('No drafts to move','');return;}
+  if(!confirm('Move all '+drafts.length+' drafts to the queue?')) return;
+  try{
+    var added=0;
+    for(var i=0;i<drafts.length;i++){
+      var d=drafts[i];
+      var r=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+        contactId:d.contact_id,c_name:d.c_name,co:d.co,msg:d.msg,
+        subject:d.subject||'',reason:d.reason||'',trigger:d.trigger||'',category:'Follow-up'
+      })});
+      if(r.ok){
+        _cache.queue.unshift(normalizeQueueItem(await r.json()));
+        await fetch('/api/drafts',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({id:d.id})});
+        added++;
+      }
+    }
+    _cache.drafts=[];
+    updateQueueBadge();renderQueue();renderDrafts();
+    toast('Moved '+added+' drafts to queue','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+// G1: Save email signature
+async function saveEmailSig(){
+  var sig=document.getElementById('emailSigArea')?.value||'';
+  localStorage.setItem('renzo_email_sig',sig);
+  if(_cache.profile) _cache.profile.emailSignature=sig;
+  try{
+    await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'save_settings',email_signature:sig})});
+  }catch(e){}
+  toast('Signature saved','success');
+}
+
+// G2: Export all data
+async function exportAllData(){
+  try{
+    var contacts=gc();
+    var activity=_cache.activity||[];
+    var profile=_cache.profile||{};
+    // Contacts CSV
+    var ctHdr='id,name,company,email,phone,tier,frequency,lastContact,tags\n';
+    var ctRows=contacts.map(function(c){return [c.id,c.name,c.company,c.email||'',c.phone||'',c.tier||'',c.frequency||'',c.lastContact||'',c.tags||''].map(function(v){return '"'+(v+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+    var dl=function(content,filename,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:type||'text/plain'}));a.download=filename;a.click();};
+    dl(ctHdr+ctRows,'renzo-contacts.csv','text/csv');
+    setTimeout(function(){
+      var actHdr='id,contact,company,message,ts\n';
+      var actRows=activity.map(function(a){return [a.id,a.cName,a.co,(a.msg||'').slice(0,100),a.ts].map(function(v){return '"'+(v+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+      dl(actHdr+actRows,'renzo-activity.csv','text/csv');
+    },300);
+    setTimeout(function(){
+      dl(JSON.stringify(profile,null,2),'renzo-profile.json','application/json');
+    },600);
+    toast('Export started — 3 files downloading','success');
+  }catch(e){toast('Export failed: '+e.message,'error');}
+}
+
+// G3: Notification prefs
+function saveNotificationPrefs(){
+  var prefs={
+    notifyOverdue:!!(document.getElementById('notifyOverdue')?.checked),
+    notifyWeekly:!!(document.getElementById('notifyWeekly')?.checked),
+    lowCreditThreshold:parseInt(document.getElementById('notifyLowCredit')?.value)||10
+  };
+  localStorage.setItem('renzo_notify_prefs',JSON.stringify(prefs));
+  fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+    action:'save_settings',
+    notify_overdue:prefs.notifyOverdue,
+    notify_weekly:prefs.notifyWeekly,
+    low_credit_threshold:prefs.lowCreditThreshold
+  })}).catch(function(){});
+  toast('Notification preferences saved','success');
+}
+
+function loadNotificationPrefs(){
+  var prefs={};
+  try{prefs=JSON.parse(localStorage.getItem('renzo_notify_prefs')||'{}');}catch(e){}
+  var od=document.getElementById('notifyOverdue');
+  var wk=document.getElementById('notifyWeekly');
+  var lc=document.getElementById('notifyLowCredit');
+  if(od) od.checked=!!prefs.notifyOverdue;
+  if(wk) wk.checked=!!prefs.notifyWeekly;
+  if(lc) lc.value=prefs.lowCreditThreshold!=null?prefs.lowCreditThreshold:10;
+}
+
+// I3: cachedFetch utility
+var _fetchCache={};
+async function cachedFetch(url,opts,ttl){
+  ttl=ttl||300000;
+  var key=url+(opts&&opts.method?opts.method:'GET');
+  var entry=_fetchCache[key];
+  if(entry&&(Date.now()-entry.ts)<ttl) return Promise.resolve(new Response(JSON.stringify(entry.data),{status:200,headers:{'Content-Type':'application/json'}}));
+  var r=await fetch(url,opts);
+  if(r.ok){
+    var data=await r.clone().json().catch(function(){return null;});
+    if(data!=null) _fetchCache[key]={data,ts:Date.now()};
+  }
+  return r;
+}
 
 function openFeatureRequest(){
   toggleAvatarDD();

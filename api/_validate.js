@@ -30,8 +30,9 @@ export async function resolveAuth(req) {
   if (!rawKey) return null;
   const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
   const { data } = await supabase
-    .from('api_keys').select('user_id').eq('key_hash', hash).maybeSingle();
+    .from('api_keys').select('user_id, expires_at').eq('key_hash', hash).maybeSingle();
   if (!data) return null;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
   await supabase.from('api_keys')
     .update({ last_used_at: new Date().toISOString() }).eq('key_hash', hash);
   const profileName = req.headers['x-profile'] || 'default';
