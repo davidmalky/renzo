@@ -35,7 +35,8 @@ export default async function handler(req, res) {
   if (isRateLimited(ip))
     return res.status(429).json({ error: 'Too many attempts. Try again in 10 minutes.' });
 
-  const { email, password } = req.body || {};
+  const email = (req.body?.email || '').trim().toLowerCase();
+  const { password } = req.body || {};
 
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password required' });

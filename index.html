@@ -475,7 +475,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </div>
         <div class="field"><label>Your name</label><input type="text" id="obRep" placeholder="Your name"></div>
       </div>
-      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px">
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-top:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🎉</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#166534">You have 10 free credits ready.</div>
+          <div style="font-size:12px;color:#166534;margin-top:2px">Generate your first message to see Renzo in action — no credit card needed.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px">
         <button class="btn btn-ghost" id="obBack">Back</button>
         <button class="btn btn-primary" id="obSave">Save &amp; Start</button>
       </div>
@@ -562,6 +569,16 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <div style="margin-bottom:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:28px" id="greeting"></div>
         <div style="color:var(--gray);font-size:14px;margin-top:3px" id="todayDate"></div>
+      </div>
+      <div id="profileCompleteBanner" class="hidden" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">⚠️</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#92400e">Complete your profile for better AI messages</div>
+            <div style="font-size:12px;color:#92400e;margin-top:2px">Add your company name so Renzo can personalize your outreach.</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showView('settings')" style="white-space:nowrap;flex-shrink:0">Add Company</button>
       </div>
       <!-- Empty state (shown when 0 contacts) -->
       <div id="dashEmptyState" class="hidden" style="text-align:center;padding:60px 24px;color:var(--gray)">
@@ -1248,55 +1265,73 @@ Response: { "draft": "Generated email text..." }</pre>
       <button class="modal-close" id="ctModalClose">x</button>
     </div>
     <input type="hidden" id="ctId">
+    <input type="hidden" id="ctTier">
+
+    <!-- Section 1: Contact Info -->
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin-bottom:10px">Contact Info</div>
     <div class="form-row">
       <div class="field"><label>Full Name *</label><input type="text" id="ctName"></div>
-      <div class="field"><label>Company *</label><input type="text" id="ctCo"></div>
-    </div>
-    <div class="form-row">
       <div class="field"><label>Title</label><input type="text" id="ctTitle"></div>
+    </div>
+    <div class="form-row">
       <div class="field"><label>Email</label><input type="email" id="ctEmail"></div>
-    </div>
-    <div class="form-row">
       <div class="field"><label>Phone</label><input type="tel" id="ctPhone"></div>
-      <div class="field"><label>Location</label><input type="text" id="ctLoc"></div>
     </div>
+
+    <!-- Section 2: Account -->
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--gray-pale)">Account</div>
     <div class="form-row">
-      <div class="field"><label>Tier *</label>
-        <select id="ctTier">
-          <option value="">Select...</option>
-          <option value="A">A - High Value</option>
-          <option value="B">B - Mid Value</option>
-          <option value="C">C - Lower Value</option>
-        </select>
+      <div class="field"><label>Company *</label><input type="text" id="ctCo"></div>
+      <div class="field"><label>Account Size</label>
+        <select id="ctSize"><option value="">Select...</option><option>Small</option><option>Mid-Market</option><option>Large</option><option>Enterprise</option></select>
       </div>
-      <div class="field"><label>Touch Frequency (days) *</label><input type="number" id="ctFreq" min="1"></div>
-    </div>
-    <div class="form-row">
-      <div class="field"><label>Last Contact Date</label><input type="date" id="ctLast"></div>
-      <div class="field"><label>Contract Expiry</label><input type="date" id="ctExpiry"></div>
     </div>
     <div class="form-row">
       <div class="field"><label>Annual Spend / Contract Value ($)</label><input type="number" id="ctAnnual" min="0"></div>
       <div class="field"><label>Outstanding Invoice ($)</label><input type="number" id="ctInvoice" min="0"></div>
     </div>
-    <div class="form-row">
-      <div class="field"><label>Account Size</label>
-        <select id="ctSize"><option value="">Select...</option><option>Small</option><option>Mid-Market</option><option>Large</option><option>Enterprise</option></select>
+
+    <!-- Section 3: Relationship -->
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--gray-pale)">Relationship</div>
+    <div class="field"><label>Tier *</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <label style="cursor:pointer"><input type="radio" name="ctTierRadio" value="A" style="display:none" id="ctTierA" onchange="updateTierHidden('A')"><span id="ctTierALabel" style="display:inline-block;padding:4px 14px;border-radius:20px;border:2px solid var(--gray-light);font-size:13px;font-weight:600;cursor:pointer">A</span></label>
+        <label style="cursor:pointer"><input type="radio" name="ctTierRadio" value="B" style="display:none" id="ctTierB" onchange="updateTierHidden('B')"><span id="ctTierBLabel" style="display:inline-block;padding:4px 14px;border-radius:20px;border:2px solid var(--gray-light);font-size:13px;font-weight:600;cursor:pointer">B</span></label>
+        <label style="cursor:pointer"><input type="radio" name="ctTierRadio" value="C" style="display:none" id="ctTierC" onchange="updateTierHidden('C')"><span id="ctTierCLabel" style="display:inline-block;padding:4px 14px;border-radius:20px;border:2px solid var(--gray-light);font-size:13px;font-weight:600;cursor:pointer">C</span></label>
+        <label style="cursor:pointer"><input type="radio" name="ctTierRadio" value="" style="display:none" id="ctTierNone" onchange="updateTierHidden('')"><span id="ctTierNoneLabel" style="display:inline-block;padding:4px 14px;border-radius:20px;border:2px solid var(--gray-light);font-size:13px;color:var(--gray);cursor:pointer">None</span></label>
       </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Touch Frequency (days) *</label><input type="number" id="ctFreq" min="1"></div>
+      <div class="field"><label>Last Contact Date</label><input type="date" id="ctLast"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Contract Expiry</label><input type="date" id="ctExpiry"></div>
+      <div class="field"></div>
+    </div>
+
+    <!-- Section 4: Notes & Context -->
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--gray-pale)">Notes &amp; Context</div>
+    <div class="form-row">
+      <div class="field"><label>Location</label><input type="text" id="ctLoc"></div>
       <div class="field"></div>
     </div>
     <div class="field"><label>Products / Services They Use</label><textarea id="ctProds"></textarea></div>
     <div class="field"><label>Relationship History</label><textarea id="ctHist"></textarea></div>
     <div class="field"><label>Notes</label><textarea id="ctNotes"></textarea></div>
-    <div style="margin-top:16px;padding:12px 14px;background:#fff5f5;border:1px solid rgba(220,38,38,.15);border-radius:8px;display:flex;align-items:center;gap:10px">
+
+    <!-- Section 5: Settings -->
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--gray-pale)">Settings</div>
+    <div style="padding:12px 14px;background:#fff5f5;border:1px solid rgba(220,38,38,.15);border-radius:8px;display:flex;align-items:center;gap:10px">
       <input type="checkbox" id="ctDnc" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;flex-shrink:0">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--red)">Do Not Contact</div>
         <div style="font-size:12px;color:var(--gray);margin-top:2px">This contact will be excluded from outreach and AI generation</div>
       </div>
     </div>
+
     <div id="ctErr" class="error-text hidden">Please fill in all required fields.</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
       <button class="btn btn-danger btn-sm hidden" id="ctDelBtn">Delete</button>
       <div style="display:flex;gap:10px;margin-left:auto">
         <button class="btn btn-ghost" id="ctCancel">Cancel</button>
@@ -1995,35 +2030,36 @@ function toast(msg,type){
 // PRIORITY
 function computePriority(c){
   if(c.doNotContact) return 0;
-  const p=gp();
-  const role=(p.role||'').toLowerCase();
-  const now=Date.now();
   let score=0;
 
-  // Days since last contact (40 points)
-  if(c.lastContact){
-    const days=Math.floor((now-new Date(c.lastContact))/86400000);
-    score+=Math.min(days/90,1)*40;
-  } else {score+=40;}
+  // Tier boost
+  if(c.tier==='A') score+=10;
+  else if(c.tier==='B') score+=5;
 
-  // Contract expiry urgency (35 points)
-  if(c.contractExpiry){
-    const daysUntil=Math.floor((new Date(c.contractExpiry)-now)/86400000);
-    if(daysUntil<0) score+=35;
-    else if(daysUntil<=90) score+=(1-daysUntil/90)*35;
+  // Days since last contact
+  if(c.lastContact){
+    const days=Math.floor((Date.now()-new Date(c.lastContact))/86400000);
+    const freq=c.frequency||30;
+    const overdueDays=days-freq;
+    if(overdueDays>0) score+=Math.min(overdueDays,60);
+    if(overdueDays>30) score+=10;
+  } else {
+    score+=20;
   }
 
-  // Value weight: annual spend OR invoice amount (25 points)
-  const spend=c.annualSpend||0;
-  const invoice=c.invoiceAmount||0;
-  if(spend>0) score+=Math.min(spend/2000000,1)*25;
-  else if(invoice>0 && !role.includes('vendor')) score+=Math.min(invoice/10000,1)*25;
+  // Contract expiry boost
+  if(c.contractExpiry){
+    const daysToExpiry=Math.floor((new Date(c.contractExpiry)-Date.now())/86400000);
+    if(daysToExpiry>0&&daysToExpiry<=30) score+=20;
+    else if(daysToExpiry>0&&daysToExpiry<=90) score+=10;
+    else if(daysToExpiry<0) score+=5;
+  }
 
-  // Tier boost
-  if(c.tier==='A') score+=5;
-  else if(c.tier==='B') score+=2;
+  // Annual spend boost
+  if(c.annualSpend>100000) score+=8;
+  else if(c.annualSpend>50000) score+=4;
 
-  return Math.round(Math.min(score,100));
+  return score;
 }
 
 function computeTrigger(c){
@@ -2258,7 +2294,7 @@ async function requirePayment(){
     const r=await fetch('/api/billing',{headers:getAuthHeaders()});
     if(!r.ok) return true;
     const d=await r.json();
-    return !!d.firstPackPurchased;
+    return d.credits > 0 || !!d.firstPackPurchased;
   }catch{return true;}
 }
 
@@ -2386,6 +2422,8 @@ function renderDashboard(){
   const _displayName=p.repName||(_u&&_u.name?_u.name.split(' ')[0]:'there');
   document.getElementById('greeting').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+_displayName;
   document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const bannerEl=document.getElementById('profileCompleteBanner');
+  if(bannerEl){if(!p.company){bannerEl.classList.remove('hidden');}else{bannerEl.classList.add('hidden');}}
   const contacts=gc(),activity=ga(),wk=new Date(Date.now()-7*86400000);
   // Toggle empty state
   const emptyEl=document.getElementById('dashEmptyState');
@@ -2469,6 +2507,7 @@ function viewFilteredContacts(filter){
 // ACTIVITY LOG VIEW
 function filterActivity(f){
   activityFilter=f;
+  activityDisplayLimit=20;
   ['all','sent','draft','batch'].forEach(function(k){
     var b=document.getElementById('afBtn-'+k);
     if(!b) return;
@@ -2477,6 +2516,7 @@ function filterActivity(f){
   });
   renderActivity();
 }
+let activityDisplayLimit=20;
 function renderActivity(){
   const el=document.getElementById('activityLogList');
   if(_cache.activity===null){
@@ -2489,7 +2529,9 @@ function renderActivity(){
     el.innerHTML='<div class="card"><div class="empty-state"><strong>No activity yet</strong>Start reaching out to contacts.</div></div>';
     return;
   }
-  el.innerHTML='<ul class="activity-list card" style="padding:0 24px">'+activity.map(a=>{
+  const visible=activity.slice(0,activityDisplayLimit);
+  const hasMore=activity.length>activityDisplayLimit;
+  el.innerHTML='<ul class="activity-list card" style="padding:0 24px">'+visible.map(a=>{
     const aid='alog-'+a.id;
     const long=a.msg.length>120;
     const short=long?a.msg.slice(0,120)+'...':a.msg;
@@ -2503,7 +2545,8 @@ function renderActivity(){
       +(long?'<div id="'+aid+'-full" class="hidden" style="font-size:14px;color:var(--dark);line-height:1.6;margin-top:6px;white-space:pre-wrap">'+esc(a.msg)+'</div>':'')
       +(long?'<div style="font-size:11px;color:var(--green);margin-top:4px">Click to expand</div>':'')
       +'</li>';
-  }).join('')+'</ul>';
+  }).join('')+'</ul>'
+  +(hasMore?'<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="activityDisplayLimit+=20;renderActivity()">Load more ('+( activity.length-activityDisplayLimit+20)+' remaining)</button></div>':'');
 }
 
 function exportActivity(){
@@ -2726,9 +2769,36 @@ async function markContactedToday(id){
 }
 
 // CONTACT FORM
+function syncTierRadios(val){
+  const tiers=['A','B','C',''];
+  const ids={A:'ctTierALabel',B:'ctTierBLabel',C:'ctTierCLabel','':'ctTierNoneLabel'};
+  const colors={A:'#1F6B47',B:'#2d7a52',C:'#6B7280','':'#6B7280'};
+  tiers.forEach(function(t){
+    const el=document.getElementById(ids[t]);
+    if(!el) return;
+    const radio=document.getElementById(t?'ctTier'+t:'ctTierNone');
+    if(val===t){
+      el.style.borderColor=colors[t];
+      el.style.background=colors[t];
+      el.style.color='#fff';
+      if(radio) radio.checked=true;
+    } else {
+      el.style.borderColor='var(--gray-light)';
+      el.style.background='';
+      el.style.color='';
+      if(radio) radio.checked=false;
+    }
+  });
+}
+function updateTierHidden(val){
+  document.getElementById('ctTier').value=val;
+  syncTierRadios(val);
+}
 function clearCtForm(){
   ['ctName','ctCo','ctTitle','ctEmail','ctPhone','ctLoc','ctProds','ctHist','ctNotes'].forEach(x=>document.getElementById(x).value='');
-  ['ctTier','ctSize'].forEach(x=>document.getElementById(x).value='');
+  ['ctSize'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('ctTier').value='';
+  syncTierRadios('');
   ['ctFreq','ctInvoice','ctAnnual'].forEach(x=>document.getElementById(x).value='');
   ['ctLast','ctExpiry'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('ctId').value='';
@@ -2755,6 +2825,7 @@ function openEditContact(id){
   document.getElementById('ctEmail').value=c.email||'';
   document.getElementById('ctPhone').value=c.phone||'';
   document.getElementById('ctTier').value=c.tier||'';
+  syncTierRadios(c.tier||'');
   document.getElementById('ctFreq').value=c.frequency||'';
   document.getElementById('ctLast').value=c.lastContact||'';
   document.getElementById('ctLoc').value=c.location||'';
@@ -2993,7 +3064,7 @@ async function generateMsg(c, customInstruction){
     +'8. Write the body only -- no subject line.\n'
     +(rulesStr?'9. '+rulesStr+'\n':'')
     +'\nReturn ONLY valid JSON, no markdown fences:\n'
-    +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only","subject":"A single-line email subject, max 8 words, specific to this contact and context"}';
+    +'{"reason":"One sentence: the specific trigger and why now","message":"the email body text only","subject":"Specific subject, not generic. Reference the contact name or company. Max 8 words. Never use \'Following up\' alone or \'Touching base\'. Example: \'Checking in on the Atlas contract\'."}';
 
   try{
     document.getElementById('aiLoading').classList.remove('hidden');
@@ -3715,13 +3786,10 @@ async function runBatch(){
     // Step 1: Ask AI which contacts match the criteria (using pre-filtered list)
     const contactSummaries=contacts.map((c,i)=>getContactSummary(c,i)).join('\n');
 
-    const filterPrompt='You are a smart outreach assistant for '+(p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
-      +'\n\nUser role: '+(p.role||'relationship manager')
-      +'\n\nThe user wants to: "'+query+'"'
-      +'\n\nHere are all contacts:\n'+contactSummaries
-      +'\n\nAnalyze each contact and decide which ones genuinely match the user\'s intent. Be intelligent -- if they say "business review" pick contacts where a review makes sense (high spend, long relationship, upcoming renewal). If they say "new product announcement about X" pick contacts who buy or use that category. If the intent is unclear, pick the most relevant subset. Do NOT just pick everyone unless the request truly applies to all.'
-      +'\n\nReturn ONLY valid JSON:'
-      +'\n{"matched":[0,2,5],"reasoning":"one sentence explaining who you picked and why","context":"what each message should focus on for this outreach"}';
+    const filterPrompt='You are selecting contacts for outreach based on this request: "'+query+'"'
+      +'\n\nContact list (JSON):\n'+JSON.stringify(contacts.map(c=>({id:c.id,name:c.name,company:c.company,tier:c.tier,location:c.location,title:c.title,lastContact:c.lastContact,notes:c.notes,contractExpiry:c.contractExpiry})))
+      +'\n\nSelect contacts that best match the request. Consider: name mentions, location, tier, title, overdue status, contract dates, and notes.'
+      +'\nReturn ONLY a JSON object: {"matched":["id1","id2",...],"reasoning":"one sentence explaining who you picked and why","context":"what each message should focus on"}. Maximum 20 contacts. If the request specifies a number, respect it exactly. Use [] if nothing matches.';
 
     const filterRes=await fetch('/api/ai',{
       method:'POST',
@@ -3736,10 +3804,9 @@ async function runBatch(){
     let filterTxt=filterData.content[0].text.trim();
     if(filterTxt.charCodeAt(0)===96) filterTxt=filterTxt.split('\n').slice(1,-1).join('\n');
     const filterResult=JSON.parse(filterTxt);
-    const matchedIndices=filterResult.matched||[];
+    const matchedIds=filterResult.matched||[];
     const batchContext=filterResult.context||query;
-    // matchedIndices index into `contacts` (the pre-filtered list)
-    const matched=matchedIndices.map(i=>contacts[i]).filter(Boolean).slice(0,15);
+    const matched=matchedIds.map(function(id){return contacts.find(function(c){return String(c.id)===String(id);});}).filter(Boolean).slice(0,20);
 
     if(!matched.length){
       document.getElementById('batchProgress').classList.add('hidden');
@@ -3776,7 +3843,7 @@ async function runBatch(){
           +'\nWhat this outreach is about: '+batchContext
           +(rules.length?'\nRules: '+rules.join('. '):'')
           +'\n\nWrite a SHORT (3-5 sentence) email. No bullets. No dashes. No sign-off. Start with Hi [firstname]. Sound human.'
-          +'\n\nReturn JSON: {"reason":"one sentence why this contact fits","message":"email body only","subject":"A single-line email subject, max 8 words, specific to this contact"}';
+          +'\n\nReturn JSON: {"reason":"one sentence why this contact fits","message":"email body only","subject":"Specific subject, not generic. Reference the contact name or company. Max 8 words. Never use \'Following up\' alone."}';
 
         const res=await fetch('/api/ai',{
           method:'POST',

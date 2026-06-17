@@ -1,7 +1,16 @@
 import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
 
+function csrfOk(req) {
+  const origin = req.headers.origin || '';
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey && origin && !origin.includes('meetrenzo.com') && !origin.includes('localhost')) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
+  if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
+
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }

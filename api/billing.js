@@ -43,7 +43,8 @@ async function handleStatus(req, res) {
   return res.status(200).json({
     credits: data.credits,
     stripeCustomerId: data.stripe_customer_id,
-    firstPackPurchased: data.first_pack_purchased
+    firstPackPurchased: data.first_pack_purchased || data.credits > 0,
+    freeTrial: !data.first_pack_purchased && data.credits > 0
   });
 }
 

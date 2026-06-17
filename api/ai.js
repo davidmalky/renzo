@@ -59,21 +59,22 @@ async function deductCredits(userId, tokensUsed, model) {
   return { creditsDeducted: creditsToDeduct, creditsRemaining: updated.credits };
 }
 
-const GENERATE_SYSTEM_PROMPT = `You are an expert relationship outreach writer. Your job is to write warm, personalized, professional emails that sound like they were written by a real person — not a template, not AI.
+const GENERATE_SYSTEM_PROMPT = `You are an expert relationship outreach writer. Write warm, personalized, professional emails.
 
 Rules:
 - If context_notes begins with "INTRODUCTION:", treat this as a vendor introduction email — do NOT reference contracts, fees, or renewal dates. Write a short, warm intro connecting two parties.
-- Write in first person from the sender's perspective
-- Keep it to 3-4 short paragraphs maximum
-- Reference specific context from the contact's data (contract dates, last contact, relationship notes)
-- Sound warm and human — like a colleague checking in, not a sales pitch
-- Never use phrases like "I hope this email finds you well" or "I wanted to reach out"
-- End with a clear but low-pressure call to action
-- If contract expiry is mentioned and it's within 90 days, acknowledge it naturally
-- Do not mention Renzo or AI anywhere in the message
-- Do not include a subject line unless specifically asked
-- Never use em dashes (—) or double hyphens (--) as punctuation — rewrite the sentence instead
-- Return only the email body, nothing else`;
+- Write in first person
+- Keep it to 3-4 short paragraphs maximum — brevity is critical
+- Always reference something specific from the contact's context (contract date, last meeting, their role, notes)
+- Sound like a human colleague, not a sales rep
+- Never start with "I hope this email finds you well" or "I wanted to reach out"
+- Never use "touch base", "circle back", "ping", "synergy", or corporate buzzwords
+- End with one clear, low-pressure ask — a call, a reply, a quick question
+- If contract expiry is within 90 days, acknowledge it naturally and specifically
+- If this is a first contact, mention how you know them or why you're reaching out
+- Do NOT mention Renzo, AI, or that this message was generated
+- Return ONLY the email body — no subject line, no greeting label, no signature instructions
+- The tone should match the relationship: warm for long-term accounts, professional for newer ones`;
 
 // Build a structured user message from a canonical relationship record
 function buildGeneratePrompt(record, context) {
@@ -119,6 +120,13 @@ Recipient: ${record.contact_name} at ${record.company_name}`;
   return lines.filter(Boolean).join('\n');
 }
 
+function csrfOk(req) {
+  const origin = req.headers.origin || '';
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey && origin && !origin.includes('meetrenzo.com') && !origin.includes('localhost')) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -126,6 +134,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
 
   // ── GENERATE (API key or JWT, no session required) ────────────────────────
   if (req.body?.action === 'generate') {

@@ -1,16 +1,28 @@
 import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
 
+function csrfOk(req) {
+  const origin = req.headers.origin || '';
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey && origin && !origin.includes('meetrenzo.com') && !origin.includes('localhost')) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
+  if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
+
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
 
   if (req.method === 'GET') {
+    const limit = parseInt(req.query.limit, 10) || 200;
+    const offset = parseInt(req.query.offset, 10) || 0;
     const { data, error } = await supabase
       .from('activity').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
-      .order('ts', { ascending: false }).limit(200);
+      .order('ts', { ascending: false })
+      .range(offset, offset + limit - 1);
     if (error) return res.status(500).json({ error: error.message });
 
     if (req.query.format === 'csv') {

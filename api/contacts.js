@@ -26,11 +26,20 @@ function canonicalToRow(r, userId, profileName) {
 
 const sanitize = s => typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim() : s;
 
+function csrfOk(req) {
+  const origin = req.headers.origin || '';
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey && origin && !origin.includes('meetrenzo.com') && !origin.includes('localhost')) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
 
   // ── INGEST (POST {action:'ingest'}) — accepts JWT or API key ──────────────
   if (req.method === 'POST' && req.body?.action === 'ingest') {

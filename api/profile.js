@@ -2,7 +2,16 @@ import { validateRequest } from './_validate.js';
 import supabase from './_supabase.js';
 import crypto from 'crypto';
 
+function csrfOk(req) {
+  const origin = req.headers.origin || '';
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey && origin && !origin.includes('meetrenzo.com') && !origin.includes('localhost')) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
+  if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
+
   // Public action — no JWT required
   if (req.method === 'GET' && req.query?.action === 'confirm_email') {
     const { token } = req.query;

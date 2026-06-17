@@ -36,7 +36,8 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many attempts. Try again in 10 minutes.' });
   recordAttempt(ip);
 
-  const { email, password, name } = req.body || {};
+  const email = (req.body?.email || '').trim().toLowerCase();
+  const { password, name } = req.body || {};
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Invalid email' });
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
   const { data: existing } = await supabase
     .from('users')
     .select('id')
-    .eq('email', email.toLowerCase())
+    .eq('email', email)
     .maybeSingle();
 
   if (existing) return res.status(409).json({ error: 'Email already registered' });
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
 
   const { data: user, error: userErr } = await supabase
     .from('users')
-    .insert({ email: email.toLowerCase(), password_hash, name: name || null })
+    .insert({ email, password_hash, name: name || null })
     .select('id, email, name')
     .single();
 
@@ -65,6 +66,20 @@ export default async function handler(req, res) {
   await supabase
     .from('profiles')
     .insert({ user_id: user.id, profile_name: 'default' });
+
+  // Grant 10 free trial credits
+  await supabase.from('billing').insert({
+    user_id: user.id,
+    credits: 10,
+    first_pack_purchased: false
+  });
+  await supabase.from('transactions').insert({
+    user_id: user.id,
+    amount_cents: 0,
+    credits_added: 10,
+    pack_type: 'free_trial',
+    created_at: new Date().toISOString()
+  });
 
   const token = jwt.sign(
     { userId: user.id, email: user.email, name: user.name },
