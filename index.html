@@ -661,6 +661,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteSelectedContacts()">Delete Selected</button>
         <select onchange="bulkUpdateTier(this.value);this.value=''" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)"><option value="">Set Tier…</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="C">Tier C</option></select>
         <select onchange="bulkSetFrequency(parseInt(this.value));this.value=''" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)"><option value="">Set Frequency…</option><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
+        <button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="bulkGenerateAndQueue()">⚡ Generate &amp; Queue All</button>
         <button class="btn btn-ghost btn-sm" onclick="clearContactSelection()" style="margin-left:auto">Clear</button>
       </div>
       <div class="table-wrap">
@@ -2932,6 +2933,53 @@ function clearContactSelection(){
   document.querySelectorAll('.ct-chk').forEach(function(cb){cb.checked=false;});
   var sa=document.getElementById('ctSelectAll');if(sa)sa.checked=false;
   updateContactBatchBar();
+}
+async function bulkGenerateAndQueue(){
+  var ids=Array.from(document.querySelectorAll('.ct-chk:checked')).map(function(cb){return cb.dataset.id;});
+  if(!ids.length){toast('Select contacts first','error');return;}
+  var n=ids.length;
+  if(!confirm('Generate personalized messages for '+n+' contact'+(n!==1?'s':'')+' and add them all to queue? This will use '+n+' credit'+(n!==1?'s':'')+'.')) return;
+  var toastEl=document.createElement('div');
+  toastEl.className='toast toast-info';
+  toastEl.style.cssText='position:fixed;bottom:24px;right:24px;background:#1F6B47;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18)';
+  toastEl.textContent='Generating messages… 0/'+n+' complete';
+  document.body.appendChild(toastEl);
+  var done=0,failed=0;
+  for(var i=0;i<ids.length;i++){
+    var cid=ids[i];
+    var c=(_cache.contacts||[]).find(function(x){return x.id===cid;});
+    if(!c){failed++;toastEl.textContent='Generating messages… '+(done+failed)+'/'+n+' complete';continue;}
+    try{
+      var aiRes=await fetch('/api/ai',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+        action:'generate',
+        record:{contact_name:c.name,company_name:c.company,contact_email:c.email,context_notes:c.notes||''},
+        context:'Check in and maintain relationship'
+      })});
+      if(!aiRes.ok){failed++;toastEl.textContent='Generating messages… '+(done+failed)+'/'+n+' complete';continue;}
+      var aiData=await aiRes.json();
+      var draft=aiData.draft||'';
+      if(!draft){failed++;toastEl.textContent='Generating messages… '+(done+failed)+'/'+n+' complete';continue;}
+      var subject='Following up — '+(c.company||c.name);
+      var qRes=await fetch('/api/queue',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({
+        contactId:c.id,c_name:c.name,co:c.company||'',email:c.email||'',
+        msg:draft,subject:subject,reason:'Bulk generated',trigger:''
+      })});
+      if(qRes.ok){
+        var qItem=await qRes.json();
+        if(!_cache.queue) _cache.queue=[];
+        _cache.queue.unshift(normalizeQueueItem(qItem));
+        done++;
+      } else { failed++; }
+    }catch(e){failed++;}
+    toastEl.textContent='Generating messages… '+(done+failed)+'/'+n+' complete';
+  }
+  toastEl.remove();
+  clearContactSelection();
+  updateQueueBadge();
+  var msg=done+' message'+(done!==1?'s':'')+' added to queue'+(failed?' ('+failed+' failed)':'');
+  toast(msg,failed?'error':'success',5000);
+  showView('queue');
+  renderQueue();
 }
 async function deleteSelectedContacts(){
   var ids=Array.from(document.querySelectorAll('.ct-chk:checked')).map(function(cb){return cb.dataset.id;});
