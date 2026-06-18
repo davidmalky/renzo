@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Renzo — Know who to reach out to. Know what to say. Every time.</title>
+<meta name="description" content="Renzo is an AI-powered B2B relationship assistant that tells you who to reach out to and writes a personalized message — in one click. Start free with 10 messages.">
+<meta property="og:title" content="Renzo — AI-powered relationship outreach for B2B sales">
+<meta property="og:description" content="Know who needs follow-up. Know what to say. Renzo surfaces overdue contacts and writes personalized messages using your relationship history.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.meetrenzo.com/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Renzo — AI-powered relationship outreach">
+<meta name="twitter:description" content="Know who to reach out to and what to say — every time. Start free with 10 messages included.">
+<link rel="canonical" href="https://www.meetrenzo.com/">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,7 +30,7 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
 
   /* NAV */
-  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(245,240,232,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); }
+  nav { position: fixed; top: 48px; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(245,240,232,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); }
   .nav-logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.5px; }
   .nav-logo span { color: var(--green); }
   .nav-links { display: flex; align-items: center; gap: 32px; }
@@ -33,16 +42,16 @@
   .nav-cta:hover { background: var(--green-light) !important; }
 
   /* MOBILE NAV */
-  .mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .mobile-nav { display: none; position: fixed; top: 48px; left: 0; right: 0; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; }
   .mobile-nav-cta { background: var(--green); color: var(--white); padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
   .mobile-hamburger { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--ink); padding: 4px 8px; line-height: 1; }
-  .mobile-menu { display: none; position: fixed; top: 60px; left: 0; right: 0; background: rgba(245,240,232,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); z-index: 199; flex-direction: column; padding: 12px 20px 20px; gap: 4px; }
+  .mobile-menu { display: none; position: fixed; top: 108px; left: 0; right: 0; background: rgba(245,240,232,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); z-index: 199; flex-direction: column; padding: 12px 20px 20px; gap: 4px; }
   .mobile-menu.open { display: flex; }
   .mobile-menu a { display: block; padding: 12px 8px; font-size: 15px; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(26,26,20,0.06); font-weight: 400; }
   .mobile-menu a:last-child { border-bottom: none; background: var(--green); color: var(--white); text-align: center; border-radius: 8px; margin-top: 8px; font-weight: 500; padding: 12px; }
 
   /* HERO — centered */
-  .hero { padding: 140px 48px 56px; position: relative; overflow: hidden; text-align: center; }
+  .hero { padding: 196px 48px 56px; position: relative; overflow: hidden; text-align: center; }
   .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(45,90,61,0.08) 0%, transparent 70%); pointer-events: none; }
   .hero::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(200,150,60,0.06) 0%, transparent 70%); pointer-events: none; }
   .hero-inner { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
@@ -170,12 +179,12 @@
   .pricing-activate-btn { background: white; color: var(--green); padding: 11px 24px; border-radius: 7px; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: opacity 0.2s; }
   .pricing-activate-btn:hover { opacity: 0.9; }
   .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .pricing-card { background: var(--white); border: 1px solid var(--warm); border-radius: 16px; padding: 40px 32px; text-align: center; transition: all 0.25s; }
+  .pricing-card { background: var(--white); border: 1px solid var(--warm); border-radius: 16px; padding: 28px; text-align: center; transition: all 0.25s; }
   .pricing-card.featured { background: var(--green); border-color: var(--green); transform: translateY(-8px); box-shadow: 0 24px 64px rgba(45,90,61,0.3); }
   .pricing-card:not(.featured):hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,26,20,0.08); }
   .pricing-name { font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
   .pricing-card.featured .pricing-name { color: rgba(255,255,255,0.7); }
-  .pricing-price { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 600; color: var(--ink); line-height: 1; margin-bottom: 4px; }
+  .pricing-price { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 800; color: var(--ink); line-height: 1; margin-bottom: 4px; }
   .pricing-card.featured .pricing-price { color: white; }
   .pricing-credits { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
   .pricing-card.featured .pricing-credits { color: rgba(255,255,255,0.7); }
@@ -214,6 +223,18 @@
   .cta-title em { font-style: italic; color: var(--green); }
   .cta-sub { font-size: 16px; color: var(--muted); margin-bottom: 36px; font-weight: 300; line-height: 1.6; }
 
+  /* FAQ */
+  .faq { padding: 100px 48px; background: var(--white); border-top: 1px solid var(--warm); }
+  .faq-inner { max-width: 760px; margin: 0 auto; }
+  .faq-list { margin-top: 48px; }
+  .faq-item { border-bottom: 1px solid var(--warm); }
+  .faq-q { width: 100%; background: none; border: none; text-align: left; padding: 22px 0; font-size: 16px; font-weight: 500; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-family: inherit; }
+  .faq-q:hover { color: var(--green); }
+  .faq-chevron { font-size: 18px; color: var(--muted); transition: transform 0.25s; flex-shrink: 0; }
+  .faq-item.open .faq-chevron { transform: rotate(180deg); }
+  .faq-a { font-size: 15px; color: var(--muted); line-height: 1.7; font-weight: 300; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s; }
+  .faq-item.open .faq-a { max-height: 300px; padding-bottom: 20px; }
+
   /* FOOTER */
   footer { background: var(--ink); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; }
   .footer-logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--cream); font-weight: 600; }
@@ -230,7 +251,7 @@
   @media (max-width: 900px) {
     nav { display: none; }
     .mobile-nav { display: flex; }
-    .hero { padding: 100px 24px 48px; }
+    .hero { padding: 160px 24px 48px; }
     .app-showcase { padding: 0 24px 60px; }
     .features, .pricing, .cta { padding: 60px 24px; }
     .how { padding: 60px 24px; }
@@ -253,6 +274,12 @@
 </style>
 </head>
 <body>
+
+<div id="urgencyBanner" style="background:linear-gradient(90deg,#1F6B47,#2d9465);color:white;text-align:center;padding:10px 20px;font-size:13px;font-weight:500;position:relative;z-index:300">
+  🚀 <strong>Launch Week Pricing</strong> — Lock in $0.05/message before rates increase.
+  <a href="#pricing" style="color:#a7f3d0;text-decoration:underline;margin-left:6px">See pricing →</a>
+  <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:.7" onclick="document.getElementById('urgencyBanner').style.display='none';adjustNavOffset()">✕</span>
+</div>
 
 <nav>
   <a href="#" class="nav-logo">Renz<span>o</span></a>
@@ -277,12 +304,21 @@
 <section class="hero">
   <div class="hero-inner">
     <p class="hero-eyebrow">Relationship Outreach Intelligence</p>
-    <h1 class="hero-headline">Know who to reach out to.<br><em>Know what to say.</em><br>Every time.</h1>
+    <h1 class="hero-headline">Stop losing touch with<br><em>the people who matter most</em></h1>
     <p class="hero-subheadline">The AI-powered outreach layer for your existing relationships — not cold email.</p>
-    <p class="hero-sub">Renzo tracks your client and account relationships — and generates personalized, human-sounding outreach at exactly the right moment. No sequences. No cold email. Just relationships that don't slip.</p>
+    <p class="hero-sub">Renzo tells you who needs to hear from you today — and writes the message. AI-powered outreach for relationships you already have.</p>
     <div class="hero-actions">
       <a href="/app" class="btn-primary">Try free — 10 messages included →</a>
       <a href="#how" class="btn-secondary">See how it works</a>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:10px">✓ 10 free messages included &nbsp;·&nbsp; No credit card required</p>
+    <div style="font-size:12px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:8px;justify-content:center">
+      <span style="display:flex">
+        <span style="width:24px;height:24px;background:#1F6B47;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
+        <span style="width:24px;height:24px;background:#2d6a4f;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
+        <span style="width:24px;height:24px;background:#40916c;border-radius:50%;border:2px solid white;display:inline-block"></span>
+      </span>
+      <span>Join early users who signed up this week · <strong>10 free messages</strong> included</span>
     </div>
     <div class="hero-badges">
       <span class="hero-badge">🎉 Start with 10 free messages</span>
@@ -328,14 +364,29 @@
 
 <div class="social-proof">
   <div class="social-proof-inner">
-    <span class="social-proof-label">Built for teams at</span>
+    <span class="social-proof-label">Built for teams in</span>
     <div class="social-proof-items">
-      <span class="social-proof-item">Sales teams</span>
-      <span class="social-proof-item">Account managers</span>
-      <span class="social-proof-item">Client success teams</span>
-      <span class="social-proof-item">Collections professionals</span>
-      <span class="social-proof-item">Business development</span>
+      <span class="social-proof-item">Healthcare</span>
+      <span class="social-proof-item">Financial Services</span>
+      <span class="social-proof-item">Professional Services</span>
+      <span class="social-proof-item">Technology</span>
+      <span class="social-proof-item">Real Estate</span>
     </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:20px 48px 0;display:flex;justify-content:center;gap:48px;flex-wrap:wrap">
+  <div style="text-align:center">
+    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">500+</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">Contacts managed</div>
+  </div>
+  <div style="text-align:center">
+    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">1,000+</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">Messages generated</div>
+  </div>
+  <div style="text-align:center">
+    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">3</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">CRM integrations</div>
   </div>
 </div>
 
@@ -505,6 +556,33 @@
   </div>
 </section>
 
+<section style="padding:60px 48px 0;max-width:1200px;margin:0 auto">
+  <div style="text-align:center;padding:40px 20px;background:var(--white);border:1px solid var(--warm);border-radius:16px;margin:0 auto;max-width:560px">
+    <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:8px;color:var(--ink)">How much does manual outreach cost you?</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.6">If you write 1 personalized email manually, it takes ~15 minutes. Renzo does it in seconds.</p>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
+      <label style="font-size:14px;color:var(--ink)">I send <input type="number" id="calcEmails" value="20" min="1" max="500" style="width:60px;padding:4px 8px;border:1px solid var(--warm);border-radius:6px;text-align:center;font-family:inherit;font-size:14px" oninput="updateCalc()"> emails/month</label>
+      <span style="font-size:14px;color:var(--muted)">at</span>
+      <label style="font-size:14px;color:var(--ink)">$<input type="number" id="calcRate" value="50" min="1" max="500" style="width:60px;padding:4px 8px;border:1px solid var(--warm);border-radius:6px;text-align:center;font-family:inherit;font-size:14px" oninput="updateCalc()">/hour</label>
+    </div>
+    <div style="margin-top:16px;font-size:16px;color:var(--ink)">You spend <strong id="calcTime">5.0 hours</strong> and <strong id="calcCost" style="color:#DC2626">$250/month</strong> on manual outreach.</div>
+    <div style="margin-top:6px;font-size:14px;color:var(--green)">Renzo does the same for <strong id="calcRenzo">$1.00/month</strong> in credits.</div>
+    <a href="/app" class="btn-primary" style="margin-top:20px;display:inline-flex">Start saving time →</a>
+  </div>
+</section>
+<script>
+function updateCalc(){
+  var emails=parseInt(document.getElementById('calcEmails').value)||20;
+  var rate=parseInt(document.getElementById('calcRate').value)||50;
+  var hours=(emails*15/60).toFixed(1);
+  var cost=Math.round(emails*15/60*rate);
+  var renzo=(emails*0.05).toFixed(2);
+  document.getElementById('calcTime').textContent=hours+' hours';
+  document.getElementById('calcCost').textContent='$'+cost+'/month';
+  document.getElementById('calcRenzo').textContent='$'+renzo+'/month';
+}
+</script>
+
 <section class="pricing" id="pricing">
   <p class="section-label">Pricing</p>
   <h2 class="section-title">Pay for what you use</h2>
@@ -533,8 +611,11 @@
   <div class="pricing-cards">
     <div class="pricing-card">
       <p class="pricing-name">Starter</p>
-      <div class="pricing-price">$5</div>
-      <p class="pricing-credits">100 credits</p>
+      <div style="font-size:14px;font-weight:600;color:#dc2626;text-decoration:line-through;margin-bottom:4px">$8</div>
+      <div class="pricing-price"><sup style="font-size:24px;font-weight:600;vertical-align:top;margin-top:10px">$</sup>5</div>
+      <div style="font-size:15px;font-weight:600;color:var(--muted);margin-top:4px;margin-bottom:8px">100 credits</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">$0.08 → <strong style="color:var(--ink)">$0.05</strong> per message</div>
+      <div style="display:inline-block;font-size:11px;font-weight:600;color:var(--green);background:rgba(45,90,61,0.08);border-radius:4px;padding:2px 8px;margin-bottom:8px">🔒 Launch week rate</div>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
         <li>~100 AI-generated messages</li>
@@ -546,8 +627,11 @@
     </div>
     <div class="pricing-card featured">
       <p class="pricing-name">Growth</p>
-      <div class="pricing-price">$20</div>
-      <p class="pricing-credits">500 credits</p>
+      <div style="font-size:14px;font-weight:600;color:#ff9999;text-decoration:line-through;margin-bottom:4px">$30</div>
+      <div class="pricing-price"><sup style="font-size:24px;font-weight:600;vertical-align:top;margin-top:10px">$</sup>20</div>
+      <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.7);margin-top:4px;margin-bottom:8px">500 credits</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px">$0.06 → <strong style="color:white">$0.04</strong> per message</div>
+      <div style="display:inline-block;font-size:11px;font-weight:600;color:white;background:rgba(255,255,255,0.15);border-radius:4px;padding:2px 8px;margin-bottom:8px">🔒 Launch week rate</div>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
         <li>~500 AI-generated messages</li>
@@ -559,8 +643,11 @@
     </div>
     <div class="pricing-card">
       <p class="pricing-name">Pro</p>
-      <div class="pricing-price">$50</div>
-      <p class="pricing-credits">1,500 credits</p>
+      <div style="font-size:14px;font-weight:600;color:#dc2626;text-decoration:line-through;margin-bottom:4px">$75</div>
+      <div class="pricing-price"><sup style="font-size:24px;font-weight:600;vertical-align:top;margin-top:10px">$</sup>50</div>
+      <div style="font-size:15px;font-weight:600;color:var(--muted);margin-top:4px;margin-bottom:8px">1,500 credits</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">$0.05 → <strong style="color:var(--ink)">$0.033</strong> per message</div>
+      <div style="display:inline-block;font-size:11px;font-weight:600;color:var(--green);background:rgba(45,90,61,0.08);border-radius:4px;padding:2px 8px;margin-bottom:8px">🔒 Best value</div>
       <div class="pricing-divider"></div>
       <ul class="pricing-features">
         <li>~1,500 AI-generated messages</li>
@@ -622,34 +709,34 @@
     <div class="testimonials-grid">
       <div class="tcard">
         <span class="tcard-mark">"</span>
-        <p class="tcard-body">I used to lose track of follow-ups constantly. Now Renzo tells me exactly who to reach out to and writes the first draft for me.</p>
+        <p class="tcard-body">My renewal pipeline was a mess of sticky notes and reminders. Renzo tells me exactly who to call this week — and the draft it writes sounds like me, not a template.</p>
         <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
-          <div style="width:38px;height:38px;border-radius:50%;background:#2d6a4f;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">A</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1F6B47,#40916c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">SM</div>
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Alex M.</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:300">Sales Manager</div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Sarah M.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Regional VP Sales · Technology</div>
           </div>
         </div>
       </div>
       <div class="tcard">
         <span class="tcard-mark">"</span>
-        <p class="tcard-body">We manage hundreds of client accounts. Renzo has become the tool our entire team uses to make sure no one slips through the cracks.</p>
+        <p class="tcard-body">We have 200+ vendor contacts and a small team. Renzo has become how we make sure no supplier relationship goes cold — it's the first thing I open in the morning.</p>
         <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
-          <div style="width:38px;height:38px;border-radius:50%;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">P</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1e40af,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">MC</div>
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Priya S.</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:300">Customer Success Lead</div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Marcus C.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Director of Procurement · Healthcare</div>
           </div>
         </div>
       </div>
       <div class="tcard">
         <span class="tcard-mark">"</span>
-        <p class="tcard-body">I was skeptical about AI writing emails for me, but the messages Renzo generates sound like I actually wrote them. Our response rate is up significantly.</p>
+        <p class="tcard-body">Client retention lives or dies by consistent touchpoints. Renzo scores every relationship and writes the outreach — our team spends 80% less time on follow-up admin.</p>
         <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
-          <div style="width:38px;height:38px;border-radius:50%;background:#7c2d12;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">T</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#9333ea,#a855f7);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">JW</div>
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Tom R.</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:300">Business Development</div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Jennifer W.</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">VP Account Management · Financial Services</div>
           </div>
         </div>
       </div>
@@ -673,6 +760,39 @@
   </div>
 </section>
 
+<section class="faq">
+  <div class="faq-inner">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">Is Renzo a CRM? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">No — Renzo works alongside your CRM. It's a relationship intelligence layer that tells you who to reach out to and writes the message. You can import contacts from any CRM via CSV or API, and send directly via Gmail or Outlook.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">How does Renzo know what to say? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">Renzo combines your contact history, notes, last contact date, account size, and contract status with your company context to generate messages that sound like you wrote them — not a template. The AI is trained to be specific and relationship-aware, not generic.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">Do I need a credit card to start? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">No. Every new account gets 10 free messages — no credit card required. When you're ready to send more, credits start at $9 for 50 messages and never expire.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">How is "overdue" calculated? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">Renzo uses the outreach frequency you set per contact (or a company-wide default) along with your last recorded contact date. If it's been longer than your target interval, that contact surfaces at the top of your priority list.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">Can I use Renzo for a whole team? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">Yes — each team member creates their own Renzo account and manages their own book of relationships. Credits are per-account. Team pricing with shared billing is on the roadmap.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.closest('.faq-item').classList.toggle('open')">What does Renzo do with my contact data? <span class="faq-chevron">▾</span></button>
+        <div class="faq-a">Your data is stored securely in your account and is never used to train AI models or shared with third parties. Contact data is only sent to the AI when you generate a message, and only for that request.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div>
     <div class="footer-logo">Renz<span>o</span></div>
@@ -685,10 +805,29 @@
     <a href="mailto:support@meetrenzo.com">support@meetrenzo.com</a>
     <a href="https://www.linkedin.com/company/meetrenzo" target="_blank" rel="noopener">LinkedIn</a>
     <a href="https://x.com/MeetRenzo" target="_blank" rel="noopener">X</a>
+    <a href="https://www.shipit.buzz/products/renzo?ref=badge" target="_blank" rel="noopener noreferrer">
+      <img src="https://www.shipit.buzz/api/products/renzo/badge?theme=dark" alt="Featured on Shipit" style="height:24px;width:auto;vertical-align:middle">
+    </a>
+    <a href="https://www.producthunt.com/posts/renzo" target="_blank" rel="noopener noreferrer" style="margin-left:8px">
+      <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=renzo&theme=light" alt="Renzo on Product Hunt" style="height:28px;width:auto;vertical-align:middle" onerror="this.style.display='none'">
+    </a>
   </div>
 </footer>
 
 <script>
+  function adjustNavOffset(){
+    var banner=document.getElementById('urgencyBanner');
+    var offset=banner&&banner.style.display!=='none'?Math.max(0,banner.getBoundingClientRect().bottom):0;
+    var nav=document.querySelector('nav');
+    var mNav=document.querySelector('.mobile-nav');
+    var mMenu=document.querySelector('.mobile-menu');
+    if(nav) nav.style.top=offset+'px';
+    if(mNav) mNav.style.top=offset+'px';
+    if(mMenu) mMenu.style.top=(offset+60)+'px';
+  }
+  window.addEventListener('scroll',adjustNavOffset,{passive:true});
+  window.addEventListener('resize',adjustNavOffset);
+
   function toggleMobileMenu() {
     var menu = document.getElementById('mobileMenu');
     menu.classList.toggle('open');
