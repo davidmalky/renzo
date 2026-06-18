@@ -29,6 +29,7 @@ function recordAttempt(ip) {
 }
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const ip = getClientIp(req);
@@ -100,4 +101,8 @@ export default async function handler(req, res) {
   }); } catch(e) { console.error('Welcome email failed:', e.message); }
 
   return res.status(201).json({ token, userId: user.id, email: user.email, name: user.name });
+  } catch (e) {
+    supabase.from('error_logs').insert({ endpoint: '/api/auth/signup', error: e.message, created_at: new Date().toISOString() }).catch(() => {});
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }

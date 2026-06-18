@@ -2174,12 +2174,12 @@ function toggleActivity(aid){
 }
 
 // TOAST
-function toast(msg,type){
+function toast(msg,type,duration){
   const el=document.createElement('div');
   el.className='toast'+(type?' '+type:'');
   el.textContent=msg;
   document.getElementById('toastCont').appendChild(el);
-  setTimeout(()=>el.remove(),3000);
+  setTimeout(()=>el.remove(),duration||3000);
 }
 
 // PRIORITY
@@ -3358,6 +3358,7 @@ async function generateMsg(c, customInstruction){
       body:JSON.stringify({model:selectedModel,max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
     if(handleAi402(res)){document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiPromptBox').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=false;document.getElementById('aiRegen').disabled=false;document.getElementById('aiModal').classList.add('hidden');return;}
+    if(res.status===429){const e=await res.json();const mins=e.retryAfter||1;toast('Generation limit reached — try again in '+mins+' minute'+(mins!==1?'s':''),'error',10000);document.getElementById('aiLoading').classList.add('hidden');document.getElementById('aiPromptBox').classList.remove('hidden');document.getElementById('aiGenBtn').disabled=false;document.getElementById('aiRegen').disabled=false;return;}
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
     const data=await res.json();
     syncCreditDisplay(data);

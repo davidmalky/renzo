@@ -69,6 +69,7 @@
   .refresh-btn{background:var(--gray-pale);border:var(--border);color:var(--dark);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
   .refresh-btn:hover{background:var(--gray-light)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -103,6 +104,15 @@
   </div>
 
   <div class="sections">
+    <!-- Revenue Chart -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Daily Revenue — Last 30 Days</h2>
+        <button class="refresh-btn" onclick="loadRevenueChart()">↻ Refresh</button>
+      </div>
+      <div style="padding:20px 24px"><canvas id="revenueChart" height="80"></canvas></div>
+    </div>
+
     <!-- Users -->
     <div class="section">
       <div class="section-head">
@@ -157,6 +167,7 @@ async function doLogin() {
   renderStats(d);
   loadUsers();
   loadTransactions();
+  loadRevenueChart();
 }
 
 function logout() {
@@ -233,6 +244,33 @@ async function loadTransactions() {
     <thead><tr><th>Date</th><th>Pack</th><th>Amount</th><th>Credits</th><th>Payment ID</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+let _revenueChart = null;
+async function loadRevenueChart() {
+  const d = await api('transactions');
+  if (!d) return;
+  const txns = (d.transactions || []).filter(t => t.amount_cents > 0);
+  const now = new Date();
+  const days = [], dayRevenue = {};
+  for (let i = 29; i >= 0; i--) {
+    const dt = new Date(now.getTime() - i * 86400000);
+    const key = dt.toISOString().slice(0, 10);
+    days.push(key); dayRevenue[key] = 0;
+  }
+  txns.forEach(t => {
+    const key = (t.created_at || '').slice(0, 10);
+    if (key in dayRevenue) dayRevenue[key] += (t.amount_cents || 0) / 100;
+  });
+  const labels = days.map(k => { const [,m,d] = k.split('-'); return parseInt(m)+'/'+parseInt(d); });
+  const data = days.map(k => dayRevenue[k]);
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  if (_revenueChart) _revenueChart.destroy();
+  _revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Revenue ($)', data, borderColor: '#1F6B47', backgroundColor: 'rgba(31,107,71,0.08)', fill: true, tension: 0.3, pointRadius: 2 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toFixed(0) } } } }
+  });
 }
 
 function esc(s) {

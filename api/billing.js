@@ -273,10 +273,23 @@ async function handleAdmin(req, body, res) {
     const credits = (txns||[]).reduce((s,t)=>s+(t.credits_added||0),0);
     return res.json({ userCount, revenue, credits });
   }
+  // 10.3 — AI usage by day (last 30 days)
+  if (action === 'admin_usage') {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const { data: rows } = await supabase.from('usage_logs').select('created_at,action,model')
+      .gte('created_at', since).order('created_at', { ascending: true }).limit(5000);
+    const dayMap = {};
+    (rows || []).forEach(r => {
+      const day = (r.created_at || '').slice(0, 10);
+      if (day) dayMap[day] = (dayMap[day] || 0) + 1;
+    });
+    return res.json({ usage: Object.entries(dayMap).map(([date, count]) => ({ date, count })) });
+  }
   return res.status(400).json({ error: 'Unknown admin action' });
 }
 
 export default async function handler(req, res) {
+  try {
   const rawBody = await readBody(req);
   const sig = req.headers['stripe-signature'];
 
@@ -374,4 +387,8 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+  } catch (e) {
+    supabase.from('error_logs').insert({ endpoint: req.url, error: e.message, created_at: new Date().toISOString() }).catch(() => {});
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }

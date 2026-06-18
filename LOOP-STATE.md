@@ -76,13 +76,13 @@ Both must be equal or higher at completion.
 | 9 | 9.4 XSS: esc() audit in renderContacts/renderQueue | DONE | YES — all dynamic fields use esc() in both functions |
 | 9 | 9.5 Secure cookie | BLOCKED — NEEDS DAVID | — |
 | 10 | 10.1 Admin impersonation | BLOCKED — NEEDS DAVID | — |
-| 10 | 10.2 Admin revenue chart (Chart.js) | TODO | — |
-| 10 | 10.3 Usage analytics endpoint in billing.js | TODO | — |
-| 10 | 10.4 Error logging in all API files | TODO | — |
+| 10 | 10.2 Admin revenue chart (Chart.js) | DONE | YES — Chart.js CDN + canvas + loadRevenueChart() in admin.html |
+| 10 | 10.3 Usage analytics endpoint in billing.js | DONE | YES — admin_usage action in billing.js handleAdmin() |
+| 10 | 10.4 Error logging in all API files | DONE | YES — try/catch + error_logs insert in all 10 API files |
 | 10 | 10.5 health.js | BLOCKED — 12-function limit | — |
 | 11 | 11.1 Privacy policy page | BLOCKED — NEEDS DAVID | — |
 | 11 | 11.2 Terms of service page | BLOCKED — NEEDS DAVID | — |
-| 11 | 11.3 Legal links audit | TODO | — |
+| 11 | 11.3 Legal links audit | DONE | YES — /terms and /privacy confirmed in index.html line 435, help.html lines 99/100/336/337 |
 
 ---
 
@@ -121,18 +121,26 @@ ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
 ---
 
-## FINAL API FILE COUNTS (will be filled in at completion)
+## FINAL API FILE COUNTS
 
 | File | Line count |
 |------|-----------|
-| api/ai.js | — |
-| api/billing.js | — |
-| api/contacts.js | — |
-| api/profile.js | — |
-| api/queue.js | — |
-| api/drafts.js | — |
-| api/activity.js | — |
-| api/rules.js | — |
-| api/auth/login.js | — |
-| api/auth/signup.js | — |
-| api/_validate.js | — |
+| api/ai.js | 273 |
+| api/billing.js | 394 |
+| api/contacts.js | 480 |
+| api/profile.js | 209 |
+| api/queue.js | 84 |
+| api/drafts.js | 64 |
+| api/activity.js | 65 |
+| api/rules.js | 49 |
+| api/auth/login.js | 67 |
+| api/auth/signup.js | 108 |
+| api/_validate.js | 40 |
+
+## FINAL HTML FILE COUNTS
+
+| File | Baseline | Final | Status |
+|------|---------|-------|--------|
+| index.html | 5899 | 5956 | ✓ +57 |
+| landing.html | 842 | 862 | ✓ +20 |
+| admin.html | — | 281 | ✓ |

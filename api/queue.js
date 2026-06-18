@@ -9,6 +9,7 @@ function csrfOk(req) {
 }
 
 export default async function handler(req, res) {
+  try {
   if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
 
   let userId, profileName;
@@ -76,4 +77,8 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+  } catch (e) {
+    supabase.from('error_logs').insert({ endpoint: req.url, error: e.message, created_at: new Date().toISOString() }).catch(() => {});
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }
