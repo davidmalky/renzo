@@ -12,16 +12,17 @@ const aiUsage = new Map();
 const AI_WINDOW_MS = 60 * 60 * 1000;
 const AI_MAX = 30;
 
+// 9.3 — returns {ok, resetAt} so caller can compute retry-after minutes
 function checkAiLimit(userId) {
   const now = Date.now();
   const entry = aiUsage.get(userId);
   if (!entry || now >= entry.resetAt) {
     aiUsage.set(userId, { count: 1, resetAt: now + AI_WINDOW_MS });
-    return true;
+    return { ok: true };
   }
-  if (entry.count >= AI_MAX) return false;
+  if (entry.count >= AI_MAX) return { ok: false, resetAt: entry.resetAt };
   entry.count++;
-  return true;
+  return { ok: true };
 }
 
 async function deductCredits(userId, tokensUsed, model) {
@@ -59,6 +60,44 @@ async function deductCredits(userId, tokensUsed, model) {
   return { creditsDeducted: creditsToDeduct, creditsRemaining: updated.credits };
 }
 
+const ANTHROPIC_HEADERS = {
+  'Content-Type': 'application/json',
+  'anthropic-version': '2023-06-01'
+};
+
+// 4.5 — calls Anthropic with JSON-parse retry on failure
+async function callAnthropic(payload) {
+  const makeCall = async (p) => {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { ...ANTHROPIC_HEADERS, 'x-api-key': process.env.ANTHROPIC_API_KEY },
+      body: JSON.stringify(p)
+    });
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) {
+      const err = new Error('JSON parse failed: ' + text.slice(0, 200));
+      err.isJsonError = true;
+      throw err;
+    }
+    return { response: r, data };
+  };
+
+  try { return await makeCall(payload); }
+  catch (e) {
+    if (!e.isJsonError) throw e;
+    // Second attempt with explicit JSON instruction
+    const retryPayload = { ...payload };
+    if (Array.isArray(retryPayload.messages) && retryPayload.messages.length > 0) {
+      retryPayload.messages = [...retryPayload.messages,
+        { role: 'user', content: 'IMPORTANT: Return ONLY valid JSON, nothing else. No markdown, no explanation, no code blocks.' }
+      ];
+    }
+    return await makeCall(retryPayload);
+  }
+}
+
 const GENERATE_SYSTEM_PROMPT = `You are an expert relationship outreach writer. Write warm, personalized, professional emails.
 
 Rules:
@@ -76,9 +115,11 @@ Rules:
 - Return ONLY the email body — no subject line, no greeting label, no signature instructions
 - The tone should match the relationship: warm for long-term accounts, professional for newer ones`;
 
-// Build a structured user message from a canonical relationship record
+// 4.3 — Build structured prompt; detects RENEWAL/REACTIVATE/CONGRATULATE context prefixes
 function buildGeneratePrompt(record, context) {
-  if ((record.context_notes || '').trimStart().startsWith('INTRODUCTION:')) {
+  const contextNotes = (record.context_notes || '').trimStart();
+
+  if (contextNotes.startsWith('INTRODUCTION:')) {
     return `You are writing a vendor-to-vendor introduction email on behalf of ${record.contact_name ? 'the sender' : 'David Genuth at Prime Source Expense Experts'}.
 
 This is NOT a follow-up or check-in. This is a warm introduction connecting two vendors.
@@ -117,6 +158,14 @@ Recipient: ${record.contact_name} at ${record.company_name}`;
     context ? 'Outreach goal: ' + context : '',
   ];
 
+  // 4.3 — Append tone guidance based on context_notes prefix
+  if (contextNotes.startsWith('RENEWAL:'))
+    lines.push('IMPORTANT: This is a contract renewal conversation. Reference the upcoming expiry naturally. The goal is to start the renewal discussion without pressure.');
+  else if (contextNotes.startsWith('REACTIVATE:'))
+    lines.push('IMPORTANT: This contact has gone dark. The goal is to re-engage warmly without making them feel guilty for not responding.');
+  else if (contextNotes.startsWith('CONGRATULATE:'))
+    lines.push('IMPORTANT: This is a congratulatory message for a milestone or achievement. Keep it genuine and brief.');
+
   return lines.filter(Boolean).join('\n');
 }
 
@@ -128,6 +177,9 @@ function csrfOk(req) {
 }
 
 export default async function handler(req, res) {
+  // 10.4 — top-level error logging
+  let _userId = null;
+  try {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
@@ -141,26 +193,24 @@ export default async function handler(req, res) {
   if (req.body?.action === 'generate') {
     const identity = await resolveAuth(req);
     if (!identity) return res.status(401).json({ error: 'Unauthorized' });
+    _userId = identity.userId;
 
     const { record = {}, context = '' } = req.body;
     const prompt = buildGeneratePrompt(record, context);
 
+    // 7.2 — fetch user outreach rules and append to system prompt
+    const { data: userRules } = await supabase.from('rules').select('rule')
+      .eq('user_id', identity.userId).limit(20);
+    const rulesText = (userRules || []).map(r => r.rule).filter(Boolean).join('\n');
+    const systemPrompt = GENERATE_SYSTEM_PROMPT + (rulesText ? '\n\nUser outreach rules:\n' + rulesText : '');
+
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 512,
-          system: GENERATE_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: prompt }]
-        })
+      const { response, data } = await callAnthropic({
+        model: 'claude-haiku-4-5',
+        max_tokens: 512,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }]
       });
-      const data = await response.json();
       if (!response.ok) {
         return res.status(response.status).json({ error: data.error?.message || 'AI error' });
       }
@@ -175,26 +225,24 @@ export default async function handler(req, res) {
   let userId;
   try { ({ userId } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
+  _userId = userId;
 
-  if (!checkAiLimit(userId))
-    return res.status(429).json({ error: 'Generation limit reached. Try again in an hour.' });
+  // 9.3 — rate limit with exact retry-after minutes
+  const limitCheck = checkAiLimit(userId);
+  if (!limitCheck.ok) {
+    const minutesRemaining = Math.ceil((limitCheck.resetAt - Date.now()) / 60000);
+    return res.status(429).json({
+      error: `Generation limit reached. You can generate up to 30 messages per hour. Try again in ${minutesRemaining} minutes.`,
+      retryAfter: minutesRemaining
+    });
+  }
 
   const { model: modelKey = 'standard', ...anthropicBody } = req.body || {};
   const anthropicModel = MODEL_MAP[modelKey] || MODEL_MAP.standard;
   const payload = { ...anthropicBody, model: anthropicModel };
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
+    const { response, data } = await callAnthropic(payload);
 
     if (response.ok && data.usage) {
       const tokensUsed = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
@@ -208,12 +256,18 @@ export default async function handler(req, res) {
         user_id: userId, action: 'generate', model: anthropicModel,
         credits_used: deductResult.creditsDeducted || 1
       }).then(() => {}).catch(() => {});
-      // Trigger auto-recharge in the background if balance is low
+      // Trigger auto-recharge in background if balance is low
       checkAutoRecharge(userId).catch(() => {});
     }
 
     return res.status(response.status).json(data);
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  }
+
+  } catch (e) {
+    // 10.4 — fire-and-forget error log
+    supabase.from('error_logs').insert({ endpoint: req.url, error: e.message, user_id: _userId, created_at: new Date().toISOString() }).catch(() => {});
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

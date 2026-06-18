@@ -493,7 +493,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
       <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px">
         <button class="btn btn-ghost" id="obBack">Back</button>
-        <button class="btn btn-primary" id="obSave">Save &amp; Start</button>
+        <button class="btn btn-primary" id="obSave">Generate my first message</button>
       </div>
     </div>
   </div>
@@ -654,6 +654,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <option value="manual">Manually added</option>
           <option value="csv">CSV import</option>
         </select>
+        <input class="search-input" id="tagFilter" placeholder="Filter by tag..." style="max-width:160px" oninput="renderContacts()">
       </div>
       <div id="ctBatchBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--green-pale);border:1px solid var(--green);border-radius:8px;margin-bottom:12px">
         <span id="ctBatchCount" style="font-size:13px;font-weight:600;color:var(--green)">0 selected</span>
@@ -1014,6 +1015,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <span style="font-size:13px;color:var(--gray)">credits</span>
           </div>
         </div>
+      </div>
+
+      <!-- TIMEZONE + CREDIT SUMMARY -->
+      <div class="card" style="padding:16px 28px;max-width:560px;margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--gray)">Timezone: <strong id="userTimezone"></strong></span>
+        <span id="creditSummaryLine" style="font-size:13px;color:var(--gray)"></span>
       </div>
 
       <!-- PAYMENT METHODS CARD -->
@@ -1606,11 +1613,16 @@ async function updateCreditDisplay(){
       const d=await r.json();
       const el=document.getElementById('creditBalance');
       const n=Number(d.credits);
-      if(el)el.textContent='⚡ '+n.toLocaleString()+' credits';
+      const fpp=!!(d.firstPackPurchased||d.first_pack_purchased);
+      if(el){
+        if(n===0&&!fpp) el.innerHTML='<span style="color:var(--red)">Trial complete</span>';
+        else if(n<=10&&!fpp) el.innerHTML='<span style="color:#d97706">⚡ '+n+' free credits remaining</span>';
+        else el.textContent='⚡ '+n.toLocaleString()+' credits';
+      }
       updateLowCreditBanner(n);
       if(!_cache.billing) _cache.billing={};
       _cache.billing.credits=n.toLocaleString();
-      _cache.billing.firstPackPurchased=!!(d.firstPackPurchased||d.first_pack_purchased);
+      _cache.billing.firstPackPurchased=fpp;
       renderSidebarAvatar();
     }
   }catch{}
@@ -2779,9 +2791,11 @@ function renderContacts(){try{
   const q=document.getElementById('ctSearch').value.toLowerCase();
   const tf=document.getElementById('ctTierF').value;
   const sf=(document.getElementById('contactSourceFilter')||{}).value||'';
+  const tgf=(document.getElementById('tagFilter')||{value:''}).value.toLowerCase();
   let list=gc().filter(c=>{
     if(q&&!c.name.toLowerCase().includes(q)&&!c.company.toLowerCase().includes(q)) return false;
     if(tf&&c.tier!==tf) return false;
+    if(tgf&&!(c.tags||'').toLowerCase().includes(tgf)) return false;
     if(sf){
       if(sf==='manual'){ if(c.source_system) return false; }
       else if(sf==='csv'){ if((c.source_system||'').toLowerCase()!=='csv') return false; }
@@ -2850,8 +2864,13 @@ function renderContacts(){try{
     })();
     var tb='<span class="tier-badge '+tierCls+'">'+(c.tier||'?')+'</span>'+(c.doNotContact?'<span style="margin-left:4px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;vertical-align:middle">DNC</span>':'');
     var lcDays=c.lastContact?Math.floor((Date.now()-new Date(c.lastContact).getTime())/86400000):null;
-    var lcColor=!c.lastContact?'var(--gray)':lcDays>60?'var(--red)':lcDays>30?'var(--amber)':'var(--green)';
-    var lc=c.lastContact?'<span style="color:'+lcColor+'">'+new Date(c.lastContact).toLocaleDateString()+'</span>':'<span style="color:var(--gray)">Never</span>';
+    var freq=c.frequency||30;
+    var daysUntilDue=lcDays!==null?freq-lcDays:null;
+    var lc;
+    if(!c.lastContact){lc='<span style="color:var(--gray)">Never</span>';}
+    else if(daysUntilDue<0){lc='<span style="color:var(--red);font-weight:600">'+Math.abs(daysUntilDue)+' days overdue</span>';}
+    else if(daysUntilDue<=7){lc='<span style="color:#d97706">Due soon</span>';}
+    else{lc='<span style="color:var(--green)">'+new Date(c.lastContact).toLocaleDateString()+'</span>';}
     var row='<tr class="clickable">';
     row+='<td onclick="event.stopPropagation()"><input type="checkbox" class="ct-chk" data-id="'+c.id+'" onchange="updateContactBatchBar()"></td>';
     row+='<td><strong class="contact-name-link" style="cursor:pointer;color:var(--green)" data-id="'+c.id+'">'+esc(c.name)+'</strong>'+(c.email?'<div style="font-size:11px;color:var(--gray);margin-top:1px">'+esc(c.email)+'</div>':'<div style="font-size:11px;color:var(--red);margin-top:1px">⚠ No email</div>')+'</td>';
@@ -3191,12 +3210,17 @@ function openHistory(id){
   if(!activity.length){
     histList.innerHTML=pendingHtml+'<div class="empty-state" style="padding:24px"><strong>No messages sent yet</strong>Generate a message to start the history.</div>';
   } else {
-    const sentHtml=activity.map(a=>'<div style="padding:16px;border-bottom:1px solid var(--gray-pale)">'
+    const sentHtml=activity.map(a=>'<div style="display:flex;gap:0;padding:12px 16px;border-bottom:1px solid var(--gray-pale)">'
+      +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-right:12px">'
+      +'<div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:3px"></div>'
+      +'<div style="width:2px;flex:1;background:var(--border);margin-top:4px"></div>'
+      +'</div>'
+      +'<div style="flex:1">'
       +'<div style="font-size:11px;color:var(--gray);margin-bottom:4px">'+new Date(a.ts).toLocaleString()+'</div>'
       +(a.trigger?'<div style="font-size:12px;color:var(--green);font-weight:500;margin-bottom:6px;font-style:italic">'+esc(a.trigger)+'</div>':'')
       +'<div style="font-size:14px;color:var(--dark);line-height:1.6;white-space:pre-wrap">'+esc(a.msg)+'</div>'
       +(a.reason?'<div style="font-size:12px;color:var(--gray);margin-top:6px;font-style:italic">Why: '+esc(a.reason)+'</div>':'')
-      +'</div>').join('');
+      +'</div></div>').join('');
     const sentHeader='<div style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);background:var(--gray-pale)">Sent -- '+activity.length+' message'+(activity.length!==1?'s':'')+'</div>';
     histList.innerHTML=pendingHtml+sentHeader+sentHtml;
   }
@@ -3466,8 +3490,9 @@ function renderQueue(){try{
   const items=gq().filter(i=>(!sq||i.c_name?.toLowerCase().includes(sq)||i.co?.toLowerCase().includes(sq))&&(!catFilter||i.category===catFilter));
   if(!items.length){list.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
+  var paceHtml=items.length>1?'<div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding:7px 12px;background:var(--gray-pale);border-radius:6px">At your current pace (1 per day), this queue will take <strong>'+items.length+' days</strong> to clear.</div>':'';
   var CAT_COLORS={'Follow-up':'#1F6B47','Introduction':'#1d4ed8','Renewal':'#7c3aed','Invoice':'#dc2626','Other':'#6b7280'};
-  list.innerHTML=items.map(item=>{
+  list.innerHTML=paceHtml+items.map(item=>{
   var catColor=CAT_COLORS[item.category]||'#6b7280';
   var catBadge='<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:'+catColor+'22;color:'+catColor+';border:1px solid '+catColor+'44;margin-bottom:6px">'+esc(item.category||'Follow-up')+'</span>';
     const c=gc().find(x=>x.id===item.contact_id);
@@ -3484,7 +3509,7 @@ function renderQueue(){try{
       catBadge+
       '<div class="queue-who">'+esc(item.c_name)+'</div>'+
       '<div class="queue-co">'+esc(item.co)+' &middot; '+emailDisplay+'</div>'+
-      '<div style="font-size:12px;color:var(--gray);margin-bottom:6px;font-style:italic">Subject: '+esc(subject.slice(0,80))+'</div>'+
+      '<div style="font-size:12px;color:var(--gray);margin-bottom:6px;font-style:italic">Subject: <span contenteditable="true" id="qsubj-'+item.id+'" style="outline:none;border-bottom:1px dashed var(--gray-light);padding:0 3px;cursor:text" onblur="saveQueueSubject(this,\''+item.id+'\')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur()}">'+esc(subject)+'</span></div>'+
       (item.trigger?'<div class="queue-trigger">'+esc(item.trigger)+'</div>':'')+
       '<div class="queue-preview" id="qmsg-'+item.id+'">'+esc(item.msg)+'</div>'+
       '<div id="qrefine-'+item.id+'" class="hidden" style="margin:8px 0;display:flex;gap:8px">'+
@@ -3518,6 +3543,19 @@ function renderQueue(){try{
       '</div></div>';
   }).join('');
 }catch(_e){const _l=document.getElementById('queueList');if(_l)_l.innerHTML='<div style="padding:32px;text-align:center;color:var(--gray)">Something went wrong loading queue. <button onclick="renderQueue()" style="color:var(--green);background:none;border:none;cursor:pointer;text-decoration:underline">Retry</button></div>';}
+}
+
+async function saveQueueSubject(el,id){
+  const subject=(el.textContent||'').trim();
+  if(!subject){el.textContent=el.dataset.orig||'';return;}
+  el.dataset.orig=subject;
+  try{
+    const r=await fetch('/api/queue',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id,subject})});
+    if(r.ok){
+      const idx=(_cache.queue||[]).findIndex(x=>x.id===id);
+      if(idx>-1) _cache.queue[idx].subject=subject;
+    }
+  }catch{}
 }
 
 let _pendingSentConfirm=null;
@@ -3773,12 +3811,13 @@ function exportContacts(){
     return true;
   });
   if(!contacts.length){toast('No contacts to export','error');return;}
-  const headers=['Name','Company','Title','Email','Phone','Tier','Frequency','Last Contact','Contract Expiry','Annual Spend','Invoice Amount','Location','Account Size','Products','History','Notes'];
+  const headers=['Name','Company','Title','Email','Phone','Tier','Frequency','Last Contact','Contract Expiry','Annual Spend','Invoice Amount','Location','Account Size','Products','History','Notes','Tags','Do Not Contact','Source','Rep Name'];
   const rows=contacts.map(c=>[
     c.name||'',c.company||'',c.title||'',c.email||'',c.phone||'',
     c.tier||'',c.frequency||'',c.lastContact||'',c.contractExpiry||'',
     c.annualSpend||0,c.invoiceAmount||0,c.location||'',c.accountSize||'',
-    c.products||'',c.history||'',c.notes||''
+    c.products||'',c.history||'',c.notes||'',
+    c.tags||'',c.doNotContact?'Yes':'',c.source_system||'',c.repName||''
   ]);
   const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
@@ -4291,6 +4330,8 @@ async function confirmCsv(){
     const get=(field)=>mapping[field]>=0?row[mapping[field]]:'';
     const name=get('name'),co=get('company');
     if(!name&&!co){missingFields.push({row,reason:'Missing name and company'});continue;}
+    const emailVal=get('email');
+    if(emailVal&&!/.+@.+\..+/.test(emailVal)){missingFields.push({row,reason:'Invalid email: '+emailVal});continue;}
     if(existing.find(c=>c.name===name&&c.company===co)){duplicates.push({name,co});continue;}
     let tier=get('tier').toUpperCase().charAt(0);
     if(!['A','B','C'].includes(tier)) tier='C';
@@ -4719,6 +4760,21 @@ function loadSettings(){
   loadApiKeys();
   loadAutoRecharge();
   loadPaymentMethods();
+  // 7.5 — timezone
+  var tzEl=document.getElementById('userTimezone');
+  if(tzEl) tzEl.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // 7.3 — credit purchase summary
+  (async function(){
+    try{
+      const r=await fetch('/api/billing?action=transactions',{headers:getAuthHeaders()});
+      if(!r.ok) return;
+      const d=await r.json();
+      const txns=d.transactions||d||[];
+      const total=txns.reduce(function(s,t){return s+(Number(t.credits)||0);},0);
+      const el=document.getElementById('creditSummaryLine');
+      if(el&&txns.length) el.textContent='You\'ve purchased '+total.toLocaleString()+' credits total across '+txns.length+' transaction'+(txns.length!==1?'s':'')+'.';
+    }catch{}
+  })();
 }
 
 // ── API KEYS ──────────────────────────────────────────────────────────────────

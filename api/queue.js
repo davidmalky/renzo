@@ -42,6 +42,20 @@ export default async function handler(req, res) {
     return res.status(201).json(data);
   }
 
+  if (req.method === 'PUT') {
+    if (!csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
+    const { id, scheduled_for, subject } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'id is required' });
+    const updates = { scheduled_for: scheduled_for || null };
+    if (subject !== undefined) updates.subject = subject;
+    const { data, error } = await supabase
+      .from('queue').update(updates)
+      .eq('id', id).eq('user_id', userId)
+      .select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
+  }
+
   if (req.method === 'DELETE') {
     const { id, deleteAll } = req.body || {};
 

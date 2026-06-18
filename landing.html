@@ -247,6 +247,13 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+  @media(max-width:640px){
+    .pricing-cards { flex-direction:column; align-items:center; }
+    .pricing-card { width:100%; max-width:340px; }
+    .hero h1, .hero-headline { font-size:36px; }
+    .hero p, .hero-subheadline, .hero-sub { font-size:16px; }
+  }
+
   /* RESPONSIVE */
   @media (max-width: 900px) {
     nav { display: none; }
@@ -272,6 +279,18 @@
     .value-props, .use-cases { padding: 60px 24px; }
   }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Renzo",
+  "description": "AI-powered B2B relationship outreach assistant that tells you who to reach out to and writes personalized messages.",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Start free with 10 messages"},
+  "url": "https://www.meetrenzo.com"
+}
+</script>
 </head>
 <body>
 
@@ -308,7 +327,7 @@
     <p class="hero-subheadline">The AI-powered outreach layer for your existing relationships — not cold email.</p>
     <p class="hero-sub">Renzo tells you who needs to hear from you today — and writes the message. AI-powered outreach for relationships you already have.</p>
     <div class="hero-actions">
-      <a href="/app" class="btn-primary">Try free — 10 messages included →</a>
+      <a href="/app" class="btn-primary">Start free — 10 messages included</a>
       <a href="#how" class="btn-secondary">See how it works</a>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-top:10px">✓ 10 free messages included &nbsp;·&nbsp; No credit card required</p>
@@ -325,6 +344,7 @@
       <span class="hero-badge">🔒 No credit card required</span>
       <span class="hero-badge">⚡ Ready in 60 seconds</span>
     </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:14px">Featured on <a href="https://www.producthunt.com/posts/renzo" target="_blank" rel="noopener" style="color:var(--muted)">Product Hunt</a> &nbsp;·&nbsp; <a href="https://www.shipit.buzz/products/renzo" target="_blank" rel="noopener" style="color:var(--muted)">Shipit</a> &nbsp;·&nbsp; <a href="https://betalist.com" target="_blank" rel="noopener" style="color:var(--muted)">BetaList</a></p>
   </div>
 </section>
 
@@ -500,28 +520,28 @@
       <!-- Salesforce -->
       <div class="int-badge">
         <div class="int-card">
-          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/salesforce.svg" width="44" height="44" alt="Salesforce" style="filter: invert(42%) sepia(100%) saturate(500%) hue-rotate(170deg)">
+          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/salesforce.svg" width="44" height="44" alt="Salesforce" loading="lazy" decoding="async" style="filter: invert(42%) sepia(100%) saturate(500%) hue-rotate(170deg)">
         </div>
         <span class="int-label">Salesforce</span>
       </div>
       <!-- HubSpot -->
       <div class="int-badge">
         <div class="int-card">
-          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/hubspot.svg" width="44" height="44" alt="HubSpot" style="filter: invert(45%) sepia(90%) saturate(500%) hue-rotate(350deg)">
+          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/hubspot.svg" width="44" height="44" alt="HubSpot" loading="lazy" decoding="async" style="filter: invert(45%) sepia(90%) saturate(500%) hue-rotate(350deg)">
         </div>
         <span class="int-label">HubSpot</span>
       </div>
       <!-- QuickBooks -->
       <div class="int-badge">
         <div class="int-card">
-          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/quickbooks.svg" width="44" height="44" alt="QuickBooks" style="filter: invert(40%) sepia(80%) saturate(400%) hue-rotate(90deg)">
+          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/quickbooks.svg" width="44" height="44" alt="QuickBooks" loading="lazy" decoding="async" style="filter: invert(40%) sepia(80%) saturate(400%) hue-rotate(90deg)">
         </div>
         <span class="int-label">QuickBooks</span>
       </div>
       <!-- Gmail -->
       <div class="int-badge">
         <div class="int-card">
-          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/gmail.svg" width="44" height="44" alt="Gmail" style="filter: invert(35%) sepia(100%) saturate(500%) hue-rotate(340deg)">
+          <img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/gmail.svg" width="44" height="44" alt="Gmail" loading="lazy" decoding="async" style="filter: invert(35%) sepia(100%) saturate(500%) hue-rotate(340deg)">
         </div>
         <span class="int-label">Gmail</span>
       </div>
@@ -749,7 +769,7 @@ function updateCalc(){
   <div class="cta-inner">
     <h2 class="cta-title">Your relationships are your business.<br><em>Treat them that way.</em></h2>
     <p class="cta-sub">Join Renzo and start reaching out to the right people with the right message — today.</p>
-    <a href="/app" class="btn-primary" style="font-size:16px;padding:16px 36px">Try free — 10 messages included →</a>
+    <a href="/app" class="btn-primary" style="font-size:16px;padding:16px 36px">Start free — 10 messages included</a>
     <p style="margin-top:16px;font-size:13px;color:var(--muted)">No credit card required. Credits never expire.</p>
   </div>
 </section>
@@ -800,10 +820,10 @@ function updateCalc(){
     <a href="https://www.linkedin.com/company/meetrenzo" target="_blank" rel="noopener">LinkedIn</a>
     <a href="https://x.com/MeetRenzo" target="_blank" rel="noopener">X</a>
     <a href="https://www.shipit.buzz/products/renzo?ref=badge" target="_blank" rel="noopener noreferrer">
-      <img src="https://www.shipit.buzz/api/products/renzo/badge?theme=dark" alt="Featured on Shipit" style="height:24px;width:auto;vertical-align:middle">
+      <img src="https://www.shipit.buzz/api/products/renzo/badge?theme=dark" alt="Featured on Shipit" loading="lazy" decoding="async" style="height:24px;width:auto;vertical-align:middle">
     </a>
     <a href="https://www.producthunt.com/posts/renzo" target="_blank" rel="noopener noreferrer" style="margin-left:8px">
-      <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=renzo&theme=light" alt="Renzo on Product Hunt" style="height:28px;width:auto;vertical-align:middle" onerror="this.style.display='none'">
+      <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=renzo&theme=light" alt="Renzo on Product Hunt" loading="lazy" decoding="async" style="height:28px;width:auto;vertical-align:middle" onerror="this.style.display='none'">
     </a>
   </div>
 </footer>
