@@ -586,7 +586,7 @@ function updateCalc(){
 <section class="pricing" id="pricing">
   <p class="section-label">Pricing</p>
   <h2 class="section-title">Pay for what you use</h2>
-  <p class="section-sub">No subscriptions. No per-seat fees. Start free, then buy credits when you need more.</p>
+  <p class="section-sub">Start free with 10 messages. Buy more when you're ready.</p>
 
   <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px 24px;margin-bottom:24px;display:flex;align-items:center;gap:12px">
     <span style="font-size:22px">🎉</span>
@@ -595,17 +595,6 @@ function updateCalc(){
       <div style="font-size:13px;color:#166534;margin-top:2px">Generate your first messages and see Renzo in action before spending a cent.</div>
     </div>
     <a href="/app" style="margin-left:auto;background:#1F6B47;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;flex-shrink:0">Try free →</a>
-  </div>
-
-  <div class="pricing-activate" style="display:none">
-    <div class="pricing-activate-left">
-      <div class="pricing-activate-price">$0.99</div>
-      <div class="pricing-activate-text">
-        <h4>Account Activation</h4>
-        <p>One-time card verification to activate AI features. No credits included — this just confirms your payment method.</p>
-      </div>
-    </div>
-    <a href="/app" class="pricing-activate-btn">Get started →</a>
   </div>
 
   <div class="pricing-cards">
@@ -660,45 +649,50 @@ function updateCalc(){
   </div>
   <p class="pricing-note">Credits are used only when AI generates content. Unused credits never expire.</p>
 
-  <div style="margin-top:48px;background:var(--white);border:1px solid var(--warm);border-radius:16px;overflow:hidden;padding:32px">
-    <p style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:4px;color:var(--ink)">Compare plans</p>
-    <p style="font-size:14px;color:var(--muted);font-weight:300;margin-bottom:24px">All plans include every feature — the only difference is volume.</p>
-    <table class="compare-table">
+  <div style="overflow-x:auto;margin-top:48px;max-width:640px;margin-left:auto;margin-right:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>
-        <tr>
-          <th></th>
-          <th>Starter</th>
-          <th class="col-featured">Growth</th>
-          <th>Pro</th>
+        <tr style="border-bottom:2px solid var(--warm)">
+          <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--muted)"> </th>
+          <th style="padding:12px 16px;text-align:center;font-weight:700">Starter</th>
+          <th style="padding:12px 16px;text-align:center;font-weight:700;color:var(--green);background:#f0fdf4;border-radius:8px 8px 0 0">Growth ⭐</th>
+          <th style="padding:12px 16px;text-align:center;font-weight:700">Pro</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Credits</td>
-          <td>100</td>
-          <td class="col-featured">500</td>
-          <td>1,500</td>
+        <tr style="border-bottom:1px solid var(--warm)">
+          <td style="padding:12px 16px;color:var(--muted)">Price</td>
+          <td style="padding:12px 16px;text-align:center"><span style="text-decoration:line-through;color:#dc2626;font-size:12px">$8</span> <strong>$5</strong></td>
+          <td style="padding:12px 16px;text-align:center;background:#f0fdf4"><span style="text-decoration:line-through;color:#dc2626;font-size:12px">$30</span> <strong>$20</strong></td>
+          <td style="padding:12px 16px;text-align:center"><span style="text-decoration:line-through;color:#dc2626;font-size:12px">$75</span> <strong>$50</strong></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--warm)">
+          <td style="padding:12px 16px;color:var(--muted)">Credits</td>
+          <td style="padding:12px 16px;text-align:center">100</td>
+          <td style="padding:12px 16px;text-align:center;background:#f0fdf4"><strong>500</strong></td>
+          <td style="padding:12px 16px;text-align:center">1,500</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--warm)">
+          <td style="padding:12px 16px;color:var(--muted)">Price per message</td>
+          <td style="padding:12px 16px;text-align:center"><span style="text-decoration:line-through;color:#dc2626;font-size:11px">$0.08</span> <strong style="color:var(--green)">$0.05</strong></td>
+          <td style="padding:12px 16px;text-align:center;background:#f0fdf4"><span style="text-decoration:line-through;color:#dc2626;font-size:11px">$0.06</span> <strong style="color:var(--green)">$0.04</strong></td>
+          <td style="padding:12px 16px;text-align:center"><span style="text-decoration:line-through;color:#dc2626;font-size:11px">$0.05</span> <strong style="color:var(--green)">$0.033</strong></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--warm)">
+          <td style="padding:12px 16px;color:var(--muted)">Savings vs regular price</td>
+          <td style="padding:12px 16px;text-align:center;color:#dc2626;font-weight:600">Save 38%</td>
+          <td style="padding:12px 16px;text-align:center;background:#f0fdf4;color:#dc2626;font-weight:600">Save 33%</td>
+          <td style="padding:12px 16px;text-align:center;color:#dc2626;font-weight:600">Save 33%</td>
         </tr>
         <tr>
-          <td>Price</td>
-          <td>$5</td>
-          <td class="col-featured">$20</td>
-          <td>$50</td>
-        </tr>
-        <tr>
-          <td>Price per message</td>
-          <td>~$0.05</td>
-          <td class="col-featured">~$0.04</td>
-          <td>~$0.03</td>
-        </tr>
-        <tr>
-          <td>Best for</td>
-          <td>Trying it out</td>
-          <td class="col-featured">Regular users</td>
-          <td>Power users & teams</td>
+          <td style="padding:12px 16px;color:var(--muted)">Credits expire?</td>
+          <td style="padding:12px 16px;text-align:center">Never</td>
+          <td style="padding:12px 16px;text-align:center;background:#f0fdf4">Never</td>
+          <td style="padding:12px 16px;text-align:center">Never</td>
         </tr>
       </tbody>
     </table>
+    <p style="text-align:center;font-size:12px;color:#f59e0b;font-weight:600;margin-top:12px">🔒 Launch week pricing — rates will increase after launch period ends</p>
   </div>
 </section>
 
