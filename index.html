@@ -5713,21 +5713,34 @@ async function exportAllData(){
     var contacts=gc();
     var activity=_cache.activity||[];
     var profile=_cache.profile||{};
-    // Contacts CSV
+    var today=new Date().toISOString().slice(0,10);
+    var dl=function(content,filename,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:type||'text/plain'}));a.download=filename;a.click();};
     var ctHdr='id,name,company,email,phone,tier,frequency,lastContact,tags\n';
     var ctRows=contacts.map(function(c){return [c.id,c.name,c.company,c.email||'',c.phone||'',c.tier||'',c.frequency||'',c.lastContact||'',c.tags||''].map(function(v){return '"'+(v+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-    var dl=function(content,filename,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:type||'text/plain'}));a.download=filename;a.click();};
-    dl(ctHdr+ctRows,'renzo-contacts.csv','text/csv');
+    dl(ctHdr+ctRows,'renzo-contacts-'+today+'.csv','text/csv');
     setTimeout(function(){
       var actHdr='id,contact,company,message,ts\n';
       var actRows=activity.map(function(a){return [a.id,a.cName,a.co,(a.msg||'').slice(0,100),a.ts].map(function(v){return '"'+(v+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-      dl(actHdr+actRows,'renzo-activity.csv','text/csv');
+      dl(actHdr+actRows,'renzo-activity-'+today+'.csv','text/csv');
     },300);
     setTimeout(function(){
-      dl(JSON.stringify(profile,null,2),'renzo-profile.json','application/json');
+      dl(JSON.stringify(profile,null,2),'renzo-profile-'+today+'.json','application/json');
     },600);
     toast('Export started — 3 files downloading','success');
+    setTimeout(function(){document.getElementById('exportGDriveModal').classList.remove('hidden');},800);
   }catch(e){toast('Export failed: '+e.message,'error');}
+}
+async function submitGDriveWaitlist(){
+  var email=(document.getElementById('gdriveWaitlistEmail').value||'').trim();
+  if(!email||!/.+@.+\..+/.test(email)){toast('Enter a valid email','error');return;}
+  var btn=document.getElementById('gdriveWaitlistBtn');
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    await fetch('/api/billing',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'waitlist',email,feature:'google_drive_export'})});
+    document.getElementById('exportGDriveModal').classList.add('hidden');
+    toast('Got it — we\'ll email you when Google Drive export is ready','success',5000);
+  }catch(e){toast('Network error','error');}
+  btn.disabled=false;btn.textContent='Notify me';
 }
 
 // G3: Notification prefs
@@ -6033,6 +6046,24 @@ async function submitFeedback(){
         <textarea id="frMessage" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box;outline:none;resize:vertical;font-family:inherit" placeholder="Describe the feature you'd like to see..."></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="submitFeatureRequest()">Send Suggestion</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOOGLE DRIVE EXPORT WAITLIST MODAL -->
+<div id="exportGDriveModal" class="modal-overlay hidden" onclick="this.classList.add('hidden')">
+  <div class="modal-box modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header"><h2 class="modal-title">Export to Google Drive</h2><button class="modal-close" onclick="document.getElementById('exportGDriveModal').classList.add('hidden')">✕</button></div>
+    <div style="padding:20px 24px">
+      <p style="font-size:14px;color:var(--gray);line-height:1.6;margin-bottom:16px">This will save your Renzo contacts, activity log, and settings to a new folder called <strong>"Renzo Export"</strong> in your Google Drive.</p>
+      <div style="background:var(--gray-pale);border-radius:8px;padding:14px 16px;margin-bottom:20px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">🚧</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Coming Soon</div>
+        <p style="font-size:12px;color:var(--gray);margin:0">Enter your email to be notified when Google Drive export is available.</p>
+      </div>
+      <input class="field-input" type="email" id="gdriveWaitlistEmail" placeholder="your@email.com" style="width:100%;margin-bottom:12px">
+      <button id="gdriveWaitlistBtn" class="btn btn-primary" style="width:100%" onclick="submitGDriveWaitlist()">Notify me</button>
+      <p style="font-size:11px;color:var(--gray);text-align:center;margin-top:10px">Your 3 local export files have already started downloading.</p>
     </div>
   </div>
 </div>

@@ -386,6 +386,14 @@ export default async function handler(req, res) {
     return handleCreatePaymentIntent(req, body, res);
   }
 
+  // POST {action:'waitlist', email, feature}
+  if (req.method === 'POST' && body?.action === 'waitlist') {
+    const { email, feature } = body;
+    if (!email) return res.status(400).json({ error: 'email is required' });
+    await supabase.from('waitlist').insert({ email, feature: feature || null });
+    return res.status(200).json({ success: true });
+  }
+
   return res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
     supabase.from('error_logs').insert({ endpoint: req.url, error: e.message, created_at: new Date().toISOString() }).catch(() => {});
