@@ -4832,7 +4832,7 @@ function loadSettings(){
       if(!r.ok) return;
       const d=await r.json();
       const txns=d.transactions||d||[];
-      const total=txns.reduce(function(s,t){return s+(Number(t.credits)||0);},0);
+      const total=txns.reduce(function(s,t){return s+(parseInt(t.credits_added)||0);},0);
       const el=document.getElementById('creditSummaryLine');
       if(el&&txns.length) el.textContent='You\'ve purchased '+total.toLocaleString()+' credits total across '+txns.length+' transaction'+(txns.length!==1?'s':'')+'.';
     }catch{}
