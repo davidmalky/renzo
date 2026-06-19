@@ -3083,7 +3083,7 @@ async function syncSalesforce() {
   if (btn) btn.textContent = 'Sync Now';
 }
 
-
+async function syncMicrosoft() {
   const token = sessionStorage.getItem('renzo_jwt');
   const btn = document.getElementById('msSyncBtn');
   if (btn) btn.textContent = 'Syncing...';
