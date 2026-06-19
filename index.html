@@ -523,11 +523,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </select>
       </div>
       <div id="creditBalance" style="font-size:11px;color:rgba(232,228,220,.5);padding:4px 0 4px;text-align:center">⚡ -- credits</div>
-      <div style="text-align:center;padding:4px 0 2px">
-        <a href="https://www.shipit.buzz/products/renzo?ref=badge" target="_blank" rel="noopener noreferrer" style="opacity:.55;transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='.55'">
-          <img src="https://www.shipit.buzz/api/products/renzo/badge?theme=dark" alt="Featured on Shipit" style="height:18px;width:auto;vertical-align:middle">
-        </a>
-      </div>
       <div id="sidebarStats" style="font-size:10px;color:rgba(232,228,220,.35);text-align:center;padding-bottom:8px;line-height:1.8"><span id="sbContactCount">-- contacts</span> &nbsp;·&nbsp; <span id="sbOverdueCount">-- overdue</span></div>
       <div class="sb-avatar-wrap" id="avatarWrap" onclick="toggleAvatarDD()">
         <div class="sb-avatar" id="sidebarAvatar">?</div>
@@ -869,7 +864,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <!-- SETTINGS -->
     <div id="view-settings" class="view hidden">
       <div class="view-header"><h1 class="view-title">Settings</h1></div>
-      <div class="card" style="padding:28px;max-width:560px">
+      <div class="card" style="padding:28px;max-width:680px">
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:0 0 24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Company Profile</div>
         <div class="field"><label>Profile Name</label><div style="display:flex;gap:8px"><input type="text" id="sProfileName" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none"><button class="btn btn-ghost btn-sm" onclick="renameCurrentProfile()">Rename</button></div></div>
@@ -928,7 +923,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- API KEYS CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">API Keys</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Use API keys to push contacts and generate messages from external systems. Keys are shown only once — store them securely.</p>
         <div id="apiKeysList" style="margin-bottom:16px"></div>
@@ -953,7 +948,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- CHANGE PASSWORD CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:16px">Change Password</div>
         <div class="field">
           <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px">Current Password</label>
@@ -972,7 +967,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- AUTO-RECHARGE CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Auto-Recharge</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Automatically purchase credits when your balance runs low.</p>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -1004,7 +999,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- NOTIFICATIONS CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Notifications</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Choose when Renzo should remind you.</p>
         <div style="display:flex;flex-direction:column;gap:12px">
@@ -1019,13 +1014,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- TIMEZONE + CREDIT SUMMARY -->
-      <div class="card" style="padding:16px 28px;max-width:560px;margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div class="card" style="padding:16px 28px;max-width:680px;margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
         <span style="font-size:13px;color:var(--gray)">Timezone: <strong id="userTimezone"></strong></span>
         <span id="creditSummaryLine" style="font-size:13px;color:var(--gray)"></span>
       </div>
 
       <!-- PAYMENT METHODS CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px">Payment Methods</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Cards saved for credit purchases and auto-recharge.</p>
         <div id="paymentMethodsList" style="margin-bottom:16px">
@@ -1035,7 +1030,7 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       </div>
 
       <!-- DANGER ZONE CARD -->
-      <div class="card" style="padding:28px;max-width:560px;margin-top:24px;border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.02)">
+      <div class="card" style="padding:28px;max-width:680px;margin-top:24px;border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.02)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span style="font-size:18px">⚠️</span>
           <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--red)">Danger Zone</div>
