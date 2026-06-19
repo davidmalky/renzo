@@ -4857,10 +4857,18 @@ async function loadApiKeys(){
       const used=k.last_used_at?new Date(k.last_used_at).toLocaleDateString():'never';
       const expiry=k.expires_at?new Date(k.expires_at).toLocaleDateString():null;
       const expired=k.expires_at&&new Date(k.expires_at)<new Date();
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-light)">'
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--gray-light)">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between">'
         +'<div><div style="font-size:13px;font-weight:500">'+(k.label||'Unnamed key')+'</div>'
         +'<div style="font-size:11px;color:var(--gray)">Created '+created+' &middot; Last used '+used+(expiry?' &middot; <span style="color:'+(expired?'var(--red)':'var(--gray)')+'">Expires '+expiry+(expired?' (expired)':'')+'</span>':'')+'</div></div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button class="btn btn-ghost btn-sm" onclick="revealApiKey(\''+k.id+'\',this)">Show key</button>'
         +'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="revokeApiKey(\''+k.id+'\')">Revoke</button>'
+        +'</div></div>'
+        +'<div id="key-reveal-'+k.id+'" class="hidden" style="margin-top:6px;display:flex;gap:6px;align-items:center">'
+        +'<input type="text" readonly style="flex:1;font-family:monospace;font-size:11px;padding:4px 8px;border:1px solid var(--gray-light);border-radius:4px;background:var(--gray-pale)" id="key-val-'+k.id+'">'
+        +'<button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById(\'key-val-'+k.id+'\').value);toast(\'Copied\',\'success\')">Copy</button>'
+        +'</div>'
         +'</div>';
     }).join(''):'<p style="font-size:13px;color:var(--gray)">No API keys yet.</p>';
     if(el) el.innerHTML=html;
@@ -4901,6 +4909,22 @@ async function revokeApiKey(id){
     body:JSON.stringify({action:'revoke_api_key',id})});
   if(r.ok){await loadApiKeys();toast('Key revoked','success');}
   else{const d=await r.json();toast(d.error||'Failed to revoke key','error');}
+}
+async function revealApiKey(id,btn){
+  btn.disabled=true;btn.textContent='Loading…';
+  try{
+    const r=await fetch('/api/profile?action=reveal_api_key&keyId='+encodeURIComponent(id),{headers:getAuthHeaders()});
+    const d=await r.json();
+    if(!r.ok){toast(d.error||'Could not reveal key','error');btn.disabled=false;btn.textContent='Show key';return;}
+    const box=document.getElementById('key-reveal-'+id);
+    const inp=document.getElementById('key-val-'+id);
+    if(box&&inp){
+      inp.value=d.key;box.classList.remove('hidden');
+      btn.disabled=false;btn.textContent='Hide key';
+      btn.onclick=function(){box.classList.add('hidden');inp.value='';btn.textContent='Show key';btn.onclick=function(){revealApiKey(id,btn);};};
+      setTimeout(function(){if(inp)inp.value='';if(box)box.classList.add('hidden');btn.textContent='Show key';btn.onclick=function(){revealApiKey(id,btn);};},30000);
+    }
+  }catch(e){toast('Network error','error');btn.disabled=false;btn.textContent='Show key';}
 }
 
 function copyApiKey(){

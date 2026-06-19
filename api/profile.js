@@ -79,11 +79,24 @@ export default async function handler(req, res) {
     const expiresAt = req.body.expires_at || null;
     const rawKey = crypto.randomBytes(32).toString('hex');
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
-    const row = { user_id: userId, key_hash: keyHash, label };
+    const row = { user_id: userId, key_hash: keyHash, key_value: rawKey, label };
     if (expiresAt) row.expires_at = new Date(expiresAt).toISOString();
     const { error } = await supabase.from('api_keys').insert(row);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json({ key: rawKey, label });
+  }
+
+  // GET ?action=reveal_api_key&keyId=X
+  if (req.method === 'GET' && req.query?.action === 'reveal_api_key') {
+    const { keyId } = req.query;
+    if (!keyId) return res.status(400).json({ error: 'keyId is required' });
+    const { data, error } = await supabase.from('api_keys')
+      .select('key_value').eq('id', keyId).eq('user_id', userId).maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Key not found' });
+    if (!data.key_value) return res.status(404).json({ error: 'Key value not available (generated before reveal was supported)' });
+    console.log('API key revealed for user', userId, 'key', keyId);
+    return res.status(200).json({ key: data.key_value });
   }
 
   // POST {action:'revoke_api_key', id:'...'}
