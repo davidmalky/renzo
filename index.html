@@ -559,10 +559,23 @@ tbody tr.clickable:hover td{background:#FAF7F2}
     <button class="nav-item bottom-nav-item" data-view="drafts">
       <span class="bottom-nav-icon">📝</span><span>Drafts</span>
     </button>
-    <button class="nav-item bottom-nav-item" data-view="settings">
-      <span class="bottom-nav-icon">⚙️</span><span>Settings</span>
+    <button class="bottom-nav-item" onclick="document.getElementById('mobileMoreDrawer').classList.remove('hidden');document.getElementById('mobileMoreOverlay').classList.remove('hidden')">
+      <span class="bottom-nav-icon">⋯</span><span>More</span>
     </button>
   </div>
+
+  <!-- MOBILE MORE DRAWER -->
+  <div id="mobileMoreDrawer" class="hidden" style="position:fixed;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;padding:20px;z-index:1000;box-shadow:0 -4px 20px rgba(0,0,0,.12)">
+    <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button onclick="showView('activity');document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')" style="padding:16px;border:1px solid var(--border);border-radius:12px;background:white;font-size:13px;cursor:pointer">📊 Activity</button>
+      <button onclick="showView('batch');document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')" style="padding:16px;border:1px solid var(--border);border-radius:12px;background:white;font-size:13px;cursor:pointer">📤 Batch Outreach</button>
+      <button onclick="showView('connections');document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')" style="padding:16px;border:1px solid var(--border);border-radius:12px;background:white;font-size:13px;cursor:pointer">🔗 Connections</button>
+      <button onclick="showView('settings');document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')" style="padding:16px;border:1px solid var(--border);border-radius:12px;background:white;font-size:13px;cursor:pointer">⚙️ Settings</button>
+      <button onclick="showView('help');document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')" style="padding:16px;border:1px solid var(--border);border-radius:12px;background:white;font-size:13px;cursor:pointer">❓ FAQ</button>
+    </div>
+  </div>
+  <div id="mobileMoreOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="document.getElementById('mobileMoreDrawer').classList.add('hidden');document.getElementById('mobileMoreOverlay').classList.add('hidden')"></div>
 
   <main class="main">
     <!-- LOW CREDIT BANNER -->
