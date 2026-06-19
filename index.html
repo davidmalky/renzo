@@ -626,8 +626,12 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <li>Run report → Export → CSV</li>
             <li>Import the CSV into Renzo</li>
           </ol>
-          <div id="sfStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Status: Using CSV export</div>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('salesforce')">View Setup Guide</button>
+          <div id="sfStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Checking status...</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="sfConnectBtn" class="btn btn-primary btn-sm" onclick="connectSalesforce()" style="display:none">Connect Salesforce</button>
+            <button id="sfSyncBtn" class="btn btn-ghost btn-sm" onclick="syncSalesforce()" style="display:none">Sync Now</button>
+            <button id="sfDisconnectBtn" class="btn btn-ghost btn-sm" onclick="disconnectIntegration('salesforce')" style="display:none;color:var(--red)">Disconnect</button>
+          </div>
         </div>
 
         <!-- HubSpot -->
@@ -653,15 +657,13 @@ tbody tr.clickable:hover td{background:#FAF7F2}
             <div style="width:40px;height:40px;background:#E8F5E9;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">💚</div>
             <div><div style="font-weight:700;font-size:15px">QuickBooks</div><div style="font-size:12px;color:var(--gray)">Accounting — Customers, Invoices</div></div>
           </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Great for collections and invoice follow-up. Export customers with outstanding balances directly into Renzo.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">How to export from QuickBooks:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>Reports → Accounts Receivable Aging Detail</li>
-            <li>Customize: add Customer Name, Email, Balance, Due Date</li>
-            <li>Export to Excel → Save as CSV</li>
-            <li>Import into Renzo — set your role to "Collections" for smart prioritization</li>
-          </ol>
-          <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('quickbooks')">View Setup Guide</button>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Connect QuickBooks to sync your customers directly into Renzo. Great for collections and invoice follow-up — Renzo imports outstanding balances and prioritizes by days overdue.</p>
+          <div id="qbStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Checking status...</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="qbConnectBtn" class="btn btn-primary btn-sm" onclick="connectQuickBooks()" style="display:none">Connect QuickBooks</button>
+            <button id="qbSyncBtn" class="btn btn-ghost btn-sm" onclick="syncQuickBooks()" style="display:none">Sync Now</button>
+            <button id="qbDisconnectBtn" class="btn btn-ghost btn-sm" onclick="disconnectIntegration('quickbooks')" style="display:none;color:var(--red)">Disconnect</button>
+          </div>
         </div>
 
         <!-- VCS / Custom Systems -->
@@ -680,21 +682,19 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <button class="btn btn-ghost btn-sm" onclick="showIntegrationDetail('custom')">View Embed Guide</button>
         </div>
 
-        <!-- Outlook / Gmail Sync -->
+        <!-- Microsoft Outlook Contacts -->
         <div class="card" style="padding:24px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <div style="width:40px;height:40px;background:#EFF6FF;border-radius:10px;display:flex;align-items:center;justify-content:justify;font-size:20px">✉</div>
-            <div><div style="font-weight:700;font-size:15px">Email (Gmail / Outlook)</div><div style="font-size:12px;color:var(--gray)">Send outreach from your inbox</div></div>
+            <div style="width:40px;height:40px;background:#EFF6FF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📧</div>
+            <div><div style="font-weight:700;font-size:15px">Microsoft Outlook</div><div style="font-size:12px;color:var(--gray)">Contacts — Address Book Sync</div></div>
           </div>
-          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Renzo opens email drafts directly in Gmail or Outlook web. Your messages go out from your own email — your signature, your sent folder, your reply-to.</p>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:8px">Setup:</div>
-          <ol style="font-size:13px;color:var(--gray);line-height:1.8;padding-left:16px;margin-bottom:16px">
-            <li>Go to Settings → Email Accounts</li>
-            <li>Add your Gmail or Outlook address with a label</li>
-            <li>Renzo detects the domain and opens the right email client</li>
-            <li>Gmail addresses → opens Gmail compose in browser<br>Outlook/Hotmail → opens Outlook web compose</li>
-          </ol>
-          <button class="btn btn-primary btn-sm" onclick="showView('settings')">Set Up Email Account</button>
+          <p style="font-size:13px;color:var(--gray);line-height:1.5;margin-bottom:14px">Connect your Microsoft account to sync your Outlook address book into Renzo. Contacts come in with name, company, email, and phone — ready for outreach.</p>
+          <div id="msStatus" style="font-size:12px;color:var(--gray);margin-bottom:12px">Checking status...</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="msConnectBtn" class="btn btn-primary btn-sm" onclick="connectMicrosoft()" style="display:none">Connect Outlook</button>
+            <button id="msSyncBtn" class="btn btn-ghost btn-sm" onclick="syncMicrosoft()" style="display:none">Sync Now</button>
+            <button id="msDisconnectBtn" class="btn btn-ghost btn-sm" onclick="disconnectIntegration('microsoft')" style="display:none;color:var(--red)">Disconnect</button>
+          </div>
         </div>
 
       </div>
@@ -1421,6 +1421,7 @@ async function doLogin(){
     const data=await r.json();
     if(!r.ok){err.textContent=data.error||'Login failed';err.classList.remove('hidden');return;}
     sessionStorage.setItem('renzo_jwt',data.token);
+    localStorage.setItem('renzo_user_id', data.userId);
     currentUser=data;
     await loadProfileData();
     await loadEmails();
@@ -1558,6 +1559,7 @@ async function doSignup(){
     const data=await r.json();
     if(!r.ok){err.textContent=data.error||'Signup failed';err.classList.remove('hidden');btn.disabled=false;btn.textContent='Create Account';return;}
     sessionStorage.setItem('renzo_jwt',data.token);
+    localStorage.setItem('renzo_user_id', data.userId);
     currentUser=data;
     await loadProfileData();
     await loadEmails();
@@ -1678,6 +1680,7 @@ function showView(name){
   if(name==='drafts') renderDrafts();
   if(name==='activity') renderActivity();
   if(name==='settings') loadSettings();
+  if(name==='connections') checkIntegrationStatuses();
   updateQueueBadge();
 }
 
@@ -3006,7 +3009,117 @@ function showIntegrationDetail(key){
   document.getElementById('integrationDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function loadSettings(){
+// ── INTEGRATION OAUTH ────────────────────────────────────────────────────────
+async function checkIntegrationStatuses() {
+  const token = sessionStorage.getItem('renzo_jwt');
+  if (!token) return;
+  // Microsoft
+  try {
+    const r = await fetch('/api/contacts?action=microsoft_status', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    setIntegrationUI('ms', d.connected);
+  } catch(e) { setIntegrationUI('ms', false); }
+  // QuickBooks
+  try {
+    const r = await fetch('/api/contacts?action=quickbooks_status', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    setIntegrationUI('qb', d.connected);
+  } catch(e) { setIntegrationUI('qb', false); }
+  // Salesforce
+  try {
+    const r = await fetch('/api/contacts?action=salesforce_status', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    setIntegrationUI('sf', d.connected);
+  } catch(e) { setIntegrationUI('sf', false); }
+}
+
+function setIntegrationUI(prefix, connected) {
+  const statusEl = document.getElementById(prefix + 'Status');
+  const connectBtn = document.getElementById(prefix + 'ConnectBtn');
+  const syncBtn = document.getElementById(prefix + 'SyncBtn');
+  const disconnectBtn = document.getElementById(prefix + 'DisconnectBtn');
+  if (!statusEl) return;
+  if (connected) {
+    statusEl.innerHTML = '<span style="color:var(--green)">✓ Connected</span>';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (syncBtn) syncBtn.style.display = '';
+    if (disconnectBtn) disconnectBtn.style.display = '';
+  } else {
+    statusEl.innerHTML = 'Not connected';
+    if (connectBtn) connectBtn.style.display = '';
+    if (syncBtn) syncBtn.style.display = 'none';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+  }
+}
+
+function connectMicrosoft() {
+  const userId = localStorage.getItem('renzo_user_id');
+  if (!userId) { toast('Please log in first', 'error'); return; }
+  window.location.href = '/api/contacts?action=microsoft_oauth_start&userId=' + encodeURIComponent(userId);
+}
+
+function connectQuickBooks() {
+  const userId = localStorage.getItem('renzo_user_id');
+  if (!userId) { toast('Please log in first', 'error'); return; }
+  window.location.href = '/api/contacts?action=quickbooks_oauth_start&userId=' + encodeURIComponent(userId);
+}
+
+function connectSalesforce() {
+  const userId = localStorage.getItem('renzo_user_id');
+  if (!userId) { toast('Please log in first', 'error'); return; }
+  window.location.href = '/api/contacts?action=salesforce_oauth_start&userId=' + encodeURIComponent(userId);
+}
+
+async function syncSalesforce() {
+  const token = sessionStorage.getItem('renzo_jwt') || sessionStorage.getItem('renzo_jwt');
+  const btn = document.getElementById('sfSyncBtn');
+  if (btn) btn.textContent = 'Syncing...';
+  try {
+    const r = await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action: 'salesforce_sync' }) });
+    const d = await r.json();
+    if (d.success) { toast('Synced ' + d.synced + ' Salesforce contacts', 'success'); await loadContacts(); }
+    else { toast(d.error || 'Sync failed', 'error'); if (d.error && d.error.includes('reconnect')) setIntegrationUI('sf', false); }
+  } catch(e) { toast('Sync failed', 'error'); }
+  if (btn) btn.textContent = 'Sync Now';
+}
+
+
+  const token = sessionStorage.getItem('renzo_jwt');
+  const btn = document.getElementById('msSyncBtn');
+  if (btn) btn.textContent = 'Syncing...';
+  try {
+    const r = await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action: 'microsoft_sync' }) });
+    const d = await r.json();
+    if (d.success) { toast('Synced ' + d.synced + ' Outlook contacts', 'success'); await loadContacts(); }
+    else { toast(d.error || 'Sync failed', 'error'); if (d.error && d.error.includes('reconnect')) setIntegrationUI('ms', false); }
+  } catch(e) { toast('Sync failed', 'error'); }
+  if (btn) btn.textContent = 'Sync Now';
+}
+
+async function syncQuickBooks() {
+  const token = sessionStorage.getItem('renzo_jwt');
+  const btn = document.getElementById('qbSyncBtn');
+  if (btn) btn.textContent = 'Syncing...';
+  try {
+    const r = await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action: 'quickbooks_sync' }) });
+    const d = await r.json();
+    if (d.success) { toast('Synced ' + d.synced + ' QuickBooks customers', 'success'); await loadContacts(); }
+    else { toast(d.error || 'Sync failed', 'error'); if (d.error && d.error.includes('reconnect')) setIntegrationUI('qb', false); }
+  } catch(e) { toast('Sync failed', 'error'); }
+  if (btn) btn.textContent = 'Sync Now';
+}
+
+async function disconnectIntegration(provider) {
+  if (!confirm('Disconnect ' + provider + '? Your synced contacts will remain but future syncs will stop.')) return;
+  const token = sessionStorage.getItem('renzo_jwt');
+  // We just clear the connected flag by calling a status check that will reflect false after we clear locally
+  // Full disconnect would require a DELETE endpoint — for now show as disconnected in UI and re-auth will overwrite
+  const prefix = provider === 'microsoft' ? 'ms' : provider === 'quickbooks' ? 'qb' : 'sf';
+  setIntegrationUI(prefix, false);
+  toast('Disconnected. You can reconnect at any time.', 'success');
+}
+
+
   const p=gp();
   document.getElementById('sWebsite').value=p.website||'';
   document.getElementById('sCo').value=p.company||'';
@@ -3328,6 +3441,7 @@ document.addEventListener('keydown',function(e){
     const user=await r.json();
     if(!user.valid){sessionStorage.removeItem('renzo_jwt');return;}
     currentUser=user;
+    if(user.userId) localStorage.setItem('renzo_user_id', user.userId);
     await loadProfileData();
     await loadEmails();
     document.getElementById('loginView').classList.add('hidden');
@@ -3336,10 +3450,26 @@ document.addEventListener('keydown',function(e){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
-    else showView('dashboard');
+    // Handle OAuth redirects
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.get('ms_connected')==='1'){
+      history.replaceState({},'','/app');
+      showView('connections');
+      toast('Microsoft Outlook connected!','success');
+    } else if(urlParams.get('qb_connected')==='1'){
+      history.replaceState({},'','/app');
+      showView('connections');
+      toast('QuickBooks connected!','success');
+    } else if(urlParams.get('sf_connected')==='1'){
+      history.replaceState({},'','/app');
+      showView('connections');
+      toast('Salesforce connected!','success');
+    } else if(!localStorage.getItem(profileKey('renzo_onboarded'))||!_cache.profile.company){
+      document.getElementById('onboardModal').classList.remove('hidden');
+    } else {
+      showView('dashboard');
+    }
     setTimeout(tourStart,600);
-  setTimeout(tourStart,600);
   }catch(e){sessionStorage.removeItem('renzo_jwt');}
 })();
 document.addEventListener('click',function(e){

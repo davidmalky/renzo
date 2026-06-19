@@ -72,6 +72,41 @@ export default async function handler(req, res) {
     return handleSfOAuthCallback(req, res);
   }
 
+  // ── MICROSOFT OAUTH (public — no JWT needed) ─────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'microsoft_oauth_start') {
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=microsoft_oauth_callback';
+    const state = req.query.userId || '';
+    const authUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+      + '?client_id=' + encodeURIComponent(clientId)
+      + '&response_type=code'
+      + '&redirect_uri=' + encodeURIComponent(redirectUri)
+      + '&scope=' + encodeURIComponent('Contacts.Read offline_access')
+      + '&state=' + encodeURIComponent(state)
+      + '&response_mode=query';
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.query.action === 'microsoft_oauth_callback') {
+    return handleMsOAuthCallback(req, res);
+  }
+
+  // ── QUICKBOOKS OAUTH (public — no JWT needed) ────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_start') {
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback';
+    const state = req.query.userId || '';
+    const authUrl = 'https://appcenter.intuit.com/connect/oauth2'
+      + '?client_id=' + encodeURIComponent(clientId)
+      + '&response_type=code'
+      + '&scope=' + encodeURIComponent('com.intuit.quickbooks.accounting')
+      + '&redirect_uri=' + encodeURIComponent(redirectUri)
+      + '&state=' + encodeURIComponent(state);
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_callback') {
+    return handleQbOAuthCallback(req, res);
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
@@ -82,12 +117,123 @@ export default async function handler(req, res) {
       const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'salesforce').maybeSingle();
       return res.status(200).json({ connected: intData?.connected || false });
     }
+    if (req.query.action === 'microsoft_status') {
+      const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'microsoft').maybeSingle();
+      return res.status(200).json({ connected: intData?.connected || false });
+    }
+    if (req.query.action === 'quickbooks_status') {
+      const { data: intData } = await supabase.from('integrations').select('connected').eq('user_id', userId).eq('provider', 'quickbooks').maybeSingle();
+      return res.status(200).json({ connected: intData?.connected || false });
+    }
     const { data, error } = await supabase
       .from('contacts').select('*')
       .eq('user_id', userId).eq('profile_name', profileName)
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'microsoft_sync') {
+    const { data: msInt } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'microsoft').maybeSingle();
+    if (!msInt || !msInt.access_token) return res.status(400).json({ error: 'Microsoft not connected. Please connect first.' });
+
+    // Try refresh if needed
+    let accessToken = msInt.access_token;
+    if (msInt.refresh_token) {
+      try {
+        const refreshRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: msInt.refresh_token,
+            client_id: process.env.MICROSOFT_CLIENT_ID,
+            client_secret: process.env.MICROSOFT_CLIENT_SECRET,
+            scope: 'Contacts.Read offline_access'
+          })
+        });
+        if (refreshRes.ok) {
+          const refreshed = await refreshRes.json();
+          accessToken = refreshed.access_token;
+          await supabase.from('integrations').update({ access_token: refreshed.access_token, refresh_token: refreshed.refresh_token || msInt.refresh_token }).eq('user_id', userId).eq('provider', 'microsoft');
+        }
+      } catch(e) { /* use existing token */ }
+    }
+
+    const msRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$top=500&$select=displayName,emailAddresses,businessPhones,companyName,jobTitle', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if (msRes.status === 401) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'microsoft');
+      return res.status(401).json({ error: 'Microsoft session expired. Please reconnect.' });
+    }
+    const msData = await msRes.json();
+    if (!msRes.ok) return res.status(400).json({ error: msData.error?.message || 'Microsoft sync failed' });
+
+    const msRecs = msData.value || [];
+    let msSynced = 0, msErrors = [];
+    for (const r of msRecs) {
+      try {
+        const email = r.emailAddresses?.[0]?.address || null;
+        const phone = r.businessPhones?.[0] || null;
+        const m = { name: r.displayName || 'Unknown', email, phone, company: r.companyName || null, source_system: 'Microsoft', source_record_id: 'ms:' + r.id, updated_at: new Date().toISOString() };
+        const { data: ex } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Microsoft').eq('source_record_id', 'ms:' + r.id).maybeSingle();
+        if (ex) { await supabase.from('contacts').update(m).eq('id', ex.id); }
+        else { await supabase.from('contacts').insert({ ...m, user_id: userId, profile_name: profileName }); }
+        msSynced++;
+      } catch(e) { msErrors.push({ id: r.id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced: msSynced, errors: msErrors });
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'quickbooks_sync') {
+    const { data: qbInt } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'quickbooks').maybeSingle();
+    if (!qbInt || !qbInt.access_token) return res.status(400).json({ error: 'QuickBooks not connected. Please connect first.' });
+
+    // Refresh token
+    let accessToken = qbInt.access_token;
+    try {
+      const creds = Buffer.from(process.env.QUICKBOOKS_CLIENT_ID + ':' + process.env.QUICKBOOKS_CLIENT_SECRET).toString('base64');
+      const refreshRes = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic ' + creds },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: qbInt.refresh_token })
+      });
+      if (refreshRes.ok) {
+        const refreshed = await refreshRes.json();
+        accessToken = refreshed.access_token;
+        await supabase.from('integrations').update({ access_token: refreshed.access_token, refresh_token: refreshed.refresh_token || qbInt.refresh_token }).eq('user_id', userId).eq('provider', 'quickbooks');
+      }
+    } catch(e) { /* use existing token */ }
+
+    const realmId = qbInt.instance_url;
+    const isProd = !realmId?.startsWith('sandbox');
+    const baseUrl = 'https://quickbooks.api.intuit.com';
+    const qbRes = await fetch(`${baseUrl}/v3/company/${realmId}/query?query=SELECT%20*%20FROM%20Customer%20WHERE%20Active%3Dtrue%20MAXRESULTS%20500&minorversion=65`, {
+      headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' }
+    });
+    if (qbRes.status === 401) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'quickbooks');
+      return res.status(401).json({ error: 'QuickBooks session expired. Please reconnect.' });
+    }
+    const qbData = await qbRes.json();
+    if (!qbRes.ok) return res.status(400).json({ error: qbData.Fault?.Error?.[0]?.Message || 'QuickBooks sync failed' });
+
+    const qbRecs = qbData.QueryResponse?.Customer || [];
+    let qbSynced = 0, qbErrors = [];
+    for (const r of qbRecs) {
+      try {
+        const email = r.PrimaryEmailAddr?.Address || null;
+        const phone = r.PrimaryPhone?.FreeFormNumber || null;
+        const balance = r.Balance != null ? String(r.Balance) : null;
+        const m = { name: r.DisplayName || r.CompanyName || 'Unknown', email, phone, company: r.CompanyName || null, invoice_amount: balance, source_system: 'QuickBooks', source_record_id: 'qb:' + r.Id, updated_at: new Date().toISOString() };
+        const { data: ex } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'QuickBooks').eq('source_record_id', 'qb:' + r.Id).maybeSingle();
+        if (ex) { await supabase.from('contacts').update(m).eq('id', ex.id); }
+        else { await supabase.from('contacts').insert({ ...m, user_id: userId, profile_name: profileName }); }
+        qbSynced++;
+      } catch(e) { qbErrors.push({ id: r.Id, error: e.message }); }
+    }
+    return res.status(200).json({ success: true, synced: qbSynced, errors: qbErrors });
   }
 
   if (req.method === 'POST' && req.body?.action === 'salesforce_sync') {
@@ -273,6 +419,85 @@ async function handleSfOAuthCallback(req, res) {
     }
     await supabase.from('integrations').upsert({ user_id: userId, provider: 'salesforce', access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, instance_url: tokens.instance_url, connected: true, connected_at: new Date().toISOString() }, { onConflict: 'user_id,provider' });
     return res.redirect('https://www.meetrenzo.com/app?sf_connected=1');
+  } catch(e) {
+    return res.status(500).send('OAuth error: ' + e.message);
+  }
+}
+
+async function handleMsOAuthCallback(req, res) {
+  const { code, state: userId, error: oauthError, error_description } = req.query;
+  if (oauthError) return res.status(400).send('Microsoft auth failed: ' + (error_description || oauthError));
+  if (!code) return res.status(400).send('No authorization code received from Microsoft');
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=microsoft_oauth_callback';
+  try {
+    const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        scope: 'Contacts.Read offline_access'
+      })
+    });
+    const tokens = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.access_token) {
+      return res.status(400).send('Microsoft auth failed: ' + (tokens.error_description || tokens.error || 'Unknown error'));
+    }
+    await supabase.from('integrations').upsert({
+      user_id: userId,
+      provider: 'microsoft',
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || null,
+      instance_url: null,
+      connected: true,
+      connected_at: new Date().toISOString()
+    }, { onConflict: 'user_id,provider' });
+    return res.redirect('https://www.meetrenzo.com/app?ms_connected=1');
+  } catch(e) {
+    return res.status(500).send('OAuth error: ' + e.message);
+  }
+}
+
+async function handleQbOAuthCallback(req, res) {
+  const { code, state: userId, realmId, error: oauthError } = req.query;
+  if (oauthError) return res.status(400).send('QuickBooks auth failed: ' + oauthError);
+  if (!code) return res.status(400).send('No authorization code received from QuickBooks');
+  const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+  const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+  const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback';
+  try {
+    const creds = Buffer.from(clientId + ':' + clientSecret).toString('base64');
+    const tokenRes = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + creds
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri
+      })
+    });
+    const tokens = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.access_token) {
+      return res.status(400).send('QuickBooks auth failed: ' + (tokens.error_description || tokens.error || 'Unknown error'));
+    }
+    await supabase.from('integrations').upsert({
+      user_id: userId,
+      provider: 'quickbooks',
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || null,
+      instance_url: realmId || null,
+      connected: true,
+      connected_at: new Date().toISOString()
+    }, { onConflict: 'user_id,provider' });
+    return res.redirect('https://www.meetrenzo.com/app?qb_connected=1');
   } catch(e) {
     return res.status(500).send('OAuth error: ' + e.message);
   }
