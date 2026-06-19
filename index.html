@@ -3119,7 +3119,7 @@ async function disconnectIntegration(provider) {
   toast('Disconnected. You can reconnect at any time.', 'success');
 }
 
-
+function loadSettings(){
   const p=gp();
   document.getElementById('sWebsite').value=p.website||'';
   document.getElementById('sCo').value=p.company||'';
