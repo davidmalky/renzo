@@ -88,6 +88,67 @@ export default async function handler(req, res) {
     return handleSfOAuthCallback(req, res);
   }
 
+  // ── OUTLOOK OAUTH (public — no JWT needed) ───────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'outlook_oauth_start') {
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=outlook_oauth_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=Contacts.Read+User.Read+offline_access&state=${encodeURIComponent(state)}&prompt=select_account`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.query.action === 'outlook_oauth_callback') {
+    const { code, state: userId, error: msError, error_description } = req.query;
+    if (msError) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(error_description || msError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=missing_params');
+    try {
+      const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.MICROSOFT_CLIENT_ID, client_secret: process.env.MICROSOFT_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/contacts?action=outlook_oauth_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(tokens.error_description || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'outlook', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?outlook_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
+  // ── QUICKBOOKS OAUTH (public — no JWT needed) ────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_start') {
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://appcenter.intuit.com/connect/oauth2?client_id=${encodeURIComponent(clientId)}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_callback') {
+    const { code, state: userId, realmId, error: qbError } = req.query;
+    if (qbError) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=' + encodeURIComponent(qbError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=missing_params');
+    try {
+      const creds = Buffer.from(`${process.env.QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`).toString('base64');
+      const tokenRes = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${creds}` },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=' + encodeURIComponent(tokens.error || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, instance_url: realmId || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'quickbooks').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'quickbooks', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?quickbooks_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
@@ -405,6 +466,56 @@ export default async function handler(req, res) {
       .from('contacts').delete().eq('id', id).eq('user_id', userId);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ success: true });
+  }
+
+  // ── OUTLOOK SYNC ────────────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'outlook_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Outlook not connected' });
+    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=100', { headers: { Authorization: 'Bearer ' + intData.access_token } });
+    if (!graphRes.ok) return res.status(502).json({ error: 'Microsoft Graph request failed' });
+    const graphData = await graphRes.json();
+    const records = (graphData.value || []);
+    let synced = 0; const errors = [];
+    for (const c of records) {
+      const email = (c.emailAddresses || [])[0]?.address || null;
+      const phone = c.mobilePhone || (c.businessPhones || [])[0] || null;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: 'outlook:' + c.id, name: c.displayName || null, company: c.companyName || null, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', 'outlook:' + c.id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: c.id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── QUICKBOOKS SYNC ──────────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'quickbooks_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'quickbooks').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'QuickBooks not connected' });
+    const realmId = intData.instance_url;
+    if (!realmId) return res.status(400).json({ error: 'QuickBooks realm ID missing' });
+    const qbRes = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT+*+FROM+Customer+WHERE+Active+%3D+true+MAXRESULTS+100`, { headers: { Authorization: 'Bearer ' + intData.access_token, Accept: 'application/json' } });
+    if (!qbRes.ok) return res.status(502).json({ error: 'QuickBooks API request failed' });
+    const qbData = await qbRes.json();
+    const customers = (qbData?.QueryResponse?.Customer || []);
+    let synced = 0; const errors = [];
+    for (const c of customers) {
+      const email = c.PrimaryEmailAddr?.Address || null;
+      const phone = c.PrimaryPhone?.FreeFormNumber || null;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'QuickBooks', source_record_id: 'qb:' + c.Id, name: c.DisplayName || c.CompanyName || null, company: c.CompanyName || null, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'QuickBooks').eq('source_record_id', 'qb:' + c.Id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: c.Id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'quickbooks');
+    return res.status(200).json({ success: true, synced, errors });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

@@ -806,12 +806,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
         </div>
 
-        <!-- QuickBooks — coming soon -->
-        <div class="int-tile coming-soon" data-int-name="quickbooks accounting invoices customers">
+        <!-- QuickBooks -->
+        <div class="int-tile" data-int-name="quickbooks accounting invoices customers" id="int-tile-quickbooks">
           <div class="int-icon" style="background:#E8F5E9"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/quickbooks.svg" width="28" height="28" style="filter:invert(40%) sepia(80%) saturate(400%) hue-rotate(90deg)" alt="QuickBooks"></div>
           <div class="int-name">QuickBooks</div>
           <div class="int-desc">Import customers and invoice data for collections and billing follow-up.</div>
-          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
+          <div id="int-action-quickbooks" style="margin-top:auto">
+            <button class="btn btn-primary btn-sm" onclick="connectQuickBooks()">Connect</button>
+          </div>
         </div>
 
         <!-- Monday.com — coming soon -->
@@ -838,12 +840,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
         </div>
 
-        <!-- Outlook — coming soon -->
-        <div class="int-tile coming-soon" data-int-name="outlook microsoft contacts calendar email">
+        <!-- Outlook -->
+        <div class="int-tile" data-int-name="outlook microsoft contacts calendar email" id="int-tile-outlook">
           <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#0078D4"/><path d="M6 10l10 7 10-7" stroke="white" stroke-width="1.5" fill="none"/><rect x="6" y="10" width="20" height="13" rx="1" fill="none" stroke="white" stroke-width="1.5"/></svg></div>
           <div class="int-name">Outlook</div>
           <div class="int-desc">Sync contacts from your Microsoft Outlook address book.</div>
-          <div style="margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Coming soon</div>
+          <div id="int-action-outlook" style="margin-top:auto">
+            <button class="btn btn-primary btn-sm" onclick="connectOutlook()">Connect</button>
+          </div>
         </div>
 
         <!-- Custom API -->
@@ -4681,6 +4685,82 @@ async function connectSalesforce(){
       } else {
         toast('Could not verify Salesforce connection — please try again','error');
       }
+    }
+  },1000);
+}
+
+// OUTLOOK OAUTH
+async function connectOutlook(){
+  const uid=currentUser?.userId||currentUser?.id;
+  if(!uid){toast('Please log in first','error');return;}
+  const popup=window.open('/api/contacts?action=outlook_oauth_start&userId='+encodeURIComponent(uid),'outlook_oauth','width=600,height=700,scrollbars=yes,resizable=yes');
+  if(!popup){toast('Please allow popups to connect Outlook','error');return;}
+  const poll=setInterval(async()=>{
+    if(popup.closed){
+      clearInterval(poll);
+      toast('Verifying connection…','');
+      await new Promise(r=>setTimeout(r,2000));
+      try{
+        const r=await fetch('/api/contacts?action=get_integrations',{headers:getAuthHeaders()});
+        const ints=await r.json();
+        const connected=Array.isArray(ints)&&ints.find(i=>i.provider==='outlook'&&i.connected);
+        if(connected){
+          var connKey=profileKey('renzo_crm_connections');
+          var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+          conns['outlook']={lastSync:new Date().toISOString(),count:0};
+          localStorage.setItem(connKey,JSON.stringify(conns));
+          renderConnectionsView();
+          toast('Outlook connected! Syncing contacts…','success');
+          const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync'})});
+          const sd=await sr.json();
+          if(sd.success){
+            conns['outlook']={lastSync:new Date().toISOString(),count:sd.synced};
+            localStorage.setItem(connKey,JSON.stringify(conns));
+            toast('Synced '+sd.synced+' contacts from Outlook','success');
+            const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+            _cache.contacts=(await cr.json()).map(normalizeContact);
+            renderContacts();renderConnectionsView();
+          }else{toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');}
+        }else{toast('Could not verify Outlook connection — please try again','error');}
+      }catch(e){toast('Error: '+e.message,'error');}
+    }
+  },1000);
+}
+
+// QUICKBOOKS OAUTH
+async function connectQuickBooks(){
+  const uid=currentUser?.userId||currentUser?.id;
+  if(!uid){toast('Please log in first','error');return;}
+  const popup=window.open('/api/contacts?action=quickbooks_oauth_start&userId='+encodeURIComponent(uid),'quickbooks_oauth','width=600,height=700,scrollbars=yes,resizable=yes');
+  if(!popup){toast('Please allow popups to connect QuickBooks','error');return;}
+  const poll=setInterval(async()=>{
+    if(popup.closed){
+      clearInterval(poll);
+      toast('Verifying connection…','');
+      await new Promise(r=>setTimeout(r,2000));
+      try{
+        const r=await fetch('/api/contacts?action=get_integrations',{headers:getAuthHeaders()});
+        const ints=await r.json();
+        const connected=Array.isArray(ints)&&ints.find(i=>i.provider==='quickbooks'&&i.connected);
+        if(connected){
+          var connKey=profileKey('renzo_crm_connections');
+          var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+          conns['quickbooks']={lastSync:new Date().toISOString(),count:0};
+          localStorage.setItem(connKey,JSON.stringify(conns));
+          renderConnectionsView();
+          toast('QuickBooks connected! Syncing contacts…','success');
+          const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'quickbooks_sync'})});
+          const sd=await sr.json();
+          if(sd.success){
+            conns['quickbooks']={lastSync:new Date().toISOString(),count:sd.synced};
+            localStorage.setItem(connKey,JSON.stringify(conns));
+            toast('Synced '+sd.synced+' contacts from QuickBooks','success');
+            const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+            _cache.contacts=(await cr.json()).map(normalizeContact);
+            renderContacts();renderConnectionsView();
+          }else{toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');}
+        }else{toast('Could not verify QuickBooks connection — please try again','error');}
+      }catch(e){toast('Error: '+e.message,'error');}
     }
   },1000);
 }
