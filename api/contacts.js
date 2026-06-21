@@ -91,12 +91,12 @@ export default async function handler(req, res) {
   // ── OUTLOOK OAUTH (public — no JWT needed) ───────────────────────────────
   if (req.method === 'GET' && req.query.action === 'outlook_oauth_start') {
     const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=outlook_oauth_callback';
+    const redirectUri = 'https://www.meetrenzo.com/api/microsoft_callback';
     const state = req.query.userId || '';
     const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=Contacts.Read+User.Read+offline_access&state=${encodeURIComponent(state)}&prompt=select_account`;
     return res.redirect(authUrl);
   }
-  if (req.method === 'GET' && req.query.action === 'outlook_oauth_callback') {
+  if (req.method === 'GET' && req.url && req.url.includes('/api/microsoft_callback')) {
     const { code, state: userId, error: msError, error_description } = req.query;
     if (msError) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(error_description || msError));
     if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=missing_params');
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
       const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.MICROSOFT_CLIENT_ID, client_secret: process.env.MICROSOFT_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/contacts?action=outlook_oauth_callback' })
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.MICROSOFT_CLIENT_ID, client_secret: process.env.MICROSOFT_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/microsoft_callback' })
       });
       const tokens = await tokenRes.json();
       if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(tokens.error_description || 'token_failed'));
@@ -121,12 +121,12 @@ export default async function handler(req, res) {
   // ── QUICKBOOKS OAUTH (public — no JWT needed) ────────────────────────────
   if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_start') {
     const clientId = process.env.QUICKBOOKS_CLIENT_ID;
-    const redirectUri = 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback';
+    const redirectUri = 'https://www.meetrenzo.com/api/quickbooks_callback';
     const state = req.query.userId || '';
     const authUrl = `https://appcenter.intuit.com/connect/oauth2?client_id=${encodeURIComponent(clientId)}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
     return res.redirect(authUrl);
   }
-  if (req.method === 'GET' && req.query.action === 'quickbooks_oauth_callback') {
+  if (req.method === 'GET' && req.url && req.url.includes('/api/quickbooks_callback')) {
     const { code, state: userId, realmId, error: qbError } = req.query;
     if (qbError) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=' + encodeURIComponent(qbError));
     if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=missing_params');
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
       const tokenRes = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${creds}` },
-        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: 'https://www.meetrenzo.com/api/contacts?action=quickbooks_oauth_callback' })
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: 'https://www.meetrenzo.com/api/quickbooks_callback' })
       });
       const tokens = await tokenRes.json();
       if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?quickbooks_error=1&msg=' + encodeURIComponent(tokens.error || 'token_failed'));
