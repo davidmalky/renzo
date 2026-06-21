@@ -176,10 +176,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST' && req.body?.action === 'disconnect_integration') {
     const { provider, deleteContacts } = req.body;
-    if (provider === 'salesforce') {
-      await supabase.from('integrations').update({ connected: false, access_token: null, refresh_token: null })
-        .eq('user_id', userId).eq('provider', 'salesforce');
-    }
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    await supabase.from('integrations')
+      .update({ connected: false, access_token: null, refresh_token: null, scope_version: null })
+      .eq('user_id', userId).eq('provider', provider);
     if (deleteContacts) {
       const sourceSystem = provider.charAt(0).toUpperCase() + provider.slice(1);
       await supabase.from('contacts').delete().eq('user_id', userId).eq('source_system', sourceSystem);
