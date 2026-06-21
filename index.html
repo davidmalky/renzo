@@ -2094,7 +2094,8 @@ function normalizeProfile(r){
     repName:r.rep_name||r.repName||'',
     defaultFrequency:r.default_frequency||r.defaultFrequency||null,
     emailSignature:r.email_signature||r.emailSignature||'',
-    onboarding_completed:r.onboarding_completed||false
+    onboarding_completed:r.onboarding_completed||false,
+    outlook_sync_options:r.outlook_sync_options||null
   };
 }
 
@@ -4566,6 +4567,7 @@ function renderConnectionsView(){
     var changed=false;
     ints.forEach(function(int){
       if(!conns[int.provider]){conns[int.provider]={lastSync:int.last_sync||null,count:0};changed=true;}
+      if(int.scope_version!==undefined&&conns[int.provider].scope_version!==int.scope_version){conns[int.provider].scope_version=int.scope_version;changed=true;}
     });
     if(changed){localStorage.setItem(key,JSON.stringify(conns));renderConnectionsView();}
   }).catch(function(){});
@@ -4603,9 +4605,23 @@ function renderConnectionsView(){
       : p==='outlook'
       ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncOutlook(this)">Sync Again</button>'
       : '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
+    var extraPanel='';
+    if(p==='outlook'){
+      var defOpts={address_book:true,people:true,sent_mail:true,calendar:true};
+      var saved=(_cache.profile&&_cache.profile.outlook_sync_options)||defOpts;
+      var reconnectBanner=(!c.scope_version||c.scope_version<2)?'<div style="margin-top:8px;padding:8px 10px;background:#fef3c7;border:1px solid #d97706;border-radius:6px;font-size:11px;color:#92400e;cursor:pointer" onclick="connectOutlook()">⚠ Reconnect required — click here to upgrade your Outlook connection and unlock all sync options</div>':'';
+      extraPanel=reconnectBanner
+        +'<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--dark)">Sync Options</div>'
+        +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:4px;cursor:pointer"><input type="checkbox" id="olSync_address_book" '+(saved.address_book!==false?'checked':'')+'> Address Book — your saved Outlook contacts</label>'
+        +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:3px;cursor:pointer"><input type="checkbox" id="olSync_people" '+(saved.people!==false?'checked':'')+'> People You\'ve Emailed — top contacts by interaction frequency</label>'
+        +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:3px;cursor:pointer"><input type="checkbox" id="olSync_sent_mail" '+(saved.sent_mail!==false?'checked':'')+'> Sent Mail Recipients — everyone you\'ve emailed since 2023</label>'
+        +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:3px;cursor:pointer"><input type="checkbox" id="olSync_calendar" '+(saved.calendar!==false?'checked':'')+'> Calendar Contacts — people from your calendar events</label>'
+        +'<button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:11px" onclick="saveOutlookSyncOptions()">Save Preferences</button>';
+    }
     el.innerHTML='<span class="int-badge-connected">✓ Connected</span>'
       +syncBtn
-      +disconnectBtn;
+      +disconnectBtn
+      +extraPanel;
   });
 }
 
@@ -4723,7 +4739,8 @@ async function connectOutlook(){
           localStorage.setItem(connKey,JSON.stringify(conns));
           renderConnectionsView();
           toast('Outlook connected! Syncing contacts…','success');
-          const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync'})});
+          const syncOpts=(_cache.profile&&_cache.profile.outlook_sync_options)||{address_book:true,people:true,sent_mail:true,calendar:true};
+          const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync',sync_options:syncOpts})});
           const sd=await sr.json();
           if(sd.success){
             conns['outlook']={lastSync:new Date().toISOString(),count:sd.synced};
@@ -4810,7 +4827,8 @@ async function syncSalesforceAgain(btn){
 async function syncOutlook(btn){
   if(btn){ btn.disabled=true; btn.textContent='Syncing...'; }
   try{
-    const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync'})});
+    const syncOpts=(_cache.profile&&_cache.profile.outlook_sync_options)||{address_book:true,people:true,sent_mail:true,calendar:true};
+    const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync',sync_options:syncOpts})});
     const sd=await sr.json();
     if(sd.success){
       var connKey=profileKey('renzo_crm_connections');
@@ -4834,6 +4852,19 @@ async function syncOutlook(btn){
   }
 }
 
+async function saveOutlookSyncOptions(){
+  const opts={
+    address_book:document.getElementById('olSync_address_book')?.checked!==false,
+    people:document.getElementById('olSync_people')?.checked!==false,
+    sent_mail:document.getElementById('olSync_sent_mail')?.checked!==false,
+    calendar:document.getElementById('olSync_calendar')?.checked!==false
+  };
+  if(_cache.profile) _cache.profile.outlook_sync_options=opts;
+  try{
+    await fetch('/api/profile',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({outlook_sync_options:opts})});
+    toast('Sync preferences saved','success');
+  }catch(e){ toast('Failed to save preferences','error'); }
+}
 
 // GENERIC DISCONNECT
 async function disconnectIntegration(provider){

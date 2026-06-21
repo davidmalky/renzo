@@ -93,7 +93,7 @@ export default async function handler(req, res) {
     const clientId = process.env.MICROSOFT_CLIENT_ID;
     const redirectUri = 'https://www.meetrenzo.com/api/microsoft_callback';
     const state = req.query.userId || '';
-    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=Contacts.Read+User.Read+offline_access&state=${encodeURIComponent(state)}&prompt=select_account`;
+    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=Contacts.Read+People.Read+Mail.Read+offline_access&state=${encodeURIComponent(state)}&prompt=select_account`;
     return res.redirect(authUrl);
   }
   if (req.method === 'GET' && req.url && req.url.includes('/api/microsoft_callback')) {
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
       });
       const tokens = await tokenRes.json();
       if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?outlook_error=1&msg=' + encodeURIComponent(tokens.error_description || 'token_failed'));
-      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString(), scope_version: 2 };
       const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
       if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
       else { await supabase.from('integrations').insert({ user_id: userId, provider: 'outlook', ...record }); }
@@ -160,7 +160,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ connected: intData?.connected || false });
     }
     if (req.query.action === 'get_integrations') {
-      const { data: ints } = await supabase.from('integrations').select('provider, connected, last_sync, instance_url').eq('user_id', userId).eq('connected', true);
+      const { data: ints } = await supabase.from('integrations').select('provider, connected, last_sync, instance_url, scope_version').eq('user_id', userId).eq('connected', true);
       return res.status(200).json(ints || []);
     }
     const limit = parseInt(req.query.limit, 10) || 500;
@@ -468,25 +468,116 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
-  // ── OUTLOOK SYNC ────────────────────────────────────────────────────────────
+  // ── OUTLOOK SYNC (multi-pass) ───────────────────────────────────────────────
   if (req.method === 'POST' && req.body?.action === 'outlook_sync') {
+    const opts = req.body.sync_options || { address_book: true, people: true, sent_mail: true, calendar: true };
     const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
     if (!intData?.access_token) return res.status(400).json({ error: 'Outlook not connected' });
-    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=100', { headers: { Authorization: 'Bearer ' + intData.access_token } });
-    if (!graphRes.ok) return res.status(502).json({ error: 'Microsoft Graph request failed' });
-    const graphData = await graphRes.json();
-    const records = (graphData.value || []);
-    let synced = 0; const errors = [];
-    for (const c of records) {
-      const email = (c.emailAddresses || [])[0]?.address || null;
-      const phone = c.mobilePhone || (c.businessPhones || [])[0] || null;
-      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: 'outlook:' + c.id, name: c.displayName || null, company: c.companyName || null, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+
+    let accessToken = intData.access_token;
+    const refreshToken = intData.refresh_token;
+
+    const doTokenRefresh = async () => {
+      if (!refreshToken) return false;
       try {
-        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', 'outlook:' + c.id).maybeSingle();
+        const tr = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: process.env.MICROSOFT_CLIENT_ID, client_secret: process.env.MICROSOFT_CLIENT_SECRET, scope: 'Contacts.Read People.Read Mail.Read offline_access' })
+        });
+        const td = await tr.json();
+        if (!td.access_token) return false;
+        accessToken = td.access_token;
+        await supabase.from('integrations').update({ access_token: td.access_token, refresh_token: td.refresh_token || refreshToken }).eq('user_id', userId).eq('provider', 'outlook');
+        return true;
+      } catch { return false; }
+    };
+
+    const graphGet = async (url) => {
+      let r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (r.status === 401) { if (!await doTokenRefresh()) return null; r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } }); }
+      if (!r.ok) return null;
+      return r.json();
+    };
+
+    const raw = [];
+
+    // Pass 1 — Address Book
+    if (opts.address_book !== false) {
+      const d = await graphGet('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=999');
+      for (const c of (d?.value || [])) {
+        const email = (c.emailAddresses || [])[0]?.address?.toLowerCase() || null;
+        raw.push({ email, name: c.displayName || null, company: c.companyName || null, phone: c.mobilePhone || (c.businessPhones || [])[0] || null, msId: c.id });
+      }
+    }
+
+    // Pass 2 — People
+    if (opts.people !== false) {
+      const d = await graphGet("https://graph.microsoft.com/v1.0/me/people?$select=displayName,emailAddresses,companyName,jobTitle,phones&$top=1000&$filter=personType/class eq 'Person'");
+      for (const c of (d?.value || [])) {
+        const email = (c.emailAddresses || [])[0]?.address?.toLowerCase() || null;
+        raw.push({ email, name: c.displayName || null, company: c.companyName || null, phone: (c.phones || [])[0]?.number || null, msId: c.id || null });
+      }
+    }
+
+    // Pass 3 — Sent Mail Recipients
+    if (opts.sent_mail !== false) {
+      const d = await graphGet('https://graph.microsoft.com/v1.0/me/mailFolders/sentItems/messages?$select=toRecipients,ccRecipients&$top=500&$filter=sentDateTime ge 2023-01-01T00:00:00Z');
+      const seenEmails = new Set(raw.map(r => r.email).filter(Boolean));
+      for (const msg of (d?.value || [])) {
+        for (const recip of [...(msg.toRecipients || []), ...(msg.ccRecipients || [])]) {
+          const email = recip.emailAddress?.address?.toLowerCase();
+          if (email && !seenEmails.has(email)) {
+            seenEmails.add(email);
+            raw.push({ email, name: recip.emailAddress?.name || null, company: null, phone: null, msId: null });
+          }
+        }
+      }
+    }
+
+    // Pass 4 — Calendar Attendees
+    if (opts.calendar !== false) {
+      const d = await graphGet("https://graph.microsoft.com/v1.0/me/events?$select=attendees&$top=500&$filter=start/dateTime ge '2023-01-01T00:00:00'");
+      const seenEmails = new Set(raw.map(r => r.email).filter(Boolean));
+      for (const evt of (d?.value || [])) {
+        for (const att of (evt.attendees || [])) {
+          const email = att.emailAddress?.address?.toLowerCase();
+          if (email && !seenEmails.has(email)) {
+            seenEmails.add(email);
+            raw.push({ email, name: att.emailAddress?.name || null, company: null, phone: null, msId: null });
+          }
+        }
+      }
+    }
+
+    // Deduplicate by email, merging fields preferring richer records
+    const emailMap = new Map();
+    for (const c of raw) {
+      const key = c.email || null;
+      if (!key) { if (c.msId) emailMap.set('msid:' + c.msId, c); continue; }
+      if (!emailMap.has(key)) {
+        emailMap.set(key, c);
+      } else {
+        const prev = emailMap.get(key);
+        const score = r => (r.name ? 1 : 0) + (r.company ? 1 : 0) + (r.phone ? 1 : 0);
+        emailMap.set(key, score(c) > score(prev)
+          ? { ...c, msId: prev.msId || c.msId }
+          : { ...prev, name: prev.name || c.name, company: prev.company || c.company, phone: prev.phone || c.phone });
+      }
+    }
+    const deduped = Array.from(emailMap.values());
+
+    let synced = 0; const errors = [];
+    for (const c of deduped) {
+      const uniqueKey = c.email || ('msid:' + c.msId);
+      const sourceRecordId = 'outlook:' + uniqueKey;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || null, company: c.company || null, email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', sourceRecordId).maybeSingle();
         if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
         else { await supabase.from('contacts').insert(mapped); }
         synced++;
-      } catch (e) { errors.push({ id: c.id, error: e.message }); }
+      } catch (e) { errors.push({ key: uniqueKey, error: e.message }); }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
     return res.status(200).json({ success: true, synced, errors });

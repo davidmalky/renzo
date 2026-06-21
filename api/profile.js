@@ -200,15 +200,14 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { company, website, sell, customer, role, tone, rep_name, repName, defaultFrequency } = req.body || {};
+    const { company, website, sell, customer, role, tone, rep_name, repName, defaultFrequency, outlook_sync_options } = req.body || {};
+    const upsertData = { user_id: userId, profile_name: profileName, company, website, sell,
+      customer, role, tone, rep_name: rep_name ?? repName ?? null,
+      default_frequency: defaultFrequency ?? null };
+    if (outlook_sync_options !== undefined) upsertData.outlook_sync_options = outlook_sync_options;
     const { data, error } = await supabase
       .from('profiles')
-      .upsert(
-        { user_id: userId, profile_name: profileName, company, website, sell,
-          customer, role, tone, rep_name: rep_name ?? repName ?? null,
-          default_frequency: defaultFrequency ?? null },
-        { onConflict: 'user_id,profile_name' }
-      )
+      .upsert(upsertData, { onConflict: 'user_id,profile_name' })
       .select().single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
