@@ -4597,6 +4597,7 @@ function renderConnectionsView(){
   }).join('');
   // Update action areas in grid with "Connected ✓" badge
   providers.forEach(function(p){
+    var c=conns[p];
     var el=document.getElementById('int-action-'+p);
     if(!el) return;
     var disconnectBtn = '<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:11px;margin-top:4px" onclick="disconnectIntegration(\''+p+'\')">Disconnect</button>';
