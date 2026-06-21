@@ -419,7 +419,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Unsupported provider: ' + provider });
   }
 
-  if (req.method === 'POST') {
+  if (req.method === 'POST' && !req.body?.action) {
     const { name: rawName, company: rawCompany, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
             products, history, notes, do_not_contact, tags } = req.body || {};
