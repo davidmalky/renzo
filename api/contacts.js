@@ -423,8 +423,38 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && req.body?.action === 'outlook_sync') {
     const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
     if (!intData?.access_token) return res.status(400).json({ error: 'Outlook not connected' });
-    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=999', { headers: { Authorization: 'Bearer ' + intData.access_token } });
-    if (!graphRes.ok) return res.status(502).json({ error: 'Microsoft Graph request failed' });
+
+    // Refresh token before calling Graph — MS access tokens expire in 1 hour
+    let accessToken = intData.access_token;
+    if (intData.refresh_token) {
+      try {
+        const refreshRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: intData.refresh_token,
+            client_id: process.env.MICROSOFT_CLIENT_ID,
+            client_secret: process.env.MICROSOFT_CLIENT_SECRET,
+            scope: 'Contacts.Read offline_access'
+          })
+        });
+        if (refreshRes.ok) {
+          const refreshed = await refreshRes.json();
+          accessToken = refreshed.access_token;
+          await supabase.from('integrations').update({
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token || intData.refresh_token
+          }).eq('user_id', userId).eq('provider', 'outlook');
+        }
+      } catch (e) { /* use existing token */ }
+    }
+
+    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=999', { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (!graphRes.ok) {
+      const errBody = await graphRes.json().catch(() => ({}));
+      return res.status(502).json({ error: 'Microsoft Graph request failed: ' + (errBody?.error?.message || graphRes.status) });
+    }
     const graphData = await graphRes.json();
     const records = (graphData.value || []);
     let synced = 0; const errors = [];
