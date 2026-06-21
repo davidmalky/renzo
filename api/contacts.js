@@ -574,13 +574,18 @@ export default async function handler(req, res) {
       const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || null, company: c.company || null, email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
       try {
         const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', sourceRecordId).maybeSingle();
-        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
-        else { await supabase.from('contacts').insert(mapped); }
+        if (existing) {
+          const { error: ue } = await supabase.from('contacts').update(mapped).eq('id', existing.id);
+          if (ue) { errors.push({ key: uniqueKey, error: 'update: ' + ue.message }); continue; }
+        } else {
+          const { error: ie } = await supabase.from('contacts').insert(mapped);
+          if (ie) { errors.push({ key: uniqueKey, error: 'insert: ' + ie.message }); continue; }
+        }
         synced++;
-      } catch (e) { errors.push({ key: uniqueKey, error: e.message }); }
+      } catch (e) { errors.push({ key: uniqueKey, error: 'exception: ' + e.message }); }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
-    return res.status(200).json({ success: true, synced, errors });
+    return res.status(200).json({ success: true, synced, errors, total: deduped.length });
   }
 
   // ── QUICKBOOKS SYNC ──────────────────────────────────────────────────────────
