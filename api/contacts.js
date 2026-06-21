@@ -594,15 +594,64 @@ export default async function handler(req, res) {
     if (!intData?.access_token) return res.status(400).json({ error: 'QuickBooks not connected' });
     const realmId = intData.instance_url;
     if (!realmId) return res.status(400).json({ error: 'QuickBooks realm ID missing' });
-    const qbRes = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT+*+FROM+Customer+WHERE+Active+%3D+true+MAXRESULTS+100`, { headers: { Authorization: 'Bearer ' + intData.access_token, Accept: 'application/json' } });
-    if (!qbRes.ok) return res.status(502).json({ error: 'QuickBooks API request failed' });
-    const qbData = await qbRes.json();
-    const customers = (qbData?.QueryResponse?.Customer || []);
+
+    let accessToken = intData.access_token;
+    const refreshToken = intData.refresh_token;
+
+    // Fix 1: token refresh identical in pattern to outlook_sync doTokenRefresh
+    const doQbTokenRefresh = async () => {
+      if (!refreshToken) return false;
+      try {
+        const creds = Buffer.from(`${process.env.QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`).toString('base64');
+        const tr = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${creds}` },
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken })
+        });
+        const td = await tr.json();
+        if (!td.access_token) return false;
+        accessToken = td.access_token;
+        await supabase.from('integrations').update({ access_token: td.access_token, refresh_token: td.refresh_token || refreshToken }).eq('user_id', userId).eq('provider', 'quickbooks');
+        return true;
+      } catch { return false; }
+    };
+
+    // Fix 2: paginate up to 1000 records, 100 per page
+    const MAX_RECORDS = 1000;
+    const PAGE_SIZE = 100;
+    const allCustomers = [];
+    let startPosition = 1;
+
+    while (allCustomers.length < MAX_RECORDS) {
+      const query = `SELECT * FROM Customer WHERE Active = true STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`;
+      const url = `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=${encodeURIComponent(query)}`;
+      let qbRes = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' } });
+      // Fix 3: 401 — try refresh once, then mark disconnected
+      if (qbRes.status === 401) {
+        if (!await doQbTokenRefresh()) {
+          await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'quickbooks');
+          return res.status(401).json({ error: 'QuickBooks session expired. Please reconnect.' });
+        }
+        qbRes = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' } });
+        if (qbRes.status === 401) {
+          await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'quickbooks');
+          return res.status(401).json({ error: 'QuickBooks session expired. Please reconnect.' });
+        }
+      }
+      if (!qbRes.ok) return res.status(502).json({ error: 'QuickBooks API request failed' });
+      const qbData = await qbRes.json();
+      const page = qbData?.QueryResponse?.Customer || [];
+      allCustomers.push(...page);
+      if (page.length < PAGE_SIZE) break;
+      startPosition += PAGE_SIZE;
+    }
+
     let synced = 0; const errors = [];
-    for (const c of customers) {
+    for (const c of allCustomers) {
       const email = c.PrimaryEmailAddr?.Address || null;
       const phone = c.PrimaryPhone?.FreeFormNumber || null;
-      const mapped = { user_id: userId, profile_name: profileName, source_system: 'QuickBooks', source_record_id: 'qb:' + c.Id, name: c.DisplayName || c.CompanyName || null, company: c.CompanyName || null, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      // Fix 4: company fallback to 'Unknown' (not null)
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'QuickBooks', source_record_id: 'qb:' + c.Id, name: c.DisplayName || c.CompanyName || 'Unknown', company: c.CompanyName || 'Unknown', email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
       try {
         const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'QuickBooks').eq('source_record_id', 'qb:' + c.Id).maybeSingle();
         if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
