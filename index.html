@@ -1960,7 +1960,7 @@ async function switchProfile(name){
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
-  if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+  if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
   toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
 }
 
@@ -1974,7 +1974,7 @@ async function submitNewProfile(){
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
-  if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+  if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
   toast('New profile created. Set up this profile\'s company info in Settings.','info');
 }
 
@@ -2093,7 +2093,8 @@ function normalizeProfile(r){
     customer:r.customer||'',role:r.role||'',tone:r.tone||'Professional',
     repName:r.rep_name||r.repName||'',
     defaultFrequency:r.default_frequency||r.defaultFrequency||null,
-    emailSignature:r.email_signature||r.emailSignature||''
+    emailSignature:r.email_signature||r.emailSignature||'',
+    onboarding_completed:r.onboarding_completed||false
   };
 }
 
@@ -2137,6 +2138,11 @@ async function loadProfileData(){
       fetch('/api/profile',{headers:h}),
       fetch('/api/rules',{headers:h})
     ]);
+    if(!cRes.ok){
+      const errText=await cRes.text();
+      console.error('[loadProfileData] contacts fetch failed:',cRes.status,errText);
+      throw new Error('Contacts fetch failed: '+cRes.status);
+    }
     const [contacts,activity,queue,drafts,profile,rules]=await Promise.all([
       cRes.json(),aRes.json(),qRes.json(),dRes.json(),pRes.json(),rRes.json()
     ]);
@@ -2150,6 +2156,10 @@ async function loadProfileData(){
     _cache.rules=Array.isArray(rules)?rules.map(r=>r.rule_text):[];
   }catch(e){
     console.warn('[loadProfileData] fetch failed, falling back to cache:',e.message);
+    if(e.message&&e.message.includes('Contacts fetch failed')){
+      const body=document.getElementById('ctBody');
+      if(body) body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red)">Failed to load contacts. <a href="#" onclick="loadProfileData();return false;">Retry</a></td></tr>';
+    }
     try{
       const cached=localStorage.getItem(_ctCacheKey);
       if(cached) _cache.contacts=JSON.parse(cached);
@@ -2298,7 +2308,7 @@ async function doLogin(){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
   }catch(e){
@@ -4579,7 +4589,7 @@ function renderConnectionsView(){
       +'<div style="font-weight:700;font-size:13px">'+esc(LABELS[p]||p)+'</div>'
       +'<div style="font-size:11px;color:var(--gray);margin-top:2px">Last sync: '+dt+(c.count?' · '+c.count+' contacts':'')+'</div>'
       +'</div>'
-      +(p==='salesforce'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncSalesforceAgain(this)">Sync Now</button>':'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>')
+      +(p==='salesforce'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncSalesforceAgain(this)">Sync Now</button>':p==='outlook'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncOutlook(this)">Sync Now</button>':'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>')
       +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray);margin-top:6px;cursor:pointer"><input type="checkbox" id="autoSync_'+p+'" '+(localStorage.getItem(profileKey('renzo_auto_sync_'+p))==='true'?'checked':'')+' onchange="toggleAutoSync(\''+p+'\',this.checked)"> Auto-sync daily</label>'
       +'</div>';
   }).join('');
@@ -4590,6 +4600,8 @@ function renderConnectionsView(){
     var disconnectBtn = '<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:11px;margin-top:4px" onclick="disconnectIntegration(\''+p+'\')">Disconnect</button>';
     var syncBtn = p==='salesforce'
       ? '<button id="sfSyncAgainBtn" class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncSalesforceAgain(this)">Sync Again</button>'
+      : p==='outlook'
+      ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncOutlook(this)">Sync Again</button>'
       : '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
     el.innerHTML='<span class="int-badge-connected">✓ Connected</span>'
       +syncBtn
@@ -4628,7 +4640,7 @@ function sendIntegrationRequest(){
 
 // SALESFORCE OAUTH
 async function connectSalesforce(){
-  const uid = currentUser?.userId || currentUser?.id;
+  const uid = currentUser?.userId || currentUser?.id || localStorage.getItem('renzo_user_id');
   if(!uid){ toast('Please log in first','error'); return; }
   const oauthUrl = '/api/contacts?action=salesforce_oauth_start&userId='+encodeURIComponent(uid);
   const popup = window.open(oauthUrl, 'salesforce_oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
@@ -4691,7 +4703,7 @@ async function connectSalesforce(){
 
 // OUTLOOK OAUTH
 async function connectOutlook(){
-  const uid=currentUser?.userId||currentUser?.id;
+  const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('renzo_user_id');
   if(!uid){toast('Please log in first','error');return;}
   const popup=window.open('/api/contacts?action=outlook_oauth_start&userId='+encodeURIComponent(uid),'outlook_oauth','width=600,height=700,scrollbars=yes,resizable=yes');
   if(!popup){toast('Please allow popups to connect Outlook','error');return;}
@@ -4729,7 +4741,7 @@ async function connectOutlook(){
 
 // QUICKBOOKS OAUTH
 async function connectQuickBooks(){
-  const uid=currentUser?.userId||currentUser?.id;
+  const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('renzo_user_id');
   if(!uid){toast('Please log in first','error');return;}
   const popup=window.open('/api/contacts?action=quickbooks_oauth_start&userId='+encodeURIComponent(uid),'quickbooks_oauth','width=600,height=700,scrollbars=yes,resizable=yes');
   if(!popup){toast('Please allow popups to connect QuickBooks','error');return;}
@@ -4780,6 +4792,35 @@ async function syncSalesforceAgain(btn){
       if(sd.synced===0){ toast('Salesforce sync complete — no new contacts','success'); }
       else if(sd.errors&&sd.errors.length>0){ toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped',''); }
       else { toast('Synced '+sd.synced+' contacts from Salesforce','success'); }
+      const cr2=await fetch('/api/contacts',{headers:getAuthHeaders()});
+      _cache.contacts=(await cr2.json()).map(normalizeContact);
+      renderContacts();
+    } else {
+      toast('Sync failed: '+(sd.error||'unknown error')+' — click Sync Again to retry','error');
+      if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
+    }
+  }catch(e){
+    toast('Sync error: '+e.message,'error');
+    if(btn){ btn.disabled=false; btn.textContent='Sync Again'; }
+  }
+}
+
+
+// OUTLOOK SYNC AGAIN (from connected tile)
+async function syncOutlook(btn){
+  if(btn){ btn.disabled=true; btn.textContent='Syncing...'; }
+  try{
+    const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'outlook_sync'})});
+    const sd=await sr.json();
+    if(sd.success){
+      var connKey=profileKey('renzo_crm_connections');
+      var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+      conns['outlook']={lastSync:new Date().toISOString(),count:sd.synced};
+      localStorage.setItem(connKey,JSON.stringify(conns));
+      renderConnectionsView();
+      if(sd.synced===0){ toast('Outlook sync complete — no new contacts','success'); }
+      else if(sd.errors&&sd.errors.length>0){ toast(sd.synced+' contacts synced, '+sd.errors.length+' records skipped',''); }
+      else { toast('Synced '+sd.synced+' contacts from Outlook','success'); }
       const cr2=await fetch('/api/contacts',{headers:getAuthHeaders()});
       _cache.contacts=(await cr2.json()).map(normalizeContact);
       renderContacts();
@@ -5616,7 +5657,7 @@ document.addEventListener('keydown',function(e){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
     else showView('dashboard');
     setTimeout(tourStart,600);
     // Auto-sync check
