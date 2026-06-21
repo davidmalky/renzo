@@ -571,7 +571,7 @@ export default async function handler(req, res) {
     for (const c of deduped) {
       const uniqueKey = c.email || ('msid:' + c.msId);
       const sourceRecordId = 'outlook:' + uniqueKey;
-      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || null, company: c.company || null, email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || c.email || 'Unknown Contact', company: c.company || 'Unknown', email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
       try {
         const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', sourceRecordId).maybeSingle();
         if (existing) {
