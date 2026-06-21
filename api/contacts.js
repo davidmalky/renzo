@@ -419,6 +419,32 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Unsupported provider: ' + provider });
   }
 
+  // ── OUTLOOK SYNC ────────────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'outlook_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Outlook not connected' });
+    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=999', { headers: { Authorization: 'Bearer ' + intData.access_token } });
+    if (!graphRes.ok) return res.status(502).json({ error: 'Microsoft Graph request failed' });
+    const graphData = await graphRes.json();
+    const records = (graphData.value || []);
+    let synced = 0; const errors = [];
+    for (const c of records) {
+      const email = (c.emailAddresses || [])[0]?.address || null;
+      const phone = c.mobilePhone || (c.businessPhones || [])[0] || null;
+      const name = c.displayName || c.givenName || c.surname || email || 'Unknown Contact';
+      const company = c.companyName || c.department || 'Unknown';
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: 'outlook:' + c.id, name, company, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', 'outlook:' + c.id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: c.id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
   if (req.method === 'POST') {
     const { name: rawName, company: rawCompany, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
@@ -466,30 +492,6 @@ export default async function handler(req, res) {
       .from('contacts').delete().eq('id', id).eq('user_id', userId);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ success: true });
-  }
-
-  // ── OUTLOOK SYNC ────────────────────────────────────────────────────────────
-  if (req.method === 'POST' && req.body?.action === 'outlook_sync') {
-    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'outlook').maybeSingle();
-    if (!intData?.access_token) return res.status(400).json({ error: 'Outlook not connected' });
-    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,companyName,jobTitle,mobilePhone,businessPhones&$top=100', { headers: { Authorization: 'Bearer ' + intData.access_token } });
-    if (!graphRes.ok) return res.status(502).json({ error: 'Microsoft Graph request failed' });
-    const graphData = await graphRes.json();
-    const records = (graphData.value || []);
-    let synced = 0; const errors = [];
-    for (const c of records) {
-      const email = (c.emailAddresses || [])[0]?.address || null;
-      const phone = c.mobilePhone || (c.businessPhones || [])[0] || null;
-      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: 'outlook:' + c.id, name: c.displayName || null, company: c.companyName || null, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
-      try {
-        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', 'outlook:' + c.id).maybeSingle();
-        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
-        else { await supabase.from('contacts').insert(mapped); }
-        synced++;
-      } catch (e) { errors.push({ id: c.id, error: e.message }); }
-    }
-    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
-    return res.status(200).json({ success: true, synced, errors });
   }
 
   // ── QUICKBOOKS SYNC ──────────────────────────────────────────────────────────
