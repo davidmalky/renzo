@@ -2904,7 +2904,7 @@ function renderContacts(){try{
     row+='<td style="padding:6px 8px" title="Priority score: '+score+' — based on tier and days since last contact">'+pb+strengthDots+'</td>';
     row+='<td style="padding:6px 8px" title="Last recorded contact in Renzo. Does not include texts or calls unless logged manually.">'+lc+'</td>';
     row+='<td style="padding:6px 8px" title="Contact frequency: every '+freq+' days"><span class="priority-badge '+st.cls+'">'+st.label+'</span></td>';
-    row+='<td style="padding:6px 8px;display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" title="Edit" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-xs" title="Delete" style="color:var(--red);display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><button class="btn btn-ghost btn-xs" title="Mark contacted today" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();markContactedToday(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></button>'+(c.email?'<button class="btn btn-ghost btn-xs" title="Copy email" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();copyEmail(\''+esc(c.email)+'\',event)">':'<button class="btn btn-ghost btn-xs" title="No email on file" disabled style="display:inline-flex;align-items:center;justify-content:center;opacity:0.35;cursor:default">')+'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
+    row+='<td style="padding:6px 8px;display:flex;gap:4px;align-items:center"><button class="btn btn-ghost btn-xs" title="Edit" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openEditContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-xs" title="Delete" style="color:var(--red);display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><button class="btn btn-ghost btn-xs" title="Mark contacted today" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();markContactedToday(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></button><button class="btn btn-ghost btn-xs" title="Log a call, text, email, or in-person contact" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();openActivityLog(\''+c.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.51 2 2 0 0 1 3.6 1.37h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.07 6.07l.38-.38a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>'+(c.email?'<button class="btn btn-ghost btn-xs" title="Copy email" style="display:inline-flex;align-items:center;justify-content:center" onclick="event.stopPropagation();copyEmail(\''+esc(c.email)+'\',event)">':'<button class="btn btn-ghost btn-xs" title="No email on file" disabled style="display:inline-flex;align-items:center;justify-content:center;opacity:0.35;cursor:default">')+'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="btn btn-ghost btn-xs msg-btn" data-id="'+c.id+'">Message</button></td>';
     row+='</tr>';
     return row;
   }).join('');
@@ -3068,6 +3068,42 @@ async function markContactedToday(id){
       toast('Marked as contacted today','success');
       renderContacts();
     }
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+var _activityContactId=null;
+function openActivityLog(id){
+  _activityContactId=id;
+  var c=gc().find(function(x){return x.id===id;});
+  var nameEl=document.getElementById('activityModalContact');
+  if(nameEl) nameEl.textContent=c?(c.name+(c.company?' — '+c.company:'')):'';
+  var notesEl=document.getElementById('activityNotes');
+  if(notesEl) notesEl.value='';
+  var first=document.querySelector('input[name="activityType"]');
+  if(first) first.checked=true;
+  document.getElementById('activityModal').classList.remove('hidden');
+}
+function closeActivityModal(){
+  document.getElementById('activityModal').classList.add('hidden');
+  _activityContactId=null;
+}
+async function submitActivityLog(){
+  var id=_activityContactId;
+  if(!id) return;
+  var typeEl=document.querySelector('input[name="activityType"]:checked');
+  var type=typeEl?typeEl.value:'Call';
+  var notes=document.getElementById('activityNotes').value.trim();
+  var today=new Date().toISOString().split('T')[0];
+  try{
+    await fetch('/api/activity',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({contactId:id,trigger:type,msg:notes||type+' on '+today})});
+    const r=await fetch('/api/contacts',{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify({id:id,last_contact:today})});
+    if(r.ok){
+      var idx=_cache.contacts.findIndex(function(x){return x.id===id;});
+      if(idx>-1) _cache.contacts[idx]=Object.assign({},_cache.contacts[idx],{lastContact:today,last_contact:today});
+    }
+    closeActivityModal();
+    toast(type+' logged','success');
+    renderContacts();
   }catch(e){toast('Failed: '+e.message,'error');}
 }
 
@@ -5977,6 +6013,33 @@ async function submitFeedback(){
   toast('Thank you for your feedback!','success');
 }
 </script>
+
+<!-- ACTIVITY LOG MODAL -->
+<div id="activityModal" class="modal-overlay hidden" onclick="if(event.target===this)closeActivityModal()">
+  <div class="modal-box" style="max-width:400px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Log Contact</h3>
+      <button class="modal-close" onclick="closeActivityModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <p id="activityModalContact" style="font-size:13px;color:var(--gray);margin-bottom:14px"></p>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px">How did you reach out?</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="activityType" value="Call" checked> Call</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="activityType" value="Text"> Text</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="activityType" value="Email"> Email</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="activityType" value="In Person"> In Person</label>
+        </div>
+      </div>
+      <textarea id="activityNotes" placeholder="Notes (optional)" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;outline:none;background:var(--white)"></textarea>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" style="flex:1" onclick="submitActivityLog()">Log Contact</button>
+        <button class="btn btn-ghost" onclick="closeActivityModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- BATCH CONFIRM MODAL -->
 <div id="batchConfirmModal" class="modal-overlay hidden" style="z-index:2500">

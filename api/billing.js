@@ -371,6 +371,12 @@ export default async function handler(req, res) {
       await stripe.paymentMethods.detach(pmId);
       return res.json({ success: true });
     }
+    if (body.action === 'email_capture') {
+      const { email } = body;
+      if (!email) return res.status(400).json({ error: 'email is required' });
+      await supabase.from('waitlist').insert({ email, feature: 'newsletter', created_at: new Date().toISOString() });
+      return res.status(200).json({ success: true });
+    }
     if (body.action === 'add_card') {
       let uid; try { ({ userId: uid } = await validateRequest(req)); } catch { return res.status(401).json({ error: 'Unauthorized' }); }
       const { data: billing } = await supabase.from('billing').select('stripe_customer_id').eq('user_id', uid).single();

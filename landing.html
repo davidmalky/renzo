@@ -458,6 +458,34 @@
   </div>
 </section>
 
+<section style="padding:60px 48px;background:var(--white);border-top:1px solid var(--warm);border-bottom:1px solid var(--warm)">
+  <div style="max-width:480px;margin:0 auto;text-align:center">
+    <p style="font-size:12px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:12px">Stay in the loop</p>
+    <h2 style="font-family:'Playfair Display',serif;font-size:26px;font-weight:600;color:var(--ink);margin-bottom:8px">Get early access tips and updates</h2>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6">Practical advice on relationship-driven outreach, new features, and how to get more out of Renzo.</p>
+    <div id="emailCaptureForm" style="display:flex;gap:8px;max-width:400px;margin:0 auto">
+      <input type="email" id="emailCaptureInput" placeholder="your@email.com" style="flex:1;padding:11px 14px;border:1.5px solid var(--warm);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:var(--cream);color:var(--ink)" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--warm)'">
+      <button onclick="submitEmailCapture()" style="background:var(--green);color:var(--white);padding:11px 20px;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s" onmouseover="this.style.background='var(--green-light)'" onmouseout="this.style.background='var(--green)'">Subscribe</button>
+    </div>
+    <p id="emailCaptureSuccess" style="display:none;color:var(--green);font-size:14px;font-weight:500;margin-top:12px">✓ You're on the list — thanks!</p>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">No spam. Unsubscribe anytime.</p>
+  </div>
+</section>
+<script>
+async function submitEmailCapture(){
+  var email=document.getElementById('emailCaptureInput').value.trim();
+  if(!email||!email.includes('@')){document.getElementById('emailCaptureInput').focus();return;}
+  try{
+    var r=await fetch('/api/billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'email_capture',email:email})});
+    if(r.ok){
+      document.getElementById('emailCaptureForm').style.display='none';
+      document.getElementById('emailCaptureSuccess').style.display='block';
+    }
+  }catch(e){}
+}
+document.getElementById('emailCaptureInput').addEventListener('keydown',function(e){if(e.key==='Enter')submitEmailCapture();});
+</script>
+
 <section class="features" id="features">
   <p class="section-label">Why Renzo</p>
   <h2 class="section-title">Not another cold email tool</h2>
