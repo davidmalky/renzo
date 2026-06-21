@@ -657,10 +657,6 @@ tbody tr.clickable:hover td{background:#FAF7F2}
         </select>
         <select id="contactSourceFilter" class="filter-select" onchange="filterContactsBySource(this.value)">
           <option value="">All sources</option>
-          <option value="Salesforce">Salesforce</option>
-          <option value="HubSpot">HubSpot</option>
-          <option value="manual">Manually added</option>
-          <option value="csv">CSV import</option>
         </select>
         <input class="search-input" id="tagFilter" placeholder="Filter by tag..." style="max-width:160px" oninput="renderContacts()">
       </div>
@@ -2793,6 +2789,32 @@ function filterContactsBySource(source){
   renderContacts();
 }
 
+function populateSourceFilter(){
+  const el=document.getElementById('contactSourceFilter');
+  if(!el||!_cache.contacts) return;
+  const current=el.value;
+  const sources=new Map();
+  for(const c of _cache.contacts){
+    const src=c.source_system;
+    if(!src){sources.set('manual','Manually added');}
+    else if(src.toLowerCase()==='csv'){sources.set('csv','CSV import');}
+    else{sources.set(src,src);}
+  }
+  el.innerHTML='<option value="">All sources</option>';
+  const order=['VCS','Salesforce','HubSpot','Outlook','QuickBooks','csv','manual'];
+  const sorted=[...sources.entries()].sort((a,b)=>{
+    const ai=order.indexOf(a[0]),bi=order.indexOf(b[0]);
+    if(ai===-1&&bi===-1) return a[1].localeCompare(b[1]);
+    if(ai===-1) return 1; if(bi===-1) return -1;
+    return ai-bi;
+  });
+  for(const [val,label] of sorted){
+    const opt=document.createElement('option');
+    opt.value=val;opt.textContent=label;el.appendChild(opt);
+  }
+  if(current&&[...el.options].some(o=>o.value===current)) el.value=current;
+}
+
 function updateSidebarStats(){
   const contacts=gc();
   const now=Date.now();
@@ -2807,6 +2829,7 @@ function updateSidebarStats(){
   if(oc) oc.textContent=overdue.length+' overdue';
 }
 function renderContacts(){try{
+  populateSourceFilter();
   updateSidebarStats();
   const body=document.getElementById('ctBody'),empty=document.getElementById('ctEmpty');
   if(_cache.contacts===null){

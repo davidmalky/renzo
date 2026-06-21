@@ -176,10 +176,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST' && req.body?.action === 'disconnect_integration') {
     const { provider, deleteContacts } = req.body;
-    if (provider === 'salesforce') {
-      await supabase.from('integrations').update({ connected: false, access_token: null, refresh_token: null })
-        .eq('user_id', userId).eq('provider', 'salesforce');
-    }
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    await supabase.from('integrations')
+      .update({ connected: false, access_token: null, refresh_token: null, scope_version: null })
+      .eq('user_id', userId).eq('provider', provider);
     if (deleteContacts) {
       const sourceSystem = provider.charAt(0).toUpperCase() + provider.slice(1);
       await supabase.from('contacts').delete().eq('user_id', userId).eq('source_system', sourceSystem);
@@ -419,7 +419,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Unsupported provider: ' + provider });
   }
 
-  if (req.method === 'POST') {
+  if (req.method === 'POST' && !req.body?.action) {
     const { name: rawName, company: rawCompany, title, email, phone, tier, frequency, last_contact,
             contract_expiry, invoice_amount, annual_spend, location, account_size,
             products, history, notes, do_not_contact, tags } = req.body || {};
@@ -571,16 +571,21 @@ export default async function handler(req, res) {
     for (const c of deduped) {
       const uniqueKey = c.email || ('msid:' + c.msId);
       const sourceRecordId = 'outlook:' + uniqueKey;
-      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || null, company: c.company || null, email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Outlook', source_record_id: sourceRecordId, name: c.name || c.email || 'Unknown Contact', company: c.company || 'Unknown', email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
       try {
         const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Outlook').eq('source_record_id', sourceRecordId).maybeSingle();
-        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
-        else { await supabase.from('contacts').insert(mapped); }
+        if (existing) {
+          const { error: ue } = await supabase.from('contacts').update(mapped).eq('id', existing.id);
+          if (ue) { errors.push({ key: uniqueKey, error: 'update: ' + ue.message }); continue; }
+        } else {
+          const { error: ie } = await supabase.from('contacts').insert(mapped);
+          if (ie) { errors.push({ key: uniqueKey, error: 'insert: ' + ie.message }); continue; }
+        }
         synced++;
-      } catch (e) { errors.push({ key: uniqueKey, error: e.message }); }
+      } catch (e) { errors.push({ key: uniqueKey, error: 'exception: ' + e.message }); }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'outlook');
-    return res.status(200).json({ success: true, synced, errors });
+    return res.status(200).json({ success: true, synced, errors, total: deduped.length });
   }
 
   // ── QUICKBOOKS SYNC ──────────────────────────────────────────────────────────
