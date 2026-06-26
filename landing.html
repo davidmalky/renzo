@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Renzo — Know who to reach out to. Know what to say. Every time.</title>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-143EWE49MX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-143EWE49MX');
+</script>
 <meta name="description" content="Renzo is an AI-powered B2B relationship assistant that tells you who to reach out to and writes a personalized message — in one click. Start free with 10 messages.">
 <meta property="og:title" content="Renzo — AI-powered relationship outreach for B2B sales">
 <meta property="og:description" content="Know who needs follow-up. Know what to say. Renzo surfaces overdue contacts and writes personalized messages using your relationship history.">
@@ -27,7 +35,9 @@
     --white: #fffef9;
   }
   html { scroll-behavior: smooth; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; max-width: 100vw; width: 100%; }
+  html { overflow-x: hidden; max-width: 100%; width: 100%; box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; }
 
   /* NAV */
   nav { position: fixed; top: 48px; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(245,240,232,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); }
@@ -42,10 +52,10 @@
   .nav-cta:hover { background: var(--green-light) !important; }
 
   /* MOBILE NAV */
-  .mobile-nav { display: none; position: fixed; top: 48px; left: 0; right: 0; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .mobile-nav { display: none; position: fixed; top: 48px; left: 0; right: 0; width: 100%; max-width: 100vw; height: 60px; z-index: 200; background: rgba(245,240,232,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); flex-direction: row; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box; overflow: hidden; }
   .mobile-nav-cta { background: var(--green); color: var(--white); padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
   .mobile-hamburger { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--ink); padding: 4px 8px; line-height: 1; }
-  .mobile-menu { display: none; position: fixed; top: 108px; left: 0; right: 0; background: rgba(245,240,232,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); z-index: 199; flex-direction: column; padding: 12px 20px 20px; gap: 4px; }
+  .mobile-menu { display: none; position: fixed; top: 108px; left: 0; right: 0; width: 100%; max-width: 100vw; box-sizing: border-box; background: rgba(245,240,232,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,26,20,0.08); z-index: 199; flex-direction: column; padding: 12px 20px 20px; gap: 4px; overflow: hidden; }
   .mobile-menu.open { display: flex; }
   .mobile-menu a { display: block; padding: 12px 8px; font-size: 15px; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(26,26,20,0.06); font-weight: 400; }
   .mobile-menu a:last-child { border-bottom: none; background: var(--green); color: var(--white); text-align: center; border-radius: 8px; margin-top: 8px; font-weight: 500; padding: 12px; }
@@ -278,6 +288,31 @@
     .vp-grid, .uc-grid { grid-template-columns: 1fr; }
     .value-props, .use-cases { padding: 60px 24px; }
   }
+
+  @media (max-width: 480px) {
+    * { box-sizing: border-box; }
+    html, body { overflow-x: hidden; width: 100%; position: relative; }
+    .hero h1, .hero-headline { font-size: 28px; line-height: 1.2; }
+    .hero p, .hero-subheadline, .hero-sub { font-size: 15px; }
+    .hero { padding: 130px 16px 40px; }
+    .hero-cta-group { flex-direction: column; align-items: center; gap: 12px; }
+    .hero-cta-group a, .hero-cta-group button { width: 100%; max-width: 280px; text-align: center; }
+    .features, .pricing, .cta, .how, .integrations, .value-props, .use-cases, .testimonials, .testimonial { padding: 48px 16px; }
+    .section-title { font-size: 24px; }
+    .section-sub { font-size: 15px; }
+    .steps { grid-template-columns: 1fr; }
+    .app-cards { grid-template-columns: 1fr; }
+    .int-grid { gap: 12px; }
+    .int-card { width: 72px; height: 72px; }
+    .pricing-card { padding: 24px 20px; }
+    .feature-card { padding: 24px 20px; }
+    .faq-inner { padding: 0; }
+    footer { padding: 24px 16px; font-size: 13px; }
+    .urgency-banner, #urgencyBanner { font-size: 12px; padding: 10px 36px 10px 16px; }
+    .mobile-nav { padding: 0 16px; }
+    img, video, iframe, table { max-width: 100%; }
+    pre, code { white-space: pre-wrap; word-break: break-word; max-width: 100%; }
+  }
 </style>
 <script type="application/ld+json">
 {
@@ -294,7 +329,7 @@
 </head>
 <body>
 
-<div id="urgencyBanner" style="background:linear-gradient(90deg,#1F6B47,#2d9465);color:white;text-align:center;padding:10px 20px;font-size:13px;font-weight:500;position:relative;z-index:300">
+<div id="urgencyBanner" style="background:linear-gradient(90deg,#1F6B47,#2d9465);color:white;text-align:center;padding:10px 48px 10px 20px;font-size:13px;font-weight:500;position:relative;z-index:300;width:100%;box-sizing:border-box;overflow:hidden">
   🚀 <strong>Launch Special Pricing</strong> — Lock in $0.05/message before rates increase.
   <a href="#pricing" style="color:#a7f3d0;text-decoration:underline;margin-left:6px">See pricing →</a>
   <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:.7" onclick="document.getElementById('urgencyBanner').style.display='none';adjustNavOffset()">✕</span>
