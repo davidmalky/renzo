@@ -258,6 +258,27 @@ export default async function handler(req, res) {
       }).then(() => {}).catch(() => {});
       // Trigger auto-recharge in background if balance is low
       checkAutoRecharge(userId).catch(() => {});
+      // Send credit exhaustion email when balance hits exactly 0 (non-blocking)
+      if (deductResult.creditsRemaining === 0) {
+        (async () => {
+          try {
+            const { data: u } = await supabase.from('users').select('email, name').eq('id', userId).single();
+            if (u?.email) {
+              const firstName = u.name ? u.name.split(' ')[0] : 'there';
+              await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  from: 'Renzo <noreply@meetrenzo.com>',
+                  to: u.email,
+                  subject: "You've used your free Renzo credits",
+                  text: `Hi ${firstName},\n\nYou've used all 10 of your free Renzo messages.\n\nHere's what other users are doing with Renzo:\n- Staying on top of vendor relationships before contracts auto-renew\n- Following up with clients they haven't spoken to in months\n- Generating personalized outreach in seconds instead of spending 20 minutes writing an email\n\nYour contacts aren't going anywhere — but the relationships are getting colder every day you wait.\n\nGet more credits and keep going:\nhttps://meetrenzo.com/app\n\nStarter pack: 100 credits for $5\nGrowth pack: 500 credits for $20\nPro pack: 1500 credits for $50\n\nThe Renzo Team`
+                })
+              });
+            }
+          } catch(e) { console.error('[credit-exhaustion] email failed:', e.message); }
+        })();
+      }
     }
 
     return res.status(response.status).json(data);

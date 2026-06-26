@@ -88,17 +88,36 @@ export default async function handler(req, res) {
     { expiresIn: '7d' }
   );
 
-  // Send welcome email (awaited to ensure it completes before function exits)
-  try { await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: 'Renzo <noreply@meetrenzo.com>',
-      to: user.email,
-      subject: 'Welcome to Renzo',
-      html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1a1a1a"><div style="font-family:Georgia,serif;font-size:28px;color:#1F6B47;margin-bottom:8px">Renzo</div><h2 style="font-weight:600;font-size:20px;margin:0 0 16px">Welcome aboard.</h2><p style="line-height:1.6;color:#444">You are all set to start managing your relationships smarter. Renzo helps you know who to reach out to and writes the message for you.</p><p style="line-height:1.6;color:#444">To get started:</p><ol style="line-height:2;color:#444"><li>Add your contacts or import from a CSV</li><li>Set up your company profile in Settings</li><li>Generate your first outreach message</li></ol><a href="https://www.meetrenzo.com/app" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1F6B47;color:white;text-decoration:none;border-radius:8px;font-weight:600">Open Renzo</a><p style="margin-top:32px;font-size:12px;color:#999">Questions? Visit <a href="https://www.meetrenzo.com/help" style="color:#1F6B47">meetrenzo.com/help</a></p></div>'
-    })
-  }); } catch(e) { console.error('Welcome email failed:', e.message); }
+  // Queue 3-email onboarding sequence into scheduled_emails
+  const displayName = user.name ? user.name.split(' ')[0] : 'there';
+  const nowTs = new Date();
+  const in24h = new Date(nowTs.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const in72h = new Date(nowTs.getTime() + 72 * 60 * 60 * 1000).toISOString();
+  try {
+    await supabase.from('scheduled_emails').insert([
+      {
+        user_id: user.id,
+        email: user.email,
+        subject: "Welcome to Renzo — here's how to get started",
+        body: `Hi ${displayName},\n\nWelcome to Renzo. You have 10 free messages to start — no credit card needed.\n\nHere's the fastest way to get value in the next 5 minutes:\n\n1. Go to Connections and import your contacts from a CSV, Salesforce, HubSpot, or Outlook\n2. Renzo will score them by priority — who's overdue, whose contract is expiring, who's gone quiet\n3. Click Generate on any contact and get a personalized message in one click\n\nStart here: https://meetrenzo.com/app\n\nThe Renzo Team`,
+        send_at: nowTs.toISOString()
+      },
+      {
+        user_id: user.id,
+        email: user.email,
+        subject: 'Have you tried generating your first message?',
+        body: `Hi ${displayName},\n\nJust checking in — did you get a chance to try Renzo yet?\n\nThe fastest way to see what it can do: import a CSV of your contacts and click Generate on whoever is most overdue for a follow-up.\n\nMost people are surprised how human the messages sound. That's because Renzo reads your relationship history and writes something specific to that contact — not a template.\n\nYou still have your free credits waiting: https://meetrenzo.com/app\n\nThe Renzo Team`,
+        send_at: in24h
+      },
+      {
+        user_id: user.id,
+        email: user.email,
+        subject: 'One thing Renzo users tell us every week',
+        body: `Hi ${displayName},\n\nThe most common thing we hear from Renzo users:\n\n"I had no idea how many relationships I was letting go cold."\n\nMost people managing a contact list of 50, 100, or 200 people think they're on top of it. Renzo shows them the reality — and then makes it easy to fix.\n\nIf you haven't tried it yet, your 10 free messages are still waiting.\n\nIf you have tried it and want to keep going, credits start at $5 for 100 messages.\n\nEither way — we're here if you have questions.\n\nhttps://meetrenzo.com/app\n\nThe Renzo Team`,
+        send_at: in72h
+      }
+    ]);
+  } catch(e) { console.error('Onboarding email queue failed:', e.message); }
 
   return res.status(201).json({ token, userId: user.id, email: user.email, name: user.name });
   } catch (e) {

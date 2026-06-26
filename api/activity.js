@@ -12,6 +12,38 @@ export default async function handler(req, res) {
   try {
   if (req.method === 'POST' && !csrfOk(req)) return res.status(403).json({ error: 'Forbidden' });
 
+  // ── SCHEDULED EMAIL DELIVERY (cron-callable, no user JWT required) ─────────
+  if (req.method === 'POST' && req.body?.action === 'send_scheduled_emails') {
+    const secret = req.headers['x-cron-secret'];
+    if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const now = new Date().toISOString();
+    const { data: pending } = await supabase
+      .from('scheduled_emails')
+      .select('*')
+      .lte('send_at', now)
+      .eq('sent', false);
+    let sent = 0;
+    for (const row of (pending || [])) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Renzo <noreply@meetrenzo.com>',
+            to: row.email,
+            subject: row.subject,
+            text: row.body
+          })
+        });
+        await supabase.from('scheduled_emails').update({ sent: true }).eq('id', row.id);
+        sent++;
+      } catch(e) { console.error('[scheduled-emails] failed for', row.id, e.message); }
+    }
+    return res.status(200).json({ success: true, sent });
+  }
+
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
   catch { return res.status(401).json({ error: 'Unauthorized' }); }
