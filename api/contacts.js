@@ -149,6 +149,67 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── CONSTANT CONTACT OAUTH (public — no JWT needed) ──────────────────────
+  if (req.method === 'GET' && req.query.action === 'constantcontact_oauth_start') {
+    const clientId = process.env.CONSTANTCONTACT_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/constantcontact_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://authz.constantcontact.com/oauth2/default/v1/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=contact_data+offline_access&state=${encodeURIComponent(state)}`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.url && req.url.includes('/api/constantcontact_callback')) {
+    const { code, state: userId, error: ccError, error_description } = req.query;
+    if (ccError) return res.redirect('https://www.meetrenzo.com/app?constantcontact_error=1&msg=' + encodeURIComponent(error_description || ccError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?constantcontact_error=1&msg=missing_params');
+    try {
+      const creds = Buffer.from(`${process.env.CONSTANTCONTACT_CLIENT_ID}:${process.env.CONSTANTCONTACT_CLIENT_SECRET}`).toString('base64');
+      const tokenRes = await fetch('https://authz.constantcontact.com/oauth2/default/v1/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${creds}` },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: 'https://www.meetrenzo.com/api/constantcontact_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?constantcontact_error=1&msg=' + encodeURIComponent(tokens.error_description || tokens.error || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'constantcontact').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'constantcontact', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?constantcontact_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?constantcontact_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
+  // ── MONDAY.COM OAUTH (public — no JWT needed) ─────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'monday_oauth_start') {
+    const clientId = process.env.MONDAY_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/monday_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://auth.monday.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.url && req.url.includes('/api/monday_callback')) {
+    const { code, state: userId, error: mdError } = req.query;
+    if (mdError) return res.redirect('https://www.meetrenzo.com/app?monday_error=1&msg=' + encodeURIComponent(mdError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?monday_error=1&msg=missing_params');
+    try {
+      const tokenRes = await fetch('https://auth.monday.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.MONDAY_CLIENT_ID, client_secret: process.env.MONDAY_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/monday_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?monday_error=1&msg=' + encodeURIComponent(tokens.error || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'monday').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'monday', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?monday_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?monday_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
@@ -660,6 +721,76 @@ export default async function handler(req, res) {
       } catch (e) { errors.push({ id: c.Id, error: e.message }); }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'quickbooks');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── CONSTANT CONTACT SYNC ─────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'constantcontact_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'constantcontact').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Constant Contact not connected' });
+    const ccRes = await fetch('https://api.cc.email/v3/contacts?status=all&limit=500&include=contact_list_memberships', {
+      headers: { Authorization: 'Bearer ' + intData.access_token, Accept: 'application/json' }
+    });
+    if (ccRes.status === 401) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'constantcontact');
+      return res.status(401).json({ error: 'Constant Contact session expired. Please reconnect.' });
+    }
+    if (!ccRes.ok) return res.status(502).json({ error: 'Constant Contact API request failed' });
+    const ccData = await ccRes.json();
+    const contacts = ccData?.contacts || [];
+    let synced = 0; const errors = [];
+    for (const c of contacts) {
+      const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email_address?.address || 'Unknown';
+      const email = c.email_address?.address || null;
+      const company = c.company_name || 'Unknown';
+      const phone = (c.phone_numbers || [])[0]?.phone_number || null;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'ConstantContact', source_record_id: 'cc:' + c.contact_id, name, company, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'ConstantContact').eq('source_record_id', 'cc:' + c.contact_id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: c.contact_id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'constantcontact');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── MONDAY.COM SYNC ───────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'monday_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'monday').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Monday.com not connected' });
+    const gqlRes = await fetch('https://api.monday.com/v2', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + intData.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ boards(limit:10) { id name items_page(limit:500) { items { id name column_values { id text value } } } } }' })
+    });
+    if (gqlRes.status === 401) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'monday');
+      return res.status(401).json({ error: 'Monday.com session expired. Please reconnect.' });
+    }
+    if (!gqlRes.ok) return res.status(502).json({ error: 'Monday.com API request failed' });
+    const gqlData = await gqlRes.json();
+    const boards = gqlData?.data?.boards || [];
+    let synced = 0; const errors = [];
+    for (const board of boards) {
+      const boardName = board.name || 'Unknown';
+      for (const item of (board.items_page?.items || [])) {
+        const cols = item.column_values || [];
+        const findCol = (...keys) => (cols.find(cv => keys.some(k => (cv.id || '').toLowerCase().includes(k)))?.text) || null;
+        const email = findCol('email');
+        const phone = findCol('phone');
+        const company = findCol('company', 'org') || boardName;
+        const mapped = { user_id: userId, profile_name: profileName, source_system: 'Monday', source_record_id: 'monday:' + item.id, name: item.name || 'Unknown', company: company || 'Unknown', email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+        try {
+          const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Monday').eq('source_record_id', 'monday:' + item.id).maybeSingle();
+          if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+          else { await supabase.from('contacts').insert(mapped); }
+          synced++;
+        } catch (e) { errors.push({ id: item.id, error: e.message }); }
+      }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'monday');
     return res.status(200).json({ success: true, synced, errors });
   }
 

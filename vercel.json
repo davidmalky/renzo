@@ -3,6 +3,8 @@
   "routes": [
     { "src": "^/api/microsoft_callback", "dest": "/api/contacts" },
     { "src": "^/api/quickbooks_callback", "dest": "/api/contacts" },
+    { "src": "^/api/constantcontact_callback", "dest": "/api/contacts" },
+    { "src": "^/api/monday_callback", "dest": "/api/contacts" },
     { "src": "^/api/(.*)", "dest": "/api/$1" },
     { "src": "^/admin$", "dest": "/admin.html" },
     { "src": "^/app$", "dest": "/index.html" },
