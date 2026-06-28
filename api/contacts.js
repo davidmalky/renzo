@@ -210,6 +210,36 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── ZOHO OAUTH (public — no JWT needed) ──────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'zoho_oauth_start') {
+    const clientId = process.env.ZOHO_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/zoho_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://accounts.zoho.com/oauth/v2/auth?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=ZohoCRM.modules.contacts.READ%20ZohoCRM.modules.leads.READ&access_type=offline&state=${encodeURIComponent(state)}`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.url && req.url.includes('/api/zoho_callback')) {
+    const { code, state: userId, error: zohoError } = req.query;
+    if (zohoError) return res.redirect('https://www.meetrenzo.com/app?zoho_error=1&msg=' + encodeURIComponent(zohoError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?zoho_error=1&msg=missing_params');
+    try {
+      const tokenRes = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.ZOHO_CLIENT_ID, client_secret: process.env.ZOHO_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/zoho_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?zoho_error=1&msg=' + encodeURIComponent(tokens.error || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'zoho').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'zoho', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?zoho_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?zoho_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
@@ -791,6 +821,168 @@ export default async function handler(req, res) {
       }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'monday');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── ZOHO CRM SYNC ─────────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'zoho_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'zoho').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Zoho CRM not connected' });
+
+    let accessToken = intData.access_token;
+    const refreshToken = intData.refresh_token;
+
+    const doZohoTokenRefresh = async () => {
+      if (!refreshToken) return false;
+      try {
+        const tr = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: process.env.ZOHO_CLIENT_ID, client_secret: process.env.ZOHO_CLIENT_SECRET })
+        });
+        const td = await tr.json();
+        if (!td.access_token) return false;
+        accessToken = td.access_token;
+        await supabase.from('integrations').update({ access_token: td.access_token }).eq('user_id', userId).eq('provider', 'zoho');
+        return true;
+      } catch { return false; }
+    };
+
+    const zohoGet = async (url) => {
+      let r = await fetch(url, { headers: { Authorization: 'Zoho-oauthtoken ' + accessToken } });
+      if (r.status === 401) { if (!await doZohoTokenRefresh()) return null; r = await fetch(url, { headers: { Authorization: 'Zoho-oauthtoken ' + accessToken } }); }
+      if (!r.ok) return null;
+      return r.json();
+    };
+
+    const allRecords = [];
+    const contactsData = await zohoGet('https://www.zohoapis.com/crm/v3/Contacts?fields=First_Name,Last_Name,Email,Phone,Account_Name,Title&per_page=200');
+    for (const c of (contactsData?.data || [])) {
+      allRecords.push({ name: [c.First_Name, c.Last_Name].filter(Boolean).join(' ') || 'Unknown', email: c.Email || null, phone: c.Phone || null, company: c.Account_Name || 'Unknown', notes: c.Title || null, source_record_id: 'zoho:contact:' + c.id });
+    }
+    const leadsData = await zohoGet('https://www.zohoapis.com/crm/v3/Leads?fields=First_Name,Last_Name,Email,Phone,Company,Title&per_page=200');
+    for (const c of (leadsData?.data || [])) {
+      allRecords.push({ name: [c.First_Name, c.Last_Name].filter(Boolean).join(' ') || 'Unknown', email: c.Email || null, phone: c.Phone || null, company: c.Company || 'Unknown', notes: c.Title || null, source_record_id: 'zoho:lead:' + c.id });
+    }
+
+    if (!contactsData && !leadsData) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'zoho');
+      return res.status(401).json({ error: 'Zoho CRM session expired. Please reconnect.' });
+    }
+
+    let synced = 0; const errors = [];
+    for (const r of allRecords) {
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Zoho', source_record_id: r.source_record_id, name: r.name, company: r.company, email: r.email, phone: r.phone, notes: r.notes || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Zoho').eq('source_record_id', r.source_record_id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: r.source_record_id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'zoho');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── PIPEDRIVE CONNECT ─────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'pipedrive_connect') {
+    const { api_key } = req.body;
+    if (!api_key) return res.status(400).json({ error: 'API key is required' });
+    try {
+      const testRes = await fetch(`https://api.pipedrive.com/v1/persons?api_token=${encodeURIComponent(api_key)}&limit=1`);
+      if (!testRes.ok) return res.status(400).json({ error: 'Invalid Pipedrive API key' });
+      const record = { access_token: api_key, refresh_token: null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'pipedrive').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'pipedrive', ...record }); }
+      return res.status(200).json({ success: true });
+    } catch (e) {
+      return res.status(502).json({ error: 'Pipedrive validation failed: ' + e.message });
+    }
+  }
+
+  // ── PIPEDRIVE SYNC ────────────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'pipedrive_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'pipedrive').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Pipedrive not connected' });
+    const pdRes = await fetch(`https://api.pipedrive.com/v1/persons?api_token=${encodeURIComponent(intData.access_token)}&limit=500&start=0`);
+    if (pdRes.status === 401) {
+      await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'pipedrive');
+      return res.status(401).json({ error: 'Pipedrive API key invalid. Please reconnect.' });
+    }
+    if (!pdRes.ok) return res.status(502).json({ error: 'Pipedrive API request failed' });
+    const pdData = await pdRes.json();
+    const persons = pdData?.data || [];
+    let synced = 0; const errors = [];
+    for (const p of persons) {
+      const email = (p.email || []).find(e => e.primary)?.value || (p.email || [])[0]?.value || null;
+      const phone = (p.phone || []).find(ph => ph.primary)?.value || (p.phone || [])[0]?.value || null;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'Pipedrive', source_record_id: 'pipedrive:' + p.id, name: p.name || 'Unknown', company: p.org_name || 'Unknown', email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'Pipedrive').eq('source_record_id', 'pipedrive:' + p.id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: p.id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'pipedrive');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── ACTIVECAMPAIGN CONNECT ────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'activecampaign_connect') {
+    const { api_key, account_url } = req.body;
+    if (!api_key || !account_url) return res.status(400).json({ error: 'API key and account URL are required' });
+    const baseUrl = account_url.replace(/\/$/, '');
+    try {
+      const testRes = await fetch(`${baseUrl}/api/3/contacts?limit=1`, { headers: { 'Api-Token': api_key } });
+      if (!testRes.ok) return res.status(400).json({ error: 'Invalid ActiveCampaign credentials' });
+      const record = { access_token: api_key, instance_url: baseUrl, refresh_token: null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'activecampaign').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'activecampaign', ...record }); }
+      return res.status(200).json({ success: true });
+    } catch (e) {
+      return res.status(502).json({ error: 'ActiveCampaign validation failed: ' + e.message });
+    }
+  }
+
+  // ── ACTIVECAMPAIGN SYNC ───────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'activecampaign_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'activecampaign').maybeSingle();
+    if (!intData?.access_token || !intData?.instance_url) return res.status(400).json({ error: 'ActiveCampaign not connected' });
+    const baseUrl = intData.instance_url;
+    const apiKey = intData.access_token;
+
+    const allContacts = [];
+    let offset = 0;
+    const PAGE = 100;
+    while (true) {
+      const acRes = await fetch(`${baseUrl}/api/3/contacts?limit=${PAGE}&offset=${offset}`, { headers: { 'Api-Token': apiKey } });
+      if (acRes.status === 401) {
+        await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'activecampaign');
+        return res.status(401).json({ error: 'ActiveCampaign credentials invalid. Please reconnect.' });
+      }
+      if (!acRes.ok) break;
+      const acData = await acRes.json();
+      const page = acData?.contacts || [];
+      allContacts.push(...page);
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+
+    let synced = 0; const errors = [];
+    for (const c of allContacts) {
+      const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || 'Unknown';
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'ActiveCampaign', source_record_id: 'ac:' + c.id, name, company: c.orgname || 'Unknown', email: c.email || null, phone: c.phone || null, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'ActiveCampaign').eq('source_record_id', 'ac:' + c.id).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: c.id, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'activecampaign');
     return res.status(200).json({ success: true, synced, errors });
   }
 
