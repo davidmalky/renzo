@@ -293,6 +293,19 @@ export default async function handler(req, res) {
   const rawBody = await readBody(req);
   const sig = req.headers['stripe-signature'];
 
+  // Public stats — no auth required, used by landing page
+  if (req.method === 'GET' && req.query.action === 'public_stats') {
+    const [contactsRes, messagesRes, usersRes] = await Promise.all([
+      supabase.from('contacts').select('id', { count: 'exact', head: true }),
+      supabase.from('usage_logs').select('credits_used').eq('action', 'generate'),
+      supabase.from('users').select('id', { count: 'exact', head: true })
+    ]);
+    const totalContacts = contactsRes.count || 0;
+    const totalMessages = (messagesRes.data || []).reduce((sum, r) => sum + (r.credits_used || 1), 0);
+    const totalUsers = usersRes.count || 0;
+    return res.status(200).json({ totalContacts, totalMessages, totalUsers });
+  }
+
   // Public config — returns publishable key, no auth required
   // User transaction history (JWT-protected, no admin required)
   if (req.method === 'GET' && req.query.action === 'transactions') {

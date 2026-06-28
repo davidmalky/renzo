@@ -366,13 +366,49 @@
       <a href="#how" class="btn-secondary">See how it works</a>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-top:10px">✓ 10 free messages included &nbsp;·&nbsp; No credit card required</p>
+    <div id="liveStats" style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div id="heroStatMessages" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
+        <div style="font-size:12px;color:var(--muted)">messages sent</div>
+      </div>
+      <div style="text-align:center">
+        <div id="heroStatContacts" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
+        <div style="font-size:12px;color:var(--muted)">contacts managed</div>
+      </div>
+      <div style="text-align:center">
+        <div id="heroStatUsers" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
+        <div style="font-size:12px;color:var(--muted)">users signed up</div>
+      </div>
+    </div>
+    <script>
+    fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
+      const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
+      const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=fmt(val||0); };
+      set('heroStatMessages', d.totalMessages);
+      set('heroStatContacts', d.totalContacts);
+      set('heroStatUsers', d.totalUsers);
+      set('statMessages', d.totalMessages);
+      set('statContacts', d.totalContacts);
+      const ls = document.getElementById('liveStats');
+      if(ls && !d.totalMessages && !d.totalContacts) ls.style.display='none';
+    }).catch(()=>{ const ls=document.getElementById('liveStats'); if(ls) ls.style.display='none'; });
+    </script>
     <div style="font-size:12px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:8px;justify-content:center">
       <span style="display:flex">
         <span style="width:24px;height:24px;background:#1F6B47;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
         <span style="width:24px;height:24px;background:#2d6a4f;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
         <span style="width:24px;height:24px;background:#40916c;border-radius:50%;border:2px solid white;display:inline-block"></span>
       </span>
-      <span>Join early users who signed up this week · <strong>10 free messages</strong> included</span>
+      <span>Trusted by early users · <strong id="statMessages">...</strong> messages sent · <strong id="statContacts">...</strong> contacts managed</span>
+<script>
+fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
+  const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : n;
+  const m = document.getElementById('statMessages');
+  const c = document.getElementById('statContacts');
+  if(m) m.textContent = fmt(d.totalMessages || 0);
+  if(c) c.textContent = fmt(d.totalContacts || 0);
+}).catch(()=>{});
+</script>
     </div>
     <div class="hero-badges">
       <span class="hero-badge">🎉 Start with 10 free messages</span>
