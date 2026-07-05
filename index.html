@@ -2579,8 +2579,12 @@ async function readWebsite(){
     document.getElementById('obNextStep').disabled=false;
     return;
   }
-  const url=document.getElementById('obUrl').value.trim();
-  if(!url||!url.startsWith('http')){toast('Enter a valid URL starting with https://','error');return;}
+  let url=document.getElementById('obUrl').value.trim();
+  if(!url){toast('Enter a website URL first','error');return;}
+  if(!url.startsWith('http://') && !url.startsWith('https://')){
+    url='https://'+url;
+  }
+  document.getElementById('obUrl').value=url;
   document.getElementById('obSiteLoading').classList.remove('hidden');
   document.getElementById('obSiteResult').classList.add('hidden');
   document.getElementById('obReadSite').disabled=true;
