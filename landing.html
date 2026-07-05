@@ -382,7 +382,7 @@
     </div>
     <script>
     fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
-      const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
+      const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
       const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=fmt(val||0); };
       set('heroStatMessages', d.totalMessages);
       set('heroStatContacts', d.totalContacts);
@@ -402,11 +402,15 @@
       <span>Trusted by early users · <strong id="statMessages">...</strong> messages sent · <strong id="statContacts">...</strong> contacts managed</span>
 <script>
 fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
-  const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : n;
+  const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : n;
   const m = document.getElementById('statMessages');
   const c = document.getElementById('statContacts');
   if(m) m.textContent = fmt(d.totalMessages || 0);
   if(c) c.textContent = fmt(d.totalContacts || 0);
+  const bc = document.getElementById('statBigContacts');
+  const bm = document.getElementById('statBigMessages');
+  if(bc) bc.textContent = fmt(d.totalContacts || 0) + '+';
+  if(bm) bm.textContent = fmt(d.totalMessages || 0) + '+';
 }).catch(()=>{});
 </script>
     </div>
@@ -468,11 +472,11 @@ fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
 
 <div style="text-align:center;padding:20px 48px 0;display:flex;justify-content:center;gap:48px;flex-wrap:wrap">
   <div style="text-align:center">
-    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">500+</div>
+    <div id="statBigContacts" style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">500+</div>
     <div style="font-size:13px;color:var(--muted);margin-top:2px">Contacts managed</div>
   </div>
   <div style="text-align:center">
-    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">1,000+</div>
+    <div id="statBigMessages" style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--forest)">1,000+</div>
     <div style="font-size:13px;color:var(--muted);margin-top:2px">Messages generated</div>
   </div>
   <div style="text-align:center">
