@@ -300,7 +300,7 @@ export default async function handler(req, res) {
       supabase.from('usage_logs').select('credits_used').eq('action', 'generate'),
       supabase.from('users').select('id', { count: 'exact', head: true })
     ]);
-    const STATS_BASELINE = { contacts: 3045100, messages: 14598540, users: 2530 };
+    const STATS_BASELINE = { contacts: 32700, messages: 6100, users: 50 };
     const totalContacts = (contactsRes.count || 0) + STATS_BASELINE.contacts;
     const totalMessages = (messagesRes.data || []).reduce((sum, r) => sum + (r.credits_used || 1), 0) + STATS_BASELINE.messages;
     const totalUsers = (usersRes.count || 0) + STATS_BASELINE.users;
