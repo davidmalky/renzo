@@ -221,6 +221,32 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── GENERATE_SIMPLE (API key or JWT, no session required) ──────────────────
+  if (req.body?.action === 'generate_simple') {
+    const identity = await resolveAuth(req);
+    if (!identity) return res.status(401).json({ error: 'Unauthorized' });
+    _userId = identity.userId;
+
+    const { contactName = 'there', context = '' } = req.body;
+    const prompt = `Write a short, warm, professional outreach message to ${contactName}. Keep it under 5 sentences. Sound like a real person, not a sales robot.`
+      + (context ? ` Context: ${context}` : '');
+
+    try {
+      const { response, data } = await callAnthropic({
+        model: 'claude-haiku-4-5',
+        max_tokens: 256,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.error?.message || 'AI error' });
+      }
+      const message = data.content?.[0]?.text || '';
+      return res.status(200).json({ message });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // ── All other AI requests require JWT + credit deduction ──────────────────
   let userId;
   try { ({ userId } = await validateRequest(req)); }

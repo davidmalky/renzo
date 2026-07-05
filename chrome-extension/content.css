@@ -1,0 +1,56 @@
+.renzo-generate-btn {
+  display: inline-block;
+  background: #1F6B47;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  line-height: 1.4;
+  box-shadow: none;
+}
+
+.renzo-generate-btn:hover {
+  background: #185939;
+}
+
+.renzo-generate-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.renzo-tooltip {
+  position: relative;
+  display: inline-block;
+  margin: 4px 0 8px;
+  padding: 6px 10px;
+  background: #1a1a14;
+  color: #ffffff;
+  font-size: 12px;
+  border-radius: 6px;
+  max-width: 260px;
+}
+
+.renzo-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1F6B47;
+  color: #ffffff;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 2147483647;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.renzo-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Renzo — AI Outreach for Salesforce",
+  "version": "1.0.0",
+  "description": "Generate personalized outreach messages with Renzo directly inside Salesforce.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://*.salesforce.com/*",
+    "https://*.force.com/*",
+    "https://meetrenzo.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*.salesforce.com/*", "https://*.force.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon48.png"
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
