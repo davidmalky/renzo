@@ -868,6 +868,16 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
         </div>
 
+        <!-- Google Contacts -->
+        <div class="int-tile" data-int-name="google contacts gmail address book" id="int-tile-google_contacts">
+          <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#4285F4"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="bold" fill="white">G</text></svg></div>
+          <div class="int-name">Google Contacts</div>
+          <div class="int-desc">Import contacts straight from your Google account.</div>
+          <div id="int-action-google_contacts" style="margin-top:auto">
+            <button class="btn btn-primary btn-sm" onclick="connectGoogleContacts()">Connect</button>
+          </div>
+        </div>
+
         <!-- Pipedrive -->
         <div class="int-tile" data-int-name="pipedrive crm sales pipeline persons" id="int-tile-pipedrive">
           <div class="int-icon" style="background:transparent"><svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#003049"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="#00C2E0">PD</text></svg></div>
@@ -2019,7 +2029,7 @@ async function switchProfile(name){
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
-  if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+  if(!_cache.profile.onboarding_completed && !_cache.profile.company) openOnboardModal();
   toast('Switched to '+(PROFILE==='default'?'Default Profile':PROFILE));
 }
 
@@ -2033,7 +2043,7 @@ async function submitNewProfile(){
   await loadProfileData();
   renderProfileSelector();
   showView('dashboard');
-  if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+  if(!_cache.profile.onboarding_completed && !_cache.profile.company) openOnboardModal();
   toast('New profile created. Set up this profile\'s company info in Settings.','info');
 }
 
@@ -2368,7 +2378,7 @@ async function doLogin(){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.onboarding_completed && !_cache.profile.company) openOnboardModal();
     else showView('dashboard');
     setTimeout(tourStart,600);
   }catch(e){
@@ -2542,7 +2552,7 @@ async function doSignup(){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    document.getElementById('onboardModal').classList.remove('hidden');
+    openOnboardModal();
   }catch(e){
     err.textContent='Network error. Please try again.';
     err.classList.remove('hidden');
@@ -2556,6 +2566,13 @@ function showObStep(step){
   document.getElementById('obPage1').classList.toggle('hidden', step!==1);
   document.getElementById('obPage2').classList.toggle('hidden', step!==2);
   document.getElementById('obStep').textContent='Step '+step+' of 2';
+}
+
+function openOnboardModal(){
+  if(currentUser && currentUser.name && currentUser.name.trim()){
+    document.getElementById('obRep').value=currentUser.name.trim();
+  }
+  document.getElementById('onboardModal').classList.remove('hidden');
 }
 
 async function requirePayment(){
@@ -4705,9 +4722,10 @@ function renderConnectionsView(){
     monday:'<div style="width:36px;height:36px;background:#F9F0FF;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><circle cx="8" cy="16" r="6" fill="#FF3D57"/><circle cx="16" cy="16" r="6" fill="#FFCB00"/><circle cx="24" cy="16" r="6" fill="#00CA72"/></svg></div>',
     zoho:'<div style="width:36px;height:36px;background:#FFE8E8;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E82427"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">ZOHO</text></svg></div>',
     pipedrive:'<div style="width:36px;height:36px;background:#E0F7FF;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#003049"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="#00C2E0">PD</text></svg></div>',
-    activecampaign:'<div style="width:36px;height:36px;background:#E8EDFF;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#356AE6"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">AC</text></svg></div>'
+    activecampaign:'<div style="width:36px;height:36px;background:#E8EDFF;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#356AE6"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">AC</text></svg></div>',
+    google_contacts:'<div style="width:36px;height:36px;background:#E8F0FE;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#4285F4"/><text x="16" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="bold" fill="white">G</text></svg></div>'
   };
-  var LABELS={salesforce:'Salesforce',hubspot:'HubSpot',constantcontact:'Constant Contact',monday:'Monday.com',zoho:'Zoho CRM',pipedrive:'Pipedrive',activecampaign:'ActiveCampaign'};
+  var LABELS={salesforce:'Salesforce',hubspot:'HubSpot',constantcontact:'Constant Contact',monday:'Monday.com',zoho:'Zoho CRM',pipedrive:'Pipedrive',activecampaign:'ActiveCampaign',google_contacts:'Google Contacts'};
   row.innerHTML=providers.map(function(p){
     var c=conns[p];
     var dt=c.lastSync?new Date(c.lastSync).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
@@ -4717,7 +4735,7 @@ function renderConnectionsView(){
       +'<div style="font-weight:700;font-size:13px">'+esc(LABELS[p]||p)+'</div>'
       +'<div style="font-size:11px;color:var(--gray);margin-top:2px">Last sync: '+dt+(c.count?' · '+c.count+' contacts':'')+'</div>'
       +'</div>'
-      +(p==='salesforce'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncSalesforceAgain(this)">Sync Now</button>':p==='outlook'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncOutlook(this)">Sync Now</button>':p==='constantcontact'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncConstantContactAgain(this)">Sync Now</button>':p==='monday'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncMondayAgain(this)">Sync Now</button>':p==='zoho'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncZohoAgain(this)">Sync Now</button>':p==='pipedrive'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncPipedriveAgain(this)">Sync Now</button>':p==='activecampaign'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncActiveCampaignAgain(this)">Sync Now</button>':'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>')
+      +(p==='salesforce'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncSalesforceAgain(this)">Sync Now</button>':p==='outlook'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncOutlook(this)">Sync Now</button>':p==='constantcontact'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncConstantContactAgain(this)">Sync Now</button>':p==='monday'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncMondayAgain(this)">Sync Now</button>':p==='zoho'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncZohoAgain(this)">Sync Now</button>':p==='pipedrive'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncPipedriveAgain(this)">Sync Now</button>':p==='activecampaign'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncActiveCampaignAgain(this)">Sync Now</button>':p==='google_contacts'?'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="syncGoogleContactsAgain(this)">Sync Now</button>':'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openCrmConnect(\''+p+'\')">Sync Now</button>')
       +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray);margin-top:6px;cursor:pointer"><input type="checkbox" id="autoSync_'+p+'" '+(localStorage.getItem(profileKey('renzo_auto_sync_'+p))==='true'?'checked':'')+' onchange="toggleAutoSync(\''+p+'\',this.checked)"> Auto-sync daily</label>'
       +'</div>';
   }).join('');
@@ -4741,6 +4759,8 @@ function renderConnectionsView(){
       ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncPipedriveAgain(this)">Sync Again</button>'
       : p==='activecampaign'
       ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncActiveCampaignAgain(this)">Sync Again</button>'
+      : p==='google_contacts'
+      ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="syncGoogleContactsAgain(this)">Sync Again</button>'
       : '<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px" onclick="openCrmConnect(\''+p+'\')">Sync Again</button>';
     var extraPanel='';
     if(p==='outlook'){
@@ -5102,6 +5122,62 @@ async function syncZohoAgain(btn){
       renderConnectionsView();
       if(sd.synced===0){toast('Zoho CRM sync complete — no new contacts','success');}
       else{toast('Synced '+sd.synced+' contacts from Zoho CRM','success');}
+      const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+      _cache.contacts=(await cr.json()).map(normalizeContact);
+      renderContacts();
+    }else{
+      toast('Sync failed: '+(sd.error||'unknown error')+' — click Sync Again to retry','error');
+      if(btn){btn.disabled=false;btn.textContent='Sync Again';}
+    }
+  }catch(e){
+    toast('Sync error: '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='Sync Again';}
+  }
+}
+
+// GOOGLE CONTACTS OAUTH
+async function connectGoogleContacts(){
+  const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('renzo_user_id');
+  if(!uid){toast('Please log in first','error');return;}
+  const popup=window.open('/api/contacts?action=google_contacts_oauth_start&userId='+uid,'google_contacts_oauth','width=600,height=700');
+  const poll=setInterval(async()=>{
+    try{if(!popup||popup.closed){clearInterval(poll);return;}
+    const url=popup.location.href;
+    if(url.includes('google_contacts_connected=1')){
+      clearInterval(poll);popup.close();
+      var connKey=profileKey('renzo_crm_connections');
+      var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+      conns['google_contacts']={lastSync:new Date().toISOString(),count:0};
+      localStorage.setItem(connKey,JSON.stringify(conns));
+      renderConnectionsView();
+      toast('Google Contacts connected! Syncing contacts…','success');
+      const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'google_contacts_sync'})});
+      const sd=await sr.json();
+      if(sd.success){
+        conns['google_contacts']={lastSync:new Date().toISOString(),count:sd.synced};
+        localStorage.setItem(connKey,JSON.stringify(conns));
+        const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
+        _cache.contacts=(await cr.json()).map(normalizeContact);
+        renderContacts();renderConnectionsView();
+      }else{toast('Connected but sync failed: '+(sd.error||'unknown error'),'error');}
+    }else if(url.includes('google_contacts_error=1')){clearInterval(poll);popup.close();toast('Google Contacts connection failed','error');}
+    }catch(ex){}
+  },1000);
+}
+
+async function syncGoogleContactsAgain(btn){
+  if(btn){btn.disabled=true;btn.textContent='Syncing...';}
+  try{
+    const sr=await fetch('/api/contacts',{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({action:'google_contacts_sync'})});
+    const sd=await sr.json();
+    if(sd.success){
+      var connKey=profileKey('renzo_crm_connections');
+      var conns={};try{conns=JSON.parse(localStorage.getItem(connKey)||'{}');}catch(ex){}
+      conns['google_contacts']={lastSync:new Date().toISOString(),count:sd.synced};
+      localStorage.setItem(connKey,JSON.stringify(conns));
+      renderConnectionsView();
+      if(sd.synced===0){toast('Google Contacts sync complete — no new contacts','success');}
+      else{toast('Synced '+sd.synced+' contacts from Google Contacts','success');}
       const cr=await fetch('/api/contacts',{headers:getAuthHeaders()});
       _cache.contacts=(await cr.json()).map(normalizeContact);
       renderContacts();
@@ -6137,7 +6213,7 @@ document.addEventListener('keydown',function(e){
     renderProfileSelector();
     renderSidebarAvatar();
     updateCreditDisplay();
-    if(!_cache.profile.onboarding_completed && !_cache.profile.company) document.getElementById('onboardModal').classList.remove('hidden');
+    if(!_cache.profile.onboarding_completed && !_cache.profile.company) openOnboardModal();
     else showView('dashboard');
     setTimeout(tourStart,600);
     // Auto-sync check

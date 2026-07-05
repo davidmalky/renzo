@@ -240,6 +240,36 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── GOOGLE CONTACTS OAUTH (public — no JWT needed) ───────────────────────
+  if (req.method === 'GET' && req.query.action === 'google_contacts_oauth_start') {
+    const clientId = process.env.GOOGLE_CONTACTS_CLIENT_ID;
+    const redirectUri = 'https://www.meetrenzo.com/api/google_contacts_callback';
+    const state = req.query.userId || '';
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('https://www.googleapis.com/auth/contacts.readonly')}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
+    return res.redirect(authUrl);
+  }
+  if (req.method === 'GET' && req.url && req.url.includes('/api/google_contacts_callback')) {
+    const { code, state: userId, error: googleError } = req.query;
+    if (googleError) return res.redirect('https://www.meetrenzo.com/app?google_contacts_error=1&msg=' + encodeURIComponent(googleError));
+    if (!code || !userId) return res.redirect('https://www.meetrenzo.com/app?google_contacts_error=1&msg=missing_params');
+    try {
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: process.env.GOOGLE_CONTACTS_CLIENT_ID, client_secret: process.env.GOOGLE_CONTACTS_CLIENT_SECRET, redirect_uri: 'https://www.meetrenzo.com/api/google_contacts_callback' })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token) return res.redirect('https://www.meetrenzo.com/app?google_contacts_error=1&msg=' + encodeURIComponent(tokens.error_description || tokens.error || 'token_failed'));
+      const record = { access_token: tokens.access_token, refresh_token: tokens.refresh_token || null, connected: true, connected_at: new Date().toISOString() };
+      const { data: existing } = await supabase.from('integrations').select('id').eq('user_id', userId).eq('provider', 'google_contacts').maybeSingle();
+      if (existing) { await supabase.from('integrations').update(record).eq('id', existing.id); }
+      else { await supabase.from('integrations').insert({ user_id: userId, provider: 'google_contacts', ...record }); }
+      return res.redirect('https://www.meetrenzo.com/app?google_contacts_connected=1');
+    } catch (e) {
+      return res.redirect('https://www.meetrenzo.com/app?google_contacts_error=1&msg=' + encodeURIComponent(e.message));
+    }
+  }
+
   // ── All other routes require JWT ──────────────────────────────────────────
   let userId, profileName;
   try { ({ userId, profileName } = await validateRequest(req)); }
@@ -983,6 +1013,65 @@ export default async function handler(req, res) {
       } catch (e) { errors.push({ id: c.id, error: e.message }); }
     }
     await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'activecampaign');
+    return res.status(200).json({ success: true, synced, errors });
+  }
+
+  // ── GOOGLE CONTACTS SYNC ──────────────────────────────────────────────────
+  if (req.method === 'POST' && req.body?.action === 'google_contacts_sync') {
+    const { data: intData } = await supabase.from('integrations').select('*').eq('user_id', userId).eq('provider', 'google_contacts').maybeSingle();
+    if (!intData?.access_token) return res.status(400).json({ error: 'Google Contacts not connected' });
+
+    let accessToken = intData.access_token;
+    const refreshToken = intData.refresh_token;
+
+    const doGoogleTokenRefresh = async () => {
+      if (!refreshToken) return false;
+      try {
+        const tr = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: process.env.GOOGLE_CONTACTS_CLIENT_ID, client_secret: process.env.GOOGLE_CONTACTS_CLIENT_SECRET })
+        });
+        const td = await tr.json();
+        if (!td.access_token) return false;
+        accessToken = td.access_token;
+        await supabase.from('integrations').update({ access_token: td.access_token }).eq('user_id', userId).eq('provider', 'google_contacts');
+        return true;
+      } catch { return false; }
+    };
+
+    const peopleUrl = 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers,organizations&pageSize=1000';
+    let gRes = await fetch(peopleUrl, { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (gRes.status === 401) {
+      if (!await doGoogleTokenRefresh()) {
+        await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'google_contacts');
+        return res.status(401).json({ error: 'Google Contacts session expired. Please reconnect.' });
+      }
+      gRes = await fetch(peopleUrl, { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (gRes.status === 401) {
+        await supabase.from('integrations').update({ connected: false }).eq('user_id', userId).eq('provider', 'google_contacts');
+        return res.status(401).json({ error: 'Google Contacts session expired. Please reconnect.' });
+      }
+    }
+    if (!gRes.ok) return res.status(502).json({ error: 'Google Contacts API request failed' });
+    const gData = await gRes.json();
+    const people = gData?.connections || [];
+    let synced = 0; const errors = [];
+    for (const p of people) {
+      const name = p.names?.[0]?.displayName || 'Unknown';
+      const email = p.emailAddresses?.[0]?.value || null;
+      const phone = p.phoneNumbers?.[0]?.value || null;
+      const company = p.organizations?.[0]?.name || 'Unknown';
+      const sourceRecordId = 'google:' + p.resourceName;
+      const mapped = { user_id: userId, profile_name: profileName, source_system: 'GoogleContacts', source_record_id: sourceRecordId, name, company, email, phone, relationship_status: 'Active', entity_type: 'vendor', tags: [] };
+      try {
+        const { data: existing } = await supabase.from('contacts').select('id').eq('user_id', userId).eq('source_system', 'GoogleContacts').eq('source_record_id', sourceRecordId).maybeSingle();
+        if (existing) { await supabase.from('contacts').update(mapped).eq('id', existing.id); }
+        else { await supabase.from('contacts').insert(mapped); }
+        synced++;
+      } catch (e) { errors.push({ id: sourceRecordId, error: e.message }); }
+    }
+    await supabase.from('integrations').update({ last_sync: new Date().toISOString() }).eq('user_id', userId).eq('provider', 'google_contacts');
     return res.status(200).json({ success: true, synced, errors });
   }
 
