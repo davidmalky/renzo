@@ -484,20 +484,16 @@ tbody tr.clickable:hover td{background:#FAF7F2}
       <p style="color:var(--gray);margin-bottom:20px;font-size:14px;line-height:1.6">Paste your company website and Renzo will read it to understand your business — no manual typing needed.</p>
       <div class="field">
         <label>Company Website</label>
-        <div style="display:flex;gap:8px">
-          <input type="url" id="obUrl" placeholder="https://yourcompany.com" style="flex:1;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none;transition:border .15s" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--gray-light)'">
-          <button class="btn btn-primary btn-sm" id="obReadSite">Read Site</button>
-        </div>
+        <input type="url" id="obUrl" placeholder="https://yourcompany.com" style="width:100%;padding:11px 13px;border:1.5px solid var(--gray-light);border-radius:var(--radius-sm);outline:none;transition:border .15s" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--gray-light)'">
         <div style="font-size:12px;color:var(--gray);margin-top:6px">Renzo will visit your site and extract your company context automatically.</div>
       </div>
-      <div id="obSiteResult" class="hidden" style="background:var(--green-pale);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#065F46;line-height:1.5"></div>
       <div id="obSiteLoading" class="hidden" style="text-align:center;padding:20px;color:var(--gray)">
         <div class="spinner" style="width:24px;height:24px;margin:0 auto 8px"></div>
         <div style="font-size:13px">Reading your website...</div>
       </div>
       <div style="display:flex;gap:10px;justify-content:space-between;margin-top:16px">
         <button class="btn btn-ghost" id="obSkipSite">Skip — I'll enter manually</button>
-        <button class="btn btn-primary" id="obNextStep" disabled>Continue</button>
+        <button class="btn btn-primary" id="obReadSite" disabled style="opacity:0.5;cursor:not-allowed">Read My Site</button>
       </div>
     </div>
 
@@ -2572,21 +2568,21 @@ async function requirePayment(){
 }
 
 async function readWebsite(){
-  const paid=await requirePayment();
-  if(!paid){
-    document.getElementById('obSiteResult').classList.remove('hidden');
-    document.getElementById('obSiteResult').innerHTML='<span style="color:var(--amber)">Complete your profile setup to enable AI auto-fill — or click <strong>Skip</strong> and enter your details manually.</span>';
-    document.getElementById('obNextStep').disabled=false;
-    return;
-  }
   let url=document.getElementById('obUrl').value.trim();
   if(!url){toast('Enter a website URL first','error');return;}
   if(!url.startsWith('http://') && !url.startsWith('https://')){
     url='https://'+url;
   }
   document.getElementById('obUrl').value=url;
+
+  const paid=await requirePayment();
+  if(!paid){
+    toast('Complete your profile setup to enable AI auto-fill — enter your details manually','');
+    showObStep(2);
+    return;
+  }
+
   document.getElementById('obSiteLoading').classList.remove('hidden');
-  document.getElementById('obSiteResult').classList.add('hidden');
   document.getElementById('obReadSite').disabled=true;
 
   try{
@@ -2608,19 +2604,14 @@ async function readWebsite(){
     document.getElementById('obSell').value=profile.sell||'';
     document.getElementById('obCust').value=profile.customer||'';
     document.getElementById('obTone').value=profile.tone||'Professional';
-    document.getElementById('obSiteResult').classList.remove('hidden');
-    document.getElementById('obSiteResult').innerHTML='<strong>Profile pre-filled from domain:</strong> '+esc(profile.company)+' &mdash; '+esc((profile.sell||'').slice(0,120))+'<br><span style="font-size:12px;color:#065F46;margin-top:4px;display:block">Review the fields below and adjust anything that looks off before continuing.</span>';
-    document.getElementById('obNextStep').disabled=false;
     document.getElementById('obPage2Note').textContent='Pre-filled based on your domain. Review and adjust below.';
     toast('Profile pre-filled — review before continuing','success');
   }catch(e){
-    document.getElementById('obSiteResult').classList.remove('hidden');
-    document.getElementById('obSiteResult').innerHTML='<span style="color:var(--red)">Auto-fill failed: '+esc(e.message)+'. Click <strong>Continue</strong> to enter your details manually.</span>';
-    document.getElementById('obNextStep').disabled=false;
-    toast('Auto-fill failed: '+e.message,'error');
+    toast('Auto-fill failed: '+e.message+' — enter your details manually','error');
   }
   document.getElementById('obSiteLoading').classList.add('hidden');
   document.getElementById('obReadSite').disabled=false;
+  showObStep(2);
 }
 
 async function saveOnboarding(){
@@ -5972,10 +5963,15 @@ document.getElementById('profileSel').addEventListener('change',function(){switc
 document.getElementById('obSave').addEventListener('click',saveOnboarding);
 document.getElementById('obReadSite').addEventListener('click',readWebsite);
 document.getElementById('obUrl').addEventListener('keydown',function(e){if(e.key==='Enter')readWebsite();});
-document.getElementById('obNextStep').addEventListener('click',function(){showObStep(2);});
+document.getElementById('obUrl').addEventListener('input',function(){
+  const btn=document.getElementById('obReadSite');
+  const hasUrl=this.value.trim().length>0;
+  btn.disabled=!hasUrl;
+  btn.style.opacity=hasUrl?'1':'0.5';
+  btn.style.cursor=hasUrl?'pointer':'not-allowed';
+});
 document.getElementById('obBack').addEventListener('click',function(){showObStep(1);});
 document.getElementById('obSkipSite').addEventListener('click',function(){
-  document.getElementById('obNextStep').disabled=false;
   showObStep(2);
 });
 // Prevent modal from closing on overlay click during onboarding
