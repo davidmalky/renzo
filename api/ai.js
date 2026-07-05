@@ -120,7 +120,7 @@ function buildGeneratePrompt(record, context) {
   const contextNotes = (record.context_notes || '').trimStart();
 
   if (contextNotes.startsWith('INTRODUCTION:')) {
-    return `You are writing a vendor-to-vendor introduction email on behalf of ${record.contact_name ? 'the sender' : 'David Genuth at Prime Source Expense Experts'}.
+    return `You are writing a vendor-to-vendor introduction email on behalf of ${record.contact_name ? 'the sender' : 'Alex Morgan at Meridian Group'}.
 
 This is NOT a follow-up or check-in. This is a warm introduction connecting two vendors.
 
@@ -130,7 +130,7 @@ Rules:
 - Keep it to 3-4 sentences maximum
 - Tone: warm, collegial, helpful — not transactional
 - Structure: (1) introduce the other party and their category, (2) explain why you see a natural fit, (3) soft ask to connect
-- Sign off as: David Genuth, Prime Source Expense Experts
+- Sign off as: Alex Morgan, Meridian Group
 - Return ONLY the email body, no subject line, no preamble
 
 Context: ${record.context_notes}

@@ -980,14 +980,14 @@ tbody tr.clickable:hover td{background:#FAF7F2}
           </div>
           <div class="field" style="margin-bottom:0">
             <label>Display Name (optional)</label>
-            <input type="text" id="newEmailDisplayName" placeholder="e.g. David Genuth">
+            <input type="text" id="newEmailDisplayName" placeholder="e.g. Alex Morgan">
           </div>
           <button class="btn btn-ghost btn-sm" id="addEmailBtn" style="align-self:flex-end">+ Add</button>
         </div>
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">Email Signature</div>
         <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Appended automatically to every generated message.</p>
-        <textarea id="emailSigArea" rows="3" placeholder="e.g. Best,&#10;David Genuth&#10;Prime Source | 555-1234" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit"></textarea>
+        <textarea id="emailSigArea" rows="3" placeholder="e.g. Best,&#10;Alex Morgan&#10;Meridian Group | 555-1234" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none;font-family:inherit"></textarea>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="saveEmailSig()">Save Signature</button>
         <hr style="border:none;border-top:1px solid var(--gray-light);margin:24px 0">
         <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px">My Outreach Rules</div>
@@ -3522,7 +3522,7 @@ async function generateMsg(c, customInstruction){
   const invoiceLine=c.invoiceAmount>0?'\n- Outstanding invoice: $'+Number(c.invoiceAmount).toLocaleString():'';
 
   const aiTone=window._aiTone||(p.tone||'Professional');
-  const prompt='You are '+( p.repName||'David')+' at '+(p.company||'Prime Source')+'. Write an outreach email in your own voice.\n\n'
+  const prompt='You are '+( p.repName||'Alex Morgan')+' at '+(p.company||'Meridian Group')+'. Write an outreach email in your own voice.\n\n'
     +relationshipCtx+'\n\n'
     +'YOUR ROLE: '+(p.role||'Vendor relationship manager')+'\n'
     +'TONE: '+aiTone+'\n\n'
@@ -4429,7 +4429,7 @@ async function runBatch(){
         const hasRel=!!(c.history||c.notes||c.lastContact||c.annualSpend);
         const relCtx=hasRel?'We have an existing relationship. Do not introduce yourself.':'Initial outreach.';
         const spendLine=c.annualSpend>0?'\nContract value: $'+Number(c.annualSpend).toLocaleString():'';
-        const batchPromptMsg='You are '+(p.repName||'David')+' at '+(p.company||'Prime Source')+'.'
+        const batchPromptMsg='You are '+(p.repName||'Alex Morgan')+' at '+(p.company||'Meridian Group')+'.'
           +'\n'+relCtx
           +'\nTone: '+(p.tone||'Professional')
           +'\nContact: '+c.name+', '+c.company+(c.title?', '+c.title:'')
@@ -5636,7 +5636,7 @@ function renderEmailAccounts(){
         +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Email address</label><input id="editAddr-'+i+'" type="email" value="'+esc(e.addr)+'" placeholder="you@example.com" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Label / nickname</label><input id="editLabel-'+i+'" type="text" value="'+esc(e.label||'')+'" placeholder="e.g. Work" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
-        +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Display Name</label><input id="editDisplayName-'+i+'" type="text" value="'+esc(e.display_name||'')+'" placeholder="e.g. David Genuth" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
+        +'<div><label style="display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Display Name</label><input id="editDisplayName-'+i+'" type="text" value="'+esc(e.display_name||'')+'" placeholder="e.g. Alex Morgan" style="width:100%;padding:7px 10px;border:1px solid var(--gray-light);border-radius:6px;font-size:13px;box-sizing:border-box"></div>'
         +'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button class="btn btn-primary btn-sm" style="padding:5px 12px;font-size:12px" onclick="saveEmailEdit('+i+')">Save</button>'
