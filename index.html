@@ -4285,6 +4285,32 @@ const BATCH_BUILTIN_TEMPLATES=[
 function getBatchTemplates(){
   try{return JSON.parse(localStorage.getItem(profileKey('batch_templates'))||'[]');}catch{return [];}
 }
+let _editingBatchPromptIdx=null;
+function updateSaveBatchPromptBtnLabel(){
+  const btn=document.getElementById('saveBatchPromptBtn');
+  if(btn) btn.textContent=_editingBatchPromptIdx!==null?'Update prompt':'+ Save this prompt';
+}
+function fillBatchPrompt(i){
+  const all=[...BATCH_BUILTIN_TEMPLATES,...getBatchTemplates()];
+  if(all[i]===undefined) return;
+  document.getElementById('batchPrompt').value=all[i];
+  _editingBatchPromptIdx=null;
+  updateSaveBatchPromptBtnLabel();
+}
+function editBatchPrompt(customIdx){
+  const custom=getBatchTemplates();
+  if(custom[customIdx]===undefined) return;
+  document.getElementById('batchPrompt').value=custom[customIdx];
+  _editingBatchPromptIdx=customIdx;
+  updateSaveBatchPromptBtnLabel();
+}
+function deleteBatchPrompt(customIdx){
+  const custom=getBatchTemplates();
+  custom.splice(customIdx,1);
+  localStorage.setItem(profileKey('batch_templates'),JSON.stringify(custom));
+  if(_editingBatchPromptIdx===customIdx){_editingBatchPromptIdx=null;updateSaveBatchPromptBtnLabel();}
+  renderBatchTemplates();
+}
 function renderBatchTemplates(){
   const el=document.getElementById('batchTemplateList');
   if(!el) return;
@@ -4292,9 +4318,11 @@ function renderBatchTemplates(){
   const all=[...BATCH_BUILTIN_TEMPLATES,...custom];
   el.innerHTML=all.map((t,i)=>{
     const isCustom=i>=BATCH_BUILTIN_TEMPLATES.length;
-    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(t)+'">'
-      +'<span onclick="document.getElementById(\'batchPrompt\').value='+JSON.stringify(t)+'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t)+'</span>'
-      +(isCustom?'<span style="color:var(--gray);font-size:10px;cursor:pointer;flex-shrink:0" onclick="removeCustomBatchTemplate('+JSON.stringify(t)+')">✕</span>':'')
+    const customIdx=i-BATCH_BUILTIN_TEMPLATES.length;
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gray-pale);border:1px solid var(--gray-light);border-radius:20px;padding:4px 10px;font-size:12px;max-width:280px" title="'+esc(t)+'">'
+      +'<span onclick="fillBatchPrompt('+i+')" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;max-width:200px">'+esc(t)+'</span>'
+      +(isCustom?'<span onclick="editBatchPrompt('+customIdx+')" title="Edit prompt" style="color:var(--gray);font-size:11px;cursor:pointer;flex-shrink:0">✎</span>':'')
+      +(isCustom?'<span onclick="deleteBatchPrompt('+customIdx+')" title="Delete prompt" style="color:var(--red);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕</span>':'')
       +'</span>';
   }).join('');
 }
@@ -4302,15 +4330,20 @@ function saveBatchPrompt(){
   const val=(document.getElementById('batchPrompt')?.value||'').trim();
   if(!val){toast('Enter a prompt first','error');return;}
   const existing=getBatchTemplates();
+  if(_editingBatchPromptIdx!==null){
+    if(BATCH_BUILTIN_TEMPLATES.includes(val)||existing.some((x,i)=>x===val&&i!==_editingBatchPromptIdx)){toast('Already saved','error');return;}
+    existing[_editingBatchPromptIdx]=val;
+    localStorage.setItem(profileKey('batch_templates'),JSON.stringify(existing));
+    _editingBatchPromptIdx=null;
+    updateSaveBatchPromptBtnLabel();
+    renderBatchTemplates();
+    toast('Prompt updated','success');
+    return;
+  }
   if(BATCH_BUILTIN_TEMPLATES.includes(val)||existing.includes(val)){toast('Already saved','error');return;}
   localStorage.setItem(profileKey('batch_templates'),JSON.stringify([...existing,val]));
   renderBatchTemplates();
   toast('Prompt saved','success');
-}
-function removeCustomBatchTemplate(t){
-  const filtered=getBatchTemplates().filter(x=>x!==t);
-  localStorage.setItem(profileKey('batch_templates'),JSON.stringify(filtered));
-  renderBatchTemplates();
 }
 async function runBatch(){
   const query=document.getElementById('batchPrompt').value.trim();
