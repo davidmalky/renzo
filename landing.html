@@ -366,53 +366,13 @@
       <a href="#how" class="btn-secondary">See how it works</a>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-top:10px">✓ 10 free messages included &nbsp;·&nbsp; No credit card required</p>
-    <div id="liveStats" style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap">
-      <div style="text-align:center">
-        <div id="heroStatMessages" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
-        <div style="font-size:12px;color:var(--muted)">messages sent</div>
-      </div>
-      <div style="text-align:center">
-        <div id="heroStatContacts" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
-        <div style="font-size:12px;color:var(--muted)">contacts managed</div>
-      </div>
-      <div style="text-align:center">
-        <div id="heroStatUsers" style="font-size:24px;font-weight:700;color:var(--green)">...</div>
-        <div style="font-size:12px;color:var(--muted)">users signed up</div>
-      </div>
-    </div>
-    <script>
-    fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
-      const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
-      const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=fmt(val||0); };
-      set('heroStatMessages', d.totalMessages);
-      set('heroStatContacts', d.totalContacts);
-      set('heroStatUsers', d.totalUsers);
-      set('statMessages', d.totalMessages);
-      set('statContacts', d.totalContacts);
-      const ls = document.getElementById('liveStats');
-      if(ls && !d.totalMessages && !d.totalContacts) ls.style.display='none';
-    }).catch(()=>{ const ls=document.getElementById('liveStats'); if(ls) ls.style.display='none'; });
-    </script>
-    <div style="font-size:12px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:8px;justify-content:center">
+    <div style="font-size:12px;color:var(--muted);margin-top:20px;display:flex;align-items:center;gap:8px;justify-content:center">
       <span style="display:flex">
         <span style="width:24px;height:24px;background:#1F6B47;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
         <span style="width:24px;height:24px;background:#2d6a4f;border-radius:50%;border:2px solid white;margin-right:-6px;display:inline-block"></span>
         <span style="width:24px;height:24px;background:#40916c;border-radius:50%;border:2px solid white;display:inline-block"></span>
       </span>
-      <span>Trusted by early users · <strong id="statMessages">...</strong> messages sent · <strong id="statContacts">...</strong> contacts managed</span>
-<script>
-fetch('/api/billing?action=public_stats').then(r=>r.json()).then(d=>{
-  const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : n;
-  const m = document.getElementById('statMessages');
-  const c = document.getElementById('statContacts');
-  if(m) m.textContent = fmt(d.totalMessages || 0);
-  if(c) c.textContent = fmt(d.totalContacts || 0);
-  const bc = document.getElementById('statBigContacts');
-  const bm = document.getElementById('statBigMessages');
-  if(bc) bc.textContent = fmt(d.totalContacts || 0) + '+';
-  if(bm) bm.textContent = fmt(d.totalMessages || 0) + '+';
-}).catch(()=>{});
-</script>
+      <span>Join early users already managing their relationships with Renzo</span>
     </div>
     <div class="hero-badges">
       <span class="hero-badge">🎉 Start with 10 free messages</span>
@@ -659,6 +619,65 @@ document.getElementById('emailCaptureInput').addEventListener('keydown',function
           </svg>
         </div>
         <span class="int-label">Outlook</span>
+      </div>
+      <!-- Google Contacts -->
+      <div class="int-badge">
+        <div class="int-card">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="44" height="44" rx="8" fill="white"/>
+            <path d="M22 20.5c0-3.04 2.46-5.5 5.5-5.5S33 17.46 33 20.5 30.54 26 27.5 26 22 23.54 22 20.5z" fill="#4285F4"/>
+            <path d="M11 31c0-3.31 2.69-6 6-6h10c3.31 0 6 2.69 6 6v1H11v-1z" fill="#34A853"/>
+            <circle cx="17" cy="19" r="4" fill="#FBBC04"/>
+          </svg>
+        </div>
+        <span class="int-label">Google Contacts</span>
+      </div>
+      <!-- Zoho -->
+      <div class="int-badge">
+        <div class="int-card">
+          <img src="https://logo.clearbit.com/zoho.com" width="44" height="44" alt="Zoho CRM" style="border-radius:8px;object-fit:contain" onerror="this.src='https://cdn.brandfetch.io/idFdCJq-rQ/w/400/h/400/theme/dark/logo.png?c=1dxbfHSJFAPEFkd7tv'">
+        </div>
+        <span class="int-label">Zoho CRM</span>
+      </div>
+      <!-- Pipedrive -->
+      <div class="int-badge">
+        <div class="int-card">
+          <img src="https://logo.clearbit.com/pipedrive.com" width="44" height="44" alt="Pipedrive" style="border-radius:8px;object-fit:contain">
+        </div>
+        <span class="int-label">Pipedrive</span>
+      </div>
+      <!-- ActiveCampaign -->
+      <div class="int-badge">
+        <div class="int-card">
+          <img src="https://logo.clearbit.com/activecampaign.com" width="44" height="44" alt="ActiveCampaign" style="border-radius:8px;object-fit:contain">
+        </div>
+        <span class="int-label">ActiveCampaign</span>
+      </div>
+      <!-- Constant Contact -->
+      <div class="int-badge">
+        <div class="int-card">
+          <img src="https://logo.clearbit.com/constantcontact.com" width="44" height="44" alt="Constant Contact" style="border-radius:8px;object-fit:contain">
+        </div>
+        <span class="int-label">Constant Contact</span>
+      </div>
+      <!-- Monday.com -->
+      <div class="int-badge">
+        <div class="int-card">
+          <img src="https://logo.clearbit.com/monday.com" width="44" height="44" alt="Monday.com" style="border-radius:8px;object-fit:contain">
+        </div>
+        <span class="int-label">Monday.com</span>
+      </div>
+      <!-- LinkedIn -->
+      <div class="int-badge">
+        <div class="int-card">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="44" height="44" rx="8" fill="#0A66C2"/>
+            <rect x="10" y="18" width="6" height="16" rx="1" fill="white"/>
+            <circle cx="13" cy="13" r="3" fill="white"/>
+            <path d="M20 18h5v2.5c.8-1.5 2.5-3 5-3 4 0 6 2.5 6 7V34h-6V25.5c0-2-.8-3-2.5-3S25 23.5 25 25.5V34h-5V18z" fill="white"/>
+          </svg>
+        </div>
+        <span class="int-label">LinkedIn</span>
       </div>
     </div>
     <p class="integrations-api"><strong>Connect via API —</strong> any system that exposes an endpoint works with Renzo. Your API key is in Settings. See the integrations guide for setup instructions.</p>
