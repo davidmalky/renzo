@@ -9,7 +9,7 @@
     "https://*.force.com/*",
     "https://mail.google.com/*",
     "https://www.linkedin.com/*",
-    "https://meetrenzo.com/*"
+    "https://*.meetrenzo.com/*"
   ],
   "content_scripts": [
     {

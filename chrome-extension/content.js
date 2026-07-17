@@ -1,7 +1,12 @@
 // Renzo — injects an AI message generation button into the compose/message
 // areas of Gmail, LinkedIn messaging, and Salesforce.
 
-const RENZO_API_URL = 'https://meetrenzo.com/api/ai';
+// Must be the exact final destination, not a domain that redirects — a
+// redirect on this URL (meetrenzo.com -> www.meetrenzo.com) fails the CORS
+// preflight outright, since browsers refuse to follow redirects for
+// preflight OPTIONS requests. That silently killed every request from
+// third-party pages like linkedin.com and mail.google.com.
+const RENZO_API_URL = 'https://www.meetrenzo.com/api/ai';
 const injectedBodies = new WeakSet();
 const buttonBodyMap = new WeakMap();
 
@@ -19,8 +24,8 @@ const COMPOSE_RULES = [
   // so the button lands immediately before the body. An earlier version
   // anchored on .compose-recipients-area, which put the button above the
   // sender name and confidentiality notice instead of the actual compose box.
-  { mode: 'direct', selector: 'div[aria-label="Message Body"][contenteditable="true"]' },
-  { mode: 'direct', selector: 'div.Am.Al.editable[contenteditable="true"]' },
+  { mode: 'direct', selector: 'div[aria-label="Message Body"][contenteditable="true"]', platform: 'gmail' },
+  { mode: 'direct', selector: 'div.Am.Al.editable[contenteditable="true"]', platform: 'gmail' },
   // LinkedIn messaging — several fallback selectors since LinkedIn's
   // messaging UI loads asynchronously and its markup varies.
   { mode: 'direct', selector: 'div[aria-label="Write a message..."]' },
@@ -183,6 +188,13 @@ function injectButton(matchedEl, rule) {
   btn.type = 'button';
   btn.className = 'renzo-generate-btn';
   btn.textContent = '✉ Generate with Renzo';
+  if (rule.platform === 'gmail') {
+    // Gmail's own layout can render an inline-block button overlapping the
+    // message text below it. Force block-level stacking so the button
+    // always sits on its own line, as a proper sibling above the body.
+    btn.style.display = 'block';
+    btn.style.marginBottom = '8px';
+  }
   buttonBodyMap.set(btn, bodyEl);
 
   parent.insertBefore(btn, insertBeforeNode);
