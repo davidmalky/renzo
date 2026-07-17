@@ -1,17 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Renzo — AI Outreach for Salesforce",
-  "version": "1.0.0",
-  "description": "Generate personalized outreach messages with Renzo directly inside Salesforce.",
+  "name": "Renzo — AI Outreach Assistant",
+  "version": "1.0.1",
+  "description": "Generate personalized outreach messages with Renzo directly inside Gmail, LinkedIn, and Salesforce.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://*.salesforce.com/*",
     "https://*.force.com/*",
+    "https://mail.google.com/*",
+    "https://www.linkedin.com/*",
     "https://meetrenzo.com/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://*.salesforce.com/*", "https://*.force.com/*"],
+      "matches": ["https://*.salesforce.com/*", "https://*.force.com/*", "https://mail.google.com/*", "https://www.linkedin.com/*"],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"

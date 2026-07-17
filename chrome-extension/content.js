@@ -1,8 +1,30 @@
-// Renzo for Salesforce — injects an AI message generation button into the
-// Salesforce email composer.
+// Renzo — injects an AI message generation button into the compose/message
+// areas of Gmail, LinkedIn messaging, and Salesforce.
 
 const RENZO_API_URL = 'https://meetrenzo.com/api/ai';
-const injectedTargets = new WeakSet();
+const injectedBodies = new WeakSet();
+
+// Each rule matches a compose area on one of the three platforms.
+// mode: 'direct' — `selector` matches the editable body itself (Gmail/LinkedIn).
+//   The button is inserted as a sibling BEFORE `anchor` (a closest-ancestor
+//   selector) if given, else BEFORE the editable element itself. It must
+//   never be inserted inside the editable element, or it becomes part of
+//   the actual message content.
+// mode: 'wrapper' — `selector` matches a non-editable wrapper that CONTAINS
+//   the editable body as a descendant (Salesforce). The button is prepended
+//   as the wrapper's first child.
+const COMPOSE_RULES = [
+  // Gmail
+  { mode: 'direct', selector: 'div[aria-label="Message Body"]', anchor: '.compose-recipients-area' },
+  { mode: 'direct', selector: 'div.Am.Al.editable', anchor: '.compose-recipients-area' },
+  // LinkedIn messaging
+  { mode: 'direct', selector: 'div[aria-label="Write a message..."]' },
+  { mode: 'direct', selector: 'div.msg-form__contenteditable' },
+  // Salesforce email compose
+  { mode: 'wrapper', selector: 'div[class*="emailBody"]' },
+  { mode: 'wrapper', selector: 'div[class*="composeArea"]' },
+  { mode: 'wrapper', selector: 'div[class*="email"]' }
+];
 
 function getApiKey() {
   return new Promise((resolve) => {
@@ -75,15 +97,12 @@ function setComposeValue(bodyEl, text) {
   }
 }
 
-async function handleGenerateClick(btn, container) {
+async function handleGenerateClick(btn, bodyEl) {
   const apiKey = await getApiKey();
   if (!apiKey) {
     showTooltip(btn, 'Add your Renzo API key in the extension settings');
     return;
   }
-
-  const bodyEl = findComposeBody(container);
-  if (!bodyEl) return;
 
   const originalLabel = btn.textContent;
   btn.disabled = true;
@@ -101,7 +120,7 @@ async function handleGenerateClick(btn, container) {
       body: JSON.stringify({
         action: 'generate_simple',
         contactName,
-        context: 'Salesforce email compose'
+        context: 'Email compose'
       })
     });
     const data = await res.json();
@@ -119,44 +138,64 @@ async function handleGenerateClick(btn, container) {
   }
 }
 
-function injectButton(container) {
-  if (injectedTargets.has(container)) return;
-  if (!findComposeBody(container)) return;
+function injectButton(matchedEl, rule) {
+  let bodyEl, parent, insertBeforeNode;
 
-  injectedTargets.add(container);
+  if (rule.mode === 'direct') {
+    bodyEl = matchedEl;
+    const ancestor = rule.anchor ? matchedEl.closest(rule.anchor) : null;
+    insertBeforeNode = ancestor || matchedEl;
+    parent = insertBeforeNode.parentElement;
+  } else {
+    bodyEl = findComposeBody(matchedEl);
+    if (!bodyEl) return;
+    parent = matchedEl;
+    insertBeforeNode = matchedEl.firstChild;
+  }
+
+  if (!parent || injectedBodies.has(bodyEl)) return;
 
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'renzo-generate-btn';
   btn.textContent = '✉ Generate with Renzo';
-  btn.addEventListener('click', () => handleGenerateClick(btn, container));
+  btn.addEventListener('click', () => handleGenerateClick(btn, bodyEl));
 
-  container.prepend(btn);
+  parent.insertBefore(btn, insertBeforeNode);
+  injectedBodies.add(bodyEl);
+  console.log('[Renzo] Generate button injected for compose area matching "' + rule.selector + '"', bodyEl);
 }
 
-function scanForComposeWindows(root) {
-  const candidates = root.querySelectorAll(
-    '[class*="email"], [class*="compose"], [class*="emailBody"]'
-  );
-  candidates.forEach((el) => {
-    if (findComposeBody(el)) injectButton(el);
-  });
+function scanForComposeAreas(root) {
+  if (!root.querySelectorAll) return;
+  for (const rule of COMPOSE_RULES) {
+    root.querySelectorAll(rule.selector).forEach((el) => injectButton(el, rule));
+  }
+  // A newly-added node can itself be the compose element, not just an
+  // ancestor of it — check that case too.
+  if (root.matches) {
+    for (const rule of COMPOSE_RULES) {
+      if (root.matches(rule.selector)) injectButton(root, rule);
+    }
+  }
 }
 
 const observer = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
     mutation.addedNodes.forEach((node) => {
       if (node.nodeType !== Node.ELEMENT_NODE) return;
-      scanForComposeWindows(node);
-      if (
-        (node.className && String(node.className).match(/email|compose|emailBody/i)) &&
-        findComposeBody(node)
-      ) {
-        injectButton(node);
-      }
+      scanForComposeAreas(node);
     });
   }
 });
 
-observer.observe(document.body, { childList: true, subtree: true });
-scanForComposeWindows(document.body);
+function start() {
+  observer.observe(document.body, { childList: true, subtree: true });
+  scanForComposeAreas(document.body);
+}
+
+if (document.body) {
+  start();
+} else {
+  document.addEventListener('DOMContentLoaded', start, { once: true });
+}

@@ -1,4 +1,5 @@
 .renzo-generate-btn {
+  position: relative;
   display: inline-block;
   background: #1F6B47;
   color: #ffffff;
