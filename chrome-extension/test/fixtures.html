@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Renzo extension fixtures</title>
+  <link rel="stylesheet" href="../content.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f5f0e8; }
+    h1 { font-size: 18px; }
+    h2 { font-size: 14px; margin-top: 28px; }
+    .aoI { display: flex; flex-direction: column; width: 520px; background: #fff; border: 1px solid #dadce0; }
+    .aoD { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .aoP { width: 100%; border-collapse: collapse; }
+    .I5 { padding: 8px 12px; }
+    .Am { min-height: 120px; outline: none; }
+    .btC { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #dadce0; }
+    .T-I.aoO { background: #0b57d0; color: #fff; border: 0; border-radius: 4px; padding: 8px 16px; }
+    .msg-form { width: 420px; background: #fff; border: 1px solid #ccc; padding: 12px; }
+    .msg-form__row { display: flex; align-items: flex-end; gap: 8px; }
+    .msg-form__contenteditable, #linkedin-new [role="textbox"] {
+      flex: 1; min-height: 40px; border: 1px solid #ddd; padding: 8px;
+    }
+    .msg-form__footer { display: flex; justify-content: flex-end; margin-top: 8px; }
+    #renzo-test-results { white-space: pre-wrap; background: #1a1a14; color: #f5f0e8; padding: 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Renzo compose fixtures</h1>
+
+  <h2>Gmail compose</h2>
+  <div id="gmail-compose" class="nH Hd" role="dialog">
+    <div class="aoI">
+      <div class="aoD">
+        To: <span email="alex@example.com" data-name="Alex Rivera">Alex Rivera</span>
+      </div>
+      <table class="aoP aoC">
+        <tbody>
+          <tr>
+            <td class="I5">
+              <div class="Am Al editable LW-avf" contenteditable="true" aria-label="Message Body" role="textbox" g_editable="true"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="btC gU Up">
+        <button type="button" class="T-I aoO" aria-label="Send ‪(Ctrl-Enter)‬">Send</button>
+        <button type="button" class="T-I">A</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>LinkedIn classic (ellipsis aria-label + flex row with Send)</h2>
+  <form class="msg-form" id="linkedin-classic">
+    <header>
+      <h2 class="msg-overlay-bubble-header__title">Jordan Lee</h2>
+    </header>
+    <div class="msg-form__row">
+      <div class="msg-form__contenteditable" contenteditable="true" role="textbox" aria-label="Write a message…"><p><br></p></div>
+      <button type="button" class="msg-form__send-button">Send</button>
+    </div>
+    <div class="msg-form__footer">
+      <button type="button">Send</button>
+    </div>
+  </form>
+
+  <h2>LinkedIn new UI (no msg-form class)</h2>
+  <div id="linkedin-new">
+    <div class="msg-s-message-list" data-thread="1">
+      <a class="msg-thread__link-to-profile">Sam Patel</a>
+    </div>
+    <div role="textbox" contenteditable="true" aria-label="Write a message…"></div>
+  </div>
+
+  <pre id="renzo-test-results">running…</pre>
+
+  <script>
+    window.chrome = {
+      storage: {
+        local: {
+          get: function (keys, cb) { cb({ renzo_api_key: 'renzo_test_key' }); }
+        }
+      }
+    };
+    window.fetch = async function () {
+      return {
+        ok: true,
+        json: async function () {
+          return { message: 'Hi there — just wanted to reconnect.' };
+        }
+      };
+    };
+  </script>
+  <script src="../content.js"></script>
+  <script src="assert.js"></script>
+</body>
+</html>

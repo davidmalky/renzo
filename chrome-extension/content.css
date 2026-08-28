@@ -1,3 +1,17 @@
+.renzo-compose-bar {
+  display: block !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  align-self: stretch !important;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 5;
+  float: none !important;
+  clear: both;
+  padding: 6px 8px;
+  margin: 0 0 4px 0;
+}
+
 .renzo-generate-btn {
   position: relative;
   display: inline-block;
@@ -8,7 +22,7 @@
   font-size: 13px;
   font-family: inherit;
   padding: 6px 14px;
-  margin-bottom: 8px;
+  margin: 0;
   cursor: pointer;
   line-height: 1.4;
   box-shadow: none;
@@ -26,7 +40,7 @@
 .renzo-tooltip {
   position: relative;
   display: inline-block;
-  margin: 4px 0 8px;
+  margin: 4px 0 0;
   padding: 6px 10px;
   background: #1a1a14;
   color: #ffffff;
