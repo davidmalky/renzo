@@ -1,3 +1,8 @@
+tr.renzo-compose-bar-row,
+tr.renzo-compose-bar-row > td {
+  background: #f8f9fa;
+}
+
 .renzo-compose-bar {
   display: block !important;
   width: 100% !important;
@@ -8,8 +13,21 @@
   z-index: 5;
   float: none !important;
   clear: both;
-  padding: 6px 8px;
-  margin: 0 0 4px 0;
+  padding: 6px 12px;
+  margin: 0;
+  background: #f8f9fa;
+  border-top: 1px solid #dadce0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.renzo-compose-bar-overlay {
+  position: fixed !important;
+  width: auto !important;
+  max-width: calc(100vw - 16px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  border: 1px solid #dadce0;
+  border-radius: 6px 6px 0 0;
 }
 
 .renzo-generate-btn {

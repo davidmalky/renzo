@@ -38,6 +38,11 @@
       !(bodyCell && [...gmailBtns].some((b) => bodyCell.contains(b))),
       bodyCell && gmailBtns[0] ? 'inI5=' + bodyCell.contains(gmailBtns[0]) : 'n/a'
     );
+    record(
+      'gmail: compose bar stays in the compose window (not an overlay)',
+      !!(gmailBar && !gmailBar.hasAttribute('data-renzo-overlay') && document.getElementById('gmail-compose').contains(gmailBar)),
+      gmailBar ? 'overlay=' + gmailBar.hasAttribute('data-renzo-overlay') : 'no bar'
+    );
 
     if (gmailBtns[0] && gmailBody) {
       const cloned = gmailBtns[0].cloneNode(true);
@@ -58,6 +63,144 @@
         'gmail: request uses the compose recipient, not the page heading',
         payload.contactName === 'Alex Rivera' && payload.context === 'Gmail compose',
         JSON.stringify(payload)
+      );
+    });
+  }
+
+  function barForHost(host) {
+    const body = document.querySelector(host + ' [contenteditable="true"]');
+    const id = body && body.getAttribute('data-renzo-id');
+    if (id) {
+      const bar = document.querySelector('.renzo-compose-bar[data-renzo-for="' + id + '"]');
+      if (bar) {
+        return { body: body, bar: bar, btns: bar.querySelectorAll('.renzo-generate-btn') };
+      }
+    }
+    return {
+      body: body,
+      bar: document.querySelector(host + ' .renzo-compose-bar'),
+      btns: document.querySelectorAll(host + ' .renzo-generate-btn')
+    };
+  }
+
+  function assertBarOutsideEmail(host, namePrefix) {
+    const found = barForHost(host);
+    const body = found.body;
+    const btns = found.btns;
+    const bar = found.bar;
+    const sendRow = document.querySelector(host + ' .btC, ' + host + ' .gU.Up');
+    const bodyCell = document.querySelector(host + ' td.I5');
+    const signature = document.querySelector(host + ' .gmail_signature, ' + host + ' [data-smartmail="gmail_signature"]');
+    const quote = document.querySelector(host + ' .gmail_quote');
+
+    record(namePrefix + ': generate button is injected', btns.length >= 1, 'count=' + btns.length);
+    record(
+      namePrefix + ': button lives in its own compose bar block',
+      !!(bar && btns[0] && bar.contains(btns[0])),
+      bar ? 'bar present' : 'missing .renzo-compose-bar'
+    );
+    record(
+      namePrefix + ': button is not inside the editable body',
+      btns.length > 0 && ![...btns].some((b) => body && body.contains(b)),
+      body && btns[0] ? 'inBody=' + body.contains(btns[0]) : 'n/a'
+    );
+    record(
+      namePrefix + ': button is not inside the signature',
+      btns.length > 0 && ![...btns].some((b) => signature && signature.contains(b)),
+      signature && btns[0] ? 'inSig=' + signature.contains(btns[0]) : 'no signature'
+    );
+    if (quote) {
+      record(
+        namePrefix + ': button is not inside the quoted thread',
+        ![...btns].some((b) => quote.contains(b)),
+        btns[0] ? 'inQuote=' + quote.contains(btns[0]) : 'n/a'
+      );
+    }
+    record(
+      namePrefix + ': button is not in Gmail send/formatting row',
+      btns.length > 0 && ![...btns].some((b) => sendRow && sendRow.contains(b)),
+      sendRow && btns[0] ? 'inSend=' + sendRow.contains(btns[0]) : 'no .btC (ok if Send is role=button)'
+    );
+    record(
+      namePrefix + ': button is not inside the message-body cell (td.I5)',
+      !bodyCell || ![...btns].some((b) => bodyCell.contains(b)),
+      bodyCell && btns[0] ? 'inI5=' + bodyCell.contains(btns[0]) : 'no td.I5'
+    );
+    const sigEl = document.querySelector(host + ' .gmail_signature, ' + host + ' [data-smartmail="gmail_signature"]');
+    if (sigEl && btns[0] && bar && sigEl.compareDocumentPosition) {
+      const pos = sigEl.compareDocumentPosition(bar);
+      const barAfterSig = !!(pos & Node.DOCUMENT_POSITION_FOLLOWING);
+      record(
+        namePrefix + ': chrome bar is after the signature, not above it',
+        barAfterSig,
+        barAfterSig ? 'after signature' : 'bar is above the signature'
+      );
+    }
+    const innerEditor = document.querySelector(host + ' .aoI');
+    const hostSend = document.querySelector(host + ' > .btC, ' + host + ' > .dC, ' + host + ' > .gU.Up');
+    if (innerEditor && hostSend && !innerEditor.contains(hostSend)) {
+      record(
+        namePrefix + ': button is outside the inner .aoI editor card (not above the signature)',
+        btns.length > 0 && ![...btns].some((b) => innerEditor.contains(b)),
+        btns[0] ? 'inAoI=' + innerEditor.contains(btns[0]) : 'n/a'
+      );
+    }
+    if (bar) {
+      record(
+        namePrefix + ': reply bar is hosted outside the letter (overlay on document.body)',
+        bar.hasAttribute('data-renzo-overlay') && bar.parentElement === document.body && !(body && body.contains(bar)),
+        bar.hasAttribute('data-renzo-overlay') ? 'overlay parent=' + (bar.parentElement && bar.parentElement.tagName) : 'in-tree'
+      );
+    }
+    return { body, btns, bar, signature, quote };
+  }
+
+  function runGmailReply() {
+    const reply = assertBarOutsideEmail('#gmail-reply', 'gmail-reply');
+    assertBarOutsideEmail('#gmail-reply-incell', 'gmail-reply-incell');
+    assertBarOutsideEmail('#gmail-reply-nosendclass', 'gmail-reply-nosendclass');
+    assertBarOutsideEmail('#gmail-reply-thread', 'gmail-reply-thread');
+
+    if (reply.btns[0] && reply.body) {
+      click(reply.btns[0]);
+    }
+
+    return wait(50).then(function () {
+      const text = (reply.body && reply.body.textContent) || '';
+      const filled = text.indexOf('reconnect') !== -1;
+      const sigKept = !!(reply.signature && reply.signature.isConnected &&
+        (reply.signature.textContent || '').indexOf('David Genuth') !== -1);
+      const noticeKept = text.indexOf('Confidentiality notice') !== -1;
+      const quoteKept = !!(reply.quote && reply.quote.isConnected &&
+        (reply.quote.textContent || '').indexOf('Please confirm') !== -1);
+      record('gmail-reply: click inserts outreach text into the reply body', filled, JSON.stringify(text.slice(0, 180)));
+      record('gmail-reply: click does not wipe the signature', sigKept, reply.signature ? JSON.stringify(reply.signature.textContent) : 'no signature');
+      record('gmail-reply: click keeps the confidentiality notice', noticeKept, noticeKept ? 'kept' : text.slice(0, 180));
+      record('gmail-reply: click does not wipe the quoted thread', quoteKept, reply.quote ? JSON.stringify(reply.quote.textContent) : 'no quote');
+
+      let payload = {};
+      try { payload = JSON.parse(window.__renzoLastFetch && window.__renzoLastFetch.opts && window.__renzoLastFetch.opts.body || '{}'); } catch (e) {}
+      record(
+        'gmail-reply: request uses the reply-header recipient',
+        payload.contactName === 'Marbitzei Torah Orders',
+        JSON.stringify(payload)
+      );
+
+      if (reply.body && reply.bar) {
+        reply.body.insertBefore(reply.bar, reply.body.firstChild);
+      }
+      if (window.RenzoExtension && window.RenzoExtension.scan) {
+        window.RenzoExtension.scan(document.body);
+      }
+      return wait(80);
+    }).then(function () {
+      const body = document.querySelector('#gmail-reply [contenteditable="true"]');
+      const id = body && body.getAttribute('data-renzo-id');
+      const bar = id && document.querySelector('.renzo-compose-bar[data-renzo-for="' + id + '"]');
+      record(
+        'gmail-reply: swallowed bar is moved back out of the editable',
+        !!(bar && body && !body.contains(bar)),
+        bar && body ? 'inBody=' + body.contains(bar) + ' overlay=' + bar.hasAttribute('data-renzo-overlay') : 'missing bar/body'
       );
     });
   }
@@ -145,6 +288,7 @@
   function run() {
     Promise.resolve()
       .then(runGmail)
+      .then(runGmailReply)
       .then(runLinkedIn)
       .then(runReinjection)
       .then(finish)

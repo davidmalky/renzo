@@ -52,11 +52,8 @@ async function runOn(url) {
 const gmail = await runOn('https://mail.google.com/mail/u/0/#inbox?compose=new');
 const linkedin = await runOn('https://www.linkedin.com/messaging/');
 
-const gmailResults = gmail.results.filter((r) => r.name.startsWith('gmail:') || r.name.startsWith('re-inject:'));
-const linkedinResults = linkedin.results.filter((r) => r.name.startsWith('linkedin') || r.name.startsWith('re-inject:'));
-// Keep one re-inject result from each host
 const results = [
-  ...gmail.results.filter((r) => r.name.startsWith('gmail:')),
+  ...gmail.results.filter((r) => r.name.startsWith('gmail:') || r.name.startsWith('gmail-reply')),
   ...linkedin.results.filter((r) => r.name.startsWith('linkedin')),
   gmail.results.find((r) => r.name.startsWith('re-inject:')),
   linkedin.results.find((r) => r.name.startsWith('re-inject:'))
