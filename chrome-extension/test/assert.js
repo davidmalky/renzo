@@ -38,6 +38,11 @@
       !(bodyCell && [...gmailBtns].some((b) => bodyCell.contains(b))),
       bodyCell && gmailBtns[0] ? 'inI5=' + bodyCell.contains(gmailBtns[0]) : 'n/a'
     );
+    record(
+      'gmail: compose bar stays in the compose window (not an overlay)',
+      !!(gmailBar && !gmailBar.hasAttribute('data-renzo-overlay') && document.getElementById('gmail-compose').contains(gmailBar)),
+      gmailBar ? 'overlay=' + gmailBar.hasAttribute('data-renzo-overlay') : 'no bar'
+    );
 
     if (gmailBtns[0] && gmailBody) {
       const cloned = gmailBtns[0].cloneNode(true);
@@ -62,10 +67,27 @@
     });
   }
 
-  function assertBarOutsideEmail(host, namePrefix) {
+  function barForHost(host) {
     const body = document.querySelector(host + ' [contenteditable="true"]');
-    const btns = document.querySelectorAll(host + ' .renzo-generate-btn');
-    const bar = document.querySelector(host + ' .renzo-compose-bar');
+    const id = body && body.getAttribute('data-renzo-id');
+    if (id) {
+      const bar = document.querySelector('.renzo-compose-bar[data-renzo-for="' + id + '"]');
+      if (bar) {
+        return { body: body, bar: bar, btns: bar.querySelectorAll('.renzo-generate-btn') };
+      }
+    }
+    return {
+      body: body,
+      bar: document.querySelector(host + ' .renzo-compose-bar'),
+      btns: document.querySelectorAll(host + ' .renzo-generate-btn')
+    };
+  }
+
+  function assertBarOutsideEmail(host, namePrefix) {
+    const found = barForHost(host);
+    const body = found.body;
+    const btns = found.btns;
+    const bar = found.bar;
     const sendRow = document.querySelector(host + ' .btC, ' + host + ' .gU.Up');
     const bodyCell = document.querySelector(host + ' td.I5');
     const signature = document.querySelector(host + ' .gmail_signature, ' + host + ' [data-smartmail="gmail_signature"]');
@@ -123,6 +145,13 @@
         btns[0] ? 'inAoI=' + innerEditor.contains(btns[0]) : 'n/a'
       );
     }
+    if (bar) {
+      record(
+        namePrefix + ': reply bar is hosted outside the letter (overlay on document.body)',
+        bar.hasAttribute('data-renzo-overlay') && bar.parentElement === document.body && !(body && body.contains(bar)),
+        bar.hasAttribute('data-renzo-overlay') ? 'overlay parent=' + (bar.parentElement && bar.parentElement.tagName) : 'in-tree'
+      );
+    }
     return { body, btns, bar, signature, quote };
   }
 
@@ -130,6 +159,7 @@
     const reply = assertBarOutsideEmail('#gmail-reply', 'gmail-reply');
     assertBarOutsideEmail('#gmail-reply-incell', 'gmail-reply-incell');
     assertBarOutsideEmail('#gmail-reply-nosendclass', 'gmail-reply-nosendclass');
+    assertBarOutsideEmail('#gmail-reply-thread', 'gmail-reply-thread');
 
     if (reply.btns[0] && reply.body) {
       click(reply.btns[0]);
@@ -165,11 +195,12 @@
       return wait(80);
     }).then(function () {
       const body = document.querySelector('#gmail-reply [contenteditable="true"]');
-      const bar = document.querySelector('#gmail-reply .renzo-compose-bar');
+      const id = body && body.getAttribute('data-renzo-id');
+      const bar = id && document.querySelector('.renzo-compose-bar[data-renzo-for="' + id + '"]');
       record(
         'gmail-reply: swallowed bar is moved back out of the editable',
         !!(bar && body && !body.contains(bar)),
-        bar && body ? 'inBody=' + body.contains(bar) : 'missing bar/body'
+        bar && body ? 'inBody=' + body.contains(bar) + ' overlay=' + bar.hasAttribute('data-renzo-overlay') : 'missing bar/body'
       );
     });
   }

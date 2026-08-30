@@ -139,6 +139,84 @@ function findGmailFrame(bodyEl) {
     bodyEl.closest('.aoI, .AD, .nH.aHU, .aaZ');
 }
 
+// Popped-out / new-message windows. Inline thread Reply is NOT this.
+function isGmailComposePopup(bodyEl) {
+  return !!(bodyEl && bodyEl.closest && bodyEl.closest('[role="dialog"], .nH.Hd'));
+}
+
+// Any Gmail Message Body that is not the compose popup is an inline Reply.
+// Real Reply often has none of `.ip` / `.aoI` / `.btC` — those were fixture guesses.
+function isGmailReply(bodyEl) {
+  if (!bodyEl) return false;
+  const marked = bodyEl.getAttribute && bodyEl.getAttribute('data-renzo-platform');
+  const platform = marked || currentPlatform();
+  if (platform && platform !== 'gmail') return false;
+  if (isGmailComposePopup(bodyEl)) return false;
+  return platform === 'gmail' || !platform;
+}
+
+function findSendNearBody(bodyEl) {
+  let node = bodyEl;
+  while (node && node !== document.documentElement) {
+    const send = findGmailSendChrome(node);
+    if (send && !bodyEl.contains(send)) return send;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function positionReplyOverlay(bar, bodyEl) {
+  if (!bar || !bodyEl || !bodyEl.getBoundingClientRect) return;
+  const send = findSendNearBody(bodyEl);
+  const sendRect = send && send.getBoundingClientRect ? send.getBoundingClientRect() : null;
+  const bodyRect = bodyEl.getBoundingClientRect();
+  const width = Math.max(bodyRect.width || 0, (sendRect && sendRect.width) || 0, 200);
+  const left = sendRect ? Math.min(bodyRect.left, sendRect.left) : bodyRect.left;
+  const barH = bar.offsetHeight || 36;
+  let top;
+  if (sendRect && sendRect.top >= (bodyRect.top - 8)) {
+    top = sendRect.top - barH - 6;
+  } else {
+    top = bodyRect.bottom + 6;
+  }
+  bar.style.position = 'fixed';
+  bar.style.left = Math.max(8, left) + 'px';
+  bar.style.top = Math.max(8, top) + 'px';
+  bar.style.width = Math.max(160, width) + 'px';
+  bar.style.zIndex = '2147483646';
+}
+
+function placeReplyOverlay(bar, bodyEl) {
+  if (!bar || !bodyEl || !document.body) return false;
+  bar.setAttribute('data-renzo-overlay', '1');
+  bar.classList.add('renzo-compose-bar-overlay');
+  const row = bar.closest && bar.closest('tr.' + BAR_CLASS + '-row');
+  if (bar.parentElement !== document.body) {
+    document.body.appendChild(bar);
+  }
+  if (row && row.parentElement && !row.contains(bar)) row.remove();
+  positionReplyOverlay(bar, bodyEl);
+  return true;
+}
+
+let overlayRaf = null;
+function scheduleOverlayReposition() {
+  if (overlayRaf) return;
+  const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : function (fn) { return setTimeout(fn, 16); };
+  overlayRaf = raf(function () {
+    overlayRaf = null;
+    document.querySelectorAll('.' + BAR_CLASS + '[data-renzo-overlay]').forEach((bar) => {
+      const id = bar.getAttribute('data-renzo-for');
+      const body = id && document.querySelector('[data-renzo-id="' + id + '"]');
+      if (!body || !body.isConnected) {
+        bar.remove();
+        return;
+      }
+      positionReplyOverlay(bar, body);
+    });
+  });
+}
+
 function findGmailSendChrome(root) {
   if (!root || !root.querySelectorAll) return null;
   const nodes = root.querySelectorAll(
@@ -550,58 +628,89 @@ document.addEventListener('click', (e) => {
   handleGenerateClick(btn, bodyEl);
 }, true);
 
-function injectButton(matchedEl, rule) {
-  const bodyEl = rule.mode === 'direct' ? matchedEl : findComposeBody(matchedEl);
-  if (!bodyEl) return;
-  if (isFeedOrComment(bodyEl)) return;
-  if (isInsideContentEditable(bodyEl.parentElement)) return;
-  if (liveBarFor(bodyEl)) return;
-
-  const insertion = rule.mode === 'wrapper'
-    ? { parent: matchedEl, before: matchedEl.firstChild }
-    : findSafeInsertion(bodyEl);
-  if (!insertion || !insertion.parent || isForbiddenInsertionParent(insertion.parent)) return;
-
+function makeBar(bodyEl, rule) {
   const id = ensureBodyId(bodyEl);
   bodyEl.setAttribute('data-renzo-platform', rule.platform || currentPlatform() || '');
-
   const bar = document.createElement('div');
   bar.className = BAR_CLASS;
   bar.setAttribute('contenteditable', 'false');
   bar.setAttribute('role', 'toolbar');
   bar.setAttribute('data-renzo-for', id);
   bar.setAttribute('data-renzo-platform', rule.platform || '');
-
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = BTN_CLASS;
   btn.setAttribute('contenteditable', 'false');
   btn.textContent = '✉ Generate with Renzo';
   bar.appendChild(btn);
+  return bar;
+}
 
+function injectButton(matchedEl, rule) {
+  const bodyEl = rule.mode === 'direct' ? matchedEl : findComposeBody(matchedEl);
+  if (!bodyEl) return;
+  if (isFeedOrComment(bodyEl)) return;
+  if (isInsideContentEditable(bodyEl.parentElement)) return;
+
+  const existing = liveBarFor(bodyEl);
+  if (existing) {
+    if (isGmailReply(bodyEl) && !existing.hasAttribute('data-renzo-overlay')) {
+      placeReplyOverlay(existing, bodyEl);
+    } else if (existing.hasAttribute('data-renzo-overlay')) {
+      positionReplyOverlay(existing, bodyEl);
+    }
+    return;
+  }
+
+  const bar = makeBar(bodyEl, rule);
+
+  // Inline Reply: host the bar on document.body. Gmail's editor reparents
+  // siblings of the contenteditable into the letter (caret = above signature).
+  // Compose popup keeps the in-tree chrome slot Dave already accepted.
+  if (isGmailReply(bodyEl)) {
+    if (!placeReplyOverlay(bar, bodyEl)) bar.remove();
+    return;
+  }
+
+  const insertion = rule.mode === 'wrapper'
+    ? { parent: matchedEl, before: matchedEl.firstChild }
+    : findSafeInsertion(bodyEl);
+  if (!insertion || !insertion.parent || isForbiddenInsertionParent(insertion.parent)) {
+    bar.remove();
+    return;
+  }
   if (!placeBar(bar, insertion)) {
     bar.remove();
   }
 }
 
+function yankIfSwallowed(bar) {
+  if (!bar || !bar.isConnected) return;
+  const inLetter = isInsideContentEditable(bar) ||
+    !!(bar.closest && bar.closest('.gmail_signature, .gmail_quote, [data-smartmail="gmail_signature"]')) ||
+    !!(bar.closest && bar.closest('td.I5') && !bar.hasAttribute('data-renzo-overlay'));
+  if (!inLetter) return;
+  const id = bar.getAttribute('data-renzo-for');
+  const body = (id && document.querySelector('[data-renzo-id="' + id + '"]')) ||
+    (bar.closest && bar.closest('[contenteditable="true"]'));
+  if (!body) {
+    bar.remove();
+    return;
+  }
+  if (isGmailReply(body) || inLetter) {
+    placeReplyOverlay(bar, body);
+  }
+}
+
 function rescueSwallowedBars() {
   document.querySelectorAll('.' + BAR_CLASS).forEach((bar) => {
-    const swallowed = isInsideContentEditable(bar) ||
-      !!(bar.closest && bar.closest('.gmail_signature, .gmail_quote, [data-smartmail="gmail_signature"]'));
-    const inBodyCell = !!(bar.closest && bar.closest('td.I5') && !bar.closest('.btC, .gU.Up'));
-    if (!swallowed && !inBodyCell) return;
-
     const id = bar.getAttribute('data-renzo-for');
-    const body = (id && document.querySelector('[data-renzo-id="' + id + '"]')) ||
-      (bar.closest && bar.closest('[contenteditable="true"]'));
-    if (!body) {
-      bar.remove();
+    const body = id && document.querySelector('[data-renzo-id="' + id + '"]');
+    if (body && isGmailReply(body) && !bar.hasAttribute('data-renzo-overlay')) {
+      placeReplyOverlay(bar, body);
       return;
     }
-    const insertion = findSafeInsertion(body);
-    if (!insertion || !placeBar(bar, insertion)) {
-      bar.remove();
-    }
+    yankIfSwallowed(bar);
   });
 }
 
@@ -628,8 +737,22 @@ function scheduleScan() {
   }, 80);
 }
 
-const observer = new MutationObserver(() => {
+const observer = new MutationObserver((mutations) => {
+  for (let i = 0; i < mutations.length; i++) {
+    const added = mutations[i].addedNodes;
+    if (!added) continue;
+    for (let j = 0; j < added.length; j++) {
+      const n = added[j];
+      if (!n || n.nodeType !== 1) continue;
+      if (n.classList && n.classList.contains(BAR_CLASS)) yankIfSwallowed(n);
+      const inner = n.querySelectorAll && n.querySelectorAll('.' + BAR_CLASS);
+      if (inner) {
+        for (let k = 0; k < inner.length; k++) yankIfSwallowed(inner[k]);
+      }
+    }
+  }
   scheduleScan();
+  scheduleOverlayReposition();
 });
 
 function start() {
@@ -639,6 +762,8 @@ function start() {
     attributes: true,
     attributeFilter: ['contenteditable', 'aria-label', 'aria-placeholder', 'role', 'class']
   });
+  window.addEventListener('scroll', scheduleOverlayReposition, true);
+  window.addEventListener('resize', scheduleOverlayReposition);
   scanForComposeAreas(document.body);
   setInterval(() => {
     if (document.body) scanForComposeAreas(document.body);
