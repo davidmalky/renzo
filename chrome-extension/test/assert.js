@@ -104,6 +104,16 @@
       !bodyCell || ![...btns].some((b) => bodyCell.contains(b)),
       bodyCell && btns[0] ? 'inI5=' + bodyCell.contains(btns[0]) : 'no td.I5'
     );
+    const sigEl = document.querySelector(host + ' .gmail_signature, ' + host + ' [data-smartmail="gmail_signature"]');
+    if (sigEl && btns[0] && bar && sigEl.compareDocumentPosition) {
+      const pos = sigEl.compareDocumentPosition(bar);
+      const barAfterSig = !!(pos & Node.DOCUMENT_POSITION_FOLLOWING);
+      record(
+        namePrefix + ': chrome bar is after the signature, not above it',
+        barAfterSig,
+        barAfterSig ? 'after signature' : 'bar is above the signature'
+      );
+    }
     const innerEditor = document.querySelector(host + ' .aoI');
     const hostSend = document.querySelector(host + ' > .btC, ' + host + ' > .dC, ' + host + ' > .gU.Up');
     if (innerEditor && hostSend && !innerEditor.contains(hostSend)) {

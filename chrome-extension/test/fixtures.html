@@ -157,7 +157,8 @@
         }
       }
     };
-    window.fetch = async function () {
+    window.fetch = async function (url, opts) {
+      window.__renzoLastFetch = { url: url, opts: opts };
       return {
         ok: true,
         json: async function () {

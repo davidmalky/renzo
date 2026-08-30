@@ -195,6 +195,11 @@ function hoistInsertion(fromEl, frame) {
     }
     if (parent.tagName === 'TABLE' || parent.tagName === 'TBODY') {
       const rowBefore = before.tagName === 'TR' ? before : (before.closest && before.closest('tr'));
+      // A TR above a row that already holds the editor looks like the button
+      // is sitting on the signature. Put chrome after that mixed row instead.
+      if (rowBefore && rowBefore.querySelector && rowBefore.querySelector('[contenteditable="true"]')) {
+        return { parent, before: rowBefore.nextSibling, asTableRow: true };
+      }
       return { parent, before: rowBefore, asTableRow: true };
     }
     if (before.parentElement !== parent) {
