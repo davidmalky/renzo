@@ -6,11 +6,17 @@
   "engines": {
     "node": ">=18"
   },
+  "scripts": {
+    "test:extension": "node chrome-extension/test/run.mjs"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "resend": "^6.12.4",
     "stripe": "^22.1.1"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
   }
 }

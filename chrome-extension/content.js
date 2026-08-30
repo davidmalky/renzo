@@ -7,36 +7,46 @@
 // preflight OPTIONS requests. That silently killed every request from
 // third-party pages like linkedin.com and mail.google.com.
 const RENZO_API_URL = 'https://www.meetrenzo.com/api/ai';
-const injectedBodies = new WeakSet();
-const buttonBodyMap = new WeakMap();
+const BAR_CLASS = 'renzo-compose-bar';
+const BTN_CLASS = 'renzo-generate-btn';
+
+let bodySeq = 0;
+let scanTimer = null;
 
 // Each rule matches a compose area on one of the three platforms.
 // mode: 'direct' — `selector` matches the editable body itself (Gmail/LinkedIn).
-//   The button is inserted as a sibling BEFORE `anchor` (a closest-ancestor
-//   selector) if given, else BEFORE the editable element itself. It must
-//   never be inserted inside the editable element, or it becomes part of
-//   the actual message content.
 // mode: 'wrapper' — `selector` matches a non-editable wrapper that CONTAINS
-//   the editable body as a descendant (Salesforce). The button is prepended
-//   as the wrapper's first child.
+//   the editable body as a descendant (Salesforce).
 const COMPOSE_RULES = [
-  // Gmail — matched directly on the editable body itself, with no anchor,
-  // so the button lands immediately before the body. An earlier version
-  // anchored on .compose-recipients-area, which put the button above the
-  // sender name and confidentiality notice instead of the actual compose box.
   { mode: 'direct', selector: 'div[aria-label="Message Body"][contenteditable="true"]', platform: 'gmail' },
   { mode: 'direct', selector: 'div.Am.Al.editable[contenteditable="true"]', platform: 'gmail' },
-  // LinkedIn messaging — several fallback selectors since LinkedIn's
-  // messaging UI loads asynchronously and its markup varies.
-  { mode: 'direct', selector: 'div[aria-label="Write a message..."]' },
-  { mode: 'direct', selector: 'div.msg-form__contenteditable' },
-  { mode: 'direct', selector: 'div.msg-form__contenteditable[contenteditable="true"]' },
-  { mode: 'direct', selector: 'div[role="textbox"][aria-label*="message" i]' },
-  // Salesforce email compose
-  { mode: 'wrapper', selector: 'div[class*="emailBody"]' },
-  { mode: 'wrapper', selector: 'div[class*="composeArea"]' },
-  { mode: 'wrapper', selector: 'div[class*="email"]' }
+  { mode: 'direct', selector: 'div[g_editable="true"][contenteditable="true"]', platform: 'gmail' },
+  // LinkedIn uses an ellipsis (U+2026) in "Write a message…", not three dots.
+  { mode: 'direct', selector: 'div.msg-form__contenteditable', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div.msg-form__contenteditable[contenteditable="true"]', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div[aria-label="Write a message…"]', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div[aria-label="Write a message..."]', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div[role="textbox"][aria-label*="message" i]', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div[role="textbox"][aria-placeholder*="message" i]', platform: 'linkedin' },
+  { mode: 'direct', selector: 'div[contenteditable="true"][aria-label*="message" i]', platform: 'linkedin' },
+  { mode: 'wrapper', selector: 'div[class*="emailBody"]', platform: 'salesforce' },
+  { mode: 'wrapper', selector: 'div[class*="composeArea"]', platform: 'salesforce' },
+  { mode: 'wrapper', selector: 'div[class*="email"]', platform: 'salesforce' }
 ];
+
+function currentPlatform() {
+  const h = (window.location && window.location.hostname) || '';
+  if (h === 'mail.google.com' || h.endsWith('.mail.google.com')) return 'gmail';
+  if (h === 'linkedin.com' || h.endsWith('.linkedin.com')) return 'linkedin';
+  if (h.endsWith('salesforce.com') || h.endsWith('force.com')) return 'salesforce';
+  return null;
+}
+
+function shouldApplyRule(rule) {
+  const platform = currentPlatform();
+  if (!platform) return true;
+  return !rule.platform || rule.platform === platform;
+}
 
 function getApiKey() {
   return new Promise((resolve) => {
@@ -46,30 +56,89 @@ function getApiKey() {
   });
 }
 
-function getContactName() {
-  // Try common Salesforce Lightning record-title selectors first, then
-  // fall back to the page's h1, then any breadcrumb link.
-  const selectors = [
-    '.slds-page-header__title',
-    '.slds-page-header__name-title lightning-formatted-text',
-    '.slds-page-header__name-title',
-    'records-highlights-details-item lightning-formatted-text',
-    '[data-aura-class="forceHighlightsDetails"] lightning-formatted-text',
-    'h1'
-  ];
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    const text = el?.textContent?.trim();
-    if (text) return text;
-  }
-  const breadcrumb = document.querySelector('.slds-breadcrumb a, .breadcrumbs a');
-  const breadcrumbText = breadcrumb?.textContent?.trim();
-  if (breadcrumbText) return breadcrumbText;
-  return '';
+function findComposeBody(container) {
+  return container.querySelector('textarea, [contenteditable="true"], [role="textbox"][contenteditable="true"]');
 }
 
-function findComposeBody(container) {
-  return container.querySelector('textarea, [contenteditable="true"]');
+function isFeedOrComment(el) {
+  return !!(el && el.closest && el.closest(
+    '.comments-comment-box, .comments-comment-texteditor, .feed-shared-update-v2, .share-creation-state'
+  ));
+}
+
+function looksLikeInputSendRow(el) {
+  if (!el || el === document.body) return false;
+  if (el.matches && el.matches('.msg-form__row, .msg-form__footer, .msg-form__right-actions, .btC, .gU.Up')) {
+    return true;
+  }
+  const send = el.querySelector && el.querySelector(
+    '.msg-form__send-button, .T-I.aoO, [aria-label^="Send"], [aria-label*="Send" i]'
+  );
+  const box = el.querySelector && el.querySelector('[contenteditable="true"], [role="textbox"]');
+  return !!(send && box);
+}
+
+function isUnsafeParent(el) {
+  if (!el) return true;
+  const tag = el.tagName;
+  if (tag === 'TABLE' || tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT' || tag === 'TR' || tag === 'TD' || tag === 'TH') {
+    return true;
+  }
+  if (el.matches && el.matches('td.I5, .aO7, .btC, .gU.Up, .msg-form__row, .msg-form__footer, .msg-form__msg-content-container')) {
+    return true;
+  }
+  return looksLikeInputSendRow(el);
+}
+
+// Place the bar as its own block in compose chrome — never inside the
+// contenteditable, never inside Gmail's send row (.btC), never as a flex
+// sibling of LinkedIn's Send control.
+function findSafeInsertion(bodyEl) {
+  const gmailRoot = bodyEl.closest('[role="dialog"], .nH.Hd, .ip, .aoI');
+  if (gmailRoot) {
+    const bodyTable = bodyEl.closest('table.aoP, table.iN, table.aoC');
+    if (bodyTable && bodyTable.parentElement && !isUnsafeParent(bodyTable.parentElement)) {
+      return { parent: bodyTable.parentElement, before: bodyTable };
+    }
+    const send = gmailRoot.querySelector('.btC, .gU.Up');
+    if (send && send.parentElement) {
+      return { parent: send.parentElement, before: send };
+    }
+    return { parent: gmailRoot, before: bodyEl };
+  }
+
+  const liRoot = bodyEl.closest('form.msg-form, .msg-form, .msg-overlay-conversation-bubble, .msg-convo-wrapper');
+  if (liRoot) {
+    const row = bodyEl.closest('.msg-form__row, .msg-form__msg-content-container, .msg-form__footer');
+    if (row && row.parentElement && !isUnsafeParent(row.parentElement)) {
+      return { parent: row.parentElement, before: row };
+    }
+    return { parent: liRoot, before: liRoot.firstChild };
+  }
+
+  let before = bodyEl;
+  let parent = bodyEl.parentElement;
+  while (parent && parent !== document.body && isUnsafeParent(parent)) {
+    before = parent;
+    parent = parent.parentElement;
+  }
+  if (!parent) return null;
+  return { parent, before };
+}
+
+function ensureBodyId(bodyEl) {
+  if (!bodyEl.getAttribute('data-renzo-id')) {
+    bodySeq += 1;
+    bodyEl.setAttribute('data-renzo-id', 'renzo-body-' + bodySeq);
+  }
+  return bodyEl.getAttribute('data-renzo-id');
+}
+
+function liveBarFor(bodyEl) {
+  const id = bodyEl.getAttribute('data-renzo-id');
+  if (!id) return null;
+  const bar = document.querySelector('.' + BAR_CLASS + '[data-renzo-for="' + id + '"]');
+  return bar && bar.isConnected ? bar : null;
 }
 
 function showToast(message) {
@@ -92,21 +161,156 @@ function showTooltip(anchor, message) {
   const tip = document.createElement('div');
   tip.className = 'renzo-tooltip';
   tip.textContent = message;
-  anchor.parentElement.appendChild(tip);
+  (anchor.parentElement || document.body).appendChild(tip);
   setTimeout(() => tip.remove(), 3000);
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function setComposeValue(bodyEl, text) {
+  bodyEl.focus();
+
+  const signature = bodyEl.querySelector('.gmail_signature, [data-smartmail="gmail_signature"]');
+  try {
+    const doc = bodyEl.ownerDocument;
+    const sel = doc.getSelection && doc.getSelection();
+    if (sel && doc.createRange && doc.execCommand) {
+      const range = doc.createRange();
+      if (signature) {
+        range.setStart(bodyEl, 0);
+        range.setEndBefore(signature);
+      } else {
+        range.selectNodeContents(bodyEl);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const ok = doc.execCommand('insertText', false, text);
+      if (ok) {
+        bodyEl.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+        return;
+      }
+    }
+  } catch (e) {
+    // fall through to the DOM write below
+  }
+
   if (bodyEl.tagName === 'TEXTAREA') {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
     setter.call(bodyEl, text);
     bodyEl.dispatchEvent(new Event('input', { bubbles: true }));
     bodyEl.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+
+  const html = escapeHtml(text).split('\n').map((line) => '<p>' + (line || '<br>') + '</p>').join('');
+  if (signature) {
+    const tmp = bodyEl.ownerDocument.createElement('div');
+    tmp.innerHTML = html;
+    while (bodyEl.firstChild && bodyEl.firstChild !== signature) {
+      bodyEl.removeChild(bodyEl.firstChild);
+    }
+    while (tmp.firstChild) bodyEl.insertBefore(tmp.firstChild, signature);
   } else {
-    bodyEl.focus();
-    bodyEl.textContent = text;
+    bodyEl.innerHTML = html;
+  }
+  try {
+    bodyEl.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
+  } catch (e) {
     bodyEl.dispatchEvent(new Event('input', { bubbles: true }));
   }
+  bodyEl.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function textFrom(el) {
+  return (el && (el.getAttribute('data-name') || el.getAttribute('email') || el.textContent) || '').trim();
+}
+
+function getGmailRecipient(bodyEl) {
+  const root = bodyEl.closest('[role="dialog"], .nH.Hd, .ip, .aoI') || document;
+  const chip = root.querySelector('[data-name], span[email], [data-hovercard-id]');
+  const fromChip = textFrom(chip);
+  if (fromChip) return fromChip.split(/\s+</)[0].replace(/"/g, '').trim();
+  const toField = root.querySelector('textarea[name="to"], input[aria-label^="To"], input[aria-label*="Recipients"]');
+  if (toField && toField.value) return toField.value.trim();
+  return '';
+}
+
+function getLinkedInRecipient(bodyEl) {
+  const thread = bodyEl.closest(
+    'form.msg-form, .msg-form, .msg-overlay-conversation-bubble, .msg-convo-wrapper, .msg-thread'
+  );
+  const searchRoots = [];
+  if (thread) searchRoots.push(thread);
+  if (thread && thread.parentElement) searchRoots.push(thread.parentElement);
+  const selectors = [
+    '.msg-overlay-bubble-header__title',
+    '.msg-entity-lockup__entity-title',
+    '.msg-thread__link-to-profile',
+    '.profile-card-one-to-one__profile-link',
+    'header h2'
+  ];
+  for (const root of searchRoots) {
+    for (const sel of selectors) {
+      const name = textFrom(root.querySelector(sel));
+      if (name && !/^(messaging|linkedin)$/i.test(name)) return name;
+    }
+  }
+  return '';
+}
+
+function getSalesforceContactName() {
+  const selectors = [
+    '.slds-page-header__title',
+    '.slds-page-header__name-title lightning-formatted-text',
+    '.slds-page-header__name-title',
+    'records-highlights-details-item lightning-formatted-text',
+    '[data-aura-class="forceHighlightsDetails"] lightning-formatted-text',
+    'h1'
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    const text = el && el.textContent && el.textContent.trim();
+    if (text) return text;
+  }
+  const breadcrumb = document.querySelector('.slds-breadcrumb a, .breadcrumbs a');
+  const breadcrumbText = breadcrumb && breadcrumb.textContent && breadcrumb.textContent.trim();
+  return breadcrumbText || '';
+}
+
+function getContactName(bodyEl, platform) {
+  if (platform === 'gmail') return getGmailRecipient(bodyEl) || 'there';
+  if (platform === 'linkedin') return getLinkedInRecipient(bodyEl) || 'there';
+  return getSalesforceContactName() || 'there';
+}
+
+function contextFor(platform) {
+  if (platform === 'linkedin') return 'LinkedIn message';
+  if (platform === 'gmail') return 'Gmail compose';
+  return 'Email compose';
+}
+
+function platformOf(bodyEl) {
+  const marked = bodyEl.getAttribute('data-renzo-platform');
+  if (marked) return marked;
+  return currentPlatform() || 'gmail';
+}
+
+function resolveBodyFromButton(btn) {
+  const bar = btn.closest('.' + BAR_CLASS);
+  const id = bar && bar.getAttribute('data-renzo-for');
+  if (id) {
+    const el = document.querySelector('[data-renzo-id="' + id + '"]');
+    if (el && el.isConnected) return el;
+  }
+  const root = (bar && bar.parentElement) || btn.parentElement;
+  if (!root) return null;
+  return root.querySelector('[data-renzo-id]') ||
+    root.querySelector('[contenteditable="true"], textarea, [role="textbox"]');
 }
 
 async function handleGenerateClick(btn, bodyEl) {
@@ -121,7 +325,8 @@ async function handleGenerateClick(btn, bodyEl) {
   btn.textContent = 'Generating…';
 
   try {
-    const contactName = getContactName();
+    const platform = platformOf(bodyEl);
+    const contactName = getContactName(bodyEl, platform);
     const res = await fetch(RENZO_API_URL, {
       method: 'POST',
       headers: {
@@ -132,7 +337,7 @@ async function handleGenerateClick(btn, bodyEl) {
       body: JSON.stringify({
         action: 'generate_simple',
         contactName,
-        context: 'Email compose'
+        context: contextFor(platform)
       })
     });
     const data = await res.json();
@@ -150,111 +355,86 @@ async function handleGenerateClick(btn, bodyEl) {
   }
 }
 
-// Single delegated click listener instead of one listener per injected
-// button. Gmail re-renders its compose chrome frequently enough that a
-// listener attached directly to a button node can end up on a detached or
-// orphaned element. Delegating to document sidesteps that entirely — we
-// don't depend on any specific button node still being "live". Capture
-// phase (the `true` third argument) means we see the click before the host
-// page's own handlers get a chance to intercept/stop it further down the
-// tree.
+// Delegated capture-phase click. Gmail re-renders compose chrome and will
+// clone or replace our button node; resolving the body from the bar's
+// data-renzo-for attribute (not a WeakMap keyed on a specific node) is
+// what keeps the click working after that.
 document.addEventListener('click', (e) => {
-  const btn = e.target && e.target.closest && e.target.closest('.renzo-generate-btn');
+  const btn = e.target && e.target.closest && e.target.closest('.' + BTN_CLASS);
   if (!btn) return;
-  const bodyEl = buttonBodyMap.get(btn);
+  const bodyEl = resolveBodyFromButton(btn);
   if (!bodyEl) return;
+  e.preventDefault();
   e.stopPropagation();
+  if (e.stopImmediatePropagation) e.stopImmediatePropagation();
   handleGenerateClick(btn, bodyEl);
 }, true);
 
 function injectButton(matchedEl, rule) {
-  let bodyEl, parent, insertBeforeNode;
+  const bodyEl = rule.mode === 'direct' ? matchedEl : findComposeBody(matchedEl);
+  if (!bodyEl) return;
+  if (isFeedOrComment(bodyEl)) return;
+  if (liveBarFor(bodyEl)) return;
 
-  if (rule.mode === 'direct') {
-    bodyEl = matchedEl;
-    const ancestor = rule.anchor ? matchedEl.closest(rule.anchor) : null;
-    insertBeforeNode = ancestor || matchedEl;
-    parent = insertBeforeNode.parentElement;
-  } else {
-    bodyEl = findComposeBody(matchedEl);
-    if (!bodyEl) return;
-    parent = matchedEl;
-    insertBeforeNode = matchedEl.firstChild;
-  }
+  const insertion = rule.mode === 'wrapper'
+    ? { parent: matchedEl, before: matchedEl.firstChild }
+    : findSafeInsertion(bodyEl);
+  if (!insertion || !insertion.parent) return;
 
-  if (!parent || injectedBodies.has(bodyEl)) return;
+  const id = ensureBodyId(bodyEl);
+  bodyEl.setAttribute('data-renzo-platform', rule.platform || currentPlatform() || '');
+
+  const bar = document.createElement('div');
+  bar.className = BAR_CLASS;
+  bar.setAttribute('data-renzo-for', id);
+  bar.setAttribute('data-renzo-platform', rule.platform || '');
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'renzo-generate-btn';
+  btn.className = BTN_CLASS;
   btn.textContent = '✉ Generate with Renzo';
-  if (rule.platform === 'gmail') {
-    // Gmail's own layout can render an inline-block button overlapping the
-    // message text below it. Force block-level stacking so the button
-    // always sits on its own line, as a proper sibling above the body.
-    btn.style.display = 'block';
-    btn.style.marginBottom = '8px';
-  }
-  buttonBodyMap.set(btn, bodyEl);
+  bar.appendChild(btn);
 
-  parent.insertBefore(btn, insertBeforeNode);
-  injectedBodies.add(bodyEl);
-  console.log('[Renzo] Generate button injected for compose area matching "' + rule.selector + '"', bodyEl);
-  console.log('[Renzo] button injected on:', window.location.hostname);
-}
-
-// TEMPORARY DEBUG LOGGING — LinkedIn's messaging UI hasn't reliably matched
-// our selectors. This logs every plausible compose-like candidate found in
-// each newly-scanned subtree so we can see what's actually in the DOM and
-// compare it against COMPOSE_RULES above. Remove once LinkedIn matching is
-// confirmed stable.
-function debugLogLinkedInCandidates(root) {
-  if (!window.location.hostname.includes('linkedin.com')) return;
-  if (!root.querySelectorAll) return;
-  const CANDIDATE_SELECTOR = '[contenteditable="true"], [role="textbox"], [class*="msg-form"], [aria-label*="message" i]';
-  const describe = (el) => ({
-    tag: el.tagName,
-    class: el.className,
-    ariaLabel: el.getAttribute('aria-label'),
-    role: el.getAttribute('role'),
-    contentEditable: el.getAttribute('contenteditable'),
-    el
-  });
-  root.querySelectorAll(CANDIDATE_SELECTOR).forEach((el) => {
-    console.log('[Renzo][debug] LinkedIn candidate element:', describe(el));
-  });
-  if (root.matches && root.matches(CANDIDATE_SELECTOR)) {
-    console.log('[Renzo][debug] LinkedIn candidate element (added node itself):', describe(root));
-  }
+  insertion.parent.insertBefore(bar, insertion.before);
 }
 
 function scanForComposeAreas(root) {
-  if (!root.querySelectorAll) return;
-  debugLogLinkedInCandidates(root);
+  if (!root || !root.querySelectorAll) return;
   for (const rule of COMPOSE_RULES) {
+    if (!shouldApplyRule(rule)) continue;
     root.querySelectorAll(rule.selector).forEach((el) => injectButton(el, rule));
   }
-  // A newly-added node can itself be the compose element, not just an
-  // ancestor of it — check that case too.
   if (root.matches) {
     for (const rule of COMPOSE_RULES) {
+      if (!shouldApplyRule(rule)) continue;
       if (root.matches(rule.selector)) injectButton(root, rule);
     }
   }
 }
 
-const observer = new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    mutation.addedNodes.forEach((node) => {
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-      scanForComposeAreas(node);
-    });
-  }
+function scheduleScan() {
+  if (scanTimer) return;
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
+    if (document.body) scanForComposeAreas(document.body);
+  }, 80);
+}
+
+const observer = new MutationObserver(() => {
+  scheduleScan();
 });
 
 function start() {
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['contenteditable', 'aria-label', 'aria-placeholder', 'role', 'class']
+  });
   scanForComposeAreas(document.body);
+  setInterval(() => {
+    if (document.body) scanForComposeAreas(document.body);
+  }, 2000);
 }
 
 if (document.body) {
@@ -262,3 +442,8 @@ if (document.body) {
 } else {
   document.addEventListener('DOMContentLoaded', start, { once: true });
 }
+
+window.RenzoExtension = {
+  scan: scanForComposeAreas,
+  start
+};
