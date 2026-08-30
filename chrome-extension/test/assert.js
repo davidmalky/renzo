@@ -62,6 +62,108 @@
     });
   }
 
+  function assertBarOutsideEmail(host, namePrefix) {
+    const body = document.querySelector(host + ' [contenteditable="true"]');
+    const btns = document.querySelectorAll(host + ' .renzo-generate-btn');
+    const bar = document.querySelector(host + ' .renzo-compose-bar');
+    const sendRow = document.querySelector(host + ' .btC, ' + host + ' .gU.Up');
+    const bodyCell = document.querySelector(host + ' td.I5');
+    const signature = document.querySelector(host + ' .gmail_signature, ' + host + ' [data-smartmail="gmail_signature"]');
+    const quote = document.querySelector(host + ' .gmail_quote');
+
+    record(namePrefix + ': generate button is injected', btns.length >= 1, 'count=' + btns.length);
+    record(
+      namePrefix + ': button lives in its own compose bar block',
+      !!(bar && btns[0] && bar.contains(btns[0])),
+      bar ? 'bar present' : 'missing .renzo-compose-bar'
+    );
+    record(
+      namePrefix + ': button is not inside the editable body',
+      btns.length > 0 && ![...btns].some((b) => body && body.contains(b)),
+      body && btns[0] ? 'inBody=' + body.contains(btns[0]) : 'n/a'
+    );
+    record(
+      namePrefix + ': button is not inside the signature',
+      btns.length > 0 && ![...btns].some((b) => signature && signature.contains(b)),
+      signature && btns[0] ? 'inSig=' + signature.contains(btns[0]) : 'no signature'
+    );
+    if (quote) {
+      record(
+        namePrefix + ': button is not inside the quoted thread',
+        ![...btns].some((b) => quote.contains(b)),
+        btns[0] ? 'inQuote=' + quote.contains(btns[0]) : 'n/a'
+      );
+    }
+    record(
+      namePrefix + ': button is not in Gmail send/formatting row',
+      btns.length > 0 && ![...btns].some((b) => sendRow && sendRow.contains(b)),
+      sendRow && btns[0] ? 'inSend=' + sendRow.contains(btns[0]) : 'no .btC (ok if Send is role=button)'
+    );
+    record(
+      namePrefix + ': button is not inside the message-body cell (td.I5)',
+      !bodyCell || ![...btns].some((b) => bodyCell.contains(b)),
+      bodyCell && btns[0] ? 'inI5=' + bodyCell.contains(btns[0]) : 'no td.I5'
+    );
+    const innerEditor = document.querySelector(host + ' .aoI');
+    const hostSend = document.querySelector(host + ' > .btC, ' + host + ' > .dC, ' + host + ' > .gU.Up');
+    if (innerEditor && hostSend && !innerEditor.contains(hostSend)) {
+      record(
+        namePrefix + ': button is outside the inner .aoI editor card (not above the signature)',
+        btns.length > 0 && ![...btns].some((b) => innerEditor.contains(b)),
+        btns[0] ? 'inAoI=' + innerEditor.contains(btns[0]) : 'n/a'
+      );
+    }
+    return { body, btns, bar, signature, quote };
+  }
+
+  function runGmailReply() {
+    const reply = assertBarOutsideEmail('#gmail-reply', 'gmail-reply');
+    assertBarOutsideEmail('#gmail-reply-incell', 'gmail-reply-incell');
+    assertBarOutsideEmail('#gmail-reply-nosendclass', 'gmail-reply-nosendclass');
+
+    if (reply.btns[0] && reply.body) {
+      click(reply.btns[0]);
+    }
+
+    return wait(50).then(function () {
+      const text = (reply.body && reply.body.textContent) || '';
+      const filled = text.indexOf('reconnect') !== -1;
+      const sigKept = !!(reply.signature && reply.signature.isConnected &&
+        (reply.signature.textContent || '').indexOf('David Genuth') !== -1);
+      const noticeKept = text.indexOf('Confidentiality notice') !== -1;
+      const quoteKept = !!(reply.quote && reply.quote.isConnected &&
+        (reply.quote.textContent || '').indexOf('Please confirm') !== -1);
+      record('gmail-reply: click inserts outreach text into the reply body', filled, JSON.stringify(text.slice(0, 180)));
+      record('gmail-reply: click does not wipe the signature', sigKept, reply.signature ? JSON.stringify(reply.signature.textContent) : 'no signature');
+      record('gmail-reply: click keeps the confidentiality notice', noticeKept, noticeKept ? 'kept' : text.slice(0, 180));
+      record('gmail-reply: click does not wipe the quoted thread', quoteKept, reply.quote ? JSON.stringify(reply.quote.textContent) : 'no quote');
+
+      let payload = {};
+      try { payload = JSON.parse(window.__renzoLastFetch && window.__renzoLastFetch.opts && window.__renzoLastFetch.opts.body || '{}'); } catch (e) {}
+      record(
+        'gmail-reply: request uses the reply-header recipient',
+        payload.contactName === 'Marbitzei Torah Orders',
+        JSON.stringify(payload)
+      );
+
+      if (reply.body && reply.bar) {
+        reply.body.insertBefore(reply.bar, reply.body.firstChild);
+      }
+      if (window.RenzoExtension && window.RenzoExtension.scan) {
+        window.RenzoExtension.scan(document.body);
+      }
+      return wait(80);
+    }).then(function () {
+      const body = document.querySelector('#gmail-reply [contenteditable="true"]');
+      const bar = document.querySelector('#gmail-reply .renzo-compose-bar');
+      record(
+        'gmail-reply: swallowed bar is moved back out of the editable',
+        !!(bar && body && !body.contains(bar)),
+        bar && body ? 'inBody=' + body.contains(bar) : 'missing bar/body'
+      );
+    });
+  }
+
   function runLinkedIn() {
     const classicBody = document.querySelector('#linkedin-classic .msg-form__contenteditable');
     if (!classicBody && !document.getElementById('linkedin-new')) return Promise.resolve();
@@ -145,6 +247,7 @@
   function run() {
     Promise.resolve()
       .then(runGmail)
+      .then(runGmailReply)
       .then(runLinkedIn)
       .then(runReinjection)
       .then(finish)

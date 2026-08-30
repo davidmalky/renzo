@@ -78,51 +78,218 @@ function looksLikeInputSendRow(el) {
   return !!(send && box);
 }
 
-function isUnsafeParent(el) {
-  if (!el) return true;
-  const tag = el.tagName;
-  if (tag === 'TABLE' || tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT' || tag === 'TR' || tag === 'TD' || tag === 'TH') {
+function isContentEditable(el) {
+  if (!el) return false;
+  if (el.isContentEditable === true) return true;
+  return !!(el.getAttribute && el.getAttribute('contenteditable') === 'true');
+}
+
+function isInsideContentEditable(el) {
+  let node = el;
+  while (node) {
+    if (isContentEditable(node)) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+function isEditorCell(el) {
+  return !!(el && el.matches && el.matches(
+    'td.I5, .aO7, .Am.Al.editable, [g_editable="true"], .gmail_signature, .gmail_quote, [data-smartmail="gmail_signature"]'
+  ));
+}
+
+function isTableChrome(el) {
+  const tag = el && el.tagName;
+  return tag === 'TABLE' || tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT' || tag === 'TR' || tag === 'TD' || tag === 'TH';
+}
+
+function isForbiddenInsertionParent(el) {
+  if (!el || el === document.body) return true;
+  if (isContentEditable(el) || isInsideContentEditable(el)) return true;
+  if (isEditorCell(el)) return true;
+  if (el.matches && el.matches('.btC, .gU.Up, .gmail_signature, .gmail_quote, [data-smartmail="gmail_signature"]')) {
     return true;
   }
+  return false;
+}
+
+function isUnsafeParent(el) {
+  if (!el) return true;
+  if (isTableChrome(el)) return true;
   if (el.matches && el.matches('td.I5, .aO7, .btC, .gU.Up, .msg-form__row, .msg-form__footer, .msg-form__msg-content-container')) {
     return true;
   }
   return looksLikeInputSendRow(el);
 }
 
-// Place the bar as its own block in compose chrome — never inside the
-// contenteditable, never inside Gmail's send row (.btC), never as a flex
-// sibling of LinkedIn's Send control.
+function childOfContaining(parent, descendant) {
+  let node = descendant;
+  while (node && node.parentElement !== parent) {
+    node = node.parentElement;
+  }
+  return node && node.parentElement === parent ? node : null;
+}
+
+// Outermost compose/reply chrome. Inline Reply keeps Send in `.ip` while
+// the editable lives in an inner `.aoI` — using the inner box as the root
+// is what put the bar above the signature (PR #2 only exercised new Compose).
+function findGmailFrame(bodyEl) {
+  return bodyEl.closest('[role="dialog"], .nH.Hd, .ip') ||
+    bodyEl.closest('.aoI, .AD, .nH.aHU, .aaZ');
+}
+
+function findGmailSendChrome(root) {
+  if (!root || !root.querySelectorAll) return null;
+  const nodes = root.querySelectorAll(
+    '.btC, .gU.Up, table.bs1, table.IU, .T-I.aoO, [role="button"][aria-label^="Send"], [data-tooltip^="Send"]'
+  );
+  for (let i = 0; i < nodes.length; i++) {
+    const el = nodes[i];
+    if (isInsideContentEditable(el)) continue;
+    if (el.closest && el.closest('.gmail_quote, .gmail_signature, [data-smartmail="gmail_signature"]')) continue;
+    if (el.matches('.T-I.aoO, [role="button"][aria-label^="Send"], [data-tooltip^="Send"]')) {
+      return el.closest('.btC, .gU.Up, table.bs1, table.IU, .dC, tr') || el;
+    }
+    return el;
+  }
+  return null;
+}
+
+function findEditorSurface(bodyEl, frame) {
+  let el = bodyEl;
+  while (el.parentElement && el !== frame) {
+    const parent = el.parentElement;
+    const sendInParent = findGmailSendChrome(parent);
+    if (sendInParent && !el.contains(sendInParent)) return el;
+    if (parent === frame) return el;
+    el = parent;
+  }
+  return el;
+}
+
+// Prefer a dedicated TR when the only chrome parent is a table, so we never
+// drop a div into td.I5 (Gmail will reparent that into the contenteditable).
+function hoistInsertion(fromEl, frame) {
+  if (!fromEl) return null;
+  let before = fromEl;
+  let parent = fromEl.parentElement;
+  while (parent && parent !== document.body) {
+    if (isForbiddenInsertionParent(parent)) {
+      before = parent;
+      parent = parent.parentElement;
+      continue;
+    }
+    if (parent.tagName === 'TR') {
+      if (parent.querySelector && parent.querySelector('[contenteditable="true"]')) {
+        before = parent;
+        parent = parent.parentElement;
+        continue;
+      }
+      before = parent;
+      parent = parent.parentElement;
+      if (parent && (parent.tagName === 'TABLE' || parent.tagName === 'TBODY')) {
+        return { parent, before, asTableRow: true };
+      }
+      continue;
+    }
+    if (parent.tagName === 'TABLE' || parent.tagName === 'TBODY') {
+      const rowBefore = before.tagName === 'TR' ? before : (before.closest && before.closest('tr'));
+      return { parent, before: rowBefore, asTableRow: true };
+    }
+    if (before.parentElement !== parent) {
+      before = childOfContaining(parent, before);
+    }
+    return { parent, before };
+  }
+  if (frame && !isForbiddenInsertionParent(frame) && frame !== fromEl) {
+    return { parent: frame, before: childOfContaining(frame, fromEl) };
+  }
+  return null;
+}
+
+function placeBar(bar, insertion) {
+  if (!insertion || !insertion.parent) return false;
+  const parent = insertion.parent;
+  if (isForbiddenInsertionParent(parent)) return false;
+  let before = insertion.before;
+  if (before && before.parentElement !== parent) {
+    before = childOfContaining(parent, before);
+  }
+  if (insertion.asTableRow || parent.tagName === 'TABLE' || parent.tagName === 'TBODY') {
+    const existingRow = bar.closest && bar.closest('tr.' + BAR_CLASS + '-row');
+    const tr = existingRow || document.createElement('tr');
+    tr.className = BAR_CLASS + '-row';
+    tr.setAttribute('contenteditable', 'false');
+    if (!existingRow) {
+      const td = document.createElement('td');
+      td.colSpan = 99;
+      td.setAttribute('contenteditable', 'false');
+      td.appendChild(bar);
+      tr.appendChild(td);
+    }
+    const rowBefore = before && (before.tagName === 'TR' ? before : (before.closest && before.closest('tr')));
+    parent.insertBefore(tr, rowBefore && rowBefore.parentElement === parent ? rowBefore : null);
+    return true;
+  }
+  parent.insertBefore(bar, before || null);
+  return true;
+}
+
+// Place the bar as its own chrome block — never inside the contenteditable,
+// never inside td.I5 / the signature / quoted thread, never inside Gmail's
+// Send/formatting row, never as a flex sibling of LinkedIn's Send control.
+//
+// Inline Reply: do NOT insert before the body table or the editable. That
+// lands the button at the top of the white editor, above the signature.
+// Insert before the Send/formatting chrome (found on the outer .ip frame).
 function findSafeInsertion(bodyEl) {
-  const gmailRoot = bodyEl.closest('[role="dialog"], .nH.Hd, .ip, .aoI');
-  if (gmailRoot) {
-    const bodyTable = bodyEl.closest('table.aoP, table.iN, table.aoC');
-    if (bodyTable && bodyTable.parentElement && !isUnsafeParent(bodyTable.parentElement)) {
-      return { parent: bodyTable.parentElement, before: bodyTable };
+  const gmailFrame = findGmailFrame(bodyEl);
+  if (gmailFrame) {
+    const send = findGmailSendChrome(gmailFrame);
+    if (send) {
+      const slot = hoistInsertion(send, gmailFrame);
+      if (slot && slot.parent && !isForbiddenInsertionParent(slot.parent)) {
+        return slot;
+      }
     }
-    const send = gmailRoot.querySelector('.btC, .gU.Up');
-    if (send && send.parentElement) {
-      return { parent: send.parentElement, before: send };
+    const surface = findEditorSurface(bodyEl, gmailFrame);
+    if (surface && surface.parentElement && !isForbiddenInsertionParent(surface.parentElement)) {
+      let before = surface.nextSibling;
+      while (before && before.nodeType !== 1) before = before.nextSibling;
+      if (before && before.classList && before.classList.contains(BAR_CLASS)) {
+        before = before.nextSibling;
+      }
+      return { parent: surface.parentElement, before: before || null };
     }
-    return { parent: gmailRoot, before: bodyEl };
+    if (!isForbiddenInsertionParent(gmailFrame) && gmailFrame !== bodyEl) {
+      return { parent: gmailFrame, before: null };
+    }
+    return null;
   }
 
   const liRoot = bodyEl.closest('form.msg-form, .msg-form, .msg-overlay-conversation-bubble, .msg-convo-wrapper');
   if (liRoot) {
     const row = bodyEl.closest('.msg-form__row, .msg-form__msg-content-container, .msg-form__footer');
-    if (row && row.parentElement && !isUnsafeParent(row.parentElement)) {
+    if (row && row.parentElement && !isUnsafeParent(row.parentElement) && !isForbiddenInsertionParent(row.parentElement)) {
       return { parent: row.parentElement, before: row };
     }
-    return { parent: liRoot, before: liRoot.firstChild };
+    if (!isForbiddenInsertionParent(liRoot)) {
+      return { parent: liRoot, before: liRoot.firstChild };
+    }
+    return null;
   }
 
   let before = bodyEl;
   let parent = bodyEl.parentElement;
-  while (parent && parent !== document.body && isUnsafeParent(parent)) {
+  while (parent && parent !== document.body && (isUnsafeParent(parent) || isForbiddenInsertionParent(parent))) {
     before = parent;
     parent = parent.parentElement;
   }
-  if (!parent) return null;
+  if (!parent || isForbiddenInsertionParent(parent)) return null;
+  if (before === bodyEl) {
+    return { parent, before: bodyEl.nextSibling };
+  }
   return { parent, before };
 }
 
@@ -172,18 +339,26 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;');
 }
 
+function firstKeepNode(bodyEl) {
+  if (!bodyEl || !bodyEl.querySelector) return null;
+  bodyEl.querySelectorAll('.' + BAR_CLASS + ', tr.' + BAR_CLASS + '-row').forEach((n) => n.remove());
+  return bodyEl.querySelector(
+    '.gmail_signature, [data-smartmail="gmail_signature"], .gmail_quote, blockquote.gmail_quote'
+  );
+}
+
 function setComposeValue(bodyEl, text) {
   bodyEl.focus();
 
-  const signature = bodyEl.querySelector('.gmail_signature, [data-smartmail="gmail_signature"]');
+  const keep = firstKeepNode(bodyEl);
   try {
     const doc = bodyEl.ownerDocument;
     const sel = doc.getSelection && doc.getSelection();
     if (sel && doc.createRange && doc.execCommand) {
       const range = doc.createRange();
-      if (signature) {
+      if (keep) {
         range.setStart(bodyEl, 0);
-        range.setEndBefore(signature);
+        range.setEndBefore(keep);
       } else {
         range.selectNodeContents(bodyEl);
       }
@@ -208,13 +383,13 @@ function setComposeValue(bodyEl, text) {
   }
 
   const html = escapeHtml(text).split('\n').map((line) => '<p>' + (line || '<br>') + '</p>').join('');
-  if (signature) {
+  if (keep) {
     const tmp = bodyEl.ownerDocument.createElement('div');
     tmp.innerHTML = html;
-    while (bodyEl.firstChild && bodyEl.firstChild !== signature) {
+    while (bodyEl.firstChild && bodyEl.firstChild !== keep) {
       bodyEl.removeChild(bodyEl.firstChild);
     }
-    while (tmp.firstChild) bodyEl.insertBefore(tmp.firstChild, signature);
+    while (tmp.firstChild) bodyEl.insertBefore(tmp.firstChild, keep);
   } else {
     bodyEl.innerHTML = html;
   }
@@ -231,7 +406,7 @@ function textFrom(el) {
 }
 
 function getGmailRecipient(bodyEl) {
-  const root = bodyEl.closest('[role="dialog"], .nH.Hd, .ip, .aoI') || document;
+  const root = findGmailFrame(bodyEl) || bodyEl.closest('[role="dialog"], .nH.Hd, .ip, .aoI') || document;
   const chip = root.querySelector('[data-name], span[email], [data-hovercard-id]');
   const fromChip = textFrom(chip);
   if (fromChip) return fromChip.split(/\s+</)[0].replace(/"/g, '').trim();
@@ -374,32 +549,60 @@ function injectButton(matchedEl, rule) {
   const bodyEl = rule.mode === 'direct' ? matchedEl : findComposeBody(matchedEl);
   if (!bodyEl) return;
   if (isFeedOrComment(bodyEl)) return;
+  if (isInsideContentEditable(bodyEl.parentElement)) return;
   if (liveBarFor(bodyEl)) return;
 
   const insertion = rule.mode === 'wrapper'
     ? { parent: matchedEl, before: matchedEl.firstChild }
     : findSafeInsertion(bodyEl);
-  if (!insertion || !insertion.parent) return;
+  if (!insertion || !insertion.parent || isForbiddenInsertionParent(insertion.parent)) return;
 
   const id = ensureBodyId(bodyEl);
   bodyEl.setAttribute('data-renzo-platform', rule.platform || currentPlatform() || '');
 
   const bar = document.createElement('div');
   bar.className = BAR_CLASS;
+  bar.setAttribute('contenteditable', 'false');
+  bar.setAttribute('role', 'toolbar');
   bar.setAttribute('data-renzo-for', id);
   bar.setAttribute('data-renzo-platform', rule.platform || '');
 
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = BTN_CLASS;
+  btn.setAttribute('contenteditable', 'false');
   btn.textContent = '✉ Generate with Renzo';
   bar.appendChild(btn);
 
-  insertion.parent.insertBefore(bar, insertion.before);
+  if (!placeBar(bar, insertion)) {
+    bar.remove();
+  }
+}
+
+function rescueSwallowedBars() {
+  document.querySelectorAll('.' + BAR_CLASS).forEach((bar) => {
+    const swallowed = isInsideContentEditable(bar) ||
+      !!(bar.closest && bar.closest('.gmail_signature, .gmail_quote, [data-smartmail="gmail_signature"]'));
+    const inBodyCell = !!(bar.closest && bar.closest('td.I5') && !bar.closest('.btC, .gU.Up'));
+    if (!swallowed && !inBodyCell) return;
+
+    const id = bar.getAttribute('data-renzo-for');
+    const body = (id && document.querySelector('[data-renzo-id="' + id + '"]')) ||
+      (bar.closest && bar.closest('[contenteditable="true"]'));
+    if (!body) {
+      bar.remove();
+      return;
+    }
+    const insertion = findSafeInsertion(body);
+    if (!insertion || !placeBar(bar, insertion)) {
+      bar.remove();
+    }
+  });
 }
 
 function scanForComposeAreas(root) {
   if (!root || !root.querySelectorAll) return;
+  rescueSwallowedBars();
   for (const rule of COMPOSE_RULES) {
     if (!shouldApplyRule(rule)) continue;
     root.querySelectorAll(rule.selector).forEach((el) => injectButton(el, rule));

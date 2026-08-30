@@ -15,6 +15,11 @@
     .Am { min-height: 120px; outline: none; }
     .btC { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #dadce0; }
     .T-I.aoO { background: #0b57d0; color: #fff; border: 0; border-radius: 4px; padding: 8px 16px; }
+    .ip { width: 520px; background: #fff; border: 1px solid #dadce0; margin-bottom: 16px; }
+    .gB { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+    .gmail_signature { color: #222; margin-top: 12px; }
+    .gmail_signature .notice { color: #888; font-size: 12px; margin-top: 8px; }
+    .gmail_quote { color: #666; border-left: 2px solid #ccc; padding-left: 8px; margin-top: 12px; }
     .msg-form { width: 420px; background: #fff; border: 1px solid #ccc; padding: 12px; }
     .msg-form__row { display: flex; align-items: flex-end; gap: 8px; }
     .msg-form__contenteditable, #linkedin-new [role="textbox"] {
@@ -46,6 +51,77 @@
         <button type="button" class="T-I aoO" aria-label="Send ‪(Ctrl-Enter)‬">Send</button>
         <button type="button" class="T-I">A</button>
       </div>
+    </div>
+  </div>
+
+  <h2>Gmail inline reply (Send lives outside inner .aoI — PR #2 miss)</h2>
+  <div id="gmail-reply" class="ip">
+    <div class="gB au">
+      <span class="ajn" aria-hidden="true">←</span>
+      <span email="orders@marbitzeitorah.com" data-name="Marbitzei Torah Orders">Marbitzei Torah Orders (orders@marbitzeitorah.com)</span>
+    </div>
+    <div class="aoI">
+      <table class="aoP aoC">
+        <tbody>
+          <tr>
+            <td class="I5">
+              <div class="Am Al editable LW-avf" contenteditable="true" aria-label="Message Body" role="textbox" g_editable="true">
+                <br>
+                <div class="gmail_signature" data-smartmail="gmail_signature">
+                  David Genuth / -- The right way, is the only way!
+                  <div class="notice">Confidentiality notice: This message is intended only for the addressee.</div>
+                </div>
+                <div class="gmail_quote">
+                  On Sat, Marbitzei Torah Orders wrote:<br>
+                  <blockquote>Please confirm the order.</blockquote>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="btC gU Up">
+      <button type="button" class="T-I aoO" aria-label="Send ‪(Ctrl-Enter)‬">Send</button>
+      <button type="button" class="T-I" aria-label="Formatting options">A</button>
+    </div>
+  </div>
+
+  <h2>Gmail reply with Send inside the message cell (td.I5)</h2>
+  <div id="gmail-reply-incell" class="ip">
+    <div class="gB au">
+      <span email="sam@example.com" data-name="Sam Patel">Sam Patel</span>
+    </div>
+    <table class="iN">
+      <tbody>
+        <tr>
+          <td class="I5">
+            <div class="Am Al editable LW-avf" contenteditable="true" aria-label="Message Body" role="textbox" g_editable="true">
+              <br>
+              <div class="gmail_signature" data-smartmail="gmail_signature">Kind regards,</div>
+            </div>
+            <div class="btC gU Up">
+              <button type="button" class="T-I aoO" aria-label="Send ‪(Ctrl-Enter)‬">Send</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Gmail reply without .btC (Send is only a role=button)</h2>
+  <div id="gmail-reply-nosendclass" class="ip">
+    <div class="gB au">
+      <span email="jordan@example.com" data-name="Jordan Lee">Jordan Lee</span>
+    </div>
+    <div class="aoI">
+      <div class="Am Al editable LW-avf" contenteditable="true" aria-label="Message Body" role="textbox" g_editable="true">
+        <br>
+        <div class="gmail_signature" data-smartmail="gmail_signature">Best,</div>
+      </div>
+    </div>
+    <div class="dC">
+      <div role="button" class="T-I aoO" aria-label="Send ‪(⌘Enter)‬">Send</div>
     </div>
   </div>
 
